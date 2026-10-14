@@ -684,6 +684,27 @@ assert(
   'gates live: import-osv fails on gates before file-read/network/write',
   'status=' + osvProbe.status + ' wrote=' + osvProbe.wrote + ' :: ' + osvProbe.stderr.trim().slice(0, 120),
 );
+// --- 12b. determinism: generator outputs are byte-stable ---------------------------
+// The manifest and dedup reporters claim deterministic output; re-running
+// them must produce byte-identical stdout, guarding against timestamps,
+// unsorted traversal, or map-ordering regressions.
+function runToString(script, args) {
+  return execFileSync('node', [join(ROOT, 'scripts', script), ...args], { cwd: ROOT, encoding: 'utf8' });
+}
+const manifestRunA = runToString('manifest.mjs', ['--scope', 'all']);
+const manifestRunB = runToString('manifest.mjs', ['--scope', 'all']);
+assert(
+  manifestRunA === manifestRunB && manifestRunA.length > 0,
+  'determinism: manifest --scope all is byte-identical across runs',
+  `lenA=${manifestRunA.length} lenB=${manifestRunB.length}`,
+);
+const dedupRunA = runToString('dedup-report.mjs', []);
+const dedupRunB = runToString('dedup-report.mjs', []);
+assert(
+  dedupRunA === dedupRunB && dedupRunA.length > 0,
+  'determinism: dedup-report is byte-identical across runs',
+  `lenA=${dedupRunA.length} lenB=${dedupRunB.length}`,
+);
 // --- 13. credential-leak scan -------------------------------------------------------
 // High-confidence secret shapes must appear NOWHERE except the documented
 // secrets-detection fixtures (packs/secrets/**), whose credential-shaped

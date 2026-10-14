@@ -9,11 +9,11 @@ name the script that re-verifies the claim on every run.
 | Capability (app evidence) | Verdict | Dataset position | Machine check |
 |---|---|---|---|
 | SCA matching (`sca/provider.ts assess`) | REQUIRED | 100-record validated seed; breadth blocked | `validate.mjs`, `check-vectors.mjs` |
-| SAST detection (50 self-contained rules) | SUPPLEMENTAL | 18 original rules for a planned loader | `validate-packs.mjs`, `test-packs.mjs` |
-| Secrets detection (6 self-contained rules) | SUPPLEMENTAL | 7 original shape-only rules | `validate-packs.mjs`, `test-packs.mjs` |
-| DAST observation (8 passive checks) | SUPPLEMENTAL | 9 original passive checks | `validate-packs.mjs`, `test-packs.mjs` |
-| CWE classification (16 app-referenced ids) | REQUIRED | 17 entries (16 + pack-only 693) | `validate-cwe.mjs`, pin check |
-| Remediation content (app computes status) | REQUIRED | 34/34 pack-rule entries, content-only | `validate-audiences.mjs`, consistency |
+| SAST detection (50 self-contained rules) | SUPPLEMENTAL | 22 original rules for a planned loader | `validate-packs.mjs`, `test-packs.mjs` |
+| Secrets detection (6 self-contained rules) | SUPPLEMENTAL | 8 original shape-only rules | `validate-packs.mjs`, `test-packs.mjs` |
+| DAST observation (8 passive checks) | SUPPLEMENTAL | 10 original passive checks | `validate-packs.mjs`, `test-packs.mjs` |
+| CWE classification (16 app-referenced ids) | REQUIRED | 20 entries (16 + pack-only 693/614/1004/1275) | `validate-cwe.mjs`, pin check |
+| Remediation content (app computes status) | REQUIRED | 40/40 pack-rule entries, content-only | `validate-audiences.mjs`, consistency |
 | Lessons (internal catalog, loader-future) | SUPPLEMENTAL | 3 lessons, practice validator-executed | `validate-audiences.mjs` |
 | Assessment templates (loader-future) | SUPPLEMENTAL | 3 templates, never pre-authorize | `validate-audiences.mjs` |
 | Engagement aids (no app consumer) | SUPPLEMENTAL | 2 standalone passive-only aids | `validate-audiences.mjs` |
