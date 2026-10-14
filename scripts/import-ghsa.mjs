@@ -10,16 +10,22 @@
  *
  * Usage:
  *   GITHUB_TOKEN=... node scripts/import-ghsa.mjs [--ecosystem npm|pip|both]
- *     [--limit N] [--out vuln-intel] [--force]
+ *     [--limit N] [--out vuln-intel] [--force] [--max-pages N]
  *
  * The token is optional but recommended (higher API rate limit).
- * Existing files are skipped unless --force is given.
+ * Existing files are skipped; --force re-checks content (identical files
+ * skip as duplicates, differing files quarantine as conflicts - never
+ * overwritten). Retrieval follows API Link pagination (default 10 pages).
  */
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { SCHEMA_VERSION, validateRecord } from './validate.mjs';
 import { requireGates } from './ingestion-gates.mjs';
+import { HttpError, withRetries } from './retry.mjs';
+import { appendCursor, lastCursorFor, loadCheckpoint } from './checkpoint.mjs';
+import { quarantineRecord } from './quarantine.mjs';
 
 // REST advisory API uses low/medium/high/critical ("moderate" kept defensively).
 const SEVERITY_MAP = {
@@ -31,8 +37,8 @@ const SEVERITY_MAP = {
 };
 const ECOSYSTEM_MAP = { npm: 'npm', pip: 'pypi' };
 
-function parseArgs(argv) {
-  const args = { ecosystem: 'both', limit: 15, out: 'vuln-intel', force: false };
+export function parseArgs(argv) {
+  const args = { ecosystem: 'both', limit: 15, out: 'vuln-intel', force: false, maxPages: 10 };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === '--ecosystem') {
@@ -46,6 +52,9 @@ function parseArgs(argv) {
       i += 1;
     } else if (arg === '--force') {
       args.force = true;
+    } else if (arg === '--max-pages') {
+      args.maxPages = Number.parseInt(argv[i + 1] ?? '', 10);
+      i += 1;
     } else {
       throw new Error(`unknown argument "${arg}"`);
     }
@@ -56,16 +65,48 @@ function parseArgs(argv) {
   if (!Number.isInteger(args.limit) || args.limit < 1 || args.limit > 100) {
     throw new Error('--limit must be an integer 1..100');
   }
+  if (!Number.isInteger(args.maxPages) || args.maxPages < 1 || args.maxPages > 50) {
+    throw new Error('--max-pages must be an integer 1..50');
+  }
   if (args.out === '') {
     throw new Error('--out must not be empty');
   }
   return args;
 }
 
-async function fetchAdvisories(ecosystem, token) {
-  const url =
-    `https://api.github.com/advisories?ecosystem=${ecosystem}` +
-    '&type=reviewed&sort=updated&direction=desc&per_page=100';
+export function parseLinkNext(linkHeader) {
+  if (typeof linkHeader !== 'string' || linkHeader === '') {
+    return null;
+  }
+  for (const part of linkHeader.split(',')) {
+    const match = /<([^>]+)>\s*;\s*rel="next"/.exec(part.trim());
+    if (match !== null) {
+      return match[1];
+    }
+  }
+  return null;
+}
+
+export async function fetchAdvisoriesPage(fetchImpl, url, headers, retryOptions = {}) {
+  return withRetries(async () => {
+    const response = await fetchImpl(url, { headers });
+    if (!response.ok) {
+      throw new HttpError(response.status, response.statusText, url);
+    }
+    const items = await response.json();
+    const link = typeof response.headers?.get === 'function' ? response.headers.get('link') : null;
+    return { items: Array.isArray(items) ? items : [], nextUrl: parseLinkNext(link) };
+  }, retryOptions);
+}
+
+export async function fetchAdvisories(ecosystem, token, options = {}) {
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const maxPages = options.maxPages ?? 10;
+  const checkpointFile = options.checkpointFile ?? null;
+  const retryOptions = options.retry ?? {};
+  if (!Number.isInteger(maxPages) || maxPages < 1 || maxPages > 50) {
+    throw new Error('fetchAdvisories: maxPages must be an integer 1..50');
+  }
   const headers = {
     Accept: 'application/vnd.github+json',
     'X-GitHub-Api-Version': '2022-11-28',
@@ -74,11 +115,34 @@ async function fetchAdvisories(ecosystem, token) {
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }
-  const response = await fetch(url, { headers });
-  if (!response.ok) {
-    throw new Error(`advisory API failed for ${ecosystem}: ${response.status} ${response.statusText}`);
+  const startUrl =
+    `https://api.github.com/advisories?ecosystem=${ecosystem}` +
+    '&type=reviewed&sort=updated&direction=desc&per_page=100';
+  let skipPages = 0;
+  if (checkpointFile !== null) {
+    const cursor = lastCursorFor(loadCheckpoint(checkpointFile), 'ghsa', `advisories:${ecosystem}`);
+    skipPages = cursor === null ? 0 : Number.parseInt(cursor.value, 10) || 0;
   }
-  return response.json();
+  const collected = [];
+  let url = startUrl;
+  let pageIndex = 0;
+  while (url !== null && pageIndex < maxPages) {
+    pageIndex += 1;
+    const page = await fetchAdvisoriesPage(fetchImpl, url, headers, retryOptions);
+    if (pageIndex > skipPages) {
+      collected.push(...page.items);
+    }
+    if (checkpointFile !== null) {
+      appendCursor(checkpointFile, {
+        source: 'ghsa',
+        kind: `advisories:${ecosystem}`,
+        value: String(pageIndex),
+        at: new Date().toISOString(),
+      });
+    }
+    url = page.nextUrl;
+  }
+  return collected;
 }
 
 function toRecords(advisory, retrievedAt, skips) {
@@ -156,10 +220,15 @@ async function main() {
   const ecosystems = args.ecosystem === 'both' ? ['npm', 'pip'] : [args.ecosystem];
   const outRoot = resolve(process.cwd(), args.out);
   const retrievedAt = new Date().toISOString();
+  const runDay = retrievedAt.slice(0, 10);
+  const batchId = `ghsa-${runDay}`;
   let written = 0;
   const skips = [];
   for (const ecosystem of ecosystems) {
-    const advisories = await fetchAdvisories(ecosystem, token);
+    const advisories = await fetchAdvisories(ecosystem, token, {
+      maxPages: args.maxPages,
+      checkpointFile: join(tmpdir(), `drobon-import-ghsa-${ecosystem}-${runDay}.json`),
+    });
     const perAdvisoryCount = new Map();
     let kept = 0;
     for (const advisory of advisories) {
@@ -176,12 +245,22 @@ async function main() {
         const fileName = seen === 1 ? `${record.id}.json` : `${record.id}--${seen}.json`;
         const dir = join(outRoot, record.ecosystem);
         const file = join(dir, fileName);
-        if (!args.force && existsSync(file)) {
-          skips.push(`${record.id} (${record.package}): file exists`);
+        const newBytes = `${JSON.stringify(record, null, 2)}\n`;
+        if (existsSync(file)) {
+          if (!args.force) {
+            skips.push(`${record.id} (${record.package}): file exists`);
+            continue;
+          }
+          if (readFileSync(file, 'utf8') === newBytes) {
+            skips.push(`${record.id} (${record.package}): duplicate, unchanged`);
+            continue;
+          }
+          quarantineRecord(process.cwd(), batchId, 'GHSA', record.id, record, `file conflict: ${file} differs; --force refuses to overwrite`);
+          skips.push(`${record.id} (${record.package}): conflict quarantined`);
           continue;
         }
         mkdirSync(dir, { recursive: true });
-        writeFileSync(file, `${JSON.stringify(record, null, 2)}\n`);
+        writeFileSync(file, newBytes);
         process.stdout.write(`wrote ${file}\n`);
         kept += 1;
         written += 1;

@@ -24,20 +24,24 @@
  *
  * Usage:
  *   node scripts/import-osv.mjs [--packages-file data/osv-seed-packages.json]
- *     [--limit N] [--out vuln-intel] [--force]
+ *     [--limit N] [--out vuln-intel] [--force] [--max-pages N]
  *
  * Needs network access to api.osv.dev. The mapping itself
  * (mapOsvVulnToRecords) is pure and covered by fixture tests in
  * scripts/test-packs.mjs, so it stays correct where the network is not.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { SCHEMA_VERSION, validateRecord } from './validate.mjs';
 import { requireGates } from './ingestion-gates.mjs';
+import { HttpError, withRetries } from './retry.mjs';
+import { appendCursor, lastCursorFor, loadCheckpoint } from './checkpoint.mjs';
+import { quarantineRecord } from './quarantine.mjs';
 
-function parseArgs(argv) {
-  const args = { packagesFile: 'data/osv-seed-packages.json', limit: 20, out: 'vuln-intel', force: false };
+export function parseArgs(argv) {
+  const args = { packagesFile: 'data/osv-seed-packages.json', limit: 20, out: 'vuln-intel', force: false, maxPages: 5 };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === '--packages-file') {
@@ -51,6 +55,9 @@ function parseArgs(argv) {
       i += 1;
     } else if (arg === '--force') {
       args.force = true;
+    } else if (arg === '--max-pages') {
+      args.maxPages = Number.parseInt(argv[i + 1] ?? '', 10);
+      i += 1;
     } else {
       throw new Error(`unknown argument "${arg}"`);
     }
@@ -60,6 +67,9 @@ function parseArgs(argv) {
   }
   if (!Number.isInteger(args.limit) || args.limit < 1 || args.limit > 100) {
     throw new Error('--limit must be an integer 1..100');
+  }
+  if (!Number.isInteger(args.maxPages) || args.maxPages < 1 || args.maxPages > 20) {
+    throw new Error('--max-pages must be an integer 1..20');
   }
   if (args.out === '') {
     throw new Error('--out must not be empty');
@@ -255,25 +265,43 @@ export function mapOsvVulnToRecords(vuln, retrievedAt, skips) {
   return records;
 }
 
-async function fetchOsvForPackage(name, ecosystem) {
+export async function fetchOsvForPackage(name, ecosystem, options = {}) {
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const maxPages = options.maxPages ?? 5;
+  const checkpointFile = options.checkpointFile ?? null;
+  const retryOptions = options.retry ?? {};
+  if (!Number.isInteger(maxPages) || maxPages < 1 || maxPages > 20) {
+    throw new Error('fetchOsvForPackage: maxPages must be an integer 1..20');
+  }
+  const kind = `osv:${ecosystem}:${name}`;
+  let skipPages = 0;
+  if (checkpointFile !== null) {
+    const cursor = lastCursorFor(loadCheckpoint(checkpointFile), 'osv', kind);
+    skipPages = cursor === null ? 0 : Number.parseInt(cursor.value, 10) || 0;
+  }
   const vulns = [];
   let pageToken = null;
-  for (let page = 0; page < 5; page += 1) {
+  for (let page = 0; page < maxPages; page += 1) {
     const body = { package: { name, ecosystem }, page_size: 100 };
     if (pageToken !== null) {
       body.page_token = pageToken;
     }
-    const response = await fetch('https://api.osv.dev/v1/query', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    if (!response.ok) {
-      throw new Error(`OSV query failed for ${ecosystem}:${name}: ${response.status}`);
-    }
-    const parsed = await response.json();
-    if (Array.isArray(parsed.vulns)) {
+    const parsed = await withRetries(async () => {
+      const response = await fetchImpl('https://api.osv.dev/v1/query', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!response.ok) {
+        throw new HttpError(response.status, response.statusText, 'api.osv.dev/v1/query');
+      }
+      return response.json();
+    }, retryOptions);
+    if (page + 1 > skipPages && Array.isArray(parsed.vulns)) {
       vulns.push(...parsed.vulns);
+    }
+    if (checkpointFile !== null) {
+      appendCursor(checkpointFile, { source: 'osv', kind, value: String(page + 1), at: new Date().toISOString() });
     }
     pageToken = parsed.next_page_token ?? null;
     if (pageToken === null) {
@@ -297,6 +325,8 @@ async function main() {
   const packages = loadPackageList(resolve(process.cwd(), args.packagesFile));
   const outRoot = resolve(process.cwd(), args.out);
   const retrievedAt = new Date().toISOString();
+  const runDay = retrievedAt.slice(0, 10);
+  const batchId = `osv-${runDay}`;
   const perIdCount = new Map();
   const skips = [];
   let written = 0;
@@ -310,7 +340,10 @@ async function main() {
     }
     let vulns;
     try {
-      vulns = await fetchOsvForPackage(pkg.name, pkg.ecosystem);
+      vulns = await fetchOsvForPackage(pkg.name, pkg.ecosystem, {
+        maxPages: args.maxPages,
+        checkpointFile: join(tmpdir(), `drobon-import-osv-${runDay}.json`),
+      });
     } catch (err) {
       skips.push(`${pkg.ecosystem}:${pkg.name}: fetch failed (${err.message})`);
       continue;
@@ -329,12 +362,22 @@ async function main() {
         const fileName = seen === 1 ? `${record.id}.json` : `${record.id}--${seen}.json`;
         const dir = join(outRoot, record.ecosystem);
         const file = join(dir, fileName);
-        if (!args.force && existsSync(file)) {
-          skips.push(`${record.id} (${record.package}): file exists`);
+        const newBytes = `${JSON.stringify(record, null, 2)}\n`;
+        if (existsSync(file)) {
+          if (!args.force) {
+            skips.push(`${record.id} (${record.package}): file exists`);
+            continue;
+          }
+          if (readFileSync(file, 'utf8') === newBytes) {
+            skips.push(`${record.id} (${record.package}): duplicate, unchanged`);
+            continue;
+          }
+          quarantineRecord(process.cwd(), batchId, 'OSV', record.id, record, `file conflict: ${file} differs; --force refuses to overwrite`);
+          skips.push(`${record.id} (${record.package}): conflict quarantined`);
           continue;
         }
         mkdirSync(dir, { recursive: true });
-        writeFileSync(file, `${JSON.stringify(record, null, 2)}\n`);
+        writeFileSync(file, newBytes);
         process.stdout.write(`wrote ${file}\n`);
         written += 1;
       }
