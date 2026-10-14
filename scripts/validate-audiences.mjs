@@ -15,7 +15,8 @@
  *   offensive-tooling tripwire; human review still required).
  *
  * Usage: node scripts/validate-audiences.mjs [path...]
- *   (defaults: knowledge learning assessments engagements; root = cwd)
+ *   (defaults: knowledge/remediation learning/lessons
+ *   assessments/templates engagements; root = cwd)
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -572,7 +573,12 @@ const invokedAsScript =
 
 if (invokedAsScript) {
   const targets = process.argv.slice(2);
-  const defaults = ['knowledge', 'learning', 'assessments', 'engagements'];
+  const defaults = [
+    'knowledge/remediation',
+    'learning/lessons',
+    'assessments/templates',
+    'engagements',
+  ];
   const roots = (targets.length > 0 ? targets : defaults).map((target) =>
     resolve(process.cwd(), target),
   );
