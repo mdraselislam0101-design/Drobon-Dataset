@@ -73,3 +73,55 @@ G5 license resolved, G6 malformed rejection, G7 xrefs, G8 rule/FP review,
 G9 determinism, G10 suite green, G11 manifest match, G12 rollback rehearsed
 (first batch), G13 perf budget met. Then human HONESTY review (open every
 sourceUrl) and the ingestionLog row. Only then do items count.
+## 8. Retry, backoff, checkpointing, idempotent recovery (design)
+
+- Retrieval retries transient failures only (network reset, 429, 5xx):
+  max 5 attempts, exponential backoff 2s/4s/8s/16s/32s + jitter, then the
+  batch aborts fail-closed. 4xx (except 429) and schema violations never
+  retry - they quarantine the item (see section 9).
+- Checkpointing: the importer appends completed page/window cursors to
+  `ingest-checkpoint-<batch>.json` (tmp, never committed) after every page.
+  A re-run resumes from the last cursor; already-written candidate files are
+  content-compared, never blindly overwritten (idempotent re-run).
+- Crash recovery procedure: re-run the same command; verify resumed output
+  against the checkpoint log; re-validate the full batch; any divergence
+  discards the batch. Recovery is rehearsed synthetically (test-rehearsal
+  section 4) before any authorized batch.
+
+## 9. Rejection and quarantine (design)
+
+- Every candidate lands in exactly one bucket: accepted, rejected
+  (schema/identity/range/link failure), duplicate (existing canonical item),
+  quarantined (needs human judgment: conflicts, ambiguous alias, license
+  doubt), or unresolved (upstream fetch failed after retries).
+- Quarantine location: `quarantine/<batch>/<source>-<id>.json` plus a
+  `quarantine/<batch>/REASONS.md` row per item (never counted, never
+  shipped; reviewed at staging, then accepted or deleted with a note).
+- Counts per bucket ship in the batch record; accepted = 0 is a valid
+  outcome and still produces a manifest + log row.
+
+## 10. Resource budgets and hostile input (design, draft defaults)
+
+- Proposed staging defaults (calibrate at staging, then pin): one batch
+  <= 500 candidates, <= 10 minutes wall-clock, <= 512 MB RSS; a batch
+  exceeding any ceiling aborts fail-closed and splits.
+- Hostile/malformed input: upstream JSON is parsed with size caps (single
+  response <= 8 MB, single string field <= bounds in FORMAT.md); control
+  characters, overlong fields, unknown properties, and bad ranges reject
+  the item (G6) with the reason logged; nothing upstream is executed,
+  interpolated into shell, or written outside the batch dir.
+- No credentials in logs: tokens pass only via environment at staging,
+  are redacted from every log line, and the leak scan (consistency
+  section 13) runs before every commit.
+
+## 11. Synthetic separation and audit retention (design)
+
+- Synthetic rehearsal records (`SYNTH-*`, source `synthetic-rehearsal`)
+  live in tmp dirs only, are excluded from every manifest/count, and are
+  proven absent from production by the isolation asserts on every run.
+- Audit retention: batch records, manifests, quarantine reasons, and gate
+  evidence stay in-repo (or attached to the release tag) for the life of
+  the corpus version they produced; checkpoint tmp files are deleted after
+  the batch verifies. Approval expiry and refresh cadence are owner-set
+  (see OWNER_ACTION_REQUIRED.md section 2); until set, approvals are
+  single-batch and non-extending.

@@ -30,6 +30,7 @@
  * Usage: node scripts/test-consistency.mjs
  */
 import { appendFileSync, cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -626,6 +627,63 @@ assert(
 );
 
 
+const approvedStatusMessage = blockMessageFor(gatesDocWith(['SATISFIED', 'SATISFIED', 'SATISFIED', 'APPROVED']));
+assert(
+  approvedStatusMessage.includes('gate file invalid'),
+  'gates matrix: unexpected status value blocks (fail-closed)',
+  approvedStatusMessage,
+);
+const nullDocMessage = blockMessageFor(null);
+assert(
+  nullDocMessage.includes('gate file invalid'),
+  'gates matrix: null gate doc blocks (fail-closed)',
+  nullDocMessage,
+);
+const swappedDoc = gatesDocWith(['SATISFIED', 'SATISFIED', 'SATISFIED', 'SATISFIED']);
+swappedDoc.gates[0].id = 'GATE-2';
+swappedDoc.gates[1].id = 'GATE-1';
+const swappedMessage = blockMessageFor(swappedDoc);
+assert(
+  swappedMessage.includes('gate file invalid'),
+  'gates matrix: misordered/duplicate gate ids block (fail-closed)',
+  swappedMessage,
+);
+const missingFileMessage = blockMessageFor(join(ROOT, 'docs', 'INGESTION_GATES.missing.json'));
+assert(
+  missingFileMessage.includes('cannot parse'),
+  'gates matrix: missing gate file blocks (fail-closed)',
+  missingFileMessage,
+);
+function runImporterBlocked(importer, args, outSubdir) {
+  const sandbox = mkdtempSync(join(tmpdir(), 'drobon-gateprobe-'));
+  const outDir = join(sandbox, outSubdir);
+  let status = 0;
+  let stderr = '';
+  try {
+    execFileSync('node', [join(ROOT, 'scripts', importer), ...args, '--out', outDir], {
+      cwd: ROOT,
+      stdio: ['ignore', 'ignore', 'pipe'],
+    });
+  } catch (err) {
+    status = err.status ?? 1;
+    stderr = String(err.stderr ?? '');
+  }
+  const wrote = existsSync(outDir);
+  rmSync(sandbox, { recursive: true, force: true });
+  return { status, stderr, wrote };
+}
+const ghsaProbe = runImporterBlocked('import-ghsa.mjs', ['--limit', 'not-a-number', '--ecosystem', 'bogus'], 'ghsa-out');
+assert(
+  ghsaProbe.status !== 0 && ghsaProbe.stderr.includes('BLOCKED') && !ghsaProbe.wrote,
+  'gates live: import-ghsa fails on gates before args/network/write',
+  'status=' + ghsaProbe.status + ' wrote=' + ghsaProbe.wrote + ' :: ' + ghsaProbe.stderr.trim().slice(0, 120),
+);
+const osvProbe = runImporterBlocked('import-osv.mjs', ['--packagesFile', 'does/not/exist.json'], 'osv-out');
+assert(
+  osvProbe.status !== 0 && osvProbe.stderr.includes('BLOCKED') && !osvProbe.wrote,
+  'gates live: import-osv fails on gates before file-read/network/write',
+  'status=' + osvProbe.status + ' wrote=' + osvProbe.wrote + ' :: ' + osvProbe.stderr.trim().slice(0, 120),
+);
 // --- 13. credential-leak scan -------------------------------------------------------
 // High-confidence secret shapes must appear NOWHERE except the documented
 // secrets-detection fixtures (packs/secrets/**), whose credential-shaped
