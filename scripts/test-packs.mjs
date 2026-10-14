@@ -116,6 +116,47 @@ for (const file of packFiles) {
   );
 }
 
+// --- 2b. detection quality: pos/neg floors + signal collisions ---------------
+// Every rule must ship at least one positive and one negative executable
+// test, and no two rules may share an identical detection signal, so batch
+// quality is enforced by the harness instead of reviewer memory.
+const ruleFiles = packFiles.filter((file) => !file.endsWith('pack.json'));
+let qualityPos = 0;
+let qualityNeg = 0;
+const qualityOffenders = [];
+const seenSignals = new Map();
+const signalCollisions = [];
+for (const file of ruleFiles) {
+  const record = JSON.parse(readFileSync(file, 'utf8'));
+  const tests = Array.isArray(record.tests) ? record.tests : [];
+  const pos = tests.filter((t) => t.match === true).length;
+  const neg = tests.filter((t) => t.match === false).length;
+  qualityPos += pos;
+  qualityNeg += neg;
+  if (pos < 1 || neg < 1) qualityOffenders.push(`${record.id} (pos=${pos} neg=${neg})`);
+  const signals = (record.patterns ?? []).map((p) => `re:${p.source}::${p.flags ?? ''}`);
+  if (record.check !== undefined) signals.push(`check:${JSON.stringify(record.check)}`);
+  for (const signal of signals) {
+    if (seenSignals.has(signal)) signalCollisions.push(`${record.id} ~= ${seenSignals.get(signal)}`);
+    else seenSignals.set(signal, record.id);
+  }
+}
+assert(
+  qualityOffenders.length === 0,
+  `quality: every rule ships >=1 positive and >=1 negative test (${ruleFiles.length} rules)`,
+  qualityOffenders.join('; '),
+);
+assert(
+  signalCollisions.length === 0,
+  `quality: no duplicate detection signals (${seenSignals.size} unique)`,
+  signalCollisions.join('; '),
+);
+assert(
+  qualityPos >= ruleFiles.length && qualityNeg >= ruleFiles.length,
+  `quality: ledger ${qualityPos} positive + ${qualityNeg} negative executable tests`,
+  '',
+);
+
 // --- 3. negative: invalid pack fixtures rejected ----------------------------
 const NEGATIVE = {
   'sast-bad-regex.json': 'invalid regex',

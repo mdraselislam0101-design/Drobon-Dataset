@@ -1,0 +1,36 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-022",
+  "title": "Hardcoded application secret key — review required",
+  "description": "A framework secret key (Flask/Django SECRET_KEY style) is assigned a quoted literal in source. The key signs sessions and tokens, so anyone with repository access can forge them until the key is rotated.",
+  "severity": "HIGH",
+  "cwe": "CWE-798",
+  "category": "hardcoded-credential",
+  "remediation": "Load the secret key from an environment variable or secret manager at startup and fail closed when it is absent. Rotate the exposed value immediately.",
+  "limitation": "Lexical: matches quoted literals only; keys from config files, vaults, or short placeholders never match. Whether the value is production or test-only needs human review.",
+  "languages": ["python"],
+  "patterns": [
+    {
+      "source": "secret_key\\s*=\\s*[\"'][^\"']{4,}[\"']",
+      "flags": "i"
+    }
+  ],
+  "tests": [
+    {
+      "line": "app.secret_key = \"dev-secret-12345\"",
+      "match": true
+    },
+    {
+      "line": "SECRET_KEY = 'abcd1234efgh'",
+      "match": true
+    },
+    {
+      "line": "app.secret_key = os.environ[\"KEY\"]",
+      "match": false
+    },
+    {
+      "line": "secret_key = \"\"",
+      "match": false
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-021",
+  "title": "Security group open to the world (0.0.0.0/0) — review required",
+  "description": "An ingress CIDR list contains 0.0.0.0/0, so the port accepts traffic from the entire internet, including scanners and botnets. This lexical rule flags the open CIDR; the reviewer scopes it to the networks that genuinely need access.",
+  "severity": "HIGH",
+  "cwe": "CWE-284",
+  "category": "access-control",
+  "remediation": "Replace 0.0.0.0/0 with the exact caller CIDRs (office, VPN, load balancer). Prefer security-group references over raw CIDRs and re-audit on every network change.",
+  "limitation": "Lexical, single-line: CIDRs built by variables or spread across lines are missed. IPv6 open ingress (::/0) is out of scope for this rule.",
+  "languages": ["hcl", "terraform"],
+  "patterns": [
+    {
+      "source": "cidr_blocks\\s*=\\s*\\[[^\\]]*\"0\\.0\\.0\\.0/0\""
+    }
+  ],
+  "tests": [
+    {
+      "line": "cidr_blocks = [\"0.0.0.0/0\"]",
+      "match": true
+    },
+    {
+      "line": "cidr_blocks=[\"0.0.0.0/0\", \"10.0.0.0/8\"]",
+      "match": true
+    },
+    {
+      "line": "cidr_blocks = [\"10.0.0.0/8\"]",
+      "match": false
+    },
+    {
+      "line": "cidr_blocks = []",
+      "match": false
+    }
+  ]
+}

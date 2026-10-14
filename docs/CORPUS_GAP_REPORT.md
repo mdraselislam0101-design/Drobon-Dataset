@@ -1,7 +1,7 @@
 # CORPUS_GAP_REPORT.md — category-by-category 100K gap (evidence-backed)
 
 Date: 2026-10-14. Counts are the suite-recomputed `CORPUS_TARGETS.json`
-inventory (validated-only 193). App alignment follows the in-repo capability
+inventory (validated-only 205). App alignment follows the in-repo capability
 contract (`docs/CAPABILITY_COVERAGE.md`, app verified read-only at `c32c797`);
 the app repo was not present locally in this run, so no live app re-check was
 performed — re-verify that table at the next app check before using this gap
@@ -37,6 +37,6 @@ given. Volumes from upstream are unquoted (null / NOT_MEASURED).
 
 ## Totals
 
-- Validated-only: 193. License-cleared eligible: 0. Verified production: 0.
+- Validated-only: 205. License-cleared eligible: 0. Verified production: 0.
 - Synthetic rehearsal items (never production): 1,000 + 10,000.
 - Remaining to 100,000: 100,000. Release: NO-GO (see report).
