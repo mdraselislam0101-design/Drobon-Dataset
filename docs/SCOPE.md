@@ -26,6 +26,9 @@ Method: cloned `Drobon` (`main`, 2026-10-14) and searched `apps/*/src` + `packag
 | 16 | Student lessons (`learning/lessons/`) | **DATA — this repo**; consumer = future loader extending the lesson catalog | `docs/AUDIENCES.md`; mirrors `StudentLessonInternal` + shared bounds (`student.ts`) |
 | 17 | Assessment templates (`assessments/templates/`) | **DATA — this repo**; consumer = future loader offering starting points | `docs/AUDIENCES.md`; mirrors Assessment bounds (`assessments.ts`); never pre-declares authorization |
 | 18 | Engagement templates (`engagements/`) | **DATA — this repo**; consumer = future loader (pentester setup aids) | `docs/AUDIENCES.md`; authorized + passive only, banned-phrase lint |
+| 19 | CWE knowledge (`knowledge/cwe/`) | **DATA — this repo**; own-words summaries + canonical MITRE links; every pack/remediation CWE must resolve here (consistency-tested) | `docs/AUDIENCES.md`; url executably pinned to the entry's own MITRE page |
+| 20 | AI assistant reasoning | NOT data — deterministic answers are computed from scan state (intent recognizer + fingerprint comparison); provider mode is an LLM boundary | `apps/api/src/assistant/service.ts` (no message templates to externalize) |
+| 21 | Security reports (JSON/Markdown/SARIF/SBOM) | NOT data — pure renderers over scan results (canonical JSON, integrity verify, format emitters) | `apps/api/src/reports/build.ts` |
 
 ## Completeness statement
 

@@ -1,8 +1,8 @@
 # Drobon-Dataset
 
-Standalone **vulnerability-intelligence dataset + rule packs + user-type datasets** for [Drobon Aegis](https://github.com/mdraselislam0101-design/Drobon) (the `Drobon` app).
+Standalone **vulnerability-intelligence dataset + rule packs + user-type datasets** for [Drobon Aegis](https://github.com/mdraselislam0101-design/Drobon) (the `Drobon` app) — the project's datacenter: every external data need of the main app, versioned, validated, and cross-checked here.
 
-This repository exists because the app enforces an **absolute dataset lock**: no CVE / NVD / GHSA / OSV / KEV / EPSS data may ever enter the app repository — not vendored, not embedded, not synthesized. The app's SCA engine stays fully usable without any dataset (inventory + SBOM) and honestly reports `NOT_ASSESSED` until a real provider matches records from **loaded data**. This repo is where that loaded data lives, versioned and reviewable on its own — alongside versioned, tested **rule packs** (SAST, secrets, DAST patterns-as-data) and **audience datasets** (remediation knowledge, student lessons, assessment and engagement templates) for future app-side loaders.
+This repository exists because the app enforces an **absolute dataset lock**: no CVE / NVD / GHSA / OSV / KEV / EPSS data may ever enter the app repository — not vendored, not embedded, not synthesized. The app's SCA engine stays fully usable without any dataset (inventory + SBOM) and honestly reports `NOT_ASSESSED` until a real provider matches records from **loaded data**. This repo is where that loaded data lives, versioned and reviewable on its own — alongside versioned, tested **rule packs** (SAST, secrets, DAST patterns-as-data) and **audience datasets** (remediation knowledge, CWE reference, student lessons, assessment and engagement templates) for future app-side loaders.
 
 ## Sibling repositories
 
@@ -13,16 +13,19 @@ This repository exists because the app enforces an **absolute dataset lock**: no
 
 What lives where (by design — proven in `docs/SCOPE.md` by inventorying every app seam):
 
-- **App logic** (engines, hardcoded matchers, SCA parsers, provider seam, lessons, remediation) → `Drobon` repo only.
+- **App logic** (engines, hardcoded matchers, SCA parsers, provider seam, lessons, remediation, assistant reasoning, report renderers) → `Drobon` repo only.
 - **Vulnerability data + rule packs + audience datasets** → this repo only.
 - **Database schemas** → `Drobon-Database` repo only.
+- **Exploit payloads / active-attack tooling** → nowhere, ever.
 
 ## Data
 
-- **50 reviewed GHSA seed records** (25 npm + 25 pypi), imported 2026-10-14 via `scripts/import-ghsa.mjs` — reviewed advisories only, withdrawn excluded, every record with source URL + retrieval time.
+- **100 reviewed GHSA seed records** (50 npm + 50 pypi), imported 2026-10-14 via `scripts/import-ghsa.mjs` — reviewed advisories only, withdrawn excluded, every record with source URL + retrieval time.
 - **3 synthetic fixtures** (`*/samples/`, `DROBON-SAMPLE-###`) proving format/validator behavior; they assert nothing about the real world.
-- **14 starter pack rules** (4 SAST + 4 secrets + 6 DAST), all original Drobon content with executable example tests — no proprietary rule was copied from any commercial tool, ever.
-- **12 audience starters**: 4 remediation entries (Developer), 3 executable lessons (Student), 3 assessment templates (Security Professional), 2 passive-only engagement templates (Pentester).
+- **18 starter pack rules** (8 SAST + 4 secrets + 6 DAST), all original Drobon content with executable example tests — no proprietary rule was copied from any commercial tool, ever.
+- **18 remediation entries** — one per pack rule, enforced by consistency tests (no finding without guidance).
+- **10 CWE knowledge entries** in our own words, each linking its canonical MITRE page; every CWE reference in packs/remediation must resolve here (enforced).
+- **8 audience starters**: 3 executable lessons (Student), 3 assessment templates (Security Professional), 2 passive-only engagement templates (Pentester).
 - **OSV importer** (`scripts/import-osv.mjs`) for open aggregated data (mapping covered by fixture tests; live import needs network to api.osv.dev).
 - Coverage is a **growing seed, never a completeness claim**: an empty result means "not in this dataset", never "not vulnerable" (HONESTY.md rule 5).
 
@@ -46,7 +49,9 @@ Drobon-Dataset/
 │   └── npm/samples/ + pypi/samples/  # Labeled synthetic fixtures
 ├── packs/
 │   ├── sast/v1/ + secrets/v1/ + dast/v1/  # pack.json + rules/*.json (one rule per file)
-├── knowledge/remediation/     # Remediation entries, one file per rule id
+├── knowledge/
+│   ├── remediation/           # Remediation entries, one file per rule id
+│   └── cwe/                   # CWE reference entries, one file per CWE id
 ├── learning/lessons/          # Student lessons, one file per lsn_* id
 ├── assessments/templates/     # Assessment templates, one file per tmpl_* id
 ├── engagements/               # Engagement templates, one file per eng_* id (passive-only)
@@ -58,19 +63,21 @@ Drobon-Dataset/
 │   ├── validate.mjs           # Zero-dependency advisory validator (executable spec)
 │   ├── validate-packs.mjs     # Zero-dependency pack validator (executes rule tests)
 │   ├── validate-audiences.mjs # Zero-dependency audience validator (executes lessons)
+│   ├── validate-cwe.mjs       # Zero-dependency CWE validator (checks MITRE links)
 │   ├── range.mjs              # semver / PEP 440 range syntax + evaluation
 │   ├── import-ghsa.mjs        # Reviewed-GHSA importer (validates before writing)
 │   ├── import-osv.mjs         # OSV importer (fixture-tested mapping)
 │   ├── check-vectors.mjs      # Provider interop checker
 │   ├── test.mjs               # Test runner part 1 (advisories + ranges + layout + vectors)
 │   ├── test-packs.mjs         # Test runner part 2 (packs + negatives + OSV mapping)
-│   └── test-audiences.mjs     # Test runner part 3 (audiences + negatives)
+│   ├── test-audiences.mjs     # Test runner part 3 (audiences + negatives)
+│   └── test-consistency.mjs   # Test runner part 4 (cross-dataset integrity + coverage)
 ├── test/
 │   ├── invalid/               # Advisory fixtures the validator MUST reject
 │   ├── invalid-packs/         # Pack fixtures the pack validator MUST reject
 │   ├── invalid-audiences/     # Audience fixtures the audience validator MUST reject
 │   └── fixtures/              # OSV mapping fixtures (synthetic API-shaped input)
-└── .github/workflows/ci.yml   # CI: npm test + validate + vectors
+└── .github/workflows/ci.yml   # CI: npm test + all validators + vectors
 ```
 
 ## Honesty rules (short version)
@@ -80,20 +87,22 @@ Full rules: `docs/HONESTY.md` (advisories), `docs/PACKS.md` (packs), `docs/AUDIE
 1. **Verified records only** — every non-fixture record traces to a real published source (GHSA/OSV/…) with URL + retrieval time. No invented CVE/GHSA IDs, no guessed severities (OSV severity comes from CVSS via the standard mapping), no risk scores.
 2. **Fixtures are labeled** — synthetic advisory samples carry `"fixture": true` and `DROBON-SAMPLE-###` ids. Packs/audiences have no samples at all: every entry is genuine and tested.
 3. **Closed, bounded, executed shapes** — advisories mirror the app's `ScaAdvisory` contract; pack patterns must compile, pass ReDoS lint, and reproduce every declared example test; lessons targeting pack rules must demonstrably work.
-4. **`NOT_ASSESSED` stays honest** — missing data is reported as missing, never as "clean".
-5. **Original content only** — every pattern, lesson, template, and guidance entry is written from public knowledge. Proprietary rules, courses, and methodologies are never copied, adapted, or paraphrased.
-6. **Audience boundaries** — templates never pre-declare authorization; engagement content is authorized + passive only (banned-phrase lint + human review); learner code is never executed.
+4. **Cross-dataset integrity (enforced)** — every pack rule has a remediation entry, every CWE reference resolves to `knowledge/cwe/`, every lesson target resolves to a pack rule. Dangling references fail the suite.
+5. **`NOT_ASSESSED` stays honest** — missing data is reported as missing, never as "clean".
+6. **Original content only** — every pattern, lesson, template, and guidance entry is written from public knowledge. Proprietary rules, courses, and methodologies are never copied, adapted, or paraphrased.
+7. **Audience boundaries** — templates never pre-declare authorization; engagement content is authorized + passive only (banned-phrase lint + human review); learner code is never executed.
 
 ## Commands
 
 Prerequisites: Node.js 22 (see `.nvmrc`), no `npm install` needed — zero dependencies.
 
 ```bash
-npm test                  # full suite: advisories + packs + audiences + vectors
-npm run validate          # validate every record under vuln-intel/
-npm run validate:packs    # validate every pack manifest + rule under packs/
+npm test                    # full suite: advisories + packs + audiences + consistency
+npm run validate            # validate every record under vuln-intel/
+npm run validate:packs      # validate every pack manifest + rule under packs/
 npm run validate:audiences  # validate knowledge/ + learning/ + assessments/ + engagements/
-npm run test:vectors      # provider interop vectors only
+npm run validate:cwe        # validate every entry under knowledge/cwe/
+npm run test:vectors        # provider interop vectors only
 npm run import:ghsa -- --limit 15   # import reviewed advisories (GITHUB_TOKEN recommended)
 npm run import:osv -- --limit 20    # import OSV records (needs network to api.osv.dev)
 ```
@@ -102,7 +111,7 @@ npm run import:osv -- --limit 20    # import OSV records (needs network to api.o
 
 1. Read the spec first: `docs/FORMAT.md` + `docs/HONESTY.md` (advisories), `docs/PACKS.md` (packs), `docs/AUDIENCES.md` (audiences).
 2. Prefer the importers for advisory growth; hand-written records need full `provenance` and one file per advisory-package (see `vuln-intel/README.md`).
-3. Pack rules must be **original**, tested (≥1 positive + ≥1 negative example), severity-conservative, with a mandatory `limitation` section.
+3. Pack rules must be **original**, tested (≥1 positive + ≥1 negative example), severity-conservative, with a mandatory `limitation` section — **and** ship with a remediation entry plus resolvable CWE (consistency tests enforce both).
 4. Audience content must be **original**; lessons must execute against their target rules; templates use exact hostnames and never declare authorization; engagements stay passive-only.
 5. If a new record changes any vector outcome, update `interop/provider-vectors.json` in the same commit with a note.
 6. Run `npm test` before pushing — CI enforces it.

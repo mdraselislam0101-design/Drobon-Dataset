@@ -12,6 +12,7 @@ One file per rule (`<RULE-ID>.json`), mirroring the app's `FindingRemediationGui
 - `ruleId`: any `DG-SAST-*` / `DG-SEC-*` / `DG-DAST-*` / `DPK-*` id.
 - Bounds: `whyItMatters`/`verification` ≤1000, `actions` 1–8 × ≤400, `example.before`/`after` ≤800, `caveat` ≤400, `standardId` `^CWE-[0-9]{1,4}$` (omit when uncertain).
 - Loader contract: merge by `ruleId` into remediation responses; entries for unknown rule ids must be ignored with a warning, never surfaced (fail-closed against stale data).
+- Coverage bar (consistency-tested): every `DPK-*` pack rule MUST have a remediation entry — a new rule without guidance fails `npm test`. The reverse is allowed (entries may cover `DG-*` app rules too).
 
 ## 2. Student lessons — `learning/lessons/` (Student)
 
