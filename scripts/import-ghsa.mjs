@@ -17,6 +17,7 @@
  */
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { SCHEMA_VERSION, validateRecord } from './validate.mjs';
 
 // REST advisory API uses low/medium/high/critical ("moderate" kept defensively).
@@ -194,7 +195,13 @@ async function main() {
   }
 }
 
-main().catch((err) => {
-  process.stderr.write(`import-ghsa: FAIL (${err.message})\n`);
-  process.exitCode = 1;
-});
+const invokedAsScript =
+  process.argv[1] !== undefined &&
+  pathToFileURL(resolve(process.argv[1])).href === import.meta.url;
+
+if (invokedAsScript) {
+  main().catch((err) => {
+    process.stderr.write(`import-ghsa: FAIL (${err.message})\n`);
+    process.exitCode = 1;
+  });
+}

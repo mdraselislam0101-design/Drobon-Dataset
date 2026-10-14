@@ -19,6 +19,9 @@ Method: cloned `Drobon` (`main`, 2026-10-14) and searched `apps/*/src` + `packag
 | 9 | Runtime stores (users, scans, projects, payments, …) | NOT data — operational persistence; future schemas belong to `Drobon-Database`, never here | `apps/api/src/*/store.ts`, `apps/api/src/auth/jsonFileUserRepository.ts` |
 | 10 | Assessments | NOT data — user-created records in the runtime store | `apps/api/src/assessments/store.ts` |
 | 11 | Config selectors | No other dataset switch exists — `VULN_INTEL_PROVIDER` is the only one, and it is locked | `apps/api/src/config.ts` (no other `*_PROVIDER`/`*_DATASET` env) |
+| 12 | Rule packs: SAST (`DPK-SAST-*`) | **DATA — this repo** (`packs/sast/`); consumer = future app pack-loader (not yet implemented) | `docs/PACKS.md`; mirrors the app `SastRule` matcher contract (`sast/rules.ts`), lexical only |
+| 13 | Rule packs: secrets (`DPK-SEC-*`) | **DATA — this repo** (`packs/secrets/`); consumer = future loader | `docs/PACKS.md`; mirrors `SecretsRule` (`secrets/rules.ts`): shape-only + denylist + redaction |
+| 14 | Rule packs: DAST (`DPK-DAST-*`) | **DATA — this repo** (`packs/dast/`); consumer = future loader | `docs/PACKS.md`; mirrors `DastRuleInput` (`dast/rules.ts`): passive checks only |
 
 ## Completeness statement
 
