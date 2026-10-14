@@ -310,6 +310,7 @@ assert(
 const NEGATIVE_MATRIX = {
   'bad-status.json': 'coverageStatus',
   'log-bad-row.json': 'ingestionLog',
+  'pin-bad-id.json': 'unresolved',
   'missing-evidence.json': 'evidence',
   'count-mismatch.json': 'recompute',
   'dangling-script.json': 'not found',

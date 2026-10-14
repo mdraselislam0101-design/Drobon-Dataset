@@ -69,6 +69,7 @@ const NEGATIVE = {
   'empty-affected.json': 'affected',
   'not-an-object.json': 'must be an object',
   'invalid-range.json': 'affected[0].range',
+  'invalid-ghsa-id.json': 'GHSA-xxxx-yyyy-zzzz',
 };
 for (const [name, needle] of Object.entries(NEGATIVE)) {
   const file = join(ROOT, 'test', 'invalid', name);
@@ -267,6 +268,31 @@ assert(isSplitFilename('GHSA-xxxx-yyyy-zzzz', 'GHSA-xxxx-yyyy-zzzz'), 'positive:
 assert(isSplitFilename('GHSA-xxxx-yyyy-zzzz', 'GHSA-xxxx-yyyy-zzzz--99'), 'positive: split matcher accepts --N suffixes');
 assert(!isSplitFilename('GHSA-xxxx-yyyy-zzzz', 'GHSA-xxxx-yyyy-zzzz--x'), 'negative: split matcher rejects non-numeric suffixes');
 assert(!isSplitFilename('GHSA-xxxx-yyyy-zzzz', 'GHSA-other'), 'negative: split matcher rejects other ids');
+
+// --- schema parity: advisory.schema.json mirrors the GHSA-id rule -----------------
+// FORMAT.md: the validator wins and the schema must mirror it. The GHSA-id rule
+// is conditional logic, so pin its presence, structure, and pattern behavior here
+// (the repo ships no JSON-Schema engine; this is the executable half of the mirror).
+const advisorySchema = JSON.parse(readFileSync(join(ROOT, 'schema', 'advisory.schema.json'), 'utf8'));
+const ghsaBranches = (advisorySchema.allOf ?? []).filter(
+  (branch) => branch?.then?.properties?.id?.pattern?.includes('GHSA-'),
+);
+assert(ghsaBranches.length === 1, 'schema: exactly one GHSA-id conditional in allOf');
+const ghsaIf = ghsaBranches[0]?.if;
+assert(
+  ghsaIf?.properties?.fixture?.const === false &&
+    ghsaIf?.properties?.provenance?.properties?.source?.const === 'GHSA',
+  'schema: GHSA conditional fires on real records with provenance.source GHSA',
+);
+const ghsaSchemaPattern = new RegExp(
+  ghsaBranches[0]?.then?.properties?.id?.pattern ?? '($^)',
+);
+assert(
+  ghsaSchemaPattern.test('GHSA-ab12-cd34-ef56') &&
+    !ghsaSchemaPattern.test('CVE-2024-1234') &&
+    !ghsaSchemaPattern.test('GHSA-abc'),
+  'schema: GHSA pattern accepts GHSA ids and rejects non-GHSA ids',
+);
 
 // --- 6. provider interop vectors -------------------------------------------
 const vectorResult = checkVectors(ROOT);
