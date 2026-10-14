@@ -24,7 +24,8 @@
  * 11. integrity manifests are deterministic + catch tampering (on a tmp
  *     copy), and the dedup recount agrees with CORPUS_TARGETS;
  * 12. the 4 ingestion gates load BLOCKED + requireGates() fail-closed
- *     matrix (single + multiple failures block, malformed file blocks).
+ *     matrix (single + multiple failures block, malformed file blocks);
+ * 13. credential-leak scan (strict repo-wide + audited secrets fixtures).
  *
  * Usage: node scripts/test-consistency.mjs
  */
@@ -622,6 +623,103 @@ assert(
   corruptMessage.includes('gate file invalid'),
   'gates matrix: malformed gate file blocks (fail-closed)',
   corruptMessage,
+);
+
+
+// --- 13. credential-leak scan -------------------------------------------------------
+// High-confidence secret shapes must appear NOWHERE except the documented
+// secrets-detection fixtures (packs/secrets/**), whose credential-shaped
+// test lines each carry a safety marker (EXAMPLE-style, placeholder-only, or
+// a pinned reviewed value). Patterns are built from string fragments so this
+// scanner cannot match its own source.
+const SECRET_PATTERNS = [
+  { name: 'pem-private-key', re: new RegExp('-----BEGIN (' + 'RSA |EC |OPENSSH )?PRIVATE KEY-----') },
+  { name: 'aws-key-id', re: new RegExp('AK' + 'IA[0-9A-Z]{16}') },
+  { name: 'github-token', re: new RegExp('ghp' + '_[A-Za-z0-9]{36}') },
+  { name: 'slack-token', re: new RegExp('xox' + '[bap]-[A-Za-z0-9-]+') },
+  {
+    name: 'secret-assignment',
+    re: new RegExp("(api[_-]?key|secret|passwd|password|token)\\s*[:=]\\s*['\"][A-Za-z0-9_\\-+/=]{12,}['\"]", 'i'),
+  },
+];
+const FIXTURE_SAFE_MARKERS = [
+  /EXAMPLE/i,
+  /(.)\1{7,}/,
+  /1234567890/,
+  /sk_live_9f2d8c1e4b7a6f5d/,
+  /"line": "-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"/,
+];
+function collectRepoTextFiles(root) {
+  const found = [];
+  const walk = (dir) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (entry.name === '.git') continue;
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (entry.isFile()) {
+        try {
+          const text = readFileSync(full, 'utf8');
+          if (!text.includes('\0')) found.push(full);
+        } catch {
+          // Unreadable files are out of scope for a text scan.
+        }
+      }
+    }
+  };
+  walk(root);
+  return found.sort();
+}
+const strictViolations = [];
+const fixtureFailures = [];
+for (const file of collectRepoTextFiles(ROOT)) {
+  const rel = file.slice(ROOT.length + 1);
+  const inSecretsFixtures = rel === 'packs/secrets' || rel.startsWith('packs/secrets/');
+  const lines = readFileSync(file, 'utf8').split('\n');
+  lines.forEach((line, index) => {
+    for (const pattern of SECRET_PATTERNS) {
+      if (!pattern.re.test(line)) continue;
+      if (!inSecretsFixtures) {
+        strictViolations.push(`${rel}:${index + 1}:${pattern.name}`);
+      } else if (!FIXTURE_SAFE_MARKERS.some((marker) => marker.test(line))) {
+        fixtureFailures.push(`${rel}:${index + 1}:${pattern.name}: ${line.trim().slice(0, 80)}`);
+      }
+    }
+  });
+}
+assert(
+  strictViolations.length === 0,
+  'positive: no credential shapes outside packs/secrets fixtures',
+  strictViolations.slice(0, 5).join(' | '),
+);
+assert(
+  fixtureFailures.length === 0,
+  'positive: every secrets-fixture credential shape carries a safety marker',
+  fixtureFailures.slice(0, 5).join(' | '),
+);
+const scannerPositives = [
+  '-----BEGIN ' + 'RSA PRIVATE KEY-----',
+  'AK' + 'IA1234567890ABCDEF',
+  'ghp' + '_' + 'A'.repeat(36),
+  'xox' + 'b-123456789012-abcdefghij',
+  'api_key = "' + 'sk_live_9f2d8c1e4b7a6f5d00' + '"',
+];
+const scannerDead = SECRET_PATTERNS.filter((pattern, index) => !pattern.re.test(scannerPositives[index]));
+assert(
+  scannerDead.length === 0,
+  'positive: leak scanner fires on all 5 synthetic credential shapes',
+  scannerDead.map((pattern) => pattern.name).join(', '),
+);
+const scannerNegatives = ['no secrets here', 'token = "short"', 'see ghp_ docs', 'AKIA docs mention'];
+const scannerFalseAlarms = [];
+for (const line of scannerNegatives) {
+  for (const pattern of SECRET_PATTERNS) {
+    if (pattern.re.test(line)) scannerFalseAlarms.push(`${pattern.name} ~ ${line}`);
+  }
+}
+assert(
+  scannerFalseAlarms.length === 0,
+  'positive: leak scanner stays silent on safe documentation lines',
+  scannerFalseAlarms.join(' | '),
 );
 
 // --- summary --------------------------------------------------------------------

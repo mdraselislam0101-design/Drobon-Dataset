@@ -3,7 +3,9 @@
  *
  * Groups real (fixture === false) records under a directory into corpus items
  * keyed by (source, sourceId, ecosystem, package). Same-tuple files (base +
- * `<ID>--N.json` shards) collapse to ONE item. Read-only: never writes.
+ * `<ID>--N.json` shards) collapse to ONE item. Files in one tuple that
+ * disagree on severity/summary/url are reported as conflicts (affected-only
+ * differences are sharding, never conflicts). Read-only: never writes.
  *
  * Usage:
  *   node scripts/dedup-report.mjs [dir]   (default: vuln-intel)
@@ -44,10 +46,13 @@ export function identityOf(record) {
 
 /**
  * Group explicit file paths into items. Pure over file bytes (read-only).
- * Returns { files, items: [{ key, files: [rel...] }], multiFile: [...] }.
+ * Returns { files, items: [{ key, files: [rel...] }], multiFile: [...],
+ * conflicts: [{ key, field, files: [rel...] }] }.
  */
 export function groupFiles(filePaths, root = process.cwd()) {
   const groups = new Map();
+  const firstSeen = new Map();
+  const conflictById = new Map();
   let files = 0;
   for (const file of filePaths) {
     const record = JSON.parse(readFileSync(file, 'utf8'));
@@ -55,12 +60,30 @@ export function groupFiles(filePaths, root = process.cwd()) {
       continue;
     }
     files += 1;
+    const rel = relative(root, file);
     const key = identityOf(record);
     const flat = JSON.stringify([key.source, key.sourceId, key.ecosystem, key.package]);
     if (!groups.has(flat)) {
       groups.set(flat, { key, files: [] });
+      firstSeen.set(flat, {
+        file: rel,
+        severity: record.severity ?? null,
+        summary: record.summary ?? null,
+        url: record.url ?? null,
+      });
     }
-    groups.get(flat).files.push(relative(root, file));
+    groups.get(flat).files.push(rel);
+    const first = firstSeen.get(flat);
+    for (const field of ['severity', 'summary', 'url']) {
+      if ((record[field] ?? null) !== first[field]) {
+        const conflictId = `${flat}|${field}`;
+        if (!conflictById.has(conflictId)) {
+          conflictById.set(conflictId, { key, field, files: [first.file] });
+        }
+        const entry = conflictById.get(conflictId);
+        if (!entry.files.includes(rel)) entry.files.push(rel);
+      }
+    }
   }
   const items = [...groups.values()].sort((a, b) =>
     JSON.stringify(a.key) < JSON.stringify(b.key) ? -1 : 1,
@@ -68,7 +91,15 @@ export function groupFiles(filePaths, root = process.cwd()) {
   for (const item of items) {
     item.files.sort();
   }
-  return { files, items, multiFile: items.filter((item) => item.files.length > 1) };
+  const conflicts = [...conflictById.values()].sort((a, b) => {
+    const left = `${JSON.stringify(a.key)}|${a.field}`;
+    const right = `${JSON.stringify(b.key)}|${b.field}`;
+    return left < right ? -1 : left > right ? 1 : 0;
+  });
+  for (const entry of conflicts) {
+    entry.files.sort();
+  }
+  return { files, items, multiFile: items.filter((item) => item.files.length > 1), conflicts };
 }
 
 /** Group every real record under <root>/vuln-intel. */
@@ -97,6 +128,6 @@ if (invokedAsScript) {
     ? groupAdvisoryRecords(root)
     : groupFiles(collectJsonFilesRecursive(target), root);
   process.stdout.write(
-    `${JSON.stringify({ files: report.files, items: report.items.length, multiFileTuples: report.multiFile.length }, null, 2)}\n`,
+    `${JSON.stringify({ files: report.files, items: report.items.length, multiFileTuples: report.multiFile.length, conflictTuples: report.conflicts.length }, null, 2)}\n`,
   );
 }

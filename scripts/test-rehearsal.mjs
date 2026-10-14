@@ -90,6 +90,7 @@ assert(bad1k.length === 0, `rehearsal: all 1017 synthetic records validate (${ba
 const group1k = groupAdvisoryRecords(gen1k);
 assert(group1k.items.length === 1000, `rehearsal: 1K groups to 1000 items (got ${group1k.items.length})`);
 assert(group1k.multiFile.length === 17, `rehearsal: 1K has 17 multi-file tuples (got ${group1k.multiFile.length})`);
+assert(group1k.conflicts.length === 0, 'rehearsal: 1K has zero conflicting tuples (shards differ only in affected)');
 const extraAccounted = group1k.multiFile.reduce((sum, item) => sum + (item.files.length - 1), 0);
 assert(extraAccounted === 17, `rehearsal: all 17 extra files land on existing tuples (got ${extraAccounted})`);
 const aliasRecord = readRecord(join(gen1k, 'vuln-intel', 'npm', 'SYNTH-000251.json'));
@@ -218,10 +219,45 @@ const rssMb = Math.round(process.memoryUsage().rss / 1024 / 1024);
 assert(stats10k.files === 10172 && stats10k.extra === 172, `rehearsal: 10K gen produces 10172 files / 172 extra (got ${stats10k.files}/${stats10k.extra})`);
 assert(bad10k.length === 0, `rehearsal: all 10172 synthetic records validate (${bad10k.length} bad)`);
 assert(group10k.items.length === 10000, `rehearsal: 10K groups to 10000 items (got ${group10k.items.length})`);
+assert(group10k.conflicts.length === 0, 'rehearsal: 10K has zero conflicting tuples');
 assert(JSON.stringify(manifest10k) === JSON.stringify(manifest10kAgain), 'rehearsal: 10K generation is byte-deterministic');
 assert(verifyManifest(gen10k, manifest10k).ok, 'rehearsal: 10K manifest verifies');
 assert(rssMb < 1024, `rehearsal: 10K peak RSS ${rssMb}MB stays under 1024MB`);
 assert(elapsedMs < 120000, `rehearsal: 10K completes in ${elapsedMs}ms (under 120000ms)`);
+
+// --- 9. conflicting records ------------------------------------------------------
+const conflictDir = join(scratch, 'conflict');
+mkdirSync(join(conflictDir, 'vuln-intel', 'npm'), { recursive: true });
+const conflictBase = readRecord(join(gen1k, 'vuln-intel', 'npm', 'SYNTH-000001.json'));
+writeFileSync(join(conflictDir, 'vuln-intel', 'npm', 'SYNTH-000001.json'), JSON.stringify(conflictBase, null, 2));
+const conflictRival = { ...conflictBase, severity: conflictBase.severity === 'LOW' ? 'HIGH' : 'LOW' };
+writeFileSync(join(conflictDir, 'vuln-intel', 'npm', 'SYNTH-000001--2.json'), JSON.stringify(conflictRival, null, 2));
+const conflictGroup = groupAdvisoryRecords(conflictDir);
+assert(conflictGroup.items.length === 1, 'rehearsal: conflicting pair still groups to 1 item');
+assert(
+  conflictGroup.conflicts.length === 1 && conflictGroup.conflicts[0].field === 'severity',
+  'rehearsal: same-tuple severity disagreement is reported as a conflict',
+  JSON.stringify(conflictGroup.conflicts),
+);
+const shardPair = [
+  join(gen1k, 'vuln-intel', 'npm', 'SYNTH-000137.json'),
+  join(gen1k, 'vuln-intel', 'npm', 'SYNTH-000137--2.json'),
+];
+const shardPairGroup = groupFiles(shardPair, gen1k);
+assert(
+  shardPairGroup.items.length === 1 && shardPairGroup.conflicts.length === 0,
+  'rehearsal: affected-only shard differences are NOT conflicts',
+);
+const summaryPairDir = join(scratch, 'conflict-summary');
+mkdirSync(join(summaryPairDir, 'vuln-intel', 'npm'), { recursive: true });
+const summaryRival = { ...conflictBase, summary: 'SYNTHETIC rival summary with different words.' };
+writeFileSync(join(summaryPairDir, 'vuln-intel', 'npm', 'SYNTH-000001.json'), JSON.stringify(conflictBase, null, 2));
+writeFileSync(join(summaryPairDir, 'vuln-intel', 'npm', 'SYNTH-000001--2.json'), JSON.stringify(summaryRival, null, 2));
+const summaryPairGroup = groupAdvisoryRecords(summaryPairDir);
+assert(
+  summaryPairGroup.conflicts.length === 1 && summaryPairGroup.conflicts[0].field === 'summary',
+  'rehearsal: same-tuple summary disagreement is reported as a conflict',
+);
 
 rmSync(scratch, { recursive: true, force: true });
 
