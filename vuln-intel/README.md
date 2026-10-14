@@ -21,7 +21,7 @@ vuln-intel/
 
 ## Current state
 
-- **30 real records** (15 npm + 15 pypi): GitHub-reviewed advisories, withdrawn excluded, imported 2026-10-14 via `scripts/import-ghsa.mjs` with full provenance. Regrow/extend with `npm run import:ghsa -- --limit N` (existing files are skipped unless `--force`).
+- **50 real records** (25 npm + 25 pypi): GitHub-reviewed advisories, withdrawn excluded, imported 2026-10-14 via `scripts/import-ghsa.mjs` with full provenance. Regrow/extend with `npm run import:ghsa -- --limit N` (existing files are skipped unless `--force`).
 - **3 fixtures** (`DROBON-SAMPLE-001…003`) proving format/validator behavior end to end.
 
 ## Vector maintenance

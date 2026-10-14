@@ -1,0 +1,51 @@
+{
+  "schemaVersion": "drobon.learning.lesson/v1",
+  "id": "lsn_pack_eval_fix",
+  "title": "Fixing dynamic code evaluation (eval on built strings)",
+  "summary": "See rule DPK-SAST-001 fire on a synthetic file, replace eval() with a lookup table, and verify the finding is gone on rescan.",
+  "concept": "eval() executes a string as JavaScript. When part of that string is built from a value — concatenation or template interpolation — the value becomes code, and whoever controls the value controls the program. That is code injection. Almost every eval-on-a-built-string can be replaced with a lookup table keyed by the value, an explicit branch, or a real parser for the exact data format. This lesson pairs with pack rule DPK-SAST-001, which flags the lexical shape eval( on one line. The rule is line-based and conservative: it cannot prove taint, so every hit is review-required rather than proven exploitable.",
+  "objectives": [
+    "Explain why mixing a value into executed code is code injection.",
+    "Recognise the eval( sink in review and in scan findings.",
+    "Replace dynamic evaluation with a lookup table and verify by rescan."
+  ],
+  "practice": {
+    "instruction": "Import the starter file into one of your OWN projects, run a SAST scan, and find rule DPK-SAST-001. Read the finding, then apply the fix (replace eval with the lookup table from the fixed file), upload the fixed file, and run SAST again to verify the finding is no longer observed.",
+    "targetRuleId": "DPK-SAST-001",
+    "starterFiles": [
+      {
+        "path": "src/calculator.js",
+        "content": "// SYNTHETIC learning fixture (not production code).\nconst ops = { add: 1, sub: 2 };\n\nfunction compute(kind, a, b) {\n  return eval(\"a + b - \" + ops[kind]);\n}\n\nmodule.exports = { compute };\n"
+      }
+    ],
+    "fixInstruction": "Replace the eval() call with the lookup table shown in the fixed file: map each known kind to a real function, throw on unknown kinds, and keep values out of executed code.",
+    "fixedFiles": [
+      {
+        "path": "src/calculator.js",
+        "content": "// SYNTHETIC learning fixture (not production code).\nconst table = { add: (a, b) => a + b, sub: (a, b) => a - b };\n\nfunction compute(kind, a, b) {\n  const fn = table[kind];\n  if (!fn) throw new Error(\"unknown op\");\n  return fn(a, b);\n}\n\nmodule.exports = { compute };\n"
+      }
+    ]
+  },
+  "quiz": [
+    {
+      "prompt": "Why is eval(\"a + b - \" + ops[kind]) dangerous?",
+      "options": [
+        "It mixes a value into executed code, so input becomes code",
+        "It runs slower than a lookup table",
+        "It only works in browsers"
+      ],
+      "answerIndex": 0,
+      "explanation": "The concatenated value is parsed as JavaScript. Whoever influences the value influences the program — that channel collapse is code injection."
+    },
+    {
+      "prompt": "Which fix removes the sink without changing behavior for known operations?",
+      "options": [
+        "A lookup table of functions keyed by kind",
+        "Wrapping eval() in try/catch",
+        "Renaming the function"
+      ],
+      "answerIndex": 0,
+      "explanation": "The table dispatches on data, never on built code. try/catch only hides failures and renaming changes nothing."
+    }
+  ]
+}

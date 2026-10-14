@@ -22,6 +22,10 @@ Method: cloned `Drobon` (`main`, 2026-10-14) and searched `apps/*/src` + `packag
 | 12 | Rule packs: SAST (`DPK-SAST-*`) | **DATA — this repo** (`packs/sast/`); consumer = future app pack-loader (not yet implemented) | `docs/PACKS.md`; mirrors the app `SastRule` matcher contract (`sast/rules.ts`), lexical only |
 | 13 | Rule packs: secrets (`DPK-SEC-*`) | **DATA — this repo** (`packs/secrets/`); consumer = future loader | `docs/PACKS.md`; mirrors `SecretsRule` (`secrets/rules.ts`): shape-only + denylist + redaction |
 | 14 | Rule packs: DAST (`DPK-DAST-*`) | **DATA — this repo** (`packs/dast/`); consumer = future loader | `docs/PACKS.md`; mirrors `DastRuleInput` (`dast/rules.ts`): passive checks only |
+| 15 | Remediation knowledge (`knowledge/remediation/`) | **DATA — this repo**; consumer = future loader merging into remediation responses | `docs/AUDIENCES.md`; mirrors `FindingRemediationGuidance` (`findings.ts`) |
+| 16 | Student lessons (`learning/lessons/`) | **DATA — this repo**; consumer = future loader extending the lesson catalog | `docs/AUDIENCES.md`; mirrors `StudentLessonInternal` + shared bounds (`student.ts`) |
+| 17 | Assessment templates (`assessments/templates/`) | **DATA — this repo**; consumer = future loader offering starting points | `docs/AUDIENCES.md`; mirrors Assessment bounds (`assessments.ts`); never pre-declares authorization |
+| 18 | Engagement templates (`engagements/`) | **DATA — this repo**; consumer = future loader (pentester setup aids) | `docs/AUDIENCES.md`; authorized + passive only, banned-phrase lint |
 
 ## Completeness statement
 
