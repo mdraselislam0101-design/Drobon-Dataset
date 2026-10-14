@@ -138,6 +138,17 @@ export function validateRecord(value) {
       }
     }
   }
+  // Canonical upstream identifiers: GHSA-sourced records must carry GHSA-shaped
+  // ids. (OSV-sourced records are intentionally unconstrained — OSV aggregates
+  // GHSA/CVE/PYSEC and other id schemes.)
+  if (
+    !isFixture &&
+    typeof record['id'] === 'string' &&
+    record['provenance']?.source === 'GHSA' &&
+    !/^GHSA-[0-9A-Za-z]{4}-[0-9A-Za-z]{4}-[0-9A-Za-z]{4}$/.test(record['id'])
+  ) {
+    errors.push('id: GHSA-sourced records must use ids matching GHSA-xxxx-yyyy-zzzz');
+  }
   if (record['ecosystem'] !== undefined && !ECOSYSTEMS.includes(record['ecosystem'])) {
     errors.push(`ecosystem: must be one of ${ECOSYSTEMS.join(', ')}`);
   }
@@ -261,7 +272,8 @@ function collectJsonFiles(target) {
       const full = join(dir, entry.name);
       if (entry.isDirectory()) {
         walk(full);
-      } else if (entry.isFile() && entry.name.endsWith('.json')) {
+      } else if (entry.isFile() && entry.name.endsWith('.json') && entry.name !== 'sources.json') {
+        // sources.json is registry metadata, not a record (validated by validate-sources.mjs).
         found.push(full);
       }
     }

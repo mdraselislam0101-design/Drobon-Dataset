@@ -16,7 +16,9 @@
  *     recomputed counts (the count-line format is load-bearing);
  *  7. every fixture under test/invalid-cwe/ MUST be rejected;
  *  8. the requirements matrix validates + every fixture under
- *     test/invalid-matrix/ MUST be rejected.
+ *     test/invalid-matrix/ MUST be rejected;
+ *  9. the source registry validates + every record source resolves +
+ *     the OSV seed list is well-formed (invalid-sources rejected).
  *
  * Usage: node scripts/test-consistency.mjs
  */
@@ -25,6 +27,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { validateCwePath } from './validate-cwe.mjs';
 import { validateMatrixPath } from './validate-matrix.mjs';
+import { validateSourcesPath } from './validate-sources.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 let passed = 0;
@@ -53,7 +56,8 @@ function collectJsonFiles(root) {
       const full = join(dir, entry.name);
       if (entry.isDirectory()) {
         walk(full);
-      } else if (entry.isFile() && entry.name.endsWith('.json')) {
+      } else if (entry.isFile() && entry.name.endsWith('.json') && entry.name !== 'sources.json') {
+        // sources.json is registry metadata, not a record (validated by validate-sources.mjs).
         found.push(full);
       }
     }
@@ -287,6 +291,7 @@ assert(
 // --- 7. negative: invalid CWE fixtures rejected --------------------------------------
 const NEGATIVE_CWE = {
   'cwe-leading-zero.json': 'id: must match',
+  'cwe-wrong-url.json': 'canonical',
 };
 for (const [name, needle] of Object.entries(NEGATIVE_CWE)) {
   const file = join(ROOT, 'test', 'invalid-cwe', name);
@@ -304,6 +309,7 @@ assert(
 );
 const NEGATIVE_MATRIX = {
   'bad-status.json': 'coverageStatus',
+  'log-bad-row.json': 'ingestionLog',
   'missing-evidence.json': 'evidence',
   'count-mismatch.json': 'recompute',
   'dangling-script.json': 'not found',
@@ -315,6 +321,114 @@ for (const [name, needle] of Object.entries(NEGATIVE_MATRIX)) {
   const rejected = errors.length > 0 && errors.some((error) => error.includes(needle));
   assert(rejected, `negative: test/invalid-matrix/${name} rejected (${needle})`, errors.join('; '));
 }
+
+// --- 9. source registry + seed list integrity ------------------------------------------
+// Every record provenance.source must resolve to vuln-intel/sources.json
+// (terms pointers + review status; pointers grant nothing), and the OSV
+// seed package list must be well-formed (OSV ecosystem names, bounded
+// trimmed names, no duplicates). (sources.json itself is excluded from
+// record walks by the collectors below — it is registry metadata, not
+// a record.)
+const sourceRegistryErrors = validateSourcesPath(join(ROOT, 'vuln-intel', 'sources.json'));
+assert(
+  sourceRegistryErrors.length === 0,
+  'positive: vuln-intel/sources.json validates',
+  sourceRegistryErrors.join('; '),
+);
+if (sourceRegistryErrors.length === 0) {
+  const registeredSources = new Set(
+    readJson(join(ROOT, 'vuln-intel', 'sources.json')).sources.map((entry) => entry.id),
+  );
+  const unregisteredSources = [];
+  for (const file of collectJsonFiles(join(ROOT, 'vuln-intel'))) {
+    const record = readJson(file);
+    const source = record.provenance?.source;
+    if (!registeredSources.has(source)) {
+      unregisteredSources.push(`${file.split('/').slice(-3).join('/')}: ${String(source)}`);
+    }
+  }
+  assert(
+    unregisteredSources.length === 0,
+    'consistency: every record source resolves to sources.json',
+    unregisteredSources.join('; '),
+  );
+}
+const NEGATIVE_SOURCES = {
+  'bad-status.json': 'status',
+  'bad-url.json': 'https://',
+};
+for (const [name, needle] of Object.entries(NEGATIVE_SOURCES)) {
+  const file = join(ROOT, 'test', 'invalid-sources', name);
+  const errors = existsSync(file) ? validateSourcesPath(file) : [];
+  const rejected = errors.length > 0 && errors.some((error) => error.includes(needle));
+  assert(rejected, `negative: test/invalid-sources/${name} rejected (${needle})`, errors.join('; '));
+}
+function checkSeedList(doc) {
+  const problems = [];
+  if (typeof doc !== 'object' || doc === null || Array.isArray(doc)) {
+    return ['seed list: must be an object'];
+  }
+  for (const key of Object.keys(doc)) {
+    if (!['_note', 'packages'].includes(key)) {
+      problems.push(`seed list: unknown property "${key}"`);
+    }
+  }
+  const packages = Array.isArray(doc.packages) ? doc.packages : [];
+  if (!Array.isArray(doc.packages)) {
+    problems.push('seed list: packages must be an array');
+  }
+  if (packages.length < 1 || packages.length > 500) {
+    problems.push(`seed list: packages must have 1..500 entries (got ${packages.length})`);
+  }
+  const seen = new Set();
+  packages.forEach((entry, index) => {
+    const label = `packages[${index}]`;
+    if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) {
+      problems.push(`${label}: must be an object`);
+      return;
+    }
+    if (entry.ecosystem !== 'npm' && entry.ecosystem !== 'PyPI') {
+      problems.push(`${label}: ecosystem must be npm or PyPI (OSV names)`);
+    }
+    if (typeof entry.name !== 'string' || entry.name.length < 1 || entry.name.length > 214) {
+      problems.push(`${label}: name must be 1..214 characters`);
+    } else {
+      let dirty = entry.name !== entry.name.trim();
+      for (const char of entry.name) {
+        const code = char.codePointAt(0) ?? 0;
+        if (code < 0x20 || code === 0x7f) dirty = true;
+      }
+      if (dirty) {
+        problems.push(`${label}: name must be trimmed and control-character-free`);
+      }
+    }
+    const key = `${entry.ecosystem}|${entry.name}`;
+    if (seen.has(key)) {
+      problems.push(`${label}: duplicate ${key}`);
+    }
+    seen.add(key);
+  });
+  return problems;
+}
+const seedProblems = checkSeedList(readJson(join(ROOT, 'data', 'osv-seed-packages.json')));
+assert(
+  seedProblems.length === 0,
+  'consistency: data/osv-seed-packages.json is well-formed',
+  seedProblems.join('; '),
+);
+const syntheticSeed = {
+  packages: [
+    { ecosystem: 'npm', name: 'left-pad' },
+    { ecosystem: 'npm', name: 'left-pad' },
+    { ecosystem: 'rubygems', name: 'rails' },
+  ],
+  extra: true,
+};
+assert(
+  checkSeedList(syntheticSeed).length === 3,
+  'negative: seed list checker flags duplicates, bad ecosystems, and unknown keys',
+  checkSeedList(syntheticSeed).join('; '),
+);
 
 // --- summary --------------------------------------------------------------------
 const total = passed + failed;

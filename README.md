@@ -49,6 +49,7 @@ Drobon-Dataset/
 │   └── advisory.schema.json   # JSON Schema for advisory records (editors/tooling)
 ├── vuln-intel/
 │   ├── README.md              # Data directory policy
+│   ├── sources.json           # Source registry (terms pointers, review status)
 │   ├── npm/ + pypi/           # Real records, one file per advisory-package
 │   └── npm/samples/ + pypi/samples/  # Labeled synthetic fixtures
 ├── packs/
@@ -83,6 +84,7 @@ Drobon-Dataset/
 │   ├── invalid-audiences/     # Audience fixtures the audience validator MUST reject
 │   ├── invalid-cwe/           # CWE fixtures the CWE validator MUST reject
 │   ├── invalid-matrix/        # Matrix fixtures the matrix validator MUST reject
+│   ├── invalid-sources/       # Source fixtures the source validator MUST reject
 │   └── fixtures/              # OSV mapping fixtures (synthetic API-shaped input)
 └── .github/workflows/ci.yml   # CI: npm test + all validators + vectors
 ```
@@ -110,6 +112,7 @@ npm run validate:packs      # validate every pack manifest + rule under packs/
 npm run validate:audiences  # validate knowledge/ + learning/ + assessments/ + engagements/
 npm run validate:cwe        # validate every entry under knowledge/cwe/
 npm run validate:matrix     # validate the requirements traceability matrix (recomputes counts)
+npm run validate:sources    # validate the source registry
 npm run test:vectors        # provider interop vectors only
 npm run import:ghsa -- --limit 15   # BLOCKED by the production-data lock (see docs/INGESTION_PLAN.md)
 npm run import:osv -- --limit 20    # BLOCKED by the production-data lock (see docs/INGESTION_PLAN.md)

@@ -89,6 +89,7 @@ const NEGATIVE = {
   'remediation-bad-standardid.json': 'standardId: must match',
   'lesson-bad-quiz.json': 'answerIndex',
   'lesson-starter-miss.json': 'no line triggers',
+  'lesson-bad-target.json': 'not found',
   'template-with-declarations.json': 'unknown property',
   'engagement-banned-phrase.json': 'banned phrase',
 };

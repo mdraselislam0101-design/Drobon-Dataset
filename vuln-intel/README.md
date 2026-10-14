@@ -16,6 +16,7 @@ vuln-intel/
 
 - Real records: `vuln-intel/<ecosystem>/<ID>.json` where `<ID>` is the record's `id`. One advisory affecting several packages expands to one record per package: `<ID>.json`, `<ID>--2.json`, … (enforced by the layout tests). One advisory-package with disjoint affected ranges across release branches likewise expands to one record per range branch (`<ID>.json`, `<ID>--N.json`); splits must agree on severity/summary/url and differ in `affected` (enforced by the consistency tests).
 - Ids must be filename-safe: bounded text without control characters; reviewers must reject ids containing path separators (`/`, `\0`).
+- Sources: `sources.json` registers every allowed `provenance.source` with terms pointers + review status (pointers grant nothing); records citing an unregistered source fail the consistency tests.
 - Fixtures: `vuln-intel/<ecosystem>/samples/<ID>.json` only. A fixture anywhere else fails review; a non-fixture under `samples/` fails the layout tests.
 - New ecosystems require an app-side parser first (`SCA_ECOSYSTEMS` in the Drobon repo) — never add an ecosystem directory the app cannot produce coordinates for.
 

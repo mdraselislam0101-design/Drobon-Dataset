@@ -59,7 +59,7 @@ Deliberate omissions (v1 has no…): CVSS/risk scores, CWE ids, published/modifi
 - `url`: primary reference link (usually the source advisory page). `https://` only.
 - `affected[].range`: ecosystem version-range syntax (below). At least one entry; at most 50.
 - `affected[].fixed`: first version containing the fix, when the source states one. Informational in v1 (the app has no `fixed` field to surface it through); kept so data is not lost.
-- `provenance`: see HONESTY.md. Fixtures (`"fixture": true`) must use `"source": "fixture"`, must omit the "real record" requirements, and must use ids matching `DROBON-SAMPLE-###`. Real records must never use that id prefix.
+- `provenance`: see HONESTY.md. Fixtures (`"fixture": true`) must use `"source": "fixture"`, must omit the "real record" requirements, and must use ids matching `DROBON-SAMPLE-###`. Real records must never use that id prefix. `provenance.source` must resolve to `vuln-intel/sources.json`, and GHSA-sourced records must carry `GHSA-xxxx-yyyy-zzzz` ids.
 
 ## Version-range semantics
 

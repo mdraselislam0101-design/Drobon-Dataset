@@ -19,7 +19,8 @@ import { pathToFileURL } from 'node:url';
 
 export const MATRIX_SCHEMA = 'drobon.requirements.matrix/v1';
 
-const TOP_ALLOWED = ['schemaVersion', 'app', 'inventory', 'requirements'];
+const TOP_ALLOWED = ['schemaVersion', 'app', 'inventory', 'appReferencedCwe', 'ingestionLog', 'requirements'];
+const APP_CWE_PATTERN = /^CWE-[1-9][0-9]{0,5}$/;
 const APP_ALLOWED = ['repo', 'branch', 'commit', 'verified'];
 const INVENTORY_KEYS = [
   'vulnIntelReal',
@@ -144,7 +145,8 @@ function collectJsonFilesRecursive(root) {
       const full = join(dir, entry.name);
       if (entry.isDirectory()) {
         walk(full);
-      } else if (entry.isFile() && entry.name.endsWith('.json')) {
+      } else if (entry.isFile() && entry.name.endsWith('.json') && entry.name !== 'sources.json') {
+        // sources.json is registry metadata, not a record (validated by validate-sources.mjs).
         found.push(full);
       }
     }
@@ -334,6 +336,57 @@ export function validateMatrix(value, root) {
           }
         }
       }
+    }
+  }
+  if (value['appReferencedCwe'] !== undefined) {
+    const pin = value['appReferencedCwe'];
+    if (!Array.isArray(pin)) {
+      errors.push('appReferencedCwe: must be an array');
+    } else {
+      pin.forEach((id, index) => {
+        if (typeof id !== 'string' || !APP_CWE_PATTERN.test(id)) {
+          errors.push(`appReferencedCwe[${index}]: must match ^CWE-[1-9][0-9]{0,5}$`);
+          return;
+        }
+        try {
+          const stat = statSync(join(root, 'knowledge', 'cwe', `${id}.json`));
+          if (!stat.isFile()) {
+            errors.push(`appReferencedCwe[${index}]: unresolved — no knowledge/cwe/${id}.json`);
+          }
+        } catch {
+          errors.push(`appReferencedCwe[${index}]: unresolved — no knowledge/cwe/${id}.json`);
+        }
+      });
+    }
+  }
+  if (value['ingestionLog'] !== undefined) {
+    const log = value['ingestionLog'];
+    if (!Array.isArray(log)) {
+      errors.push('ingestionLog: must be an array');
+    } else {
+      if (log.length > 200) {
+        errors.push(`ingestionLog: must have 0..200 rows (got ${log.length})`);
+      }
+      const LOG_ALLOWED = ['date', 'source', 'count', 'reviewer', 'licenseBasis'];
+      log.forEach((row, index) => {
+        const path = `ingestionLog[${index}]`;
+        if (typeof row !== 'object' || row === null || Array.isArray(row)) {
+          errors.push(`${path}: must be an object`);
+          return;
+        }
+        checkClosed(errors, path, row, LOG_ALLOWED);
+        if (row['date'] !== undefined && (typeof row['date'] !== 'string' || !DATE_PATTERN.test(row['date']))) {
+          errors.push(`${path}.date: must be a YYYY-MM-DD date`);
+        }
+        if (row['source'] !== undefined) checkText(errors, `${path}.source`, row['source'], 64);
+        if (row['count'] !== undefined && (!Number.isInteger(row['count']) || row['count'] < 1)) {
+          errors.push(`${path}.count: must be an integer >= 1`);
+        }
+        if (row['reviewer'] !== undefined) checkText(errors, `${path}.reviewer`, row['reviewer'], 120);
+        if (row['licenseBasis'] !== undefined) {
+          checkText(errors, `${path}.licenseBasis`, row['licenseBasis'], 300);
+        }
+      });
     }
   }
   if (value['requirements'] !== undefined) {

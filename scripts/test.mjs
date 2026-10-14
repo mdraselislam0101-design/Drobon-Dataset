@@ -42,7 +42,8 @@ function collectJsonFiles(root) {
       const full = join(dir, entry.name);
       if (entry.isDirectory()) {
         walk(full);
-      } else if (entry.isFile() && entry.name.endsWith('.json')) {
+      } else if (entry.isFile() && entry.name.endsWith('.json') && entry.name !== 'sources.json') {
+        // sources.json is registry metadata, not a record (validated by validate-sources.mjs).
         found.push(full);
       }
     }
@@ -67,6 +68,7 @@ const NEGATIVE = {
   'missing-provenance.json': 'sourceUrl',
   'empty-affected.json': 'affected',
   'not-an-object.json': 'must be an object',
+  'invalid-range.json': 'affected[0].range',
 };
 for (const [name, needle] of Object.entries(NEGATIVE)) {
   const file = join(ROOT, 'test', 'invalid', name);
@@ -214,6 +216,21 @@ assert(
   validateRecord(badRangeRecord).join('; '),
 );
 
+function escapeRegExp(text) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// A record id plus any number of `--N` range/package splits (no hardcoded depth).
+function isSplitFilename(id, fileName) {
+  if (typeof id !== 'string' || typeof fileName !== 'string') {
+    return false;
+  }
+  if (fileName === id) {
+    return true;
+  }
+  return new RegExp(`^${escapeRegExp(id)}--[0-9]+$`).test(fileName);
+}
+
 // --- 5. layout policy ------------------------------------------------------
 const layoutFiles = collectJsonFiles(join(ROOT, 'vuln-intel'));
 for (const file of layoutFiles) {
@@ -235,11 +252,10 @@ for (const file of layoutFiles) {
       `layout: ${rel} outside samples/ is a real record`,
       `fixture flag is ${String(record.fixture)}`,
     );
-    const expectedNames = [record.id, `${record.id}--2`, `${record.id}--3`, `${record.id}--4`];
     assert(
-      typeof record.id === 'string' && expectedNames.includes(fileName),
-      `layout: ${rel} filename matches record id`,
-      `expected one of ${expectedNames.join(', ')}`,
+      isSplitFilename(record.id, fileName),
+      `layout: ${rel} filename matches record id (optionally with --N split suffix)`,
+      `expected ${String(record.id)} or ${String(record.id)}--N`,
     );
   }
   assert(
@@ -247,6 +263,10 @@ for (const file of layoutFiles) {
     `layout: ${rel} sits under a supported ecosystem dir`,
   );
 }
+assert(isSplitFilename('GHSA-xxxx-yyyy-zzzz', 'GHSA-xxxx-yyyy-zzzz'), 'positive: split matcher accepts the bare id');
+assert(isSplitFilename('GHSA-xxxx-yyyy-zzzz', 'GHSA-xxxx-yyyy-zzzz--99'), 'positive: split matcher accepts --N suffixes');
+assert(!isSplitFilename('GHSA-xxxx-yyyy-zzzz', 'GHSA-xxxx-yyyy-zzzz--x'), 'negative: split matcher rejects non-numeric suffixes');
+assert(!isSplitFilename('GHSA-xxxx-yyyy-zzzz', 'GHSA-other'), 'negative: split matcher rejects other ids');
 
 // --- 6. provider interop vectors -------------------------------------------
 const vectorResult = checkVectors(ROOT);

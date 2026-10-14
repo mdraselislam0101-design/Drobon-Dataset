@@ -36,7 +36,8 @@ function collectJsonFiles(root) {
       const full = join(dir, entry.name);
       if (entry.isDirectory()) {
         walk(full);
-      } else if (entry.isFile() && entry.name.endsWith('.json')) {
+      } else if (entry.isFile() && entry.name.endsWith('.json') && entry.name !== 'sources.json') {
+        // sources.json is registry metadata, not a record (validated by validate-sources.mjs).
         found.push(full);
       }
     }
