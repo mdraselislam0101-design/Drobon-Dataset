@@ -20,6 +20,8 @@ Status: **PLAN ONLY — BLOCKED_BY_DATA_LOCK.** Nothing in this document authori
 
 ### Source review status (terms pointers; nothing verified)
 
+Machine-readable companion: `docs/SOURCE_ROADMAP.json` (validated by `scripts/validate-corpus.mjs`; volumes stay null until measured at staging).
+
 | Source | Terms pointer | Registry | Records | Redistribution | Priority rationale |
 |---|---|---|---|---|---|
 | GHSA (reviewed advisories) | github.com/github/advisory-database | `vuln-intel/sources.json` | 100 (frozen seed) | UNVERIFIED — verify per batch at the production stage | Primary: reviewed-only, withdrawn excluded, importer ready |

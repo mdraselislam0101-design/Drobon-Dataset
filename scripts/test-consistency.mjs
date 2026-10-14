@@ -18,7 +18,9 @@
  *  8. the requirements matrix validates + every fixture under
  *     test/invalid-matrix/ MUST be rejected;
  *  9. the source registry validates + every record source resolves +
- *     the OSV seed list is well-formed (invalid-sources rejected).
+ *     the OSV seed list is well-formed (invalid-sources rejected);
+ * 10. the corpus targets + source roadmap validate as a pair
+ *     (invalid-corpus rejected).
  *
  * Usage: node scripts/test-consistency.mjs
  */
@@ -28,6 +30,7 @@ import { fileURLToPath } from 'node:url';
 import { validateCwePath } from './validate-cwe.mjs';
 import { validateMatrixPath } from './validate-matrix.mjs';
 import { validateSourcesPath } from './validate-sources.mjs';
+import { validateCorpusPair, validateCorpusTargetsPath, validateRoadmapPath } from './validate-corpus.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 let passed = 0;
@@ -430,6 +433,39 @@ assert(
   'negative: seed list checker flags duplicates, bad ecosystems, and unknown keys',
   checkSeedList(syntheticSeed).join('; '),
 );
+
+// --- 10. corpus planning artifacts -------------------------------------------------
+// The 100K planning pair validates (counts recomputed from files, production
+// claims gated on a LICENSE grant, volumes unquoted, redistribution
+// unverified), and every fixture under test/invalid-corpus/ MUST be rejected.
+const corpusPairErrors = validateCorpusPair(
+  join(ROOT, 'docs', 'CORPUS_TARGETS.json'),
+  join(ROOT, 'docs', 'SOURCE_ROADMAP.json'),
+  ROOT,
+);
+assert(
+  corpusPairErrors.length === 0,
+  'positive: corpus targets + roadmap validate as a pair',
+  corpusPairErrors.join('; '),
+);
+const NEGATIVE_CORPUS_TARGETS = {
+  'counts-inflated.json': 'LICENSE',
+};
+for (const [name, needle] of Object.entries(NEGATIVE_CORPUS_TARGETS)) {
+  const file = join(ROOT, 'test', 'invalid-corpus', name);
+  const errors = existsSync(file) ? validateCorpusTargetsPath(file, ROOT) : [];
+  const rejected = errors.length > 0 && errors.some((error) => error.includes(needle));
+  assert(rejected, `negative: test/invalid-corpus/${name} rejected (${needle})`, errors.join('; '));
+}
+const NEGATIVE_CORPUS_ROADMAP = {
+  'license-claimed.json': 'VERIFIED',
+};
+for (const [name, needle] of Object.entries(NEGATIVE_CORPUS_ROADMAP)) {
+  const file = join(ROOT, 'test', 'invalid-corpus', name);
+  const errors = existsSync(file) ? validateRoadmapPath(file) : [];
+  const rejected = errors.length > 0 && errors.some((error) => error.includes(needle));
+  assert(rejected, `negative: test/invalid-corpus/${name} rejected (${needle})`, errors.join('; '));
+}
 
 // --- summary --------------------------------------------------------------------
 const total = passed + failed;
