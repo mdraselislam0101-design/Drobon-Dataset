@@ -74,7 +74,13 @@ Rules:
 
 1. A range matches a coordinate version if and only if the ecosystem's canonical comparator says so (npm: semver; PyPI: PEP 440). No fuzzy matching, no prefix guessing.
 2. Coordinates **without** a version (declared range, no lockfile resolution) match only when the provider can prove the intersection semantics it implements — conservative default: match on name + ecosystem and let the record's `range` be evaluated only against exact versions; never silently treat "unknown version" as "affected". (Exact policy is owned by the provider implementation in the app repo; this dataset only guarantees ranges are parseable.)
-3. Ranges must be parseable by the ecosystem's canonical parser. The v1 validator checks bounds and shape only; range-parse validation is a documented gap until a zero-dependency semver/PEP 440 checker is added (tracked in `vuln-intel/README.md` as a TODO, not silently assumed).
+3. Ranges must parse under this repo's zero-dependency checker (`scripts/range.mjs`), enforced by the validator on every record. Anything outside the supported subset is rejected at import/review time with an explicit error — never silently treated as match or miss. Evaluation (`satisfiesRange`) is exact-or-throw and backs the provider interop vectors.
+
+### Supported range subset (enforced)
+
+**npm** — `range := group ("||" group)*`; `group := hyphen | and`; `hyphen := version "-" version` (spaces around `-` required); `and := token ((" " | ",") token)*`; `token := [op] version`; `op := ">=" | "<=" | ">" | "<" | "="`; `version := ["v"] num ["." num ["." num]] ["-" pre] ["+" build]` where each `num` is digits or `x`/`X`/`*`. Operator-glued spacing (`"<= 2.7.0"`, `">= 1.0.0, < 2.0.0"`) is accepted. A lone `*` is rejected — use explicit bounds.
+
+**pypi** — `range := spec ("," spec)*`; `spec := op version`; `op := "===" | "==" | "~=" | "!=" | "<=" | ">=" | "<" | ">"`; `version` is PEP 440 (optional epoch, dot-separated release, `a`/`b`/`rc` pre, `post`, `dev`, `local`). `".*"` is allowed only with `==` / `!=`; `"~="` needs at least two release segments; `"==="` takes a non-space literal (string equality). Environment markers (`; …`) are rejected — ranges match versions only.
 
 ## Determinism & ordering
 

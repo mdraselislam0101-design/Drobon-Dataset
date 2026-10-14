@@ -16,6 +16,7 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { validateRange } from './range.mjs';
 
 export const SCHEMA_VERSION = 'drobon.vuln-intel/v1';
 
@@ -174,6 +175,16 @@ export function validateRecord(value) {
         }
         if (entry['fixed'] !== undefined) {
           checkBoundedText(errors, `${path}.fixed`, entry['fixed'], MAX_VERSION);
+        }
+        if (
+          entry['range'] !== undefined &&
+          typeof entry['range'] === 'string' &&
+          ECOSYSTEMS.includes(record['ecosystem'])
+        ) {
+          const rangeError = validateRange(record['ecosystem'], entry['range']);
+          if (rangeError !== null) {
+            errors.push(`${path}.range: ${rangeError}`);
+          }
         }
       });
     }

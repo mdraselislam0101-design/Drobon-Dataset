@@ -11,6 +11,8 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { checkVectors } from './check-vectors.mjs';
+import { satisfiesRange, validateRange } from './range.mjs';
 import { SCHEMA_VERSION, validateFile, validateRecord } from './validate.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -134,6 +136,125 @@ const realRecord = {
 };
 const realErrors = validateRecord(realRecord);
 assert(realErrors.length === 0, 'positive: real-record shape validates', realErrors.join('; '));
+
+// --- 4. range syntax + evaluation -----------------------------------------
+const VALID_RANGES = {
+  npm: [
+    '<2.0.0',
+    '>=1.0.0 <1.4.2',
+    '>= 4.0.0, < 4.17.21',
+    '1.2.3 - 2.0.0',
+    '=1.0.0',
+    'v1.2.3',
+    '<= 2.7.0',
+    '>=1.0.0 <2.0.0 || >=3.0.0 <3.1.0',
+    '1.x',
+  ],
+  pypi: ['<1.2.0', '>=1.0.0,<1.4.2', '==1.2.*', '~=1.4.2', '!=1.5.0', '>2.0,<=3.0'],
+};
+for (const [ecosystem, ranges] of Object.entries(VALID_RANGES)) {
+  for (const range of ranges) {
+    assert(
+      validateRange(ecosystem, range) === null,
+      `range: valid ${ecosystem} "${range}" accepted`,
+      validateRange(ecosystem, range) ?? '',
+    );
+  }
+}
+const INVALID_RANGES = {
+  npm: ['*', 'foo', '>>1.0.0', '1.0.0 -', '>=1.0.0 ||', '1.0.0.0', '=>1.0.0', '>=', ''],
+  pypi: ['1.0.0', '=>1.0', '==', '~=1', '>=1.0,,<2.0', '>=1.0; python_version > "3"'],
+};
+for (const [ecosystem, ranges] of Object.entries(INVALID_RANGES)) {
+  for (const range of ranges) {
+    assert(
+      validateRange(ecosystem, range) !== null,
+      `range: invalid ${ecosystem} "${range}" rejected`,
+    );
+  }
+}
+const SATISFIES = [
+  // [ecosystem, version, range, expected]
+  ['npm', '1.5.0', '>=1.0.0 <2.0.0', true],
+  ['npm', '2.0.0', '>=1.0.0 <2.0.0', false],
+  ['npm', '1.4.2', '>=1.0.0 <1.4.2', false],
+  ['npm', '2.7.0', '<= 2.7.0', true],
+  ['npm', '3.0.0', '<= 2.7.0', false],
+  ['npm', '1.5.0', '1.2.3 - 2.0.0', true],
+  ['npm', '1.0.0', '1.x', true],
+  ['npm', '2.0.0', '1.x', false],
+  ['npm', '3.0.5', '>=1.0.0 <2.0.0 || >=3.0.0 <3.1.0', true],
+  ['pypi', '1.2.5', '==1.2.*', true],
+  ['pypi', '1.3.0', '==1.2.*', false],
+  ['pypi', '1.4.5', '~=1.4.2', true],
+  ['pypi', '1.5.0', '~=1.4.2', false],
+  ['pypi', '0.8.9', '<0.9.0', true],
+  ['pypi', '1.0a1', '>=1.0', false],
+  ['pypi', '1.0', '>=1.0a1', true],
+];
+for (const [ecosystem, version, range, expected] of SATISFIES) {
+  let actual;
+  let thrown = null;
+  try {
+    actual = satisfiesRange(ecosystem, version, range);
+  } catch (err) {
+    thrown = err.message;
+  }
+  assert(
+    thrown === null && actual === expected,
+    `range: ${ecosystem} ${version} vs "${range}" → ${String(expected)}`,
+    thrown ?? `got ${String(actual)}`,
+  );
+}
+const badRangeRecord = clone();
+badRangeRecord.affected[0].range = '>>nope';
+assert(
+  validateRecord(badRangeRecord).some((error) => error.includes('affected[0].range')),
+  'edge: record with unparseable range rejected',
+  validateRecord(badRangeRecord).join('; '),
+);
+
+// --- 5. layout policy ------------------------------------------------------
+const layoutFiles = collectJsonFiles(join(ROOT, 'vuln-intel'));
+for (const file of layoutFiles) {
+  const rel = relative(ROOT, file);
+  const parts = rel.split('/');
+  // vuln-intel/<ecosystem>/(samples/)<file>.json
+  const inSamples = parts.includes('samples');
+  const record = JSON.parse(readFileSync(file, 'utf8'));
+  const fileName = parts[parts.length - 1].replace(/\.json$/, '');
+  if (inSamples) {
+    assert(
+      record.fixture === true,
+      `layout: ${rel} under samples/ is a labeled fixture`,
+      `fixture flag is ${String(record.fixture)}`,
+    );
+  } else {
+    assert(
+      record.fixture === false,
+      `layout: ${rel} outside samples/ is a real record`,
+      `fixture flag is ${String(record.fixture)}`,
+    );
+    const expectedNames = [record.id, `${record.id}--2`, `${record.id}--3`, `${record.id}--4`];
+    assert(
+      typeof record.id === 'string' && expectedNames.includes(fileName),
+      `layout: ${rel} filename matches record id`,
+      `expected one of ${expectedNames.join(', ')}`,
+    );
+  }
+  assert(
+    parts.length >= 3 && (parts[1] === 'npm' || parts[1] === 'pypi'),
+    `layout: ${rel} sits under a supported ecosystem dir`,
+  );
+}
+
+// --- 6. provider interop vectors -------------------------------------------
+const vectorResult = checkVectors(ROOT);
+assert(
+  vectorResult.failed === 0,
+  `vectors: all provider vectors match (${vectorResult.passed} vectors)`,
+  vectorResult.failures.join('; '),
+);
 
 // --- summary ---------------------------------------------------------------
 const total = passed + failed;
