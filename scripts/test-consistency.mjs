@@ -19,10 +19,12 @@
  *     test/invalid-matrix/ MUST be rejected;
  *  9. the source registry validates + every record source resolves +
  *     the OSV seed list is well-formed (invalid-sources rejected);
- * 10. the corpus targets + source roadmap validate as a pair
+ * 10. the corpus targets + roadmap + owner decisions validate as a set
  *     (invalid-corpus rejected);
  * 11. integrity manifests are deterministic + catch tampering (on a tmp
- *     copy), and the dedup recount agrees with CORPUS_TARGETS.
+ *     copy), and the dedup recount agrees with CORPUS_TARGETS;
+ * 12. the 4 ingestion gates load BLOCKED + requireGates() fail-closed
+ *     matrix (single + multiple failures block, malformed file blocks).
  *
  * Usage: node scripts/test-consistency.mjs
  */
@@ -33,7 +35,8 @@ import { fileURLToPath } from 'node:url';
 import { validateCwePath } from './validate-cwe.mjs';
 import { validateMatrixPath } from './validate-matrix.mjs';
 import { validateSourcesPath } from './validate-sources.mjs';
-import { validateCorpusPair, validateCorpusTargetsPath, validateRoadmapPath } from './validate-corpus.mjs';
+import { validateCorpusSet, validateCorpusTargetsPath, validateDecisionsPath, validateRoadmapPath } from './validate-corpus.mjs';
+import { GATE_IDS, gatesSatisfied, loadGates, requireGates } from './ingestion-gates.mjs';
 import { groupAdvisoryRecords, groupFiles } from './dedup-report.mjs';
 import { computeManifest, verifyManifest } from './manifest.mjs';
 
@@ -440,18 +443,19 @@ assert(
 );
 
 // --- 10. corpus planning artifacts -------------------------------------------------
-// The 100K planning pair validates (counts recomputed from files, production
+// The 100K planning set validates (counts recomputed from files, production
 // claims gated on a LICENSE grant, volumes unquoted, redistribution
 // unverified), and every fixture under test/invalid-corpus/ MUST be rejected.
-const corpusPairErrors = validateCorpusPair(
+const corpusSetErrors = validateCorpusSet(
   join(ROOT, 'docs', 'CORPUS_TARGETS.json'),
   join(ROOT, 'docs', 'SOURCE_ROADMAP.json'),
+  join(ROOT, 'docs', 'OWNER_DECISIONS.json'),
   ROOT,
 );
 assert(
-  corpusPairErrors.length === 0,
-  'positive: corpus targets + roadmap validate as a pair',
-  corpusPairErrors.join('; '),
+  corpusSetErrors.length === 0,
+  'positive: corpus targets + roadmap + decisions validate as a set',
+  corpusSetErrors.join('; '),
 );
 const NEGATIVE_CORPUS_TARGETS = {
   'counts-inflated.json': 'LICENSE',
@@ -468,6 +472,15 @@ const NEGATIVE_CORPUS_ROADMAP = {
 for (const [name, needle] of Object.entries(NEGATIVE_CORPUS_ROADMAP)) {
   const file = join(ROOT, 'test', 'invalid-corpus', name);
   const errors = existsSync(file) ? validateRoadmapPath(file) : [];
+  const rejected = errors.length > 0 && errors.some((error) => error.includes(needle));
+  assert(rejected, `negative: test/invalid-corpus/${name} rejected (${needle})`, errors.join('; '));
+}
+const NEGATIVE_CORPUS_DECISIONS = {
+  'decisions-bad-entry.json': 'decider',
+};
+for (const [name, needle] of Object.entries(NEGATIVE_CORPUS_DECISIONS)) {
+  const file = join(ROOT, 'test', 'invalid-corpus', name);
+  const errors = existsSync(file) ? validateDecisionsPath(file) : [];
   const rejected = errors.length > 0 && errors.some((error) => error.includes(needle));
   assert(rejected, `negative: test/invalid-corpus/${name} rejected (${needle})`, errors.join('; '));
 }
@@ -522,6 +535,93 @@ assert(
 assert(
   existsSync(join(ROOT, 'docs', 'LICENSE_REVIEW.md')),
   'positive: docs/LICENSE_REVIEW.md exists (registry report pointer)',
+);
+
+
+// --- 12. ingestion authorization gates ------------------------------------------------
+// The four INGESTION_PLAN gates load BLOCKED, requireGates() names every
+// missing gate, and the fail-closed matrix proves any missing gate (single
+// or multiple) blocks production while a malformed file can never approve.
+const gatesFile = join(ROOT, 'docs', 'INGESTION_GATES.json');
+const loadedGates = loadGates(gatesFile);
+assert(
+  loadedGates.errors.length === 0,
+  'positive: INGESTION_GATES.json parses + validates structurally',
+  loadedGates.errors.join('; '),
+);
+const liveGates = gatesSatisfied(loadedGates.doc);
+assert(
+  !liveGates.ok && liveGates.missing.length === 4,
+  'positive: all 4 production gates are BLOCKED (missing: ' + liveGates.missing.join(', ') + ')',
+);
+let liveBlockMessage = '';
+try {
+  requireGates(loadedGates.doc);
+} catch (err) {
+  liveBlockMessage = err.message;
+}
+assert(
+  GATE_IDS.every((id) => liveBlockMessage.includes(id)) && liveBlockMessage.includes('BLOCKED'),
+  'positive: requireGates() on the live file blocks naming GATE-1..GATE-4',
+  liveBlockMessage,
+);
+for (const importer of ['import-ghsa.mjs', 'import-osv.mjs']) {
+  const source = readFileSync(join(ROOT, 'scripts', importer), 'utf8');
+  assert(
+    source.includes("from './ingestion-gates.mjs'") && source.includes('requireGates();'),
+    'positive: scripts/' + importer + ' enforces requireGates() at startup',
+  );
+}
+function gatesDocWith(statuses) {
+  return {
+    schemaVersion: 'drobon.ingestion.gates/v1',
+    note: 'synthetic gate matrix (test only)',
+    gates: GATE_IDS.map((id, index) => ({
+      id,
+      title: 'gate ' + id,
+      evidenceRequired: 'test evidence rule',
+      validator: 'test',
+      passCriteria: 'test pass rule',
+      owner: 'test',
+      status: statuses[index],
+      statusEvidence: statuses[index] === 'SATISFIED' ? 'test evidence recorded' : 'test blocked',
+      decidedAt: statuses[index] === 'SATISFIED' ? '2026-10-14' : null,
+    })),
+  };
+}
+function blockMessageFor(doc) {
+  try {
+    requireGates(doc);
+    return 'ALLOWED (unexpected)';
+  } catch (err) {
+    return err.message;
+  }
+}
+assert(
+  requireGates(gatesDocWith(['SATISFIED', 'SATISFIED', 'SATISFIED', 'SATISFIED'])) === true,
+  'gates matrix: 4/4 SATISFIED opens ingestion',
+);
+GATE_IDS.forEach((blockedId, blockedIndex) => {
+  const statuses = ['SATISFIED', 'SATISFIED', 'SATISFIED', 'SATISFIED'];
+  statuses[blockedIndex] = 'BLOCKED';
+  const message = blockMessageFor(gatesDocWith(statuses));
+  assert(
+    message.includes(blockedId) && message.includes('BLOCKED'),
+    'gates matrix: single failure ' + blockedId + ' blocks production',
+    message,
+  );
+});
+const multiMessage = blockMessageFor(gatesDocWith(['BLOCKED', 'SATISFIED', 'BLOCKED', 'SATISFIED']));
+assert(
+  multiMessage.includes('GATE-1') && multiMessage.includes('GATE-3') && !multiMessage.includes('GATE-2'),
+  'gates matrix: multiple failures name exactly the blocked gates',
+  multiMessage,
+);
+const corruptMessage = blockMessageFor({ schemaVersion: 'drobon.ingestion.gates/v1', gates: [] });
+assert(
+  corruptMessage.includes('gate file invalid'),
+  'gates matrix: malformed gate file blocks (fail-closed)',
+  corruptMessage,
 );
 
 // --- summary --------------------------------------------------------------------

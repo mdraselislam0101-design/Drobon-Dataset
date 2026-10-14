@@ -11,8 +11,8 @@
  *   may not claim redistribution VERIFIED (nothing is verified under the lock).
  *
  * Usage:
- *   node scripts/validate-corpus.mjs [targetsPath] [roadmapPath]
- *   (defaults: docs/CORPUS_TARGETS.json docs/SOURCE_ROADMAP.json)
+ *   node scripts/validate-corpus.mjs [targetsPath] [roadmapPath] [decisionsPath]
+ *   (defaults: docs/CORPUS_TARGETS.json docs/SOURCE_ROADMAP.json docs/OWNER_DECISIONS.json)
  */
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { countAdvisoryItems } from './dedup-report.mjs';
@@ -21,6 +21,7 @@ import { pathToFileURL } from 'node:url';
 
 export const TARGETS_SCHEMA_VERSION = 'drobon.corpus.targets/v1';
 export const ROADMAP_SCHEMA_VERSION = 'drobon.corpus.roadmap/v1';
+export const DECISIONS_SCHEMA_VERSION = 'drobon.corpus.decisions/v1';
 export const CORPUS_TARGET_MIN = 100000;
 export const COUNTING_POLICY_PATH = 'docs/COUNTING_POLICY.md';
 
@@ -30,6 +31,9 @@ const LICENSE_STATUSES = ['BLOCKED_LICENSE_REVIEW', 'ORIGINAL_UNLICENSED', 'NOT_
 const SOURCE_STATUSES = ['IN_USE_AS_SEED', 'IN_USE', 'PLANNED', 'REFERENCED', 'UNASSESSED'];
 const SOURCE_LICENSE_STATUSES = ['VERIFIED_ALLOWED', 'RESTRICTED', 'BLOCKED_UNVERIFIED', 'ORIGINAL_UNLICENSED', 'NOT_APPLICABLE'];
 const LICENSE_FILE_PATTERN = /^(LICENSE|LICENCE|COPYING)/i;
+const DECISION_STATUSES = ['OWNER_DECISION_REQUIRED', 'APPROVED', 'REJECTED'];
+const DECISION_SUBJECT_PATTERN = /^[A-Z][A-Z0-9_]*$/;
+const DECISION_DATE_PATTERN = /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/;
 
 function hasControlChars(value) {
   for (const char of value) {
@@ -345,6 +349,98 @@ function validatePair(targetsDoc, roadmapDoc, errors) {
   }
 }
 
+function validateDecisionsDoc(doc, errors) {
+  if (typeof doc !== 'object' || doc === null || Array.isArray(doc)) {
+    errors.push('decisions: must be an object');
+    return;
+  }
+  checkClosed(errors, 'decisions', doc, ['schemaVersion', 'note', 'decisions']);
+  if (doc['schemaVersion'] !== DECISIONS_SCHEMA_VERSION) {
+    errors.push('decisions.schemaVersion: must be "' + DECISIONS_SCHEMA_VERSION + '"');
+  }
+  if (doc['note'] !== undefined) {
+    checkText(errors, 'decisions.note', doc['note'], 600);
+  }
+  if (!Array.isArray(doc['decisions']) || doc['decisions'].length < 1) {
+    errors.push('decisions.decisions: must be a non-empty array');
+    return;
+  }
+  const subjects = new Set();
+  doc['decisions'].forEach((entry, index) => {
+    const path = 'decisions[' + index + ']';
+    if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) {
+      errors.push(path + ': must be an object');
+      return;
+    }
+    checkClosed(errors, path, entry, ['subject', 'roadmapSource', 'licenseOrTerms', 'evidenceUrl', 'evidenceDate', 'attribution', 'redistribution', 'commercialUse', 'requiredDecision', 'status', 'decidedAt', 'decider', 'reviewer', 'eligibleScope']);
+    if (typeof entry['subject'] !== 'string' || !DECISION_SUBJECT_PATTERN.test(entry['subject']) || entry['subject'].length > 40) {
+      errors.push(path + '.subject: must match [A-Z][A-Z0-9_]* (1..40 chars)');
+    } else if (subjects.has(entry['subject'])) {
+      errors.push(path + '.subject: duplicate subject "' + entry['subject'] + '"');
+    } else {
+      subjects.add(entry['subject']);
+    }
+    checkText(errors, path + '.roadmapSource', entry['roadmapSource'], 120);
+    for (const field of ['licenseOrTerms', 'attribution', 'redistribution', 'commercialUse', 'requiredDecision', 'reviewer', 'eligibleScope']) {
+      checkText(errors, path + '.' + field, entry[field], 500);
+    }
+    checkHttpsUrl(errors, path + '.evidenceUrl', entry['evidenceUrl'], 300);
+    if (typeof entry['evidenceDate'] !== 'string' || !DECISION_DATE_PATTERN.test(entry['evidenceDate'])) {
+      errors.push(path + '.evidenceDate: must be YYYY-MM-DD');
+    }
+    if (!DECISION_STATUSES.includes(entry['status'])) {
+      errors.push(path + '.status: must be one of ' + DECISION_STATUSES.join(', '));
+    }
+    if (entry['status'] === 'OWNER_DECISION_REQUIRED') {
+      if (entry['decidedAt'] !== null) {
+        errors.push(path + '.decidedAt: undecided entries must use null (no fabricated dates)');
+      }
+      if (entry['decider'] !== null) {
+        errors.push(path + '.decider: undecided entries must use null (no fabricated approval)');
+      }
+    } else if (DECISION_STATUSES.includes(entry['status'])) {
+      if (typeof entry['decidedAt'] !== 'string' || !DECISION_DATE_PATTERN.test(entry['decidedAt'])) {
+        errors.push(path + '.decidedAt: decided entries need a YYYY-MM-DD decision date');
+      }
+      checkText(errors, path + '.decider', entry['decider'], 120);
+    }
+  });
+}
+
+function validateDecisionsVsRoadmap(decisionsDoc, roadmapDoc, errors) {
+  if (decisionsDoc === null || roadmapDoc === null) return;
+  const names = new Set(
+    (Array.isArray(roadmapDoc['sources']) ? roadmapDoc['sources'] : [])
+      .filter((source) => typeof source?.name === 'string')
+      .map((source) => source.name),
+  );
+  const referenced = new Set();
+  (Array.isArray(decisionsDoc['decisions']) ? decisionsDoc['decisions'] : []).forEach((entry, index) => {
+    if (typeof entry?.roadmapSource !== 'string') return;
+    referenced.add(entry.roadmapSource);
+    if (!names.has(entry.roadmapSource)) {
+      errors.push('decisions[' + index + '].roadmapSource: unknown roadmap source "' + entry.roadmapSource + '"');
+    }
+  });
+  for (const name of names) {
+    if (!referenced.has(name)) {
+      errors.push('set: roadmap source "' + name + '" has no owner-decision entry');
+    }
+  }
+}
+
+export function validateDecisionsPath(decisionsPath) {
+  let doc = null;
+  try {
+    doc = readJson(decisionsPath);
+  } catch (err) {
+    return [decisionsPath + ': cannot parse (' + err.message + ')'];
+  }
+  const errors = [];
+  validateDecisionsDoc(doc, errors);
+  return errors.map((message) => decisionsPath + ': ' + message);
+}
+
 export function validateCorpusTargetsPath(targetsPath, root = process.cwd()) {
   const errors = [];
   let doc = null;
@@ -370,6 +466,32 @@ export function validateRoadmapPath(roadmapPath) {
   return errors.map((message) => `${roadmapPath}: ${message}`);
 }
 
+export function validateCorpusSet(targetsPath, roadmapPath, decisionsPath, root = process.cwd()) {
+  const errors = [
+    ...validateCorpusTargetsPath(targetsPath, root),
+    ...validateRoadmapPath(roadmapPath),
+    ...validateDecisionsPath(decisionsPath),
+  ];
+  let targetsDoc = null;
+  let roadmapDoc = null;
+  let decisionsDoc = null;
+  const slots = [[targetsPath, 'targets'], [roadmapPath, 'roadmap'], [decisionsPath, 'decisions']];
+  for (const [file, slot] of slots) {
+    try {
+      const doc = readJson(file);
+      if (slot === 'targets') targetsDoc = doc;
+      else if (slot === 'roadmap') roadmapDoc = doc;
+      else decisionsDoc = doc;
+    } catch {
+      // Parse failures are already reported by the per-file validators above.
+    }
+  }
+  const setErrors = [];
+  validatePair(targetsDoc, roadmapDoc, setErrors);
+  validateDecisionsVsRoadmap(decisionsDoc, roadmapDoc, setErrors);
+  return [...errors, ...setErrors.map((message) => 'pair: ' + message)];
+}
+
 export function validateCorpusPair(targetsPath, roadmapPath, root = process.cwd()) {
   const errors = [...validateCorpusTargetsPath(targetsPath, root), ...validateRoadmapPath(roadmapPath)];
   let targetsDoc = null;
@@ -393,13 +515,14 @@ function main(argv) {
   const root = process.cwd();
   const targetsPath = resolve(root, argv[2] ?? 'docs/CORPUS_TARGETS.json');
   const roadmapPath = resolve(root, argv[3] ?? 'docs/SOURCE_ROADMAP.json');
-  const failures = validateCorpusPair(targetsPath, roadmapPath, root);
+  const decisionsPath = resolve(root, argv[4] ?? 'docs/OWNER_DECISIONS.json');
+  const failures = validateCorpusSet(targetsPath, roadmapPath, decisionsPath, root);
   if (failures.length > 0) {
     for (const failure of failures) process.stdout.write(`${failure}\n`);
-    process.stdout.write(`validate-corpus: FAIL (2 files, ${failures.length} errors)\n`);
+    process.stdout.write(`validate-corpus: FAIL (3 files, ${failures.length} errors)\n`);
     return 1;
   }
-  process.stdout.write('validate-corpus: PASS (2 files, 0 errors)\n');
+  process.stdout.write('validate-corpus: PASS (3 files, 0 errors)\n');
   return 0;
 }
 

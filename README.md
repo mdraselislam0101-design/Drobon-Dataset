@@ -106,16 +106,17 @@ Full rules: `docs/HONESTY.md` (advisories), `docs/PACKS.md` (packs), `docs/AUDIE
 Prerequisites: Node.js 22 (see `.nvmrc`), no `npm install` needed — zero dependencies.
 
 ```bash
-npm test                    # full suite: advisories + packs + audiences + consistency
+npm test                    # full suite: advisories + packs + audiences + consistency + rehearsal
 npm run validate            # validate every record under vuln-intel/
 npm run validate:packs      # validate every pack manifest + rule under packs/
 npm run validate:audiences  # validate knowledge/ + learning/ + assessments/ + engagements/
 npm run validate:cwe        # validate every entry under knowledge/cwe/
 npm run validate:matrix     # validate the requirements traceability matrix (recomputes counts)
 npm run validate:sources    # validate the source registry
-npm run validate:corpus     # validate the 100K corpus targets + source roadmap
+npm run validate:corpus     # validate the corpus targets + source roadmap + owner decisions
 npm run manifest -- --scope records   # SHA-256 integrity manifest over a corpus scope
 npm run dedup-report        # group advisory files into corpus items by identity key
+npm run test:rehearsal      # synthetic 1K + 10K ingestion rehearsal (tmp only, never production)
 npm run test:vectors        # provider interop vectors only
 npm run import:ghsa -- --limit 15   # BLOCKED by the production-data lock (see docs/INGESTION_PLAN.md)
 npm run import:osv -- --limit 20    # BLOCKED by the production-data lock (see docs/INGESTION_PLAN.md)

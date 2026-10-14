@@ -33,7 +33,7 @@ function collectJsonFilesRecursive(root) {
   return found;
 }
 
-function identityOf(record) {
+export function identityOf(record) {
   return {
     source: record?.provenance?.source ?? null,
     sourceId: record?.id ?? null,

@@ -19,6 +19,7 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { SCHEMA_VERSION, validateRecord } from './validate.mjs';
+import { requireGates } from './ingestion-gates.mjs';
 
 // REST advisory API uses low/medium/high/critical ("moderate" kept defensively).
 const SEVERITY_MAP = {
@@ -149,6 +150,7 @@ function toRecords(advisory, retrievedAt, skips) {
 }
 
 async function main() {
+  requireGates();
   const args = parseArgs(process.argv.slice(2));
   const token = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN ?? '';
   const ecosystems = args.ecosystem === 'both' ? ['npm', 'pip'] : [args.ecosystem];

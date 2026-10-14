@@ -34,6 +34,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { SCHEMA_VERSION, validateRecord } from './validate.mjs';
+import { requireGates } from './ingestion-gates.mjs';
 
 function parseArgs(argv) {
   const args = { packagesFile: 'data/osv-seed-packages.json', limit: 20, out: 'vuln-intel', force: false };
@@ -291,6 +292,7 @@ function loadPackageList(file) {
 }
 
 async function main() {
+  requireGates();
   const args = parseArgs(process.argv.slice(2));
   const packages = loadPackageList(resolve(process.cwd(), args.packagesFile));
   const outRoot = resolve(process.cwd(), args.out);
