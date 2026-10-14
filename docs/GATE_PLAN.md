@@ -15,7 +15,7 @@ validator-enforced; the verbatim record-to-advisory projection is pinned in
 |---|---|---|---|---|---|
 | G1 | Schema validity | always | `validate.mjs` + per-kind validators | 0 errors on every file | EXISTS |
 | G2 | Canonical identifiers | always | GHSA-shape, CWE-pattern, id-pattern checks | every id matches its grammar | EXISTS |
-| G3 | Duplicate detection | batch | identity-key index (§1) + alias review | 0 duplicate identities; aliases attached, not split | DESIGN |
+| G3 | Duplicate detection | batch | scripts/dedup-report.mjs (identity grouping) + alias review | 0 duplicate identities; aliases attached, not split | EXISTS (seed scale; alias review manual at staging) |
 | G4 | Provenance + timestamps | always | required source/sourceUrl/retrievedAt; ISO-8601 | 100% complete, well-formed | EXISTS |
 | G5 | License/redistribution | batch | terms-review record per batch + LICENSE tripwire | batch license resolved or batch rejected | DESIGN |
 | G6 | Malformed/malicious input | always | negative fixtures + control-char/ bounds guards | every malformed class rejected | EXISTS |
@@ -23,7 +23,7 @@ validator-enforced; the verbatim record-to-advisory projection is pinned in
 | G8 | Rule conflict + false positives | batch | pack executable tests + FP corpus per rule | all tests pass; FP review recorded | EXISTS (packs) |
 | G9 | Deterministic ingestion | batch | byte-identical re-import rehearsal | two runs, identical bytes | DESIGN |
 | G10 | Regression | always | suite + vectors + matrix recompute | 740/740-style green, vectors pinned | EXISTS |
-| G11 | Integrity + tamper detection | batch | manifest of SHA-256 per file, verified pre-release | manifest matches, no drift | DESIGN |
+| G11 | Integrity + tamper detection | batch | scripts/manifest.mjs (SHA-256 per file, verified pre-release) | manifest matches, no drift | EXISTS (tool; per-release manifests at staging) |
 | G12 | Versioning + rollback | batch | corpus version tag + restore rehearsal | rollback restores prior tag byte-identical | DESIGN |
 | G13 | Performance + memory | staging | timed full-suite + validator runs at staged scale | budgets met (see OPERABILITY_PLAN) | DESIGN |
 

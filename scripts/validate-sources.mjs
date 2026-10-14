@@ -5,8 +5,8 @@
  * The source registry (`vuln-intel/sources.json`) is the canonical list
  * of allowed `provenance.source` values: terms pointers, review status,
  * and lifecycle per upstream. Pointers grant nothing — redistribution
- * stays UNVERIFIED until the production stage verifies terms
- * source-by-source (see docs/LICENSE_DECISION_RECORD.md). The
+ * stays UNVERIFIED until owner batch authorization (terms review:
+ * docs/LICENSE_REVIEW.md; authorization: docs/LICENSE_DECISION_RECORD.md). The
  * consistency runner cross-checks every record source against this
  * registry, so an unregistered source fails the suite.
  *
@@ -19,11 +19,14 @@ import { pathToFileURL } from 'node:url';
 export const SOURCES_SCHEMA = 'drobon.vuln-intel.sources/v1';
 
 const TOP_ALLOWED = ['schemaVersion', 'sources'];
-const SOURCE_ALLOWED = ['id', 'displayName', 'termsUrl', 'redistribution', 'attribution', 'status', 'notes'];
+const SOURCE_ALLOWED = ['id', 'displayName', 'termsUrl', 'redistribution', 'attribution', 'status', 'notes', 'licenseReview'];
 const SOURCE_REQUIRED = ['id', 'displayName', 'redistribution', 'attribution', 'status', 'notes'];
 const SOURCE_ID_PATTERN = /^[A-Za-z][A-Za-z0-9_-]{0,31}$/;
 const REDISTRIBUTION_STATUSES = ['VERIFIED', 'UNVERIFIED', 'NOT_APPLICABLE'];
 const LIFECYCLE_STATUSES = ['IN_USE', 'PLANNED', 'RETIRED'];
+const REVIEW_STATUSES = ['VERIFIED_ALLOWED', 'RESTRICTED', 'BLOCKED_UNVERIFIED', 'NOT_APPLICABLE'];
+const REVIEW_DATE_PATTERN = /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/;
+const REVIEW_REPORT_PATH = 'docs/LICENSE_REVIEW.md';
 
 function hasControlChars(value) {
   for (const char of value) {
@@ -116,6 +119,29 @@ export function validateSources(value) {
           errors.push(`${path}.status: must be one of ${LIFECYCLE_STATUSES.join(', ')}`);
         }
         if (entry['notes'] !== undefined) checkText(errors, `${path}.notes`, entry['notes'], 500);
+        if (entry['licenseReview'] === undefined) {
+          errors.push(`${path}: missing required property "licenseReview"`);
+        } else {
+          const review = entry['licenseReview'];
+          if (typeof review !== 'object' || review === null || Array.isArray(review)) {
+            errors.push(`${path}.licenseReview: must be an object`);
+          } else {
+            for (const key of Object.keys(review)) {
+              if (!['status', 'reviewedAt', 'report'].includes(key)) {
+                errors.push(`${path}.licenseReview: unknown property "${key}"`);
+              }
+            }
+            if (!REVIEW_STATUSES.includes(review['status'])) {
+              errors.push(`${path}.licenseReview.status: must be one of ${REVIEW_STATUSES.join(', ')}`);
+            }
+            if (typeof review['reviewedAt'] !== 'string' || !REVIEW_DATE_PATTERN.test(review['reviewedAt'])) {
+              errors.push(`${path}.licenseReview.reviewedAt: must be a YYYY-MM-DD date`);
+            }
+            if (review['report'] !== REVIEW_REPORT_PATH) {
+              errors.push(`${path}.licenseReview.report: must be "${REVIEW_REPORT_PATH}"`);
+            }
+          }
+        }
       });
     }
   }

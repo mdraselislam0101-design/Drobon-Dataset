@@ -9,7 +9,7 @@ volumes unquotable until measured). Everything else is enforced by review.
 
 | Category | Identity = one item | Rationale |
 |---|---|---|
-| `advisory-record` | `(source, sourceId, ecosystem, package)` | The provider matches `(ecosystem, package, version)`; the advisory-package pair is the matchable unit. |
+| `advisory-record` | `(source, sourceId, ecosystem, package)` | The provider matches `(ecosystem, package, version)`; the advisory-package pair is the matchable unit. 100 files collapse to 84 items today (9 multi-file tuples). |
 | `sast-rule` / `secrets-rule` / `dast-check` | rule `id` | One tested detection unit. |
 | `cwe-entry` | CWE `id` | One weakness definition. |
 | `remediation-entry` | `ruleId` | One guidance unit per pack rule. |
@@ -36,6 +36,13 @@ aliases as metadata on the single item, never as sibling items).
 - Re-harvesting the same source id twice (re-import, re-crawl) must dedup to
   the existing item; the importer skips existing files and the suite rejects
   exact-duplicate `affected` entries.
+
+Files are storage; items are identities. A multi-file tuple must be exactly
+base + `--N` shards (filename discipline is layout-enforced);
+`scripts/dedup-report.mjs` reports the file-to-item grouping, and the suite
+cross-checks its item count against CORPUS_TARGETS on every run. File counts
+(matrix inventory) and item counts (corpus targets) are reported separately
+and must never be substituted for each other.
 
 ## 4. Verified production (the only count that matters for 100K)
 
@@ -69,5 +76,7 @@ never quoted without the word "estimate" and the measurement basis.
 
 Every COUNTED `validatedCount` in `docs/CORPUS_TARGETS.json` is recomputed from
 repository files by the validator on every run. `verifiedProduction` totals are
-sums of per-category claims, each gated on the LICENSE tripwire. A claim that
-disagrees with recomputation fails the suite - counts cannot go stale silently.
+sums of per-category claims, each gated on the LICENSE tripwire. The advisory
+recount groups by identity tuple through the shared `dedup-report.mjs`
+implementation (single source of truth for grouping). A claim that disagrees
+with recomputation fails the suite - counts cannot go stale silently.

@@ -18,15 +18,15 @@ Status: **PLAN ONLY — BLOCKED_BY_DATA_LOCK.** Nothing in this document authori
 | P3 | Pack/audience breadth (optional) | More starter rules/lessons/templates are original content and may grow any time, but are NOT required for any verified capability | Nothing (opportunistic) |
 | P4 | Loader implementations (app repo) | Pack + audience loaders per `PACKS.md`/`AUDIENCES.md` checklists | App maintainers |
 
-### Source review status (terms pointers; nothing verified)
+### Source review status (review findings; authorization still pending)
 
 Machine-readable companion: `docs/SOURCE_ROADMAP.json` (validated by `scripts/validate-corpus.mjs`; volumes stay null until measured at staging).
 
 | Source | Terms pointer | Registry | Records | Redistribution | Priority rationale |
 |---|---|---|---|---|---|
-| GHSA (reviewed advisories) | github.com/github/advisory-database | `vuln-intel/sources.json` | 100 (frozen seed) | UNVERIFIED — verify per batch at the production stage | Primary: reviewed-only, withdrawn excluded, importer ready |
-| OSV (aggregated) | osv.dev | `vuln-intel/sources.json` | 0 (importer ready, runs blocked) | UNVERIFIED — verify before the first import | Secondary: cross-ecosystem breadth after GHSA batches |
-| NVD/CVE feeds | — | not registered | 0 | UNVERIFIED — register + verify before any use | Tertiary: only if a verified need emerges (none today) |
+| GHSA (reviewed advisories) | github.com/github/advisory-database | `vuln-intel/sources.json` | 100 (frozen seed) | REVIEWED CC-BY-4.0 (LICENSE_REVIEW.md §1) — owner batch authorization still required | Primary: reviewed-only, withdrawn excluded, importer ready |
+| OSV (aggregated) | osv.dev | `vuln-intel/sources.json` | 0 (importer ready, runs blocked) | REVIEWED per-home terms (LICENSE_REVIEW.md §2) — resolve per record per batch | Secondary: cross-ecosystem breadth after GHSA batches |
+| NVD/CVE feeds | — | not registered | 0 | REVIEWED public-domain+notice (LICENSE_REVIEW.md §3) — no verified need; register before any use | Tertiary: only if a verified need emerges (none today) |
 
 Package priority within P2 batches follows `data/osv-seed-packages.json` (24 curated packages, machine-checked); extend the queue only with reviewed additions.
 

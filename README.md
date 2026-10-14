@@ -114,6 +114,8 @@ npm run validate:cwe        # validate every entry under knowledge/cwe/
 npm run validate:matrix     # validate the requirements traceability matrix (recomputes counts)
 npm run validate:sources    # validate the source registry
 npm run validate:corpus     # validate the 100K corpus targets + source roadmap
+npm run manifest -- --scope records   # SHA-256 integrity manifest over a corpus scope
+npm run dedup-report        # group advisory files into corpus items by identity key
 npm run test:vectors        # provider interop vectors only
 npm run import:ghsa -- --limit 15   # BLOCKED by the production-data lock (see docs/INGESTION_PLAN.md)
 npm run import:osv -- --limit 20    # BLOCKED by the production-data lock (see docs/INGESTION_PLAN.md)

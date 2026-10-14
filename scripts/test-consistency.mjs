@@ -20,17 +20,22 @@
  *  9. the source registry validates + every record source resolves +
  *     the OSV seed list is well-formed (invalid-sources rejected);
  * 10. the corpus targets + source roadmap validate as a pair
- *     (invalid-corpus rejected).
+ *     (invalid-corpus rejected);
+ * 11. integrity manifests are deterministic + catch tampering (on a tmp
+ *     copy), and the dedup recount agrees with CORPUS_TARGETS.
  *
  * Usage: node scripts/test-consistency.mjs
  */
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { appendFileSync, cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { validateCwePath } from './validate-cwe.mjs';
 import { validateMatrixPath } from './validate-matrix.mjs';
 import { validateSourcesPath } from './validate-sources.mjs';
 import { validateCorpusPair, validateCorpusTargetsPath, validateRoadmapPath } from './validate-corpus.mjs';
+import { groupAdvisoryRecords, groupFiles } from './dedup-report.mjs';
+import { computeManifest, verifyManifest } from './manifest.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 let passed = 0;
@@ -466,6 +471,58 @@ for (const [name, needle] of Object.entries(NEGATIVE_CORPUS_ROADMAP)) {
   const rejected = errors.length > 0 && errors.some((error) => error.includes(needle));
   assert(rejected, `negative: test/invalid-corpus/${name} rejected (${needle})`, errors.join('; '));
 }
+
+// --- 11. integrity manifests + dedup recount ------------------------------------------------
+// G11: manifests are deterministic; tampered/missing/extra files fail loudly
+// (all mutation happens on a tmp copy - the repo is never touched). G3: the
+// dedup report groups the real tree into items; its count must equal the
+// CORPUS_TARGETS advisory claim, and synthetic fixtures must group 4 files
+// into 3 items.
+const recordsManifestA = computeManifest(ROOT, 'records');
+const recordsManifestB = computeManifest(ROOT, 'records');
+assert(
+  JSON.stringify(recordsManifestA) === JSON.stringify(recordsManifestB),
+  'positive: records manifest is deterministic',
+);
+assert(
+  verifyManifest(ROOT, recordsManifestA).ok,
+  'positive: records manifest verifies against the tree',
+);
+const tamperRoot = mkdtempSync(join(tmpdir(), 'drobon-manifest-'));
+cpSync(join(ROOT, 'vuln-intel'), join(tamperRoot, 'vuln-intel'), { recursive: true });
+const tamperManifest = computeManifest(tamperRoot, 'records');
+const tamperVictim = join(tamperRoot, tamperManifest.files[0].path);
+appendFileSync(tamperVictim, ' ');
+const tamperResult = verifyManifest(tamperRoot, tamperManifest);
+assert(
+  !tamperResult.ok && tamperResult.problems.length === 1 && tamperResult.problems[0].startsWith('tampered:'),
+  'negative: manifest verification catches a tampered file',
+  tamperResult.problems.join('; '),
+);
+rmSync(tamperRoot, { recursive: true, force: true });
+const targetsDoc = readJson(join(ROOT, 'docs', 'CORPUS_TARGETS.json'));
+const advisoryClaim = targetsDoc.categories.find((category) => category.id === 'advisory-record')?.validatedCount;
+const dedupReal = groupAdvisoryRecords(ROOT);
+assert(
+  dedupReal.items.length === advisoryClaim,
+  `consistency: dedup items (${dedupReal.items.length}) equal CORPUS_TARGETS advisory claim (${String(advisoryClaim)})`,
+);
+assert(
+  dedupReal.files === 100 && dedupReal.multiFile.length === 9,
+  `consistency: dedup real tree is 100 files / 9 multi-file tuples (got ${dedupReal.files}/${dedupReal.multiFile.length})`,
+);
+const dedupSynthetic = groupFiles(
+  readdirSync(join(ROOT, 'test', 'dedup')).filter((name) => name.endsWith('.json')).map((name) => join(ROOT, 'test', 'dedup', name)),
+  ROOT,
+);
+assert(
+  dedupSynthetic.files === 4 && dedupSynthetic.items.length === 3 && dedupSynthetic.multiFile.length === 1,
+  `negative: synthetic duplicates group 4 files into 3 items (got ${dedupSynthetic.files}/${dedupSynthetic.items.length}/${dedupSynthetic.multiFile.length})`,
+);
+assert(
+  existsSync(join(ROOT, 'docs', 'LICENSE_REVIEW.md')),
+  'positive: docs/LICENSE_REVIEW.md exists (registry report pointer)',
+);
 
 // --- summary --------------------------------------------------------------------
 const total = passed + failed;

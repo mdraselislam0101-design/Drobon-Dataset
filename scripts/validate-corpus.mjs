@@ -15,6 +15,7 @@
  *   (defaults: docs/CORPUS_TARGETS.json docs/SOURCE_ROADMAP.json)
  */
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { countAdvisoryItems } from './dedup-report.mjs';
 import { dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -27,7 +28,7 @@ const CATEGORY_ID_PATTERN = /^[a-z0-9-]+$/;
 const CATEGORY_STATUSES = ['COUNTED', 'EXCLUDED'];
 const LICENSE_STATUSES = ['BLOCKED_LICENSE_REVIEW', 'ORIGINAL_UNLICENSED', 'NOT_APPLICABLE'];
 const SOURCE_STATUSES = ['IN_USE_AS_SEED', 'IN_USE', 'PLANNED', 'REFERENCED', 'UNASSESSED'];
-const SOURCE_LICENSE_STATUSES = ['UNVERIFIED', 'ORIGINAL_UNLICENSED', 'NOT_APPLICABLE'];
+const SOURCE_LICENSE_STATUSES = ['VERIFIED_ALLOWED', 'RESTRICTED', 'BLOCKED_UNVERIFIED', 'ORIGINAL_UNLICENSED', 'NOT_APPLICABLE'];
 const LICENSE_FILE_PATTERN = /^(LICENSE|LICENCE|COPYING)/i;
 
 function hasControlChars(value) {
@@ -77,26 +78,6 @@ function countFlatJsonFiles(dir) {
     .length;
 }
 
-function collectJsonFilesRecursive(root) {
-  const found = [];
-  const walk = (dir) => {
-    const entries = readdirSync(dir, { withFileTypes: true }).sort((a, b) =>
-      a.name < b.name ? -1 : a.name > b.name ? 1 : 0,
-    );
-    for (const entry of entries) {
-      const full = join(dir, entry.name);
-      if (entry.isDirectory()) {
-        walk(full);
-      } else if (entry.isFile() && entry.name.endsWith('.json') && entry.name !== 'sources.json') {
-        // sources.json is registry metadata, not a record (validated by validate-sources.mjs).
-        found.push(full);
-      }
-    }
-  };
-  walk(root);
-  return found;
-}
-
 function hasLicenseFile(root) {
   try {
     return readdirSync(root, { withFileTypes: true }).some(
@@ -109,13 +90,9 @@ function hasLicenseFile(root) {
 
 function recomputeCategory(root, id) {
   switch (id) {
-    case 'advisory-record': {
-      let real = 0;
-      for (const file of collectJsonFilesRecursive(join(root, 'vuln-intel'))) {
-        if (readJson(file).fixture === false) real += 1;
-      }
-      return real;
-    }
+    case 'advisory-record':
+      // Items, not files: same-tuple shards collapse to one (COUNTING_POLICY.md section 1).
+      return countAdvisoryItems(root);
     case 'sast-rule':
       return countFlatJsonFiles(join(root, 'packs', 'sast', 'v1', 'rules'));
     case 'secrets-rule':
