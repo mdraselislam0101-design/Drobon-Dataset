@@ -407,6 +407,17 @@ assert(parseGhsaArgs(['--max-pages', '7']).maxPages === 7, 'pipeline: ghsa --max
 let badMaxThrew = false;
 try { parseOsvArgs(['--max-pages', '99']); } catch { badMaxThrew = true; }
 assert(badMaxThrew, 'pipeline: osv --max-pages rejects out-of-range values');
+// --- 12. fixture-flag exclusion --------------------------------------------------------
+const fixtureFlagDir = join(scratch, 'fixture-flag');
+mkdirSync(join(fixtureFlagDir, 'vuln-intel', 'npm'), { recursive: true });
+const flagReal = readRecord(join(gen1k, 'vuln-intel', 'npm', 'SYNTH-000001.json'));
+writeFileSync(join(fixtureFlagDir, 'vuln-intel', 'npm', 'SYNTH-000001.json'), JSON.stringify(flagReal, null, 2));
+const flagFixture = { ...flagReal, fixture: true, id: 'DROBON-SAMPLE-900', provenance: { ...flagReal.provenance, source: 'fixture' } };
+writeFileSync(join(fixtureFlagDir, 'vuln-intel', 'npm', 'DROBON-SAMPLE-900.json'), JSON.stringify(flagFixture, null, 2));
+const flagGroup = groupAdvisoryRecords(fixtureFlagDir);
+assert(flagGroup.files === 1, 'rehearsal: fixture:true files are not counted as files');
+assert(flagGroup.items.length === 1 && flagGroup.items[0].files.length === 1 && flagGroup.items[0].files[0].endsWith('SYNTH-000001.json'), 'rehearsal: a valid fixture:true twin never forms items or joins groups');
+assert(validateRecord(flagFixture).length === 0, 'rehearsal: the fixture twin stays schema-valid (excluded by flag, not by breakage)');
 rmSync(scratch, { recursive: true, force: true });
 
 // --- summary --------------------------------------------------------------------
