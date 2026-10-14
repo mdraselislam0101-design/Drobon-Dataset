@@ -4,7 +4,7 @@
 
 ## Design constraints (inherited from the app)
 
-The Drobon app's SCA provider seam consumes this data through one narrow contract:
+The Drobon app's SCA provider seam would consume this data — once a real provider exists — through one narrow contract:
 
 ```
 assess(coordinates) → { providerId, datasetStatus, advisories[] }
@@ -84,7 +84,7 @@ Rules:
 
 ## Determinism & ordering
 
-- One advisory per file (see `vuln-intel/README.md` for paths).
+- One advisory-package-range record per file: multi-package and multi-range-branch advisories expand to `<ID>.json`, `<ID>--2.json`, … (see `vuln-intel/README.md` for paths).
 - Files and `affected` entries SHOULD be sorted (by `ecosystem`, `package`, `id`; ranges ascending) so diffs stay reviewable. The validator does not enforce order in v1.
 
 ## Versioning policy

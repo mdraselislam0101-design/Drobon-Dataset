@@ -34,7 +34,8 @@ const RULE_ID_PATTERN =
 const LESSON_ID_PATTERN = /^lsn_[a-z0-9_]{3,40}$/; // mirrors STUDENT_LESSON_ID_PATTERN
 const TEMPLATE_ID_PATTERN = /^tmpl_[a-z0-9_]{3,40}$/;
 const ENGAGEMENT_ID_PATTERN = /^eng_[a-z0-9_]{3,40}$/;
-const CWE_PATTERN = /^CWE-[0-9]{1,4}$/;
+// Mirrors FINDING_CWE_PATTERN (Drobon app, packages/shared/src/scans.ts): no leading zeros.
+const CWE_PATTERN = /^CWE-[1-9][0-9]{0,5}$/;
 const HOSTNAME_PATTERN =
   /^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$/;
 const CHECKLIST_KINDS = ['authorization', 'scope', 'evidence', 'safety'];
@@ -160,7 +161,7 @@ export function validateRemediation(record) {
   }
   if (record['standardId'] !== undefined) {
     if (typeof record['standardId'] !== 'string' || !CWE_PATTERN.test(record['standardId'])) {
-      errors.push('standardId: must match ^CWE-[0-9]{1,4}$ (omit when uncertain)');
+      errors.push('standardId: must match ^CWE-[1-9][0-9]{0,5}$ (omit when uncertain)');
     }
   }
   if (record['example'] !== undefined) {

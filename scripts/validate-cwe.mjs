@@ -14,7 +14,9 @@ import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 export const CWE_SCHEMA = 'drobon.knowledge.cwe/v1';
-const CWE_ID_PATTERN = /^CWE-([0-9]{1,4})$/;
+// Mirrors FINDING_CWE_PATTERN (Drobon app, packages/shared/src/scans.ts):
+// no leading zeros, so dataset ids always match app finding references.
+const CWE_ID_PATTERN = /^CWE-([1-9][0-9]{0,5})$/;
 const MAX_NAME = 120;
 const MAX_SUMMARY = 500;
 
@@ -66,7 +68,7 @@ export function validateCwe(value) {
   if (value['id'] !== undefined) {
     const match = typeof value['id'] === 'string' ? CWE_ID_PATTERN.exec(value['id']) : null;
     if (match === null) {
-      errors.push('id: must match ^CWE-[0-9]{1,4}$');
+      errors.push('id: must match ^CWE-[1-9][0-9]{0,5}$ (no leading zeros)');
     } else {
       number = match[1];
     }

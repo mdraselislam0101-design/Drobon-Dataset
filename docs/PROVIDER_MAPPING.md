@@ -1,4 +1,4 @@
-# PROVIDER_MAPPING.md — how the app consumes this dataset
+# PROVIDER_MAPPING.md — how a future app provider would consume this dataset
 
 The `Drobon` app never reads this repository directly. A future, separately-deployed **provider** loads this data server-side and plugs into the app's single seam (`apps/api/src/scans/sca/provider.ts`):
 
@@ -41,8 +41,8 @@ Every advisory the provider returns must satisfy the app's `isScaAdvisory` guard
 
 Rules for the future provider (app-side, recorded here so both sides agree):
 
-1. **Match, then re-validate.** The engine re-validates every provider advisory against `isScaAdvisory` before persisting — a provider cannot smuggle shapes. Records that pass this repo's validator are guaranteed to survive that guard on the dataset-sourced fields.
-2. **Only verified matches.** `assess` returns records it actually matched against loaded data. No match → no advisory; the scan completes `NOT_ASSESSED` for those dependencies.
+1. **Match, then re-validate.** The engine fail-closes every provider advisory through `sanitizeAdvisory` at write time, and the store enforces the closed `isScaAdvisory`/`isScaResult` guards on read/boot — a provider cannot smuggle shapes. Records that pass this repo's validator are guaranteed to survive those guards on the dataset-sourced fields.
+2. **Only verified matches.** `assess` returns records it actually matched against loaded data. No match → no advisory; the scan completes `NOT_ASSESSED` (scan-level state — a zero-match assessment is still `NOT_ASSESSED` today, since `ScaDatasetStatus` has no "checked, clean" value).
 3. **Dataset status is honest.** A configured provider whose data is missing/unreachable reports `DATASET_UNAVAILABLE` — the scan still succeeds with inventory + SBOM. The shipped Null provider reports `NO_DATA_LOADED`.
 4. **Server-side composition only.** Nothing client-facing selects, registers, or influences a provider (`VULN_INTEL_PROVIDER` is server config; today it must be `none` and any other value fails app startup — changing that is an app-repo decision, not this repo's).
 

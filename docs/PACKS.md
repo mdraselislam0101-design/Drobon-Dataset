@@ -35,7 +35,7 @@ packs/
 | `category` | `^[a-z0-9-]{1,64}$` | grouping (`command-injection`, `private-key`, …) |
 | `remediation` | 1–1000 chars | fix guidance (surfaces in findings) |
 | `limitation` | 1–1000 chars | documented detection limits (required — every rule states what it cannot see) |
-| `cwe` | optional `^CWE-[0-9]{1,4}$` | only when certain; omitted rather than guessed |
+| `cwe` | optional `^CWE-[1-9][0-9]{0,5}$` (app `FINDING_CWE_PATTERN`, no leading zeros) | only when certain; omitted rather than guessed |
 | `tests` | 2–50 entries | executable examples, ≥1 positive AND ≥1 negative (required) |
 
 All shapes are closed (unknown fields rejected) and control-character-free, mirroring the advisories discipline. The executable spec is `scripts/validate-packs.mjs`.

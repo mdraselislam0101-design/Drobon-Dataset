@@ -40,7 +40,8 @@ const ID_PATTERNS = {
   secrets: /^DPK-SEC-[0-9]{3,}$/,
   dast: /^DPK-DAST-[0-9]{3,}$/,
 };
-const CWE_PATTERN = /^CWE-[0-9]{1,4}$/;
+// Mirrors FINDING_CWE_PATTERN (Drobon app, packages/shared/src/scans.ts): no leading zeros.
+const CWE_PATTERN = /^CWE-[1-9][0-9]{0,5}$/;
 const CATEGORY_PATTERN = /^[a-z0-9-]{1,64}$/;
 const LANGUAGE_PATTERN = /^[a-z][a-z0-9]{0,31}$/;
 const HEADER_TOKEN = /^[A-Za-z0-9-]{1,64}$/;
@@ -188,7 +189,7 @@ function checkBase(errors, record, kind) {
   }
   if (record['cwe'] !== undefined) {
     if (typeof record['cwe'] !== 'string' || !CWE_PATTERN.test(record['cwe'])) {
-      errors.push('cwe: must match ^CWE-[0-9]{1,4}$ (omit when uncertain)');
+      errors.push('cwe: must match ^CWE-[1-9][0-9]{0,5}$ (omit when uncertain)');
     }
   }
 }

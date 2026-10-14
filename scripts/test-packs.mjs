@@ -122,6 +122,7 @@ const NEGATIVE = {
   'sast-failing-test.json': 'tests[#0]',
   'sast-nested-quantifier.json': 'nested quantifier',
   'sast-bad-id.json': 'must match',
+  'sast-bad-cwe.json': 'cwe: must match',
   'secrets-bad-confidence.json': 'confidence',
   'dast-unknown-check.json': 'must be one of',
 };

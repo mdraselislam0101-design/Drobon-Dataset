@@ -86,6 +86,7 @@ for (const [dir, spec] of Object.entries(AUDIENCE_DIRS)) {
 // --- 3. negative ---------------------------------------------------------------
 const NEGATIVE = {
   'remediation-bad-ruleid.json': 'ruleId',
+  'remediation-bad-standardid.json': 'standardId: must match',
   'lesson-bad-quiz.json': 'answerIndex',
   'lesson-starter-miss.json': 'no line triggers',
   'template-with-declarations.json': 'unknown property',

@@ -8,7 +8,7 @@ This repository exists because the app enforces an **absolute dataset lock**: no
 
 | Repository | Holds | This repo's relation to it |
 |---|---|---|
-| [`Drobon`](https://github.com/mdraselislam0101-design/Drobon) | The main app (API, Web, Worker, scanners, rule *logic*) | Consumer: reads vuln-intel only through the SCA provider seam (`assess(coordinates)`), server-side. See `docs/PROVIDER_MAPPING.md`. Pack/audience loaders are future app work — see `docs/PACKS.md` + `docs/AUDIENCES.md`. |
+| [`Drobon`](https://github.com/mdraselislam0101-design/Drobon) | The main app (API, Web, Worker, scanners, rule *logic*) | Future consumer (no integration today — the app ships the Null provider): would read vuln-intel only through the SCA provider seam (`assess(coordinates)`), server-side. See `docs/PROVIDER_MAPPING.md`. Pack/audience loaders are future app work — see `docs/PACKS.md` + `docs/AUDIENCES.md`. |
 | [`Drobon-Database`](https://github.com/mdraselislam0101-design/Drobon-Database) | Future database schemas/migrations | No coupling today. If the dataset is ever served from a database, the schema lives there; the record *format* stays defined here. |
 
 What lives where (by design — proven in `docs/SCOPE.md` by inventorying every app seam):
@@ -20,11 +20,12 @@ What lives where (by design — proven in `docs/SCOPE.md` by inventorying every 
 
 ## Data
 
+- **Production-data lock in force**: catalog expansion (GHSA/OSV/CVE/KEV/EPSS/…) is blocked until the authorized production stage — see `docs/INGESTION_PLAN.md`. The seed below is preserved as-is and assessed read-only.
 - **100 reviewed GHSA seed records** (50 npm + 50 pypi), imported 2026-10-14 via `scripts/import-ghsa.mjs` — reviewed advisories only, withdrawn excluded, every record with source URL + retrieval time.
 - **3 synthetic fixtures** (`*/samples/`, `DROBON-SAMPLE-###`) proving format/validator behavior; they assert nothing about the real world.
 - **18 starter pack rules** (8 SAST + 4 secrets + 6 DAST), all original Drobon content with executable example tests — no proprietary rule was copied from any commercial tool, ever.
 - **18 remediation entries** — one per pack rule, enforced by consistency tests (no finding without guidance).
-- **10 CWE knowledge entries** in our own words, each linking its canonical MITRE page; every CWE reference in packs/remediation must resolve here (enforced).
+- **17 CWE knowledge entries** in our own words (all 15 app-referenced CWEs + 2 pack-only), each linking its canonical MITRE page; every CWE reference in packs/remediation must resolve here (enforced).
 - **8 audience starters**: 3 executable lessons (Student), 3 assessment templates (Security Professional), 2 passive-only engagement templates (Pentester).
 - **OSV importer** (`scripts/import-osv.mjs`) for open aggregated data (mapping covered by fixture tests; live import needs network to api.osv.dev).
 - Coverage is a **growing seed, never a completeness claim**: an empty result means "not in this dataset", never "not vulnerable" (HONESTY.md rule 5).
@@ -40,7 +41,10 @@ Drobon-Dataset/
 │   ├── PROVIDER_MAPPING.md    # How a future provider maps records → ScaAdvisory
 │   ├── PACKS.md               # Rule-pack formats, engine contract, loader checklist
 │   ├── AUDIENCES.md           # Audience datasets (remediation/lessons/templates/engagements)
-│   └── SCOPE.md               # Seam inventory: why ONLY this data lives here
+│   ├── SCOPE.md               # Seam inventory: what lives here, and why
+│   ├── REQUIREMENTS_MATRIX.json # Machine-readable capability → asset traceability (validated)
+│   ├── LICENSE_DECISION_RECORD.md # License status: no grant; owner decision pending
+│   └── INGESTION_PLAN.md      # Blocked-until-authorized production ingestion plan
 ├── schema/
 │   └── advisory.schema.json   # JSON Schema for advisory records (editors/tooling)
 ├── vuln-intel/
@@ -64,6 +68,7 @@ Drobon-Dataset/
 │   ├── validate-packs.mjs     # Zero-dependency pack validator (executes rule tests)
 │   ├── validate-audiences.mjs # Zero-dependency audience validator (executes lessons)
 │   ├── validate-cwe.mjs       # Zero-dependency CWE validator (checks MITRE links)
+│   ├── validate-matrix.mjs    # Zero-dependency requirements-matrix validator (recomputes counts)
 │   ├── range.mjs              # semver / PEP 440 range syntax + evaluation
 │   ├── import-ghsa.mjs        # Reviewed-GHSA importer (validates before writing)
 │   ├── import-osv.mjs         # OSV importer (fixture-tested mapping)
@@ -76,6 +81,8 @@ Drobon-Dataset/
 │   ├── invalid/               # Advisory fixtures the validator MUST reject
 │   ├── invalid-packs/         # Pack fixtures the pack validator MUST reject
 │   ├── invalid-audiences/     # Audience fixtures the audience validator MUST reject
+│   ├── invalid-cwe/           # CWE fixtures the CWE validator MUST reject
+│   ├── invalid-matrix/        # Matrix fixtures the matrix validator MUST reject
 │   └── fixtures/              # OSV mapping fixtures (synthetic API-shaped input)
 └── .github/workflows/ci.yml   # CI: npm test + all validators + vectors
 ```
@@ -102,19 +109,20 @@ npm run validate            # validate every record under vuln-intel/
 npm run validate:packs      # validate every pack manifest + rule under packs/
 npm run validate:audiences  # validate knowledge/ + learning/ + assessments/ + engagements/
 npm run validate:cwe        # validate every entry under knowledge/cwe/
+npm run validate:matrix     # validate the requirements traceability matrix (recomputes counts)
 npm run test:vectors        # provider interop vectors only
-npm run import:ghsa -- --limit 15   # import reviewed advisories (GITHUB_TOKEN recommended)
-npm run import:osv -- --limit 20    # import OSV records (needs network to api.osv.dev)
+npm run import:ghsa -- --limit 15   # BLOCKED by the production-data lock (see docs/INGESTION_PLAN.md)
+npm run import:osv -- --limit 20    # BLOCKED by the production-data lock (see docs/INGESTION_PLAN.md)
 ```
 
 ## Contributing records, rules & content
 
 1. Read the spec first: `docs/FORMAT.md` + `docs/HONESTY.md` (advisories), `docs/PACKS.md` (packs), `docs/AUDIENCES.md` (audiences).
-2. Prefer the importers for advisory growth; hand-written records need full `provenance` and one file per advisory-package (see `vuln-intel/README.md`).
+2. Catalog growth is BLOCKED by the production-data lock until the authorized stage (importers and hand-written real records alike — see `docs/INGESTION_PLAN.md`). Original pack/audience/CWE content and labeled fixtures remain welcome; any record needs full `provenance` and one file per advisory-package (see `vuln-intel/README.md`).
 3. Pack rules must be **original**, tested (≥1 positive + ≥1 negative example), severity-conservative, with a mandatory `limitation` section — **and** ship with a remediation entry plus resolvable CWE (consistency tests enforce both).
 4. Audience content must be **original**; lessons must execute against their target rules; templates use exact hostnames and never declare authorization; engagements stay passive-only.
 5. If a new record changes any vector outcome, update `interop/provider-vectors.json` in the same commit with a note.
-6. Run `npm test` before pushing — CI enforces it.
+6. Run `npm test` before committing — CI enforces it on every push. Pushes, PRs, releases, and deployments need explicit authorization.
 
 ## License
 

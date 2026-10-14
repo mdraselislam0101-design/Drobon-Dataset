@@ -1,8 +1,8 @@
-# SCOPE.md — why this repo holds ONLY vulnerability intelligence
+# SCOPE.md — what lives in this repo, and why (app-seam inventory)
 
-This document proves the dataset surface is **complete**: every place in the Drobon app that could consume external data was inventoried, and exactly one seam needs a dataset. Anything proposed for this repo that is not vulnerability intelligence must cite a new app seam — otherwise it belongs in the app repo (logic) or the database repo (persistence schemas).
+This document proves the dataset surface is **complete**: every place in the Drobon app that could consume external data was inventoried. Exactly one seam needs vulnerability intelligence (row 1); rows 12–19 cover rule packs and audience datasets for documented future loaders. Anything proposed for this repo outside these rows must cite a new app seam — otherwise it belongs in the app repo (logic) or the database repo (persistence schemas).
 
-Method: cloned `Drobon` (`main`, 2026-10-14) and searched `apps/*/src` + `packages/shared/src` for data seams (`dataset`, `vuln-intel`, `provider`, `catalog`, `advisory`, `CVE/GHSA/OSV/NVD/KEV/EPSS`, JSON imports, file reads, `fetch(`). Runtime `readFileSync` hits were triaged one by one: all are operational stores (user/scans/projects state), not datasets.
+Method: cloned `Drobon` (`main` @ `c32c797a549453802bd6d82c5673d2a1728457a3`, 2026-10-14) and searched `apps/*/src` + `packages/shared/src` for data seams (`dataset`, `vuln-intel`, `provider`, `catalog`, `advisory`, `CVE/GHSA/OSV/NVD/KEV/EPSS`, JSON imports, file reads, `fetch(`). Runtime `readFileSync` hits were triaged one by one: all are operational stores (user/scans/projects state), not datasets.
 
 ## Seam inventory
 
@@ -20,19 +20,19 @@ Method: cloned `Drobon` (`main`, 2026-10-14) and searched `apps/*/src` + `packag
 | 10 | Assessments | NOT data — user-created records in the runtime store | `apps/api/src/assessments/store.ts` |
 | 11 | Config selectors | No other dataset switch exists — `VULN_INTEL_PROVIDER` is the only one, and it is locked | `apps/api/src/config.ts` (no other `*_PROVIDER`/`*_DATASET` env) |
 | 12 | Rule packs: SAST (`DPK-SAST-*`) | **DATA — this repo** (`packs/sast/`); consumer = future app pack-loader (not yet implemented) | `docs/PACKS.md`; mirrors the app `SastRule` matcher contract (`sast/rules.ts`), lexical only |
-| 13 | Rule packs: secrets (`DPK-SEC-*`) | **DATA — this repo** (`packs/secrets/`); consumer = future loader | `docs/PACKS.md`; mirrors `SecretsRule` (`secrets/rules.ts`): shape-only + denylist + redaction |
+| 13 | Rule packs: secrets (`DPK-SEC-*`) | **DATA — this repo** (`packs/secrets/`); consumer = future loader | `docs/PACKS.md`; mirrors `SecretsRule` (`secrets/rules.ts`): shape-only + redaction + dataset-side denylist veto (≈ the app `validate` gate) |
 | 14 | Rule packs: DAST (`DPK-DAST-*`) | **DATA — this repo** (`packs/dast/`); consumer = future loader | `docs/PACKS.md`; mirrors `DastRuleInput` (`dast/rules.ts`): passive checks only |
 | 15 | Remediation knowledge (`knowledge/remediation/`) | **DATA — this repo**; consumer = future loader merging into remediation responses | `docs/AUDIENCES.md`; mirrors `FindingRemediationGuidance` (`findings.ts`) |
 | 16 | Student lessons (`learning/lessons/`) | **DATA — this repo**; consumer = future loader extending the lesson catalog | `docs/AUDIENCES.md`; mirrors `StudentLessonInternal` + shared bounds (`student.ts`) |
 | 17 | Assessment templates (`assessments/templates/`) | **DATA — this repo**; consumer = future loader offering starting points | `docs/AUDIENCES.md`; mirrors Assessment bounds (`assessments.ts`); never pre-declares authorization |
 | 18 | Engagement templates (`engagements/`) | **DATA — this repo**; consumer = future loader (pentester setup aids) | `docs/AUDIENCES.md`; authorized + passive only, banned-phrase lint |
-| 19 | CWE knowledge (`knowledge/cwe/`) | **DATA — this repo**; own-words summaries + canonical MITRE links; every pack/remediation CWE must resolve here (consistency-tested) | `docs/AUDIENCES.md`; url executably pinned to the entry's own MITRE page |
+| 19 | CWE knowledge (`knowledge/cwe/`) | **DATA — this repo**; own-words summaries + canonical MITRE links; every pack/remediation CWE must resolve here (consistency-tested); covers all 15 app-referenced CWEs + 2 pack-only (319, 693) | `docs/AUDIENCES.md`; url executably pinned to the entry's own MITRE page |
 | 20 | AI assistant reasoning | NOT data — deterministic answers are computed from scan state (intent recognizer + fingerprint comparison); provider mode is an LLM boundary | `apps/api/src/assistant/service.ts` (no message templates to externalize) |
 | 21 | Security reports (JSON/Markdown/SARIF/SBOM) | NOT data — pure renderers over scan results (canonical JSON, integrity verify, format emitters) | `apps/api/src/reports/build.ts` |
 
 ## Completeness statement
 
-`vuln-intel/` is the complete dataset surface for the Drobon app as inventoried above. Consequences:
+`vuln-intel/` (vulnerability intelligence) plus `packs/`, `knowledge/`, `learning/`, `assessments/`, and `engagements/` (rule packs + audience datasets, rows 12–19) are the complete dataset surface for the Drobon app as inventoried above. Consequences:
 
 - A new top-level data directory requires: (a) a new consumer seam in the app repo, (b) a row in the table above, (c) format + validator + tests of the same standard. No seam, no directory.
 - Moving rule *logic* (rows 5–7) out of the app would break its build and ~150 engine tests; rules stay in the app by design.
