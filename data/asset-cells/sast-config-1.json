@@ -1,0 +1,318 @@
+[
+  {
+    "class": "tls-verify-off",
+    "kind": "sast",
+    "category": "transport-security",
+    "cwe": "CWE-319",
+    "severity": "HIGH",
+    "framing": "flag",
+    "title": "TLS verification disabled ({lang}) \u2014 review required",
+    "description": "Certificate or hostname verification is switched off in {lang}: {sink}. The connection then trusts any certificate, so an active attacker intercepts credentials, tokens, and data. This lexical rule flags the switch; the reviewer confirms it is test-only or restores verification.",
+    "remediation": "Delete the switch and verify against the system store ({safe}); for private CAs, pin the CA instead of disabling checks.",
+    "limitation": "Lexical, line-based: matches the switch regardless of environment. Per-client verify=False forms are separate rules.",
+    "scopeT": "Single-line lexical match on TLS-disabling settings in {lang} code or config.",
+    "fp": "Local test harnesses against self-signed fixtures are the common false positive \u2014 confirm test scope.",
+    "recordDesc": "In {lang}, {sink} disables a TLS authenticity check. Without verification, encryption still runs but against whoever answers \u2014 including an attacker. The remedy is restoring verification ({safe}).",
+    "applicability": "{lang} TLS clients and configuration; single-line lexical scope.",
+    "risk": "Machine-in-the-middle interception of all traffic on the connection; HIGH severity.",
+    "why": "{lang} TLS verification is disabled ({sink}), so any certificate is trusted.",
+    "fix": [
+      "Remove the switch and verify with {safe}.",
+      "For private CAs, configure the CA bundle explicitly.",
+      "Re-run the scan and confirm no disabling switch remains outside tests."
+    ],
+    "verifyT": "Rescan shows no disabling switch outside tests, and invalid certificates are refused.",
+    "sinks": {
+      "javascript": [
+        "rejectUnauthorized\\s*:\\s*false",
+        "rejectUnauthorized: false",
+        "rejectUnauthorized: true",
+        "default CA verification"
+      ],
+      "go": [
+        "InsecureSkipVerify\\s*:\\s*true",
+        "InsecureSkipVerify: true",
+        "InsecureSkipVerify: false",
+        "system roots plus private CA pool"
+      ],
+      "ruby": [
+        "VERIFY_NONE",
+        "OpenSSL::SSL::VERIFY_NONE",
+        "OpenSSL::SSL::VERIFY_PEER",
+        "VERIFY_PEER with a CA store"
+      ],
+      "php": [
+        "CURLOPT_SSL_VERIFYPEER\\s*,\\s*(?:false|0)",
+        "CURLOPT_SSL_VERIFYPEER, false",
+        "CURLOPT_SSL_VERIFYPEER, true",
+        "default verification with CA bundle"
+      ],
+      "java": [
+        "ALLOW_ALL_HOSTNAME_VERIFIER",
+        "ALLOW_ALL_HOSTNAME_VERIFIER",
+        "STRICT_HOSTNAME_VERIFIER",
+        "the strict hostname verifier"
+      ],
+      "csharp": [
+        "ServerCertificateCustomValidationCallback.{0,40}=>\\s*true",
+        "ServerCertificateCustomValidationCallback = (m,c,ch,e) => true",
+        "ServerCertificateCustomValidationCallback = Validator",
+        "chain validation"
+      ],
+      "shell": [
+        "curl\\s[^|]*-[a-zA-Z]*k\\b",
+        "curl -k https://x",
+        "curl https://x",
+        "valid certificates"
+      ],
+      "powershell": [
+        "ServerCertificateValidationCallback\\s*=\\s*[^=\\n]*\\{\\s*\\$true",
+        "$c.ServerCertificateValidationCallback = {$true}",
+        "$c.ServerCertificateValidationCallback = {param($s,$c) $c.Verify()}",
+        "chain validation"
+      ],
+      "yaml": [
+        "validate_certs\\s*:\\s*(?:no|false)",
+        "validate_certs: no",
+        "validate_certs: yes",
+        "valid certificates"
+      ],
+      "json": [
+        "insecure-registries",
+        "\"insecure-registries\": [\"x\"]",
+        "\"registries\": [\"x\"]",
+        "TLS registries with valid certificates"
+      ]
+    }
+  },
+  {
+    "class": "debug-flag-on",
+    "kind": "sast",
+    "category": "debug-exposure",
+    "cwe": "CWE-489",
+    "severity": "MEDIUM",
+    "framing": "flag",
+    "title": "Debug mode enabled ({lang}) \u2014 review required",
+    "description": "Debug behavior is switched on in {lang}: {sink}. Debug modes expose tracebacks, consoles, or verbose errors to whoever can reach the service. This lexical rule flags the switch; the reviewer confirms it is local-only or turns it off.",
+    "remediation": "Gate the switch on {safe} and default it off.",
+    "limitation": "Lexical, line-based: matches the switch regardless of environment. Generic debug=true forms are separate rules.",
+    "scopeT": "Single-line lexical match on debug-enabling settings in {lang} code or config.",
+    "fp": "Local development configuration is the common false positive \u2014 confirm it cannot ship.",
+    "recordDesc": "In {lang}, {sink} enables debug behavior. Debug output and consoles turn minor flaws into disclosure or execution. The remedy is environment gating via {safe}.",
+    "applicability": "{lang} application configuration; single-line lexical scope.",
+    "risk": "Information disclosure and debug-console execution; MEDIUM severity, HIGH when public.",
+    "why": "{lang} debug mode is enabled ({sink}), exposing internals to whoever reaches the service.",
+    "fix": [
+      "Gate the switch with {safe}, defaulting off.",
+      "Fail startup when debug is on outside development.",
+      "Re-run the scan and confirm no debug switch remains enabled."
+    ],
+    "verifyT": "Rescan shows no enabled debug switch, and production starts with debug off.",
+    "sinks": {
+      "ruby": [
+        "consider_all_requests_local\\s*=\\s*true",
+        "consider_all_requests_local = true",
+        "consider_all_requests_local = false",
+        "Rails.env.development?"
+      ],
+      "php": [
+        "display_errors\\s*[=:]\\s*(?:On|1|stdout)",
+        "display_errors = On",
+        "display_errors = Off",
+        "an environment check"
+      ],
+      "shell": [
+        "APP_DEBUG\\s*=\\s*true",
+        "APP_DEBUG=true",
+        "APP_DEBUG=false",
+        "APP_ENV-gated config"
+      ],
+      "xml": [
+        "customErrors\\s+mode\\s*=\\s*[\"']Off[\"']",
+        "<customErrors mode=\"Off\" />",
+        "<customErrors mode=\"On\" />",
+        "RemoteOnly errors"
+      ],
+      "properties": [
+        "android:debuggable\\s*=\\s*[\"']true[\"']",
+        "android:debuggable=\"true\"",
+        "android:debuggable=\"false\"",
+        "build-type gating"
+      ]
+    }
+  },
+  {
+    "class": "cors-open",
+    "kind": "sast",
+    "category": "access-control",
+    "cwe": "CWE-284",
+    "severity": "MEDIUM",
+    "framing": "flag",
+    "title": "Overly open CORS ({lang}) \u2014 review required",
+    "description": "Cross-origin sharing in {lang} is opened wide: {sink}. Any site can then read responses with the victim's ambient credentials where credentials are allowed, or probe APIs otherwise. This lexical rule flags the opening; the reviewer confirms the scope or narrows it.",
+    "remediation": "List exact trusted origins ({safe}) and avoid credentials with wildcards.",
+    "limitation": "Lexical, line-based: matches open CORS regardless of credential settings. Framework allow_origins forms are separate rules.",
+    "scopeT": "Single-line lexical match on open CORS settings in {lang} code or config.",
+    "fp": "Public, unauthenticated APIs intentionally open are the common accepted case.",
+    "recordDesc": "In {lang}, {sink} lets foreign origins read responses. Wildcard origins combine dangerously with credentialed requests. The remedy is an explicit origin list ({safe}).",
+    "applicability": "{lang} API servers and middleware; single-line lexical scope.",
+    "risk": "Cross-origin data theft where credentials apply; MEDIUM severity.",
+    "why": "{lang} CORS is opened wide ({sink}), letting foreign sites read responses.",
+    "fix": [
+      "Replace the opening with {safe}.",
+      "Never combine wildcard origins with credentials.",
+      "Re-run the scan and confirm no open CORS remains on sensitive APIs."
+    ],
+    "verifyT": "Rescan shows no open CORS on sensitive APIs, and foreign origins are refused.",
+    "sinks": {
+      "javascript": [
+        "cors\\s*\\(\\s*\\)|origin\\s*:\\s*['\"]\\*",
+        "app.use(cors())",
+        "app.use(cors({origin: FE}))",
+        "an explicit origin list"
+      ],
+      "java": [
+        "allowedOrigins\\s*\\([^)]*[\"']\\*[\"']",
+        ".allowedOrigins(\"*\")",
+        ".allowedOrigins(\"https://a\")",
+        "an explicit origin list"
+      ],
+      "php": [
+        "Access-Control-Allow-Origin[^\\n]*\\*",
+        "header(\"Access-Control-Allow-Origin: *\")",
+        "header(\"Access-Control-Allow-Origin: https://a\")",
+        "an explicit origin"
+      ],
+      "go": [
+        "AllowOrigins[^\\n]*\\*",
+        "AllowOrigins: []string{\"*\"}",
+        "AllowOrigins: []string{\"https://a\"}",
+        "an explicit origin list"
+      ],
+      "ruby": [
+        "origins\\s+['\"]\\*['\"]",
+        "origins '*'",
+        "origins 'https://a'",
+        "an explicit origin list"
+      ],
+      "csharp": [
+        "AllowAnyOrigin\\s*\\(\\s*\\)",
+        "AllowAnyOrigin()",
+        "WithOrigins(\"https://a\")",
+        "WithOrigins listing"
+      ],
+      "nginx": [
+        "add_header\\s+Access-Control-Allow-Origin\\s+[\"']?\\*",
+        "add_header Access-Control-Allow-Origin *;",
+        "add_header Access-Control-Allow-Origin $o;",
+        "a mapped origin variable"
+      ],
+      "apache": [
+        "Header\\s+set\\s+Access-Control-Allow-Origin\\s+[\"']?\\*",
+        "Header set Access-Control-Allow-Origin *",
+        "Header set Access-Control-Allow-Origin expr=%{o}",
+        "an expression-mapped origin"
+      ],
+      "python": [
+        "CORS_ALLOW_ALL_ORIGINS\\s*=\\s*True",
+        "CORS_ALLOW_ALL_ORIGINS = True",
+        "CORS_ALLOWED_ORIGINS = [FE]",
+        "CORS_ALLOWED_ORIGINS listing"
+      ]
+    }
+  },
+  {
+    "class": "secret-context",
+    "kind": "sast",
+    "category": "hardcoded-credential",
+    "cwe": "CWE-798",
+    "severity": "HIGH",
+    "framing": "flag",
+    "title": "Secret in a framework or file context ({lang}) \u2014 review required",
+    "description": "A secret is embedded in a {lang} context: {sink}. Context-shaped secrets (framework keys, connection strings, config values) ship to checkouts and artifacts like any hardcoded value. This lexical rule flags the embedding; the reviewer confirms it is a placeholder or externalizes it.",
+    "remediation": "Load the value from {safe} and rotate the embedded one.",
+    "limitation": "Lexical, line-based: matches embedded values regardless of liveness. Generic secret assignments are separate rules.",
+    "scopeT": "Single-line lexical match on context-embedded secrets in {lang} code or config.",
+    "fp": "Placeholder-shaped values (changeme, xxx) are the common false positive.",
+    "recordDesc": "In {lang}, {sink} places a secret where the framework or file format expects it. Context does not protect the value: it still lands in history, images, and dumps. The remedy is external storage via {safe}.",
+    "applicability": "{lang} framework settings, connection strings, and config files; single-line lexical scope.",
+    "risk": "Credential exposure through checkouts and artifacts; HIGH severity when the value is live.",
+    "why": "{lang} contexts embed secret values ({sink}), which leak through history and artifacts.",
+    "fix": [
+      "Move the value to {safe} and reference it.",
+      "Rotate the embedded value.",
+      "Re-run the scan and confirm no embedded secret remains."
+    ],
+    "verifyT": "Rescan shows no embedded secret, and rotation is complete.",
+    "sinks": {
+      "ruby": [
+        "secret_key_base\\s*=\\s*[\"'][^\"']{4,}[\"']",
+        "secret_key_base = \"abc123def456\"",
+        "secret_key_base = ENV[\"K\"]",
+        "the environment or credentials store"
+      ],
+      "java": [
+        "jdbc:[^\"'\\s]*[?;&]password=[^\"'\\s]+",
+        "url=jdbc:mysql://h/db?user=u&password=s3cret",
+        "url=jdbc:mysql://h/db",
+        "a secret store plus rotation"
+      ],
+      "universal": [
+        "Password\\s*=\\s*[^;]{4,};",
+        "Server=x;Password=s3cret-pw;",
+        "Server=x;Trusted_Connection=True;",
+        "integrated auth or a secret store"
+      ],
+      "shell": [
+        "[A-Z][A-Z0-9_]*(?:KEY|SECRET|TOKEN|PASSWORD)\\s*=\\s*\\S+",
+        "STRIPE_SECRET=sk-from-env",
+        "# STRIPE_SECRET is set in env",
+        "the process environment, never the file"
+      ],
+      "ini": [
+        "password\\s*=\\s*[^\"'\\s]\\S*",
+        "password = s3cret",
+        "password = \"\"",
+        "a secret include outside version control"
+      ],
+      "xml": [
+        "<password>[^<]+</password>",
+        "<password>s3cret-pw</password>",
+        "<username>u</username>",
+        "a secret store reference"
+      ]
+    }
+  },
+  {
+    "class": "django-security-flag",
+    "kind": "sast",
+    "category": "secure-configuration",
+    "cwe": "CWE-284",
+    "severity": "MEDIUM",
+    "framing": "flag",
+    "title": "Insecure Django setting ({lang}) \u2014 review required",
+    "description": "A Django security setting is left open: {sink}. Django's secure defaults exist to be switched on for deployment; the open value weakens host validation, transport, or cookie handling. This lexical rule flags the setting; the reviewer confirms local-only scope or hardens it.",
+    "remediation": "Set the deployment value ({safe}) outside local settings.",
+    "limitation": "Lexical, line-based: matches the setting regardless of settings module.",
+    "scopeT": "Single-line lexical match on insecure Django settings in {lang} code.",
+    "fp": "Local-only settings modules are the common false positive \u2014 confirm they cannot deploy.",
+    "recordDesc": "In Django, {sink} keeps a protection off. Host validation, HTTPS redirect, and secure cookie flags each close a real attack path. The remedy is the deployment value ({safe}).",
+    "applicability": "Django settings; single-line lexical scope.",
+    "risk": "Host-spoofing, downgrade, or cookie theft depending on the setting; MEDIUM severity.",
+    "why": "Django security settings stay open ({sink}), weakening deployment protections.",
+    "fix": [
+      "Set {safe} in deployment settings.",
+      "Split local and deployment settings so the open value cannot ship.",
+      "Re-run the scan and confirm no open setting remains deployable."
+    ],
+    "verifyT": "Rescan shows no open setting deployable, and deployment checks pass.",
+    "sinks": {
+      "python": [
+        "ALLOWED_HOSTS\\s*=\\s*\\[\\s*\\]",
+        "ALLOWED_HOSTS = []",
+        "ALLOWED_HOSTS = [HOST]",
+        "the real host list"
+      ]
+    }
+  }
+]

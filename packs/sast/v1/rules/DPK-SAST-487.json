@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-487",
+  "title": "Dangerous .NET construct (certcb) — review required",
+  "description": ".NET weakens a control: ServerCertificateValidationCallback.{0,80}=>s*true (certcb). Polymorphic typing enables gadgets, XSLT scripts execute, certificate callbacks accept all, plaintext mail and HTTP leak data, and validation opt-outs invite script. This lexical rule flags the construct; the reviewer hardens via real chain validation.",
+  "severity": "HIGH",
+  "cwe": "CWE-95",
+  "category": "code-injection",
+  "remediation": "Harden with real chain validation.",
+  "limitation": "Lexical, line-based: matches the construct.",
+  "languages": [
+    "csharp"
+  ],
+  "patterns": [
+    {
+      "source": "ServerCertificateValidationCallback.{0,80}=>\\s*true"
+    }
+  ],
+  "tests": [
+    {
+      "line": "ServerCertificateValidationCallback += (s,c,ch,e) => true;",
+      "match": true
+    },
+    {
+      "line": "# audit: ServerCertificateValidationCallback += (s,c,ch,e) => true; present",
+      "match": true
+    },
+    {
+      "line": "ServerCertificateValidationCallback += DefaultValidation;",
+      "match": false
+    },
+    {
+      "line": "# verified: ServerCertificateValidationCallback += DefaultValidation;",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-0604"
+  ]
+}

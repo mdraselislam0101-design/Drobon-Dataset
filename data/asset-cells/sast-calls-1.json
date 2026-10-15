@@ -1,0 +1,633 @@
+[
+  {
+    "class": "cmd-exec",
+    "kind": "sast",
+    "category": "command-injection",
+    "cwe": "CWE-78",
+    "severity": "HIGH",
+    "framing": "call",
+    "title": "OS command execution via {sink} ({lang}) \u2014 review required",
+    "description": "The {lang} sink {sink} hands its argument to a command shell or process launcher. If any part of the argument derives from untrusted input, an attacker can inject extra commands. This lexical rule flags the sink; the reviewer confirms every argument is trusted or safely separated from the command.",
+    "remediation": "Avoid the sink: use argument-vector APIs ({safe}) so untrusted data never passes through a shell. If a shell is unavoidable, pin an allowlist of commands and quote every interpolated value.",
+    "limitation": "Lexical, line-based: any {sink} call matches, including fully trusted invocations. Dataflow from untrusted input is not proven \u2014 treat every hit as review-required.",
+    "scopeT": "Single-line lexical match on the {sink} call in {lang} code.",
+    "fp": "Trusted, hardcoded commands (no variables) are the common false positive; confirm no interpolated input before dismissing.",
+    "recordDesc": "In {lang}, {sink} executes operating-system commands. The weakness mechanics are identical across languages \u2014 shell metacharacters in untrusted input break out of the intended command \u2014 but the concrete sink spelling, argument conventions, and safe alternative ({safe}) are {lang}-specific.",
+    "applicability": "{lang} codebases that launch external processes through {sink}; single-line lexical scope.",
+    "risk": "Unauthenticated command execution when untrusted input reaches the sink; HIGH severity because exploitation is typically trivial and impact is full process compromise.",
+    "why": "{sink} passes its argument to command execution in {lang}, so untrusted input reaching it becomes command injection.",
+    "fix": [
+      "Replace {sink} with {safe}, passing untrusted data as separate arguments, never interpolated into a command string.",
+      "If a shell is required, restrict the command to a fixed allowlist and validate every argument against it.",
+      "Re-run the scan and confirm no {sink} call remains reachable from untrusted input."
+    ],
+    "verifyT": "Rescan shows no {sink} reachable from untrusted input, and command tests with metacharacter input execute safely.",
+    "sinks": {
+      "c": [
+        "system",
+        "system",
+        "execve-family calls with an argument vector"
+      ],
+      "java": [
+        "Runtime\\.getRuntime\\(\\)\\.exec",
+        "Runtime.getRuntime().exec",
+        "ProcessBuilder with a command list"
+      ],
+      "go": [
+        "exec\\.Command",
+        "exec.Command",
+        "exec.Command with separate args (no shell)"
+      ],
+      "ruby": [
+        "system",
+        "system",
+        "Open3 with an argument array"
+      ],
+      "csharp": [
+        "Process\\.Start",
+        "Process.Start",
+        "ProcessStartInfo with ArgumentList"
+      ],
+      "javascript": [
+        "child_process\\.exec",
+        "child_process.exec",
+        "child_process.execFile with an args array"
+      ],
+      "perl": [
+        "system",
+        "system",
+        "IPC::Run or list-form open"
+      ],
+      "lua": [
+        "os\\.execute",
+        "os.execute",
+        "an argument-vector launcher instead of the shell"
+      ],
+      "r": [
+        "(?:system2?|shell)",
+        "system",
+        "system2 with an args vector"
+      ],
+      "powershell": [
+        "Start-Process",
+        "Start-Process",
+        "Start-Process with -ArgumentList array"
+      ],
+      "swift": [
+        "system",
+        "system",
+        "Process with executableURL plus arguments"
+      ],
+      "groovy": [
+        "execute",
+        "x.execute",
+        "list .execute() with separate arguments"
+      ],
+      "cpp": [
+        "_popen|popen",
+        "popen",
+        "fork plus exec with an argument vector"
+      ],
+      "c:popen": [
+        "(?:_popen|popen)",
+        "popen",
+        "fork plus exec with an argument vector"
+      ]
+    }
+  },
+  {
+    "class": "code-eval",
+    "kind": "sast",
+    "category": "code-injection",
+    "cwe": "CWE-95",
+    "severity": "HIGH",
+    "framing": "call",
+    "title": "Dynamic code evaluation via {sink} ({lang}) \u2014 review required",
+    "description": "The {lang} sink {sink} parses and runs a string as code. If the string contains untrusted input, an attacker achieves code execution in the application. This lexical rule flags the sink; the reviewer confirms every evaluated string is trusted or replaced with data-only parsing.",
+    "remediation": "Remove the evaluation: parse data with {safe} instead of running it as code. If evaluation is unavoidable, run it in a sandbox with no sensitive authority.",
+    "limitation": "Lexical, line-based: any {sink} call matches, including trusted uses such as local tooling. Whether the evaluated string is attacker-controlled needs human review.",
+    "scopeT": "Single-line lexical match on the {sink} call in {lang} code.",
+    "fp": "Build scripts, REPL helpers, and test harnesses evaluating trusted strings are the common false positives.",
+    "recordDesc": "In {lang}, {sink} turns a string into running code. Evaluation sinks collapse the data/code boundary, so any untrusted bytes in the string become an injection primitive. The {lang}-specific remedy is data-only handling via {safe}.",
+    "applicability": "{lang} codebases that build code or expressions from strings via {sink}; single-line lexical scope.",
+    "risk": "Code execution in the application process when untrusted input reaches the sink; HIGH severity because evaluation sinks rarely constrain what the injected code can do.",
+    "why": "{sink} evaluates strings as {lang} code, so untrusted input reaching it becomes code injection.",
+    "fix": [
+      "Replace {sink} with {safe} so untrusted input stays data, never code.",
+      "If evaluation must stay, isolate it in a sandbox without file, network, or credential access.",
+      "Re-run the scan and confirm no {sink} call remains reachable from untrusted input."
+    ],
+    "verifyT": "Rescan shows no {sink} reachable from untrusted input, and injection probes stay inert data.",
+    "sinks": {
+      "python": [
+        "eval",
+        "eval",
+        "ast.literal_eval for data or a dispatch table"
+      ],
+      "php": [
+        "eval",
+        "eval",
+        "a dispatch table or expression parser"
+      ],
+      "ruby": [
+        "eval",
+        "eval",
+        "JSON parsing or a dispatch table"
+      ],
+      "perl": [
+        "eval",
+        "eval",
+        "a dispatch table for dynamic behavior"
+      ],
+      "lua": [
+        "load",
+        "load",
+        "a data format parser instead of chunk loading"
+      ],
+      "r": [
+        "eval",
+        "eval",
+        "direct calls or formula interfaces"
+      ],
+      "powershell": [
+        "Invoke-Expression",
+        "Invoke-Expression",
+        "direct cmdlets with parameters"
+      ],
+      "groovy": [
+        "Eval\\.me",
+        "Eval.me",
+        "a typed builder or parser"
+      ],
+      "elixir": [
+        "Code\\.eval_string",
+        "Code.eval_string",
+        "pattern matching or Config-free data flow"
+      ],
+      "julia": [
+        "eval",
+        "eval",
+        "first-class functions or generated functions"
+      ],
+      "javascript": [
+        "vm\\.runInNewContext",
+        "vm.runInNewContext",
+        "vm with a frozen context or no evaluation"
+      ]
+    }
+  },
+  {
+    "class": "deserialization",
+    "kind": "sast",
+    "category": "unsafe-deserialization",
+    "cwe": "CWE-502",
+    "severity": "HIGH",
+    "framing": "call",
+    "title": "Unsafe deserialization via {sink} ({lang}) \u2014 review required",
+    "description": "The {lang} sink {sink} rebuilds objects from bytes, and hostile bytes can instantiate dangerous classes or run callbacks during decoding. This lexical rule flags the sink; the reviewer confirms the input source is trusted or switches to a data-only format.",
+    "remediation": "Decode untrusted input with {safe} instead of object deserialization. If object graphs are required, sign the bytes and verify before decoding.",
+    "limitation": "Lexical, line-based: any {sink} call matches, including decoding of trusted local state. Trust in the byte source needs human review.",
+    "scopeT": "Single-line lexical match on the {sink} call in {lang} code.",
+    "fp": "Loading trusted session checkpoints or local caches is the common false positive; confirm the bytes cannot arrive from the network.",
+    "recordDesc": "In {lang}, {sink} performs object deserialization: bytes select classes and set fields, so a hostile payload can drive gadget chains or execute callbacks. The {lang}-specific remedy is data-only decoding via {safe}.",
+    "applicability": "{lang} codebases decoding persisted or received bytes through {sink}; single-line lexical scope.",
+    "risk": "Object injection leading to code execution or state corruption when hostile bytes reach the sink; HIGH severity because payloads are compact and often unauthenticated.",
+    "why": "{sink} deserializes {lang} objects from bytes, so hostile input can trigger gadget execution during decoding.",
+    "fix": [
+      "Replace {sink} with {safe} for any bytes that cross a trust boundary.",
+      "If object graphs must persist, authenticate the bytes (MAC/signature) and verify before decoding.",
+      "Re-run the scan and confirm no {sink} call remains reachable from untrusted bytes."
+    ],
+    "verifyT": "Rescan shows no {sink} reachable from untrusted bytes, and hostile payloads decode to inert data or fail closed.",
+    "sinks": {
+      "python": [
+        "marshal\\.loads",
+        "marshal.loads",
+        "JSON decoding"
+      ],
+      "ruby": [
+        "Marshal\\.load",
+        "Marshal.load",
+        "JSON parsing"
+      ],
+      "java": [
+        "readObject",
+        "readObject",
+        "a data-only format with explicit field mapping"
+      ],
+      "php": [
+        "unserialize",
+        "unserialize",
+        "JSON decoding with type checks"
+      ],
+      "perl": [
+        "Storable::thaw|Storable::retrieve",
+        "Storable::retrieve",
+        "JSON or Sereal with validation"
+      ],
+      "javascript": [
+        "unserialize",
+        "unserialize",
+        "JSON.parse with schema validation"
+      ],
+      "julia": [
+        "deserialize",
+        "deserialize",
+        "a typed data format"
+      ],
+      "elixir": [
+        "erlang\\.binary_to_term",
+        ":erlang.binary_to_term",
+        "Jason/JSON decoding or :safe option review"
+      ]
+    }
+  },
+  {
+    "class": "weak-hash-md5",
+    "kind": "sast",
+    "category": "weak-cryptography",
+    "cwe": "CWE-327",
+    "severity": "LOW",
+    "framing": "call",
+    "title": "MD5 use via {sink} ({lang}) \u2014 review required",
+    "description": "The {lang} call {sink} computes MD5, which is broken for security purposes (collisions are practical). It is unacceptable for passwords, signatures, or integrity of untrusted data, but still fine for non-security checksums. This lexical rule cannot tell the use case \u2014 treat every hit as review-required.",
+    "remediation": "Use {safe} for any security purpose. Keep MD5 only for non-security checksums with a comment saying so.",
+    "limitation": "Lexical, line-based: matches any {sink} call regardless of purpose. Bare md5() calls belong to the generic rule; other weak algorithms are separate rules.",
+    "scopeT": "Single-line lexical match on the {sink} call in {lang} code.",
+    "fp": "Deduplication, etag, and cache-key checksums are the common false positives; they need only a justifying comment.",
+    "recordDesc": "In {lang}, {sink} computes MD5. Collision attacks let an attacker forge a second input with the same digest, which defeats signatures and integrity checks while leaving non-security checksums unaffected. The {lang}-specific remedy is {safe}.",
+    "applicability": "{lang} codebases hashing data through {sink}; single-line lexical scope.",
+    "risk": "Forged integrity values and signatures when MD5 protects untrusted data; LOW severity as a default because checksum uses dominate, raised on review when the digest is security-relevant.",
+    "why": "{sink} computes MD5 in {lang}, whose collisions defeat any security reliance on the digest.",
+    "fix": [
+      "Replace {sink} with {safe} wherever the digest protects passwords, signatures, or untrusted data.",
+      "For remaining checksum uses, add a comment stating MD5 is intentional and non-security.",
+      "Re-run the scan and confirm every remaining hit carries that justification."
+    ],
+    "verifyT": "Rescan shows no unjustified {sink}, and security digests verify under the replacement.",
+    "sinks": {
+      "python": [
+        "hashlib\\.md5",
+        "hashlib.md5",
+        "hashlib.sha256"
+      ],
+      "ruby": [
+        "Digest::MD5\\.hexdigest",
+        "Digest::MD5.hexdigest",
+        "Digest::SHA256.hexdigest"
+      ],
+      "c": [
+        "CC_MD5",
+        "CC_MD5",
+        "CC_SHA256"
+      ],
+      "rust": [
+        "md5::compute",
+        "md5::compute",
+        "sha2::Sha256"
+      ],
+      "dart": [
+        "md5\\.convert",
+        "md5.convert",
+        "sha256.convert"
+      ],
+      "swift": [
+        "Insecure\\.MD5\\.hash",
+        "Insecure.MD5.hash",
+        "SHA256.hash"
+      ],
+      "objc": [
+        "CC_MD5",
+        "CC_MD5",
+        "CC_SHA256"
+      ]
+    }
+  },
+  {
+    "class": "weak-hash-md5-literal",
+    "kind": "sast",
+    "category": "weak-cryptography",
+    "cwe": "CWE-327",
+    "severity": "LOW",
+    "framing": "flag",
+    "title": "MD5 selected by name ({lang}) \u2014 review required",
+    "description": "Security code in {lang} selects MD5 by algorithm name: {sink}. MD5 collisions are practical, so the selection is unsafe for passwords, signatures, or integrity of untrusted data. This lexical rule flags the selection; the reviewer confirms the use is a non-security checksum or upgrades it.",
+    "remediation": "Select {safe} instead of MD5 for any security purpose. Keep MD5 only for non-security checksums with a comment saying so.",
+    "limitation": "Lexical, line-based: matches the MD5 name regardless of purpose. Call-shaped MD5 uses are separate rules.",
+    "scopeT": "Single-line lexical match on the MD5 selection in {lang} code.",
+    "fp": "Checksum and fingerprint selections are the common false positives; they need only a justifying comment.",
+    "recordDesc": "In {lang}, naming MD5 ({sink}) requests a broken digest. Name-selected digests hide inside factory calls, so reviewers must check the string, not just the call. The {lang}-specific remedy is selecting {safe}.",
+    "applicability": "{lang} codebases selecting digests by name; single-line lexical scope.",
+    "risk": "Same as any MD5 use: forged digests where security is assumed; LOW default severity, raised when the digest guards trust.",
+    "why": "{lang} code selects MD5 ({sink}), whose collisions defeat security reliance on the resulting digest.",
+    "fix": [
+      "Replace the MD5 selection with {safe} wherever the digest is security-relevant.",
+      "For remaining checksum uses, add a comment stating MD5 is intentional and non-security.",
+      "Re-run the scan and confirm every remaining hit carries that justification."
+    ],
+    "verifyT": "Rescan shows no unjustified MD5 selection, and security digests verify under the replacement.",
+    "sinks": {
+      "java": [
+        "getInstance\\s*\\(\\s*\"MD5\"",
+        "MessageDigest.getInstance(\"MD5\")",
+        "MessageDigest.getInstance(\"SHA-256\")",
+        "\"SHA-256\""
+      ],
+      "csharp": [
+        "MD5\\.Create\\s*\\(\\s*\\)",
+        "MD5.Create()",
+        "SHA256.Create()",
+        "SHA256.Create()"
+      ],
+      "go": [
+        "md5\\.New\\s*\\(\\s*\\)",
+        "h := md5.New()",
+        "h := sha256.New()",
+        "sha256.New()"
+      ],
+      "javascript": [
+        "createHash\\s*\\(\\s*['\"]md5['\"]",
+        "createHash('md5')",
+        "createHash('sha256')",
+        "createHash('sha256')"
+      ],
+      "r": [
+        "algo\\s*=\\s*[\"']md5[\"']",
+        "digest(x, algo=\"md5\")",
+        "digest(x, algo=\"sha256\")",
+        "algo=\"sha256\""
+      ],
+      "elixir": [
+        ":crypto\\.hash\\s*\\(\\s*:md5",
+        ":crypto.hash(:md5, data)",
+        ":crypto.hash(:sha256, data)",
+        ":crypto.hash(:sha256, data)"
+      ],
+      "powershell": [
+        "Get-FileHash.*-Algorithm\\s+MD5",
+        "Get-FileHash f -Algorithm MD5",
+        "Get-FileHash f -Algorithm SHA256",
+        "-Algorithm SHA256"
+      ]
+    }
+  },
+  {
+    "class": "weak-hash-sha1",
+    "kind": "sast",
+    "category": "weak-cryptography",
+    "cwe": "CWE-327",
+    "severity": "LOW",
+    "framing": "call",
+    "title": "SHA-1 use via {sink} ({lang}) \u2014 review required",
+    "description": "The {lang} call {sink} computes SHA-1, which is deprecated for security purposes (collision attacks are practical for well-funded attackers and improving). It is unacceptable for signatures or integrity of untrusted data. This lexical rule cannot tell the use case \u2014 treat every hit as review-required.",
+    "remediation": "Use {safe} for any security purpose. Keep SHA-1 only for compatibility shims and checksums with a comment saying so.",
+    "limitation": "Lexical, line-based: matches any {sink} call regardless of purpose. Name-selected SHA-1 and other weak algorithms are separate rules.",
+    "scopeT": "Single-line lexical match on the {sink} call in {lang} code.",
+    "fp": "Git object ids, legacy protocol interop, and checksums are the common false positives.",
+    "recordDesc": "In {lang}, {sink} computes SHA-1. Public collision demonstrations ended SHA-1's suitability for signatures and integrity, though content addressing and legacy interop remain legitimate. The {lang}-specific remedy is {safe}.",
+    "applicability": "{lang} codebases hashing data through {sink}; single-line lexical scope.",
+    "risk": "Forged signatures and integrity values where SHA-1 guards trust; LOW default severity, raised when the digest is security-relevant.",
+    "why": "{sink} computes SHA-1 in {lang}, whose collisions defeat security reliance on the digest.",
+    "fix": [
+      "Replace {sink} with {safe} wherever the digest protects signatures or untrusted data.",
+      "For remaining compatibility uses, add a comment stating SHA-1 is intentional.",
+      "Re-run the scan and confirm every remaining hit carries that justification."
+    ],
+    "verifyT": "Rescan shows no unjustified {sink}, and security digests verify under the replacement.",
+    "sinks": {
+      "python": [
+        "hashlib\\.sha1",
+        "hashlib.sha1",
+        "hashlib.sha256"
+      ],
+      "ruby": [
+        "Digest::SHA1\\.hexdigest",
+        "Digest::SHA1.hexdigest",
+        "Digest::SHA256.hexdigest"
+      ],
+      "c": [
+        "CC_SHA1",
+        "CC_SHA1",
+        "CC_SHA256"
+      ],
+      "dart": [
+        "sha1\\.convert",
+        "sha1.convert",
+        "sha256.convert"
+      ],
+      "swift": [
+        "Insecure\\.SHA1\\.hash",
+        "Insecure.SHA1.hash",
+        "SHA256.hash"
+      ],
+      "objc": [
+        "CC_SHA1",
+        "CC_SHA1",
+        "CC_SHA256"
+      ],
+      "php": [
+        "sha1",
+        "sha1",
+        "hash('sha256', ...)"
+      ]
+    }
+  },
+  {
+    "class": "weak-hash-sha1-literal",
+    "kind": "sast",
+    "category": "weak-cryptography",
+    "cwe": "CWE-327",
+    "severity": "LOW",
+    "framing": "flag",
+    "title": "SHA-1 selected by name ({lang}) \u2014 review required",
+    "description": "Security code in {lang} selects SHA-1 by algorithm name: {sink}. Collision attacks ended SHA-1's suitability for signatures and integrity. This lexical rule flags the selection; the reviewer confirms the use is legacy interop or upgrades it.",
+    "remediation": "Select {safe} instead of SHA-1 for any security purpose.",
+    "limitation": "Lexical, line-based: matches the SHA-1 name regardless of purpose. Call-shaped SHA-1 uses are separate rules.",
+    "scopeT": "Single-line lexical match on the SHA-1 selection in {lang} code.",
+    "fp": "Protocol interop naming SHA-1 for negotiation (not use) is the common false positive.",
+    "recordDesc": "In {lang}, naming SHA-1 ({sink}) requests a deprecated digest. Name-selected digests hide inside factory calls, so reviewers must check the string. The {lang}-specific remedy is selecting {safe}.",
+    "applicability": "{lang} codebases selecting digests by name; single-line lexical scope.",
+    "risk": "Forged digests where security is assumed; LOW default severity, raised when the digest guards trust.",
+    "why": "{lang} code selects SHA-1 ({sink}), whose collisions defeat security reliance on the resulting digest.",
+    "fix": [
+      "Replace the SHA-1 selection with {safe} wherever the digest is security-relevant.",
+      "For remaining interop uses, add a comment stating SHA-1 is intentional.",
+      "Re-run the scan and confirm every remaining hit carries that justification."
+    ],
+    "verifyT": "Rescan shows no unjustified SHA-1 selection, and security digests verify under the replacement.",
+    "sinks": {
+      "java": [
+        "getInstance\\s*\\(\\s*\"SHA-1\"",
+        "MessageDigest.getInstance(\"SHA-1\")",
+        "MessageDigest.getInstance(\"SHA-256\")",
+        "\"SHA-256\""
+      ],
+      "csharp": [
+        "SHA1\\.Create\\s*\\(\\s*\\)",
+        "SHA1.Create()",
+        "SHA256.Create()",
+        "SHA256.Create()"
+      ],
+      "go": [
+        "sha1\\.New\\s*\\(\\s*\\)",
+        "h := sha1.New()",
+        "h := sha256.New()",
+        "sha256.New()"
+      ],
+      "javascript": [
+        "createHash\\s*\\(\\s*['\"]sha1['\"]",
+        "createHash('sha1')",
+        "createHash('sha256')",
+        "createHash('sha256')"
+      ],
+      "r": [
+        "algo\\s*=\\s*[\"']sha1[\"']",
+        "digest(x, algo=\"sha1\")",
+        "digest(x, algo=\"sha256\")",
+        "algo=\"sha256\""
+      ],
+      "powershell": [
+        "Get-FileHash.*-Algorithm\\s+SHA1",
+        "Get-FileHash f -Algorithm SHA1",
+        "Get-FileHash f -Algorithm SHA256",
+        "-Algorithm SHA256"
+      ]
+    }
+  },
+  {
+    "class": "weak-random",
+    "kind": "sast",
+    "category": "weak-cryptography",
+    "cwe": "CWE-330",
+    "cweDef": {
+      "name": "Use of Insufficiently Random Values",
+      "summary": "Security decisions use a predictable generator, so an attacker can guess tokens, nonces, or temporary secrets."
+    },
+    "severity": "MEDIUM",
+    "framing": "call",
+    "title": "Predictable randomness via {sink} ({lang}) \u2014 review required",
+    "description": "The {lang} call {sink} draws from a non-cryptographic generator. Its output is predictable from past values or seed, so tokens, nonces, and temporary secrets built on it can be guessed. This lexical rule flags the call; the reviewer confirms the value is non-security or switches to {safe}.",
+    "remediation": "Draw security values from {safe}. Keep the fast generator only for simulations, games, and sampling with a comment saying so.",
+    "limitation": "Lexical, line-based: matches any {sink} call regardless of purpose; no-arg generator forms are separate rules.",
+    "scopeT": "Single-line lexical match on the {sink} call in {lang} code.",
+    "fp": "Simulations, shuffling, test data, and games are the common false positives.",
+    "recordDesc": "In {lang}, {sink} is a statistical generator, not a cryptographic one: observing outputs reveals the state, and default seeds repeat across runs. Security values need unpredictability, which only {safe} provides in {lang}.",
+    "applicability": "{lang} codebases drawing random values through {sink}; single-line lexical scope.",
+    "risk": "Guessed session tokens, reset links, and nonces when predictable output guards access; MEDIUM severity, HIGH when the value directly authenticates.",
+    "why": "{sink} is predictable in {lang}, so security values drawn from it can be guessed by an attacker.",
+    "fix": [
+      "Replace {sink} with {safe} for tokens, nonces, salts, and secrets.",
+      "For remaining statistical uses, add a comment stating predictability is acceptable.",
+      "Re-run the scan and confirm every security draw uses the cryptographic generator."
+    ],
+    "verifyT": "Rescan shows no {sink} feeding security values, and token prediction tests fail.",
+    "sinks": {
+      "python": [
+        "random\\.random|random\\.randint|random\\.choice",
+        "random.randint",
+        "secrets.token_bytes / secrets.choice"
+      ],
+      "java": [
+        "Math\\.random",
+        "Math.random",
+        "SecureRandom"
+      ],
+      "php": [
+        "(?:rand|mt_rand)",
+        "mt_rand",
+        "random_int / random_bytes"
+      ],
+      "ruby": [
+        "rand",
+        "rand",
+        "SecureRandom"
+      ],
+      "perl": [
+        "rand",
+        "rand",
+        "a CSPRNG module"
+      ],
+      "kotlin": [
+        "Random\\.nextInt|Random\\.nextBytes",
+        "Random.nextInt",
+        "SecureRandom"
+      ],
+      "julia": [
+        "rand",
+        "rand",
+        "RandomDevice-based draws"
+      ],
+      "lua": [
+        "math\\.random",
+        "math.random",
+        "a CSPRNG binding"
+      ],
+      "r": [
+        "runif|sample",
+        "sample",
+        "a cryptographic source"
+      ],
+      "go": [
+        "rand\\.Intn|rand\\.Float64",
+        "rand.Intn",
+        "crypto/rand"
+      ]
+    }
+  },
+  {
+    "class": "weak-random-noarg",
+    "kind": "sast",
+    "category": "weak-cryptography",
+    "cwe": "CWE-330",
+    "severity": "LOW",
+    "framing": "flag",
+    "title": "Predictable generator use ({lang}) \u2014 review required",
+    "description": "Code in {lang} draws from a non-cryptographic generator: {sink}. Output is predictable, so security values built on it can be guessed. This lexical rule flags the use; the reviewer confirms the value is non-security or switches to {safe}.",
+    "remediation": "Draw security values from {safe} instead.",
+    "limitation": "Lexical, line-based: matches the generator regardless of purpose. Argument-taking generator calls are separate rules.",
+    "scopeT": "Single-line lexical match on the generator use in {lang} code.",
+    "fp": "Test fixtures and simulations are the common false positives.",
+    "recordDesc": "In {lang}, {sink} exposes a predictable generator. Default seeds and observable state make every output guessable, which is fine for sampling but fatal for tokens. The {lang}-specific remedy is {safe}.",
+    "applicability": "{lang} codebases instantiating or reading the generator; single-line lexical scope.",
+    "risk": "Guessed security values; LOW default severity because these forms are often test-only, raised when the value guards access.",
+    "why": "{lang} code uses a predictable generator ({sink}) whose outputs an attacker can guess.",
+    "fix": [
+      "Replace the generator with {safe} for security values.",
+      "For remaining statistical uses, add a comment stating predictability is acceptable.",
+      "Re-run the scan and confirm security draws use the cryptographic source."
+    ],
+    "verifyT": "Rescan shows no unjustified generator use feeding security values.",
+    "sinks": {
+      "c": [
+        "\\brand\\s*\\(\\s*\\)",
+        "n = rand()",
+        "n = arc4random()",
+        "arc4random()"
+      ],
+      "csharp": [
+        "new\\s+Random\\s*\\(\\s*\\)",
+        "var r = new Random()",
+        "RandomNumberGenerator.Fill()",
+        "RandomNumberGenerator"
+      ],
+      "dart": [
+        "Random\\s*\\(\\s*\\)",
+        "var r = Random()",
+        "Random.secure()",
+        "Random.secure()"
+      ],
+      "shell": [
+        "\\$RANDOM",
+        "token=$RANDOM",
+        "token=$(openssl rand -hex 16)",
+        "openssl rand"
+      ],
+      "vba": [
+        "\\bRnd\\s*\\(\\s*\\)",
+        "n = Rnd()",
+        "a cryptographic source",
+        "a cryptographic source"
+      ]
+    }
+  }
+]

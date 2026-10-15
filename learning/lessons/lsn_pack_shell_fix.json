@@ -1,0 +1,51 @@
+{
+  "schemaVersion": "drobon.learning.lesson/v1",
+  "id": "lsn_pack_shell_fix",
+  "title": "Removing shell=True from subprocess calls",
+  "summary": "See rule DPK-SAST-003 fire on a synthetic file, switch to an argument list with shell=False, and verify the finding is gone on rescan.",
+  "concept": "subprocess with shell=True passes the command through a system shell. Shell metacharacters — spaces, quotes, semicolons, backticks — in attacker-influenced input then become OS command injection. The safe pattern is an argument list with no shell: the operating system receives each argument exactly, with no parsing step where input can escape into syntax. This lesson pairs with pack rule DPK-SAST-003, which flags the lexical shape shell=True on one line. The rule is line-based and conservative: it cannot prove taint, so every hit is review-required rather than proven exploitable.",
+  "objectives": [
+    "Explain why shell=True turns input into shell syntax.",
+    "Recognise the shell=True flag in review and in scan findings.",
+    "Convert a shell command to an argument list and verify by rescan."
+  ],
+  "practice": {
+    "instruction": "Import the starter file into one of your OWN projects, run a SAST scan, and find rule DPK-SAST-003. Read the finding, then apply the fix (argument list with shell=False from the fixed file), upload the fixed file, and run SAST again to verify the finding is no longer observed.",
+    "targetRuleId": "DPK-SAST-003",
+    "starterFiles": [
+      {
+        "path": "run.py",
+        "content": "# SYNTHETIC learning fixture (not production code).\nimport subprocess\n\ndef show(ref):\n    return subprocess.run(\"git show \" + ref, shell=True)\n"
+      }
+    ],
+    "fixInstruction": "Replace the shell string with an argument list and shell=False, so each argument is passed exactly with no shell parsing step.",
+    "fixedFiles": [
+      {
+        "path": "run.py",
+        "content": "# SYNTHETIC learning fixture (not production code).\nimport subprocess\n\ndef show(ref):\n    return subprocess.run([\"git\", \"show\", ref], shell=False)\n"
+      }
+    ]
+  },
+  "quiz": [
+    {
+      "prompt": "What does shell=True change about a subprocess call?",
+      "options": [
+        "The command passes through a system shell that parses metacharacters",
+        "The command runs faster",
+        "The command can only run git"
+      ],
+      "answerIndex": 0,
+      "explanation": "The shell parsing step is where input escapes into syntax. An argument list with shell=False has no such step."
+    },
+    {
+      "prompt": "Which fix removes the injection channel?",
+      "options": [
+        "An argument list with shell=False",
+        "Lowercasing the input",
+        "Logging the command before running it"
+      ],
+      "answerIndex": 0,
+      "explanation": "argv passes each argument exactly. Lowercasing and logging leave the shell parsing step intact."
+    }
+  ]
+}

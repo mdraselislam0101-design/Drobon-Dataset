@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-358",
+  "title": "TLS verification disabled (powershell) — review required",
+  "description": "Certificate or hostname verification is switched off in powershell: ServerCertificateValidationCallbacks*=s*[^=n]*{s*$true. The connection then trusts any certificate, so an active attacker intercepts credentials, tokens, and data. This lexical rule flags the switch; the reviewer confirms it is test-only or restores verification.",
+  "severity": "HIGH",
+  "cwe": "CWE-319",
+  "category": "transport-security",
+  "remediation": "Delete the switch and verify against the system store (chain validation); for private CAs, pin the CA instead of disabling checks.",
+  "limitation": "Lexical, line-based: matches the switch regardless of environment. Per-client verify=False forms are separate rules.",
+  "languages": [
+    "powershell"
+  ],
+  "patterns": [
+    {
+      "source": "ServerCertificateValidationCallback\\s*=\\s*[^=\\n]*\\{\\s*\\$true"
+    }
+  ],
+  "tests": [
+    {
+      "line": "$c.ServerCertificateValidationCallback = {$true}",
+      "match": true
+    },
+    {
+      "line": "# audit: $c.ServerCertificateValidationCallback = {$true} present",
+      "match": true
+    },
+    {
+      "line": "$c.ServerCertificateValidationCallback = {param($s,$c) $c.Verify()}",
+      "match": false
+    },
+    {
+      "line": "# verified: $c.ServerCertificateValidationCallback = {param($s,$c) $c.Verify()}",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-0397"
+  ]
+}
