@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-155",
+  "title": "LDAP filter built by concatenation (python) — review required",
+  "description": "A python directory call assembles an LDAP filter from parts: .searchs*([^)]*(?:+|%|{). Filter metacharacters in untrusted input rewrite the query, bypassing authentication or dumping entries. This lexical rule flags the assembly; the reviewer confirms escaping or parameterization.",
+  "severity": "HIGH",
+  "cwe": "CWE-90",
+  "category": "ldap-injection",
+  "remediation": "Escape filter values with ldap3.utils.conv escape_filter_chars or use parameterized directory APIs.",
+  "limitation": "Lexical, line-based: any assembled filter matches, including trusted ones.",
+  "languages": [
+    "python"
+  ],
+  "patterns": [
+    {
+      "source": "\\.search\\s*\\([^)]*(?:\\+|%|\\{)"
+    }
+  ],
+  "tests": [
+    {
+      "line": "conn.search(base, f\"(uid={u})\")",
+      "match": true
+    },
+    {
+      "line": "# audit: conn.search(base, f\"(uid={u})\") present",
+      "match": true
+    },
+    {
+      "line": "conn.search(base, FIXED)",
+      "match": false
+    },
+    {
+      "line": "# verified: conn.search(base, FIXED)",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-0194"
+  ]
+}

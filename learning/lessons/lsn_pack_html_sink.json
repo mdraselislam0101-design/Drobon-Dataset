@@ -1,0 +1,51 @@
+{
+  "schemaVersion": "drobon.learning.lesson/v1",
+  "id": "lsn_pack_html_sink",
+  "title": "Replacing innerHTML assignment with safe rendering",
+  "summary": "See rule DPK-SAST-002 fire on a synthetic file, switch to textContent, and verify the finding is gone on rescan.",
+  "concept": "Assigning to innerHTML parses a string as HTML. If the string contains attacker-influenced data, markup and scripts in that data run with page privileges — cross-site scripting (XSS). The safe default is textContent, which treats the value as pure text and never parses it. When real markup is required, build DOM nodes explicitly or sanitize with a maintained allowlist sanitizer first. This lesson pairs with pack rule DPK-SAST-002, which flags the lexical shape .innerHTML = on one line. The rule is line-based and conservative: it cannot prove taint, so every hit is review-required rather than proven exploitable.",
+  "objectives": [
+    "Explain why innerHTML assignment parses untrusted data as code.",
+    "Recognise the innerHTML sink in review and in scan findings.",
+    "Replace the sink with textContent and verify by rescan."
+  ],
+  "practice": {
+    "instruction": "Import the starter file into one of your OWN projects, run a SAST scan, and find rule DPK-SAST-002. Read the finding, then apply the fix (textContent from the fixed file), upload the fixed file, and run SAST again to verify the finding is no longer observed.",
+    "targetRuleId": "DPK-SAST-002",
+    "starterFiles": [
+      {
+        "path": "app.js",
+        "content": "// SYNTHETIC learning fixture (not production code).\nfunction greet(el, name) {\n  el.innerHTML = \"<p>Hello, \" + name + \"</p>\";\n}\n"
+      }
+    ],
+    "fixInstruction": "Replace the innerHTML assignment with textContent so the value is rendered as pure text and never parsed as markup.",
+    "fixedFiles": [
+      {
+        "path": "app.js",
+        "content": "// SYNTHETIC learning fixture (not production code).\nfunction greet(el, name) {\n  el.textContent = \"Hello, \" + name;\n}\n"
+      }
+    ]
+  },
+  "quiz": [
+    {
+      "prompt": "What happens to the assigned string in el.innerHTML = value?",
+      "options": [
+        "It is parsed as HTML, so markup in the value becomes live",
+        "It is stored as plain text",
+        "It is ignored unless the page reloads"
+      ],
+      "answerIndex": 0,
+      "explanation": "Parsing is the hazard: live markup from untrusted data is XSS. textContent never parses."
+    },
+    {
+      "prompt": "Which fix keeps the greeting while removing the sink?",
+      "options": [
+        "el.textContent = \"Hello, \" + name",
+        "Hiding the element with CSS",
+        "Moving the code to a separate file"
+      ],
+      "answerIndex": 0,
+      "explanation": "textContent renders the same words as inert text. Hiding or moving the code leaves the sink intact."
+    }
+  ]
+}

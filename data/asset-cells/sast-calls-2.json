@@ -1,0 +1,655 @@
+[
+  {
+    "class": "xss-sink-call",
+    "kind": "sast",
+    "category": "cross-site-scripting",
+    "cwe": "CWE-79",
+    "severity": "MEDIUM",
+    "framing": "call",
+    "title": "Unescaped HTML sink {sink} ({lang}) \u2014 review required",
+    "description": "The {lang} sink {sink} writes a value into HTML without escaping. If the value contains untrusted input, attacker markup and scripts run in victims' browsers. This lexical rule flags the sink; the reviewer confirms the value is trusted or escaped.",
+    "remediation": "Escape the value for its HTML context ({safe}) or bind it as text, never markup. Only trusted constant markup may bypass escaping.",
+    "limitation": "Lexical, line-based: any {sink} call matches, including trusted constant markup. Whether the value is attacker-controlled needs human review.",
+    "scopeT": "Single-line lexical match on the {sink} call in {lang} code.",
+    "fp": "Rendering trusted constant templates is the common false positive.",
+    "recordDesc": "In {lang}, {sink} inserts raw markup into a page. Unescaped sinks turn stored or reflected input into script execution in the victim's session. The {lang}-specific remedy is contextual escaping via {safe}.",
+    "applicability": "{lang} codebases rendering values through {sink}; single-line lexical scope.",
+    "risk": "Stored or reflected cross-site scripting when untrusted input reaches the sink; MEDIUM severity, HIGH for stored sinks on authenticated pages.",
+    "why": "{sink} writes unescaped markup in {lang}, so untrusted input reaching it becomes cross-site scripting.",
+    "fix": [
+      "Escape the value with {safe} or bind it as text content.",
+      "If raw markup is required, sanitize it against an allowlist of tags and attributes.",
+      "Re-run the scan and confirm no {sink} call remains reachable from untrusted input."
+    ],
+    "verifyT": "Rescan shows no {sink} reachable from untrusted input, and markup probes render inert.",
+    "sinks": {
+      "javascript": [
+        "\\)\\.(?:html|append)",
+        "$(el).html",
+        "text() binding or a sanitizer"
+      ],
+      "python": [
+        "mark_safe",
+        "mark_safe",
+        "conditional_escape or template autoescape"
+      ]
+    }
+  },
+  {
+    "class": "xss-sink-flag",
+    "kind": "sast",
+    "category": "cross-site-scripting",
+    "cwe": "CWE-79",
+    "severity": "MEDIUM",
+    "framing": "flag",
+    "title": "Raw-markup binding ({lang}: {sink}) \u2014 review required",
+    "description": "A {lang} template or component binds a value as raw markup: {sink}. Untrusted input in the value runs as script in victims' browsers. This lexical rule flags the binding; the reviewer confirms the value is trusted or switches to text binding.",
+    "remediation": "Bind the value as text ({safe}) or sanitize it against a tag allowlist before raw binding.",
+    "limitation": "Lexical, line-based: matches the binding regardless of value trust. Call-shaped sinks are separate rules.",
+    "scopeT": "Single-line lexical match on the raw-markup binding in {lang} templates or code.",
+    "fp": "Trusted constant markup bound for layout is the common false positive.",
+    "recordDesc": "In {lang}, {sink} disables the framework's automatic escaping for one binding. Raw-markup bindings exist for trusted rich text, but any untrusted bytes in the value become script. The remedy is text binding via {safe}.",
+    "applicability": "{lang} templates and components using the raw binding; single-line lexical scope.",
+    "risk": "Cross-site scripting, usually stored; MEDIUM severity, HIGH on authenticated pages.",
+    "why": "{sink} binds unescaped markup in {lang}, so untrusted input in the value becomes script execution.",
+    "fix": [
+      "Replace the raw binding with {safe}.",
+      "If raw markup is required, sanitize the value against an allowlist first.",
+      "Re-run the scan and confirm no raw binding remains reachable from untrusted input."
+    ],
+    "verifyT": "Rescan shows no raw binding reachable from untrusted input, and markup probes render inert.",
+    "sinks": {
+      "javascript": [
+        "dangerouslySetInnerHTML",
+        "<div dangerouslySetInnerHTML={{__html: q}} />",
+        "<div>{q}</div>",
+        "text children or DOMPurify.sanitize"
+      ],
+      "ruby": [
+        "\\.html_safe",
+        "<%= q.html_safe %>",
+        "<%= q %>",
+        "default escaped output"
+      ]
+    }
+  },
+  {
+    "class": "path-open",
+    "kind": "sast",
+    "category": "path-traversal",
+    "cwe": "CWE-22",
+    "cweDef": {
+      "name": "Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')",
+      "summary": "User input reaches a file path without confinement, so ../ sequences escape the intended directory."
+    },
+    "severity": "HIGH",
+    "framing": "flag",
+    "title": "File access built from input ({lang}) \u2014 review required",
+    "description": "A {lang} file operation builds its path from concatenated or interpolated input: {sink}. Directory-traversal sequences in the input escape the intended directory. This lexical rule flags the construction; the reviewer confirms the input is confined or mapped through an allowlist.",
+    "remediation": "Resolve the path against a base directory with {safe} and reject results outside it, or map input through an allowlist of file ids.",
+    "limitation": "Lexical, line-based: any concatenated path matches, including trusted ones. Whether the input is attacker-controlled needs human review.",
+    "scopeT": "Single-line lexical match on input-built file paths in {lang} code.",
+    "fp": "Joining trusted configuration directories is the common false positive.",
+    "recordDesc": "In {lang}, {sink} assembles a filesystem path from parts. Traversal payloads (..%2f, absolute paths, symlink races) redirect the operation outside its directory. The {lang}-specific remedy is confinement via {safe}.",
+    "applicability": "{lang} codebases opening files with assembled paths; single-line lexical scope.",
+    "risk": "Arbitrary file read or write when untrusted input reaches the path; HIGH severity because traversal payloads are trivial and impact is filesystem-wide.",
+    "why": "{lang} file access assembles paths from input ({sink}), so traversal sequences escape the intended directory.",
+    "fix": [
+      "Confine the resolved path under its base directory with {safe} and reject escapes.",
+      "Prefer an allowlist mapping opaque input ids to fixed paths.",
+      "Re-run the scan and confirm no assembled path remains reachable from untrusted input."
+    ],
+    "verifyT": "Rescan shows no assembled path reachable from untrusted input, and traversal probes are rejected.",
+    "sinks": {
+      "python": [
+        "open\\s*\\([^)]*\\+",
+        "open(base + name)",
+        "open(fixed_path)",
+        "os.path.realpath plus prefix check"
+      ],
+      "javascript": [
+        "readFile(?:Sync)?\\s*\\([^)]*\\+",
+        "readFileSync(dir + f)",
+        "readFileSync(fixed)",
+        "path.resolve plus prefix check"
+      ],
+      "php": [
+        "include[^;]*\\$_(?:GET|POST)",
+        "include $_GET['p'];",
+        "include 'fixed.php';",
+        "an allowlist of includable files"
+      ],
+      "java": [
+        "FileInputStream\\s*\\([^)]*\\+",
+        "new FileInputStream(dir + f)",
+        "new FileInputStream(fixed)",
+        "Path.normalize plus startsWith check"
+      ],
+      "go": [
+        "os\\.Open\\s*\\([^)]*\\+",
+        "os.Open(dir + f)",
+        "os.Open(fixed)",
+        "filepath evaluation plus prefix check"
+      ],
+      "ruby": [
+        "File\\.read\\s*\\([^)]*\\+",
+        "File.read(dir + f)",
+        "File.read(fixed)",
+        "File.expand_path plus prefix check"
+      ],
+      "csharp": [
+        "File\\.ReadAllText\\s*\\([^)]*\\+",
+        "File.ReadAllText(dir + f)",
+        "File.ReadAllText(fixed)",
+        "Path.GetFullPath plus prefix check"
+      ],
+      "c": [
+        "fopen\\s*\\([^)]*(?:\\+|strcat\\s*\\()",
+        "fopen(strcat(d, f), \"r\")",
+        "fopen(fixed, \"r\")",
+        "realpath plus prefix check"
+      ],
+      "perl": [
+        "open\\s*\\([^)]*\\.",
+        "open(FH, $dir . $f)",
+        "open(FH, $fixed)",
+        "Cwd::realpath plus prefix check"
+      ],
+      "shell": [
+        "cat\\s+\\$",
+        "cat $f",
+        "cat fixed.txt",
+        "a case-allowlist of file names"
+      ],
+      "powershell": [
+        "Get-Content\\s+\\$",
+        "Get-Content $f",
+        "Get-Content fixed.txt",
+        "Resolve-Path plus prefix check"
+      ]
+    }
+  },
+  {
+    "class": "zip-slip",
+    "kind": "sast",
+    "category": "path-traversal",
+    "cwe": "CWE-22",
+    "severity": "HIGH",
+    "framing": "call",
+    "title": "Archive extraction via {sink} ({lang}) \u2014 review required",
+    "description": "The {lang} call {sink} extracts archive entries to disk. A hostile archive can carry traversal entry names (../../) that write outside the target directory. This lexical rule flags the extraction; the reviewer confirms entry names are validated or confined.",
+    "remediation": "Validate every entry name with {safe} before writing, rejecting absolute paths and parent traversal.",
+    "limitation": "Lexical, line-based: any {sink} call matches, including extraction of trusted archives. Archive trust needs human review.",
+    "scopeT": "Single-line lexical match on the {sink} call in {lang} code.",
+    "fp": "Extracting bundled, trusted archives is the common false positive.",
+    "recordDesc": "In {lang}, {sink} writes archive members to the filesystem. Entry names are attacker-controlled metadata in hostile archives, so extraction without name checks is a write primitive. The remedy is per-entry validation via {safe}.",
+    "applicability": "{lang} codebases extracting archives through {sink}; single-line lexical scope.",
+    "risk": "Arbitrary file overwrite (Zip Slip) from hostile archives; HIGH severity because archives routinely cross trust boundaries.",
+    "why": "{sink} extracts {lang} archives without name checks, so traversal entries write outside the target directory.",
+    "fix": [
+      "Check every entry name with {safe}, rejecting absolute paths, .. segments, and symlinks.",
+      "Extract into an empty directory and verify its contents before use.",
+      "Re-run the scan and confirm extraction is guarded."
+    ],
+    "verifyT": "Rescan shows extraction guarded, and a traversal-entry archive writes nothing outside its directory.",
+    "sinks": {
+      "python": [
+        "tarfile\\.extractall|zipfile\\.extractall|shutil\\.unpack_archive",
+        "tarfile.extractall",
+        "per-entry name validation"
+      ],
+      "javascript": [
+        "\\.extractAll|\\.extract",
+        "zip.extractAll",
+        "entry-name validation before write"
+      ],
+      "ruby": [
+        "\\.extract",
+        "entry.extract",
+        "entry-name validation before write"
+      ],
+      "php": [
+        "extractTo",
+        "$zip->extractTo",
+        "entry-name validation before write"
+      ],
+      "csharp": [
+        "ExtractToDirectory",
+        "ExtractToDirectory",
+        "entry enumeration with name checks"
+      ]
+    }
+  },
+  {
+    "class": "tempfile-risk",
+    "kind": "sast",
+    "category": "insecure-temporary-file",
+    "cwe": "CWE-377",
+    "cweDef": {
+      "name": "Insecure Temporary File",
+      "summary": "Temporary files use predictable names or weak creation, letting attackers pre-create or swap them."
+    },
+    "severity": "LOW",
+    "framing": "call",
+    "title": "Insecure temporary file via {sink} ({lang}) \u2014 review required",
+    "description": "The {lang} call {sink} creates temporary files with predictable names or unsafe semantics, so a local attacker can pre-create or replace the file (symlink attacks). This lexical rule flags the call; the reviewer confirms exclusive creation or switches to {safe}.",
+    "remediation": "Create temporary files with {safe}, which opens exclusively with tight permissions.",
+    "limitation": "Lexical, line-based: any {sink} call matches regardless of directory protections.",
+    "scopeT": "Single-line lexical match on the {sink} call in {lang} code.",
+    "fp": "Single-user scripts in protected directories are the common false positive.",
+    "recordDesc": "In {lang}, {sink} names temporary files predictably or separates name choice from creation, opening a race window. The remedy is atomic exclusive creation via {safe}.",
+    "applicability": "{lang} codebases creating temporary files through {sink}; single-line lexical scope.",
+    "risk": "Local file overwrite or disclosure via symlink races; LOW severity, higher on multi-user systems.",
+    "why": "{sink} creates {lang} temporary files insecurely, so local attackers can intercept them.",
+    "fix": [
+      "Replace {sink} with {safe}.",
+      "Set tight permissions on any file that must persist.",
+      "Re-run the scan and confirm no insecure creation remains."
+    ],
+    "verifyT": "Rescan shows no {sink}, and temporary files are created exclusively.",
+    "sinks": {
+      "python": [
+        "tempfile\\.mktemp",
+        "tempfile.mktemp",
+        "tempfile.NamedTemporaryFile"
+      ],
+      "c": [
+        "tmpnam",
+        "tmpnam",
+        "mkstemp"
+      ],
+      "php": [
+        "tempnam",
+        "tempnam",
+        "tempnam with immediate exclusive open"
+      ]
+    }
+  },
+  {
+    "class": "file-chmod-open",
+    "kind": "sast",
+    "category": "permissions",
+    "cwe": "CWE-732",
+    "severity": "MEDIUM",
+    "framing": "flag",
+    "title": "Overly broad file permissions ({lang}) \u2014 review required",
+    "description": "Code in {lang} grants world-writable or world-readable permissions: {sink}. Any local user can then modify or read the file. This lexical rule flags the grant; the reviewer confirms the breadth is intended or tightens it.",
+    "remediation": "Grant the narrowest workable mode ({safe}) and rely on group ownership instead of world bits.",
+    "limitation": "Lexical, line-based: matches the mode regardless of file sensitivity.",
+    "scopeT": "Single-line lexical match on broad permission grants in {lang} code or scripts.",
+    "fp": "Intentionally public data files are the common false positive.",
+    "recordDesc": "In {lang}, {sink} sets permission bits that include world access. Broad modes on code, keys, or data turn any local account into a writer or reader. The remedy is least-privilege modes via {safe}.",
+    "applicability": "{lang} code and scripts setting file modes; single-line lexical scope.",
+    "risk": "Local tampering or disclosure; MEDIUM severity, HIGH for executables, keys, and configuration.",
+    "why": "{lang} code grants world access ({sink}), so any local user can read or modify the file.",
+    "fix": [
+      "Replace the mode with {safe}.",
+      "Use group ownership for sharing instead of world bits.",
+      "Re-run the scan and confirm no broad grant remains on sensitive files."
+    ],
+    "verifyT": "Rescan shows no broad grant, and file modes audit tight.",
+    "sinks": {
+      "shell": [
+        "chmod\\s+[0-7]*777",
+        "chmod 777 app.sh",
+        "chmod 755 app.sh",
+        "0755/0644 least privilege"
+      ],
+      "python": [
+        "os\\.chmod[^)]*0o777",
+        "os.chmod(p, 0o777)",
+        "os.chmod(p, 0o755)",
+        "0o755/0o644 least privilege"
+      ],
+      "javascript": [
+        "chmod[^)]*0o777",
+        "fs.chmod(f, 0o777)",
+        "fs.chmod(f, 0o755)",
+        "0o755/0o644 least privilege"
+      ],
+      "c": [
+        "[^0-9A-Za-z]0777",
+        "fd = open(p, O_CREAT, 0777)",
+        "fd = open(p, O_CREAT, 0644)",
+        "0644/0755 least privilege"
+      ],
+      "php": [
+        "chmod[^)]*0777",
+        "chmod($f, 0777)",
+        "chmod($f, 0755)",
+        "0755/0644 least privilege"
+      ],
+      "go": [
+        "0o777",
+        "os.OpenFile(p, f, 0o777)",
+        "os.OpenFile(p, f, 0o644)",
+        "0o644/0o755 least privilege"
+      ],
+      "ruby": [
+        "umask\\s*\\(\\s*0\\s*\\)|File\\.umask\\s*\\(\\s*0\\s*\\)",
+        "File.umask(0)",
+        "File.umask(18)",
+        "umask 022/027"
+      ]
+    }
+  },
+  {
+    "class": "open-redirect-call",
+    "kind": "sast",
+    "category": "open-redirect",
+    "cwe": "CWE-601",
+    "cweDef": {
+      "name": "URL Redirection to Untrusted Site ('Open Redirect')",
+      "summary": "Redirect targets take untrusted input, so phishing links abuse the site's domain for credibility."
+    },
+    "severity": "MEDIUM",
+    "framing": "call",
+    "title": "Redirect via {sink} ({lang}) \u2014 review required",
+    "description": "The {lang} call {sink} redirects the user to a computed address. If the address derives from untrusted input, phishing links gain the site's credibility. This lexical rule flags the call; the reviewer confirms the target is fixed or validated.",
+    "remediation": "Redirect only to fixed paths or validate the target with {safe} before redirecting.",
+    "limitation": "Lexical, line-based: any {sink} call matches, including fixed-target redirects.",
+    "scopeT": "Single-line lexical match on the {sink} call in {lang} code.",
+    "fp": "Fixed post-login landing pages are the common false positive.",
+    "recordDesc": "In {lang}, {sink} issues a redirect to a caller-chosen address. Open targets let attackers craft trusted-looking links to hostile sites. The remedy is target validation via {safe}.",
+    "applicability": "{lang} request handlers redirecting through {sink}; single-line lexical scope.",
+    "risk": "Phishing and token theft via trusted-domain links; MEDIUM severity, HIGH when redirects carry tokens.",
+    "why": "{sink} redirects {lang} users to a computed address, so untrusted input in the target enables phishing.",
+    "fix": [
+      "Validate the target with {safe}, allowing only relative paths or listed hosts.",
+      "Drop untrusted redirect parameters in favor of fixed destinations.",
+      "Re-run the scan and confirm no open target remains."
+    ],
+    "verifyT": "Rescan shows no open redirect, and hostile targets are rejected.",
+    "sinks": {
+      "python": [
+        "redirect",
+        "redirect",
+        "url_has_allowed_host_and_scheme check"
+      ],
+      "ruby": [
+        "redirect_to",
+        "redirect_to",
+        "an allowlist of paths"
+      ],
+      "java": [
+        "sendRedirect",
+        "sendRedirect",
+        "a same-origin check"
+      ],
+      "javascript": [
+        "res\\.redirect",
+        "res.redirect",
+        "a same-origin check"
+      ],
+      "go": [
+        "http\\.Redirect",
+        "http.Redirect",
+        "a same-origin check"
+      ],
+      "csharp": [
+        "Redirect",
+        "Redirect",
+        "Url.IsLocalUrl check"
+      ],
+      "php": [
+        "redirect",
+        "redirect",
+        "a same-origin check"
+      ]
+    }
+  },
+  {
+    "class": "sql-concat",
+    "kind": "sast",
+    "category": "sql-injection",
+    "cwe": "CWE-89",
+    "severity": "HIGH",
+    "framing": "flag",
+    "title": "SQL built by concatenation ({lang}) \u2014 review required",
+    "description": "A {lang} query call assembles SQL from parts: {sink}. If any part is untrusted input, the query structure itself is attacker-controlled. This lexical rule flags the assembly; the reviewer confirms every part is trusted or parameterizes it.",
+    "remediation": "Parameterize with {safe} so input stays data; never interpolate values into SQL text.",
+    "limitation": "Lexical, line-based: any concatenated query matches, including trusted assembly. Input trust needs human review.",
+    "scopeT": "Single-line lexical match on concatenated SQL in {lang} code.",
+    "fp": "Assembling fixed column lists or trusted fragments is the common false positive.",
+    "recordDesc": "In {lang}, {sink} mixes code and data in one SQL string. Concatenation is the classic injection primitive: quotes and keywords in the input rewrite the statement. The remedy is bound parameters via {safe}.",
+    "applicability": "{lang} codebases issuing SQL through the flagged call; single-line lexical scope.",
+    "risk": "Full database compromise (read, write, execute) when untrusted input reaches the query; HIGH severity.",
+    "why": "{lang} SQL is assembled from parts ({sink}), so untrusted input rewrites the statement.",
+    "fix": [
+      "Rewrite the query with {safe}, binding every value as a parameter.",
+      "For dynamic identifiers, map input through an allowlist of columns and tables.",
+      "Re-run the scan and confirm no concatenated query remains on untrusted input."
+    ],
+    "verifyT": "Rescan shows no concatenated query on untrusted input, and quote payloads stay inert data.",
+    "sinks": {
+      "python": [
+        "\\.execute\\s*\\([^)]*(?:\\+|%\\s|\\.format\\s*\\()",
+        "cursor.execute(\"SELECT \" + col)",
+        "cursor.execute(\"SELECT * FROM t\")",
+        "parameter placeholders (?/%s)"
+      ],
+      "php": [
+        "mysqli_query\\s*\\([^)]*(?:\"[^\"\\n]*\\$|\\.\\s*\\$)",
+        "mysqli_query($c, \"SELECT $q\")",
+        "mysqli_query($c, $stmt)",
+        "prepared statements with bind_param"
+      ],
+      "java": [
+        "executeQuery\\s*\\([^)]*\\+",
+        "stmt.executeQuery(\"SELECT \" + id)",
+        "stmt.executeQuery(FIXED)",
+        "PreparedStatement with ? placeholders"
+      ],
+      "go": [
+        "\\.Query\\w*\\s*\\([^)]*\\+",
+        "db.Query(\"SELECT \" + id)",
+        "db.Query(FIXED)",
+        "$1 placeholders"
+      ],
+      "ruby": [
+        "\\.execute\\s*\\([^)]*(?:\\+|#\\{)",
+        "db.execute(\"SELECT #{id}\")",
+        "db.execute(FIXED)",
+        "bound parameters"
+      ],
+      "csharp": [
+        "ExecuteReader\\s*\\([^)]*\\+|\\$\"SELECT[^\"]*\\{",
+        "cmd.ExecuteReader(\"SELECT \" + id)",
+        "cmd.ExecuteReader(FIXED)",
+        "SqlParameter bindings"
+      ],
+      "perl": [
+        "->do\\s*\\([^)]*(?:\"[^\"\\n]*\\$|\\.\\s*\\$)",
+        "$dbh->do(\"SELECT $q\")",
+        "$dbh->do($fixed)",
+        "placeholders with bind values"
+      ],
+      "scala": [
+        "SQL\\s*\\([^)]*\\+",
+        "SQL(\"SELECT \" + id)",
+        "SQL(FIXED)",
+        "SQL with .on() bindings"
+      ],
+      "groovy": [
+        "\\.execute\\s*\\([^)]*\\+",
+        "sql.execute(\"SELECT \" + id)",
+        "sql.execute(FIXED)",
+        "GString with parameters"
+      ]
+    }
+  },
+  {
+    "class": "template-inject",
+    "kind": "sast",
+    "category": "template-injection",
+    "cwe": "CWE-94",
+    "cweDef": {
+      "name": "Improper Control of Generation of Code ('Code Injection')",
+      "summary": "Untrusted input reaches code generation, so template or expression text becomes executable."
+    },
+    "severity": "HIGH",
+    "framing": "flag",
+    "title": "Template compiled from input ({lang}) \u2014 review required",
+    "description": "A {lang} template engine compiles a template built from parts: {sink}. Template syntax in the input executes with the application's authority. This lexical rule flags the compilation; the reviewer confirms the template is fixed or sandboxed.",
+    "remediation": "Compile fixed templates only and pass input as variables ({safe}); never build template source from input.",
+    "limitation": "Lexical, line-based: any assembled template matches, including trusted ones.",
+    "scopeT": "Single-line lexical match on assembled templates in {lang} code.",
+    "fp": "Assembling fixed template names (not source) is the common false positive \u2014 confirm which is assembled.",
+    "recordDesc": "In {lang}, {sink} turns a string into an executable template. Server-side template injection runs attacker expressions with application data access. The remedy is fixed templates with variable binding via {safe}.",
+    "applicability": "{lang} codebases compiling templates from assembled strings; single-line lexical scope.",
+    "risk": "Server-side template injection leading to data theft or code execution; HIGH severity.",
+    "why": "{lang} templates compile from assembled source ({sink}), so input syntax executes with application authority.",
+    "fix": [
+      "Use fixed template files with {safe} variable binding.",
+      "If dynamic templates are required, sandbox them without sensitive context.",
+      "Re-run the scan and confirm no assembled template source remains."
+    ],
+    "verifyT": "Rescan shows no assembled template source, and expression probes render inert.",
+    "sinks": {
+      "python": [
+        "render_template_string\\s*\\([^)]*(?:\\+|%|\\bf['\"])|Template\\s*\\([^)]*(?:\\+|%|\\bf['\"])",
+        "render_template_string(tpl + name)",
+        "render_template_string(FIXED)",
+        "render_template with variables"
+      ],
+      "ruby": [
+        "ERB\\.new\\s*\\([^)]*(?:\\+|#\\{)",
+        "ERB.new(tpl + name)",
+        "ERB.new(File.read(f))",
+        "fixed templates with result(binding)"
+      ]
+    }
+  },
+  {
+    "class": "ldap-inject",
+    "kind": "sast",
+    "category": "ldap-injection",
+    "cwe": "CWE-90",
+    "cweDef": {
+      "name": "Improper Neutralization of Special Elements used in an LDAP Query ('LDAP Injection')",
+      "summary": "Untrusted input reaches LDAP filters, so metacharacters rewrite the directory query."
+    },
+    "severity": "HIGH",
+    "framing": "flag",
+    "title": "LDAP filter built by concatenation ({lang}) \u2014 review required",
+    "description": "A {lang} directory call assembles an LDAP filter from parts: {sink}. Filter metacharacters in untrusted input rewrite the query, bypassing authentication or dumping entries. This lexical rule flags the assembly; the reviewer confirms escaping or parameterization.",
+    "remediation": "Escape filter values with {safe} or use parameterized directory APIs.",
+    "limitation": "Lexical, line-based: any assembled filter matches, including trusted ones.",
+    "scopeT": "Single-line lexical match on assembled LDAP filters in {lang} code.",
+    "fp": "Assembling fixed organizational units is the common false positive.",
+    "recordDesc": "In {lang}, {sink} mixes filter syntax with values. LDAP metacharacters (*, (, ), \\) in input alter which entries match. The remedy is value escaping via {safe}.",
+    "applicability": "{lang} codebases querying directories with assembled filters; single-line lexical scope.",
+    "risk": "Authentication bypass and directory disclosure; HIGH severity for login paths.",
+    "why": "{lang} LDAP filters assemble from parts ({sink}), so input metacharacters rewrite the query.",
+    "fix": [
+      "Escape every value with {safe} before interpolation.",
+      "Prefer parameterized directory calls where the library offers them.",
+      "Re-run the scan and confirm no raw interpolation remains."
+    ],
+    "verifyT": "Rescan shows no raw filter interpolation, and metacharacter input matches literally.",
+    "sinks": {
+      "java": [
+        "\\.search\\s*\\([^)]*\\+",
+        "ctx.search(base, \"(uid=\" + id + \")\")",
+        "ctx.search(base, FIXED)",
+        "Filter escaping per RFC 4515"
+      ],
+      "python": [
+        "\\.search\\s*\\([^)]*(?:\\+|%|\\{)",
+        "conn.search(base, f\"(uid={u})\")",
+        "conn.search(base, FIXED)",
+        "ldap3.utils.conv escape_filter_chars"
+      ],
+      "php": [
+        "ldap_search\\s*\\([^)]*(?:\"[^\"\\n]*\\$|\\.\\s*\\$)",
+        "ldap_search($c, $b, \"(uid=$u)\")",
+        "ldap_search($c, $b, FIXED)",
+        "ldap_escape for filter values"
+      ]
+    }
+  },
+  {
+    "class": "xpath-inject",
+    "kind": "sast",
+    "category": "xpath-injection",
+    "cwe": "CWE-91",
+    "cweDef": {
+      "name": "XML Injection (aka Blind XPath Injection)",
+      "summary": "Untrusted input reaches XPath or XML construction, so query syntax escapes its intended bounds."
+    },
+    "severity": "HIGH",
+    "framing": "flag",
+    "title": "XPath built by concatenation ({lang}) \u2014 review required",
+    "description": "A {lang} XML call assembles an XPath from parts: {sink}. Quote-breaking input rewrites the query and reads unintended nodes. This lexical rule flags the assembly; the reviewer confirms quoting or variable binding.",
+    "remediation": "Bind values as XPath variables ({safe}) instead of interpolating them.",
+    "limitation": "Lexical, line-based: any assembled XPath matches, including trusted ones.",
+    "scopeT": "Single-line lexical match on assembled XPath in {lang} code.",
+    "fp": "Assembling fixed element paths is the common false positive.",
+    "recordDesc": "In {lang}, {sink} embeds values in XPath text. Quote and axis syntax in input escapes the intended predicate. The remedy is variable binding via {safe}.",
+    "applicability": "{lang} codebases querying XML with assembled paths; single-line lexical scope.",
+    "risk": "XML disclosure and authentication bypass on XPath-based checks; HIGH severity.",
+    "why": "{lang} XPath assembles from parts ({sink}), so input quotes rewrite the query.",
+    "fix": [
+      "Bind values as variables with {safe}.",
+      "If binding is unavailable, quote-escape values before interpolation.",
+      "Re-run the scan and confirm no raw interpolation remains."
+    ],
+    "verifyT": "Rescan shows no raw XPath interpolation, and quote payloads match literally.",
+    "sinks": {
+      "python": [
+        "(?:xpath|findall)\\s*\\([^)]*\\+",
+        "tree.xpath(\"//user[@id='\" + i + \"']\")",
+        "tree.xpath(FIXED)",
+        "xpath variables"
+      ],
+      "java": [
+        "(?:xpath|evaluate)\\s*\\([^)]*\\+",
+        "xp.evaluate(\"//u[@id='\" + i + \"']\", d)",
+        "xp.evaluate(FIXED, d)",
+        "XPathVariableResolver"
+      ]
+    }
+  },
+  {
+    "class": "header-inject",
+    "kind": "sast",
+    "category": "http-response-splitting",
+    "cwe": "CWE-113",
+    "cweDef": {
+      "name": "Improper Neutralization of CRLF Sequences in HTTP Headers ('HTTP Request/Response Splitting')",
+      "summary": "CR or LF reaches a header value, splitting one response into attacker-controlled headers or bodies."
+    },
+    "severity": "MEDIUM",
+    "framing": "flag",
+    "title": "Response header built from input ({lang}) \u2014 review required",
+    "description": "A {lang} response call sets a header from assembled parts: {sink}. CRLF sequences in untrusted input split the response and inject headers or body bytes. This lexical rule flags the assembly; the reviewer confirms the value is validated.",
+    "remediation": "Validate the value against {safe} (no CR/LF, expected charset) before setting the header.",
+    "limitation": "Lexical, line-based: any assembled header matches; modern frameworks often reject CRLF, which the reviewer should confirm.",
+    "scopeT": "Single-line lexical match on assembled response headers in {lang} code.",
+    "fp": "Frameworks that reject CRLF in header values make many hits non-exploitable \u2014 confirm the behavior.",
+    "recordDesc": "In {lang}, {sink} places a computed value in a response header. CR and LF bytes end the header early, letting the remainder become new headers or body. The remedy is strict value validation ({safe}).",
+    "applicability": "{lang} response paths setting headers from parts; single-line lexical scope.",
+    "risk": "Response splitting: header injection, cache poisoning, script injection; MEDIUM severity (frameworks mitigate).",
+    "why": "{lang} response headers assemble from parts ({sink}), so CRLF in input splits the response.",
+    "fix": [
+      "Validate the value with {safe}, rejecting CR, LF, and unexpected bytes.",
+      "Prefer framework header APIs that encode or reject control bytes.",
+      "Re-run the scan and confirm no raw header assembly remains."
+    ],
+    "verifyT": "Rescan shows no raw header assembly, and CRLF probes are rejected.",
+    "sinks": {
+      "java": [
+        "setHeader\\s*\\([^)]*\\+",
+        "res.setHeader(\"X-N\", \"v\" + n)",
+        "res.setHeader(\"X-N\", FIXED)",
+        "a token-charset allowlist"
+      ],
+      "php": [
+        "header\\s*\\([^)]*\\$_(?:GET|POST)",
+        "header(\"X-N: \" . $_GET['n'])",
+        "header(\"X-N: fixed\")",
+        "a token-charset allowlist"
+      ]
+    }
+  }
+]

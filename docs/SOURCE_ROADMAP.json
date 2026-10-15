@@ -1,0 +1,137 @@
+{
+  "schemaVersion": "drobon.corpus.roadmap/v1",
+  "note": "Planning only. Under the production-data lock every source below is UNASSESSED, PLANNED, REFERENCED, or IN_USE-as-seed; License review findings are recorded per source (see docs/LICENSE_REVIEW.md); owner production authorization is still pending for all. No volume is quoted until measured at staging (volumeEstimate must stay null).",
+  "sources": [
+    {
+      "name": "GHSA reviewed advisories",
+      "url": "https://github.com/github/advisory-database",
+      "categories": ["advisory-record"],
+      "volumeEstimate": null,
+      "estimateBasis": "Not measured. Measure at staging (reviewed-only, withdrawn-excluded count for npm+PyPI via API) before quoting any number.",
+      "license": {
+        "status": "VERIFIED_ALLOWED",
+        "evidence": "CC-BY-4.0 verified 2026-10-14 (API spdx_id + LICENSE.md + README). See docs/LICENSE_REVIEW.md section 1; owner batch authorization still required."
+      },
+      "attribution": "Per-record sourceUrl + retrievedAt already on 100/100 seed records; batch-level terms note required before any batch.",
+      "retrieval": {
+        "method": "scripts/import-ghsa.mjs (reviewed-only, withdrawn excluded, per-package files)",
+        "cadence": "Per explicitly authorized batch only; no schedule until all four INGESTION_PLAN gates pass."
+      },
+      "dedupKeys": ["source", "sourceId", "ecosystem", "package"],
+      "validation": "scripts/validate.mjs + full suite; HONESTY.md per-record human review for severity/provenance truth.",
+      "provenance": "source/sourceUrl/retrievedAt required per record; license field must be resolved per batch before it counts.",
+      "appConsumer": "apps/api/src/scans/sca/provider.ts: assess(coordinates)",
+      "status": "IN_USE_AS_SEED",
+      "statusEvidence": "100 frozen seed records under vuln-intel/ (50 npm + 50 PyPI); expansion blocked by the data lock.",
+      "gaps": [
+        "Breadth beyond the 100-record seed needs INGESTION_PLAN gates 1-4 (B-datalock).",
+        "Redistribution terms unverified (B-license).",
+        "No staging volume measurement performed yet."
+      ]
+    },
+    {
+      "name": "OSV aggregated vulnerabilities",
+      "url": "https://osv.dev",
+      "categories": ["advisory-record"],
+      "volumeEstimate": null,
+      "estimateBasis": "Not measured. Measure at staging (query the 24 seed packages + candidate extensions via the OSV API) before quoting any number.",
+      "license": {
+        "status": "RESTRICTED",
+        "evidence": "Per-home-database terms verified 2026-10-14 (GHSA/PYSEC CC-BY-4.0; CVE-from-NVD public domain). Resolve per record per batch. See docs/LICENSE_REVIEW.md section 2."
+      },
+      "attribution": "Per-record sourceUrl (osv.dev entry) + retrievedAt; OSV aggregates upstream sources - record the upstream id as sourceId.",
+      "retrieval": {
+        "method": "scripts/import-osv.mjs walking data/osv-seed-packages.json in list order (priority-first); ECOSYSTEM ranges (npm also SEMVER).",
+        "cadence": "Per explicitly authorized batch only; importer runs are blocked until gates pass."
+      },
+      "dedupKeys": ["source", "sourceId", "ecosystem", "package"],
+      "validation": "scripts/validate.mjs + full suite; cross-source alias review (same upstream flaw via GHSA and OSV must not double-count - see COUNTING_POLICY.md).",
+      "provenance": "source/sourceUrl/retrievedAt required per record; license field must be resolved per batch before it counts.",
+      "appConsumer": "apps/api/src/scans/sca/provider.ts: assess(coordinates)",
+      "status": "PLANNED",
+      "statusEvidence": "Importer implemented with invokedAsScript guard; zero imports executed; seed queue of 24 packages validated by the suite.",
+      "gaps": [
+        "Same four INGESTION_PLAN gates as GHSA, plus alias/dedup review against GHSA-sourced records.",
+        "Redistribution terms unverified (B-license).",
+        "Seed queue covers 24 packages; extension needs reviewed additions only."
+      ]
+    },
+    {
+      "name": "NVD CVE feeds",
+      "url": "https://nvd.nist.gov",
+      "categories": ["advisory-record"],
+      "volumeEstimate": null,
+      "estimateBasis": "Not measured and not needed yet: no verified app consumer requires CVE-keyed records beyond what GHSA/OSV already carry.",
+      "license": {
+        "status": "RESTRICTED",
+        "evidence": "Public domain + notice + key ToU verified 2026-10-14, but no verified consumer need and no importer. See docs/LICENSE_REVIEW.md section 3."
+      },
+      "attribution": "Undecided - define at registration time if a verified need emerges.",
+      "retrieval": {
+        "method": "None implemented.",
+        "cadence": "None."
+      },
+      "dedupKeys": ["source", "sourceId", "ecosystem", "package"],
+      "validation": "Would require a new importer plus alias review against GHSA/OSV records.",
+      "provenance": "Would require source/sourceUrl/retrievedAt per record plus resolved license per batch.",
+      "appConsumer": "(none verified - GHSA/OSV cover the provider seam today)",
+      "status": "UNASSESSED",
+      "statusEvidence": "No registration, no importer, no measurement; INGESTION_PLAN lists NVD as tertiary-unregistered.",
+      "gaps": [
+        "No verified need: register + measure only if GHSA/OSV breadth proves insufficient for a real consumer.",
+        "Would need source registration, terms review, importer, and alias policy before any batch."
+      ]
+    },
+    {
+      "name": "MITRE CWE definitions",
+      "url": "https://cwe.mitre.org",
+      "categories": ["cwe-entry"],
+      "volumeEstimate": null,
+      "estimateBasis": "Not applicable as a volume: entries are hand-written own-words summaries; MITRE is the canonical link target, not bulk input.",
+      "license": {
+        "status": "NOT_APPLICABLE",
+        "evidence": "No MITRE text is copied (own-words summaries + canonical links). Terms permit commercial use with notice: docs/LICENSE_REVIEW.md section 4."
+      },
+      "attribution": "Canonical https://cwe.mitre.org/data/definitions/<id>.html link per entry (URL shape machine-checked).",
+      "retrieval": {
+        "method": "Hand authorship against the public definition; no scraping, no bulk import.",
+        "cadence": "Per new app-referenced or pack-referenced CWE id."
+      },
+      "dedupKeys": ["id"],
+      "validation": "scripts/validate-cwe.mjs + consistency (zero dangling pack/remediation references; pin resolution).",
+      "provenance": "Own-words statement + canonical URL per entry.",
+      "appConsumer": "(none - future finding/guidance enrichment, not implemented)",
+      "status": "REFERENCED",
+      "statusEvidence": "17 entries under knowledge/cwe/, each linking its canonical MITRE page.",
+      "gaps": [
+        "New entries needed only when the app or packs reference new CWE ids (watch at each app re-verification)."
+      ]
+    },
+    {
+      "name": "Original Drobon authorship",
+      "url": "https://github.com/mdraselislam0101-design/Drobon-Dataset",
+      "categories": ["sast-rule", "secrets-rule", "dast-check", "remediation-entry", "lesson", "assessment-template", "engagement-aid", "provider-vector"],
+      "volumeEstimate": null,
+      "estimateBasis": "Not applicable as a volume: hand-authored, tested content; growth is editorial, not harvested. No per-category record target exists.",
+      "license": {
+        "status": "ORIGINAL_UNLICENSED",
+        "evidence": "No LICENSE file; owner has not chosen license(s). Original expression, zero third-party copying (PACKS.md rule 1)."
+      },
+      "attribution": "N/A (own work); provenance field on planning docs where relevant.",
+      "retrieval": {
+        "method": "Hand authorship with executable tests per item (patterns, starters, vectors).",
+        "cadence": "As needed; starter breadth already shipped (8/4/6 rules, 18 remediation, 3/3/2 audiences, 16 vectors)."
+      },
+      "dedupKeys": ["id"],
+      "validation": "scripts/validate-packs.mjs + test-packs (originality + executable tests), validate-audiences + test-audiences, check-vectors, consistency.",
+      "provenance": "Authored in-repo with git history; no upstream to cite.",
+      "appConsumer": "(none - future pack/audience/vector loaders, not implemented)",
+      "status": "IN_USE",
+      "statusEvidence": "77 validated original items in-repo (8+4+6+18+3+3+2+16+17 CWE - CWE links MITRE above; all suite-green).",
+      "gaps": [
+        "Needs the license decision (B-license) before any item can count as verified production.",
+        "Needs app-side loader designs (B-design) before any item is consumable."
+      ]
+    }
+  ]
+}

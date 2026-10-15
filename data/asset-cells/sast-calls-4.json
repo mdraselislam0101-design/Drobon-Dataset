@@ -1,0 +1,1013 @@
+[
+  {
+    "class": "cmd-exec-3",
+    "kind": "sast",
+    "category": "command-injection",
+    "cwe": "CWE-78",
+    "severity": "HIGH",
+    "framing": "call",
+    "title": "OS command execution via {sink} ({lang}) \u2014 review required",
+    "description": "The {lang} sink {sink} launches processes. Untrusted input in the command becomes command injection. This lexical rule flags the sink; the reviewer confirms arguments are trusted or passed as vectors via {safe}.",
+    "remediation": "Use {safe} with separate arguments, never interpolated command strings.",
+    "limitation": "Lexical, line-based: any {sink} call matches.",
+    "scopeT": "Single-line lexical match on the {sink} call in {lang} code.",
+    "fp": "Fixed maintenance commands are the common false positive.",
+    "recordDesc": "In {lang}, {sink} executes external commands. Shell metacharacters in untrusted input break out of the intended command. The remedy is {safe}.",
+    "applicability": "{lang} codebases launching processes; single-line lexical scope.",
+    "risk": "Command execution on untrusted input; HIGH severity.",
+    "why": "{sink} launches {lang} processes from strings, so untrusted input becomes command injection.",
+    "fix": [
+      "Replace {sink} with {safe}.",
+      "Allowlist commands where a shell is unavoidable.",
+      "Re-run the scan and confirm no sink remains on untrusted input."
+    ],
+    "verifyT": "Rescan shows no sink on untrusted input.",
+    "sinks": {
+      "scala": [
+        "Process",
+        "Process",
+        "Process with an args sequence"
+      ],
+      "kotlin": [
+        "ProcessBuilder",
+        "ProcessBuilder",
+        "ProcessBuilder with an args list"
+      ],
+      "haskell": [
+        "rawSystem",
+        "rawSystem",
+        "readProcess with args"
+      ],
+      "clojure": [
+        "shell/sh",
+        "shell/sh",
+        "sh with an args vector"
+      ],
+      "julia": [
+        "run",
+        "run",
+        "run with Cmd vectors"
+      ],
+      "tcl": [
+        "exec",
+        "exec",
+        "exec with a fixed argv"
+      ],
+      "pascal": [
+        "fpSystem",
+        "fpSystem",
+        "TProcess with parameters"
+      ],
+      "basic": [
+        "SHELL",
+        "SHELL",
+        "ShellExecute with validated input"
+      ],
+      "ruby:iopopen": [
+        "IO\\.popen",
+        "IO.popen",
+        "Open3 with an args list"
+      ]
+    }
+  },
+  {
+    "class": "deser-3",
+    "kind": "sast",
+    "category": "unsafe-deserialization",
+    "cwe": "CWE-502",
+    "severity": "HIGH",
+    "framing": "call",
+    "title": "Unsafe decoding via {sink} ({lang}) \u2014 review required",
+    "description": "The {lang} call {sink} rebuilds objects from bytes. Hostile input instantiates unexpected classes. This lexical rule flags the call; the reviewer confirms trust or hardens via {safe}.",
+    "remediation": "Harden with {safe}.",
+    "limitation": "Lexical, line-based: any {sink} call matches.",
+    "scopeT": "Single-line lexical match on the {sink} call in {lang} code.",
+    "fp": "Trusted local data is the common false positive.",
+    "recordDesc": "In {lang}, {sink} decodes objects. The remedy is {safe}.",
+    "applicability": "{lang} decoding; single-line lexical scope.",
+    "risk": "Deserialization gadgets; HIGH severity.",
+    "why": "{sink} decodes objects in {lang}.",
+    "fix": [
+      "Harden with {safe}."
+    ],
+    "verifyT": "Rescan shows no raw call on untrusted bytes.",
+    "sinks": {
+      "scala": [
+        "ObjectInputStream",
+        "ObjectInputStream",
+        "an allowlisted ObjectInputStream"
+      ],
+      "groovy": [
+        "XmlSlurper",
+        "XmlSlurper",
+        "a hardened parser"
+      ],
+      "clojure": [
+        "read-string",
+        "read-string",
+        "clojure.edn with readers off"
+      ],
+      "ocaml": [
+        "Marshal\\.from_string",
+        "Marshal.from_string",
+        "validated formats"
+      ]
+    }
+  },
+  {
+    "class": "hash-call-3",
+    "kind": "sast",
+    "category": "weak-cryptography",
+    "cwe": "CWE-327",
+    "severity": "LOW",
+    "framing": "call",
+    "title": "Legacy digest via {sink} ({lang}) \u2014 review required",
+    "description": "The {lang} call {sink} computes MD5 or SHA-1, broken or deprecated for security uses. This lexical rule flags the call; the reviewer confirms a checksum use or switches to {safe}.",
+    "remediation": "Use {safe} for security purposes.",
+    "limitation": "Lexical, line-based: matches any {sink} call.",
+    "scopeT": "Single-line lexical match on the {sink} call in {lang} code.",
+    "fp": "Checksums are the common false positive.",
+    "recordDesc": "In {lang}, {sink} computes a legacy digest. The remedy is {safe}.",
+    "applicability": "{lang} codebases hashing with {sink}; single-line lexical scope.",
+    "risk": "Forged digests where security is assumed; LOW severity.",
+    "why": "{sink} computes legacy digests in {lang}.",
+    "fix": [
+      "Replace {sink} with {safe} for security uses.",
+      "Justify remaining checksum uses in comments."
+    ],
+    "verifyT": "Rescan shows no unjustified {sink}.",
+    "sinks": {
+      "haskell": [
+        "MD5\\.hash",
+        "MD5.hash",
+        "SHA256.hash"
+      ],
+      "crystal": [
+        "Digest::MD5\\.hexdigest",
+        "Digest::MD5.hexdigest",
+        "Digest::SHA256.hexdigest"
+      ],
+      "haskell:sha1": [
+        "SHA1\\.hash",
+        "SHA1.hash",
+        "SHA256.hash"
+      ],
+      "crystal:sha1": [
+        "Digest::SHA1\\.hexdigest",
+        "Digest::SHA1.hexdigest",
+        "Digest::SHA256.hexdigest"
+      ]
+    }
+  },
+  {
+    "class": "hash-flag-3",
+    "kind": "sast",
+    "category": "weak-cryptography",
+    "cwe": "CWE-327",
+    "severity": "LOW",
+    "framing": "flag",
+    "title": "Legacy digest selected ({fw}) \u2014 review required",
+    "description": "Code selects MD5 or SHA-1: {sink} ({fw}). Both are unsuitable for security uses. This lexical rule flags the selection; the reviewer confirms a checksum or migrates to {safe}.",
+    "remediation": "Migrate to {safe}.",
+    "limitation": "Lexical, line-based: matches the selection.",
+    "scopeT": "Single-line lexical match on digest selection ({fw}).",
+    "fp": "Checksums are the common false positive.",
+    "recordDesc": "In {fw}, {sink} selects a legacy digest. The remedy is {safe}.",
+    "applicability": "{fw} hashing; single-line lexical scope.",
+    "risk": "Forged digests; LOW severity.",
+    "why": "{fw} selects legacy digests ({sink}).",
+    "fix": [
+      "Migrate to {safe} for security uses."
+    ],
+    "verifyT": "Rescan shows no unjustified selection.",
+    "sinks": {
+      "groovy:md5m": [
+        "\\.md5\\s*\\(\\s*\\)",
+        "\"x\".md5()",
+        "\"x\".sha256()",
+        "sha256()"
+      ],
+      "elixir:sha": [
+        ":crypto\\.hash\\s*\\(\\s*:sha\\b",
+        ":crypto.hash(:sha, x)",
+        ":crypto.hash(:sha256, x)",
+        ":sha256"
+      ]
+    }
+  },
+  {
+    "class": "random-3",
+    "kind": "sast",
+    "category": "weak-cryptography",
+    "cwe": "CWE-330",
+    "severity": "LOW",
+    "framing": "call",
+    "title": "Predictable randomness via {sink} ({lang}) \u2014 review required",
+    "description": "The {lang} call {sink} draws predictable values. Security uses need {safe}. This lexical rule flags the call; the reviewer confirms a statistical use.",
+    "remediation": "Use {safe} for security values.",
+    "limitation": "Lexical, line-based: matches any {sink} call.",
+    "scopeT": "Single-line lexical match on the {sink} call in {lang} code.",
+    "fp": "Simulations are the common false positive.",
+    "recordDesc": "In {lang}, {sink} is predictable. The remedy is {safe}.",
+    "applicability": "{lang} codebases; single-line lexical scope.",
+    "risk": "Guessed values; LOW severity.",
+    "why": "{sink} is predictable in {lang}.",
+    "fix": [
+      "Replace {sink} with {safe} for security values."
+    ],
+    "verifyT": "Rescan shows no {sink} feeding security values.",
+    "sinks": {
+      "scala": [
+        "Random\\.nextInt",
+        "Random.nextInt",
+        "SecureRandom"
+      ],
+      "haskell": [
+        "randomIO",
+        "randomIO",
+        "a cryptographic source"
+      ],
+      "clojure": [
+        "rand",
+        "rand",
+        "a cryptographic source"
+      ],
+      "elixir": [
+        "rand\\.uniform",
+        ":rand.uniform",
+        ":crypto.strong_rand_bytes"
+      ],
+      "erlang": [
+        "rand:uniform",
+        "rand:uniform",
+        "crypto:strong_rand_bytes"
+      ],
+      "ocaml": [
+        "Random\\.int",
+        "Random.int",
+        "a cryptographic source"
+      ],
+      "nim": [
+        "rand",
+        "rand",
+        "a cryptographic source"
+      ],
+      "crystal": [
+        "rand",
+        "rand",
+        "Random::Secure"
+      ],
+      "fortran": [
+        "RANDOM_NUMBER",
+        "RANDOM_NUMBER",
+        "a cryptographic source"
+      ]
+    }
+  },
+  {
+    "class": "xss-flag-3",
+    "kind": "sast",
+    "category": "cross-site-scripting",
+    "cwe": "CWE-79",
+    "severity": "MEDIUM",
+    "framing": "flag",
+    "title": "Unescaped output ({fw}) \u2014 review required",
+    "description": "A page outputs a variable unescaped: {sink} ({fw}). Untrusted input becomes script in victims' browsers. This lexical rule flags the output; the reviewer confirms trust or escapes via {safe}.",
+    "remediation": "Escape with {safe}.",
+    "limitation": "Lexical, line-based: matches the output regardless of value trust.",
+    "scopeT": "Single-line lexical match on unescaped output ({fw}).",
+    "fp": "Trusted constants are the common false positive.",
+    "recordDesc": "In {fw}, {sink} skips escaping. The remedy is {safe}.",
+    "applicability": "{fw} pages; single-line lexical scope.",
+    "risk": "Cross-site scripting; MEDIUM severity.",
+    "why": "{fw} outputs values unescaped ({sink}).",
+    "fix": [
+      "Escape with {safe}."
+    ],
+    "verifyT": "Rescan shows no unescaped output on untrusted values.",
+    "sinks": {
+      "php:echo": [
+        "echo\\s+\\$",
+        "echo $q",
+        "echo e($q)",
+        "escaped output"
+      ],
+      "perl:print": [
+        "print\\s+\\$",
+        "print $q",
+        "print e($q)",
+        "escaped output"
+      ],
+      "asp:expr": [
+        "<%=",
+        "<%= q %>",
+        "<%: q %>",
+        "encoded output"
+      ],
+      "coldfusion:output": [
+        "#[a-zA-Z_$][\\w$]*#",
+        "<cfoutput>#q#</cfoutput>",
+        "<cfoutput>#encodeForHtml(q)#</cfoutput>",
+        "encodeForHtml"
+      ]
+    }
+  },
+  {
+    "class": "xss-call-3",
+    "kind": "sast",
+    "category": "cross-site-scripting",
+    "cwe": "CWE-79",
+    "severity": "MEDIUM",
+    "framing": "call",
+    "title": "Raw HTML marker via {sink} ({lang}) \u2014 review required",
+    "description": "The {lang} call {sink} marks a value as safe HTML. Untrusted input becomes script. This lexical rule flags the call; the reviewer confirms trust or removes it via {safe}.",
+    "remediation": "Remove or use {safe}.",
+    "limitation": "Lexical, line-based: any {sink} call matches.",
+    "scopeT": "Single-line lexical match on the {sink} call in {lang} code.",
+    "fp": "Trusted markup is the common false positive.",
+    "recordDesc": "In {lang}, {sink} skips escaping. The remedy is {safe}.",
+    "applicability": "{lang} rendering; single-line lexical scope.",
+    "risk": "Cross-site scripting; MEDIUM severity.",
+    "why": "{sink} marks HTML safe in {lang}.",
+    "fix": [
+      "Remove or use {safe}."
+    ],
+    "verifyT": "Rescan shows no marker on untrusted values.",
+    "sinks": {
+      "scala": [
+        "Html",
+        "Html",
+        "escaped templates"
+      ],
+      "haskell": [
+        "preEscapedToHtml",
+        "preEscapedToHtml",
+        "escaped markup"
+      ],
+      "clojure": [
+        "raw",
+        "raw",
+        "escaped hiccup"
+      ]
+    }
+  },
+  {
+    "class": "path-3",
+    "kind": "sast",
+    "category": "path-traversal",
+    "cwe": "CWE-22",
+    "severity": "HIGH",
+    "framing": "flag",
+    "title": "File access built from input ({lang}) \u2014 review required",
+    "description": "A {lang} file operation builds its path from input: {sink}. Traversal sequences escape the directory. This lexical rule flags the construction; the reviewer confirms confinement via {safe}.",
+    "remediation": "Confine with {safe} or map input through an allowlist.",
+    "limitation": "Lexical, line-based: any input-built path matches.",
+    "scopeT": "Single-line lexical match on input-built paths in {lang} code.",
+    "fp": "Trusted directories are the common false positive.",
+    "recordDesc": "In {lang}, {sink} assembles a file path. The remedy is {safe}.",
+    "applicability": "{lang} file access; single-line lexical scope.",
+    "risk": "Arbitrary file read or write; HIGH severity.",
+    "why": "{lang} paths assemble from input ({sink}).",
+    "fix": [
+      "Confine with {safe}.",
+      "Prefer allowlisted ids."
+    ],
+    "verifyT": "Rescan shows no open path; traversal probes rejected.",
+    "sinks": {
+      "julia": [
+        "open\\s*\\([^)]*\\*",
+        "open(dir * f)",
+        "open(fixed)",
+        "normalized prefix check"
+      ],
+      "clojure": [
+        "slurp\\s*\\([^)]*str\\s",
+        "(slurp (str dir f))",
+        "(slurp fixed)",
+        "an allowlist of names"
+      ],
+      "ocaml": [
+        "open_in\\s*\\([^)]*\\^",
+        "open_in (dir ^ f)",
+        "open_in fixed",
+        "normalized prefix check"
+      ],
+      "nim": [
+        "readFile\\s*\\([^)]*&",
+        "readFile(dir & f)",
+        "readFile(fixed)",
+        "normalized prefix check"
+      ],
+      "crystal": [
+        "File\\.read\\s*\\([^)]*\\+",
+        "File.read(dir + f)",
+        "File.read(fixed)",
+        "normalized prefix check"
+      ],
+      "fortran": [
+        "FILE\\s*=\\s*[a-zA-Z]",
+        "OPEN(1, FILE=fname)",
+        "OPEN(1, FILE=\"fixed\")",
+        "an allowlist of names"
+      ],
+      "basic": [
+        "OPEN\\s+[a-zA-Z][\\w$]*\\s+FOR",
+        "OPEN fname FOR INPUT",
+        "OPEN \"fixed\" FOR INPUT",
+        "an allowlist of names"
+      ],
+      "pascal": [
+        "AssignFile\\s*\\([^,]+,\\s*[a-zA-Z]",
+        "AssignFile(f, name)",
+        "AssignFile(f, 'fixed')",
+        "an allowlist of names"
+      ],
+      "vba": [
+        "Open\\s+[a-zA-Z][\\w$]*\\s+For",
+        "Open fname For Input",
+        "Open \"fixed\" For Input",
+        "an allowlist of names"
+      ]
+    }
+  },
+  {
+    "class": "sql-4",
+    "kind": "sast",
+    "category": "sql-injection",
+    "cwe": "CWE-89",
+    "severity": "HIGH",
+    "framing": "flag",
+    "title": "SQL built by concatenation ({lang}) \u2014 review required",
+    "description": "A {lang} query assembles SQL from parts: {sink}. Untrusted parts rewrite the statement. This lexical rule flags the assembly; the reviewer confirms trust or parameterizes via {safe}.",
+    "remediation": "Parameterize with {safe}.",
+    "limitation": "Lexical, line-based: any assembled query matches.",
+    "scopeT": "Single-line lexical match on assembled SQL in {lang} code.",
+    "fp": "Fixed fragments are the common false positive.",
+    "recordDesc": "In {lang}, {sink} mixes SQL text with values. The remedy is {safe}.",
+    "applicability": "{lang} data calls; single-line lexical scope.",
+    "risk": "Full database compromise; HIGH severity.",
+    "why": "{lang} SQL assembles from parts ({sink}).",
+    "fix": [
+      "Rewrite with {safe}.",
+      "Allowlist dynamic identifiers."
+    ],
+    "verifyT": "Rescan shows no assembled query on untrusted input.",
+    "sinks": {
+      "haskell": [
+        "query\\s+[^\\n]*\\+\\+",
+        "query c (\"SELECT \" ++ q)",
+        "query c FIXED",
+        "parameter binding"
+      ],
+      "clojure": [
+        "\\(query\\s+[^)]*str\\s",
+        "(query db [(str \"SELECT \" q)])",
+        "(query db [FIXED])",
+        "parameter vectors"
+      ],
+      "ocaml": [
+        "exec\\s+[^\\n]*\\^",
+        "exec c (\"SELECT \" ^ q)",
+        "exec c FIXED",
+        "parameter binding"
+      ],
+      "nim": [
+        "exec\\s*\\([^)]*&",
+        "db.exec(sql\"SELECT \" & q)",
+        "db.exec(sqlFIXED)",
+        "dbValue bindings"
+      ],
+      "crystal": [
+        "query\\s*\\([^)]*\\+",
+        "query(\"SELECT \" + q)",
+        "query(FIXED)",
+        "parameter binding"
+      ],
+      "basic": [
+        "\\.Execute\\s*\\([^)]*&",
+        "conn.Execute(\"SELECT \" & q)",
+        "conn.Execute(FIXED)",
+        "parameter objects"
+      ],
+      "tcl": [
+        "db\\s+eval\\s+[^\\n]*\\$[a-zA-Z_]",
+        "db eval \"SELECT $q\"",
+        "db eval {SELECT 1}",
+        "bound parameters"
+      ],
+      "erlang": [
+        "sql_query\\s*\\([^)]*\\+\\+",
+        "sql_query(c, \"SELECT \" ++ q)",
+        "sql_query(c, FIXED)",
+        "parameter binding"
+      ]
+    }
+  },
+  {
+    "class": "ssrf-4",
+    "kind": "sast",
+    "category": "server-side-request-forgery",
+    "cwe": "CWE-918",
+    "severity": "HIGH",
+    "framing": "flag",
+    "title": "Server-side fetch of assembled URL ({lang}) \u2014 review required",
+    "description": "A {lang} client fetches an assembled URL: {sink}. Untrusted parts reach internal hosts. This lexical rule flags the fetch; the reviewer confirms the host is fixed or allowlisted via {safe}.",
+    "remediation": "Allowlist hosts ({safe}).",
+    "limitation": "Lexical, line-based: any assembled fetch URL matches.",
+    "scopeT": "Single-line lexical match on assembled fetch URLs in {lang} code.",
+    "fp": "Fixed hosts are the common false positive.",
+    "recordDesc": "In {lang}, {sink} fetches a computed URL. The remedy is {safe}.",
+    "applicability": "{lang} server code; single-line lexical scope.",
+    "risk": "Internal access via metadata and intranet; HIGH severity.",
+    "why": "{lang} fetches assemble URLs ({sink}).",
+    "fix": [
+      "Restrict hosts with {safe}.",
+      "Block non-HTTP schemes."
+    ],
+    "verifyT": "Rescan shows no open fetch.",
+    "sinks": {
+      "haskell": [
+        "parseRequest\\s*\\([^)]*\\+\\+",
+        "parseRequest (\"http://\" ++ h)",
+        "parseRequest FIXED",
+        "a host allowlist"
+      ],
+      "clojure": [
+        "client/get\\s*\\([^)]*str\\s",
+        "(client/get (str base p))",
+        "(client/get FIXED)",
+        "a host allowlist"
+      ],
+      "ocaml": [
+        "Client\\.get\\s*\\([^)]*\\^",
+        "Client.get (u ^ p)",
+        "Client.get fixed",
+        "a host allowlist"
+      ],
+      "nim": [
+        "request\\s*\\([^)]*&",
+        "c.request(base & p)",
+        "c.request(fixed)",
+        "a host allowlist"
+      ],
+      "crystal": [
+        "Client\\.get\\s*\\([^)]*\\+",
+        "Client.get(base + p)",
+        "Client.get(FIXED)",
+        "a host allowlist"
+      ],
+      "elixir": [
+        "HTTPoison\\.get\\s*\\([^)]*<>",
+        "HTTPoison.get(base <> p)",
+        "HTTPoison.get(fixed)",
+        "a host allowlist"
+      ],
+      "erlang": [
+        "httpc:request\\s*\\([^)]*\\+\\+",
+        "httpc:request(base ++ p)",
+        "httpc:request(fixed)",
+        "a host allowlist"
+      ],
+      "julia": [
+        "HTTP\\.get\\s*\\([^)]*\\*",
+        "HTTP.get(base * p)",
+        "HTTP.get(FIXED)",
+        "a host allowlist"
+      ],
+      "tcl": [
+        "http::geturl\\s+\\$",
+        "http::geturl $u",
+        "http::geturl http://fixed/",
+        "a host allowlist"
+      ]
+    }
+  },
+  {
+    "class": "log-4",
+    "kind": "sast",
+    "category": "sensitive-logging",
+    "cwe": "CWE-532",
+    "severity": "MEDIUM",
+    "framing": "flag",
+    "title": "Sensitive value in log call ({lang}) \u2014 review required",
+    "description": "A {lang} log call outputs a credential-named value: {sink}. Logs persist and spread. This lexical rule flags the call; the reviewer confirms non-sensitivity or redacts.",
+    "remediation": "Log {safe} instead and scrub historic logs.",
+    "limitation": "Lexical, line-based: matches credential-adjacent names.",
+    "scopeT": "Single-line lexical match on credential-named log values in {lang} code.",
+    "fp": "Presence flags are the common false positive.",
+    "recordDesc": "In {lang}, {sink} logs a credential-named value. The remedy is {safe}.",
+    "applicability": "{lang} logging; single-line lexical scope.",
+    "risk": "Credential disclosure via logs; MEDIUM severity.",
+    "why": "{lang} logs hold credential-named values ({sink}).",
+    "fix": [
+      "Emit {safe}.",
+      "Rotate exposed credentials."
+    ],
+    "verifyT": "Rescan shows no credential-named log values.",
+    "sinks": {
+      "haskell": [
+        "putStrLn\\s+[^\\n]*(?:password|passwd|secret|token)",
+        "putStrLn (\"password: \" ++ p)",
+        "putStrLn (\"user: \" ++ u)",
+        "presence flags"
+      ],
+      "clojure": [
+        "println\\s+[^\\n]*(?:password|passwd|secret|token)",
+        "(println \"password\" p)",
+        "(println \"user\" u)",
+        "presence flags"
+      ],
+      "julia": [
+        "println\\s*\\([^)]*(?:password|passwd|secret|token)",
+        "println(\"password=\", p)",
+        "println(\"user=\", u)",
+        "presence flags"
+      ],
+      "ocaml": [
+        "Printf\\.printf\\s+[^\\n]*(?:password|passwd|secret|token)",
+        "Printf.printf \"password=%s\" p",
+        "Printf.printf \"user=%s\" u",
+        "presence flags"
+      ],
+      "nim": [
+        "echo\\s+[^\\n]*(?:password|passwd|secret|token)",
+        "echo \"password=\", p",
+        "echo \"user=\", u",
+        "presence flags"
+      ],
+      "crystal": [
+        "puts\\s+[^\\n]*(?:password|passwd|secret|token)",
+        "puts \"password=#{p}\"",
+        "puts \"user=#{u}\"",
+        "presence flags"
+      ],
+      "fortran": [
+        "WRITE\\s*\\(\\s*\\*\\s*,\\s*\\*\\s*\\)[^\\n]{0,80}(?:password|passwd|secret|token)",
+        "WRITE(*,*) \"password\", p",
+        "WRITE(*,*) \"user\", u",
+        "presence flags"
+      ],
+      "cobol": [
+        "DISPLAY\\s+[^\\n]*(?:password|passwd|secret|token)",
+        "DISPLAY \"password: \" p",
+        "DISPLAY \"user: \" u",
+        "presence flags"
+      ],
+      "basic": [
+        "PRINT\\s+[^\\n]*(?:password|passwd|secret|token)",
+        "PRINT \"password=\"; p",
+        "PRINT \"user=\"; u",
+        "presence flags"
+      ],
+      "pascal": [
+        "WriteLn\\s*\\([^)]*(?:password|passwd|secret|token)",
+        "WriteLn('password=', p)",
+        "WriteLn('user=', u)",
+        "presence flags"
+      ]
+    }
+  },
+  {
+    "class": "redirect-4",
+    "kind": "sast",
+    "category": "open-redirect",
+    "cwe": "CWE-601",
+    "severity": "MEDIUM",
+    "framing": "call",
+    "title": "Redirect via {sink} ({lang}) \u2014 review required",
+    "description": "The {lang} call {sink} redirects to a computed address. Untrusted input enables phishing. This lexical rule flags the call; the reviewer validates targets via {safe}.",
+    "remediation": "Validate targets with {safe}.",
+    "limitation": "Lexical, line-based: any {sink} call matches.",
+    "scopeT": "Single-line lexical match on the {sink} call in {lang} code.",
+    "fp": "Fixed targets are the common false positive.",
+    "recordDesc": "In {lang}, {sink} redirects users. The remedy is {safe}.",
+    "applicability": "{lang} handlers; single-line lexical scope.",
+    "risk": "Phishing; MEDIUM severity.",
+    "why": "{sink} redirects {lang} users to computed addresses.",
+    "fix": [
+      "Validate with {safe}."
+    ],
+    "verifyT": "Rescan shows no open redirect.",
+    "sinks": {
+      "scala": [
+        "Redirect",
+        "Redirect",
+        "a same-origin check"
+      ],
+      "clojure": [
+        "redirect",
+        "redirect",
+        "a same-origin check"
+      ],
+      "perl": [
+        "redirect",
+        "redirect",
+        "a same-origin check"
+      ]
+    }
+  },
+  {
+    "class": "tls-4",
+    "kind": "sast",
+    "category": "transport-security",
+    "cwe": "CWE-295",
+    "severity": "HIGH",
+    "framing": "flag",
+    "title": "TLS verification disabled ({fw}) \u2014 review required",
+    "description": "TLS verification is switched off: {sink} ({fw}). Any certificate is then trusted. This lexical rule flags the switch; the reviewer restores {safe}.",
+    "remediation": "Restore {safe}.",
+    "limitation": "Lexical, line-based: matches the switch regardless of environment.",
+    "scopeT": "Single-line lexical match on TLS-disabling settings ({fw}).",
+    "fp": "Test fixtures are the common false positive.",
+    "recordDesc": "With {sink}, {fw} TLS authenticity is off. The remedy is {safe}.",
+    "applicability": "{fw} TLS clients; single-line lexical scope.",
+    "risk": "Interception; HIGH severity.",
+    "why": "{fw} disables TLS verification ({sink}).",
+    "fix": [
+      "Restore {safe}."
+    ],
+    "verifyT": "Rescan shows no disabling switch outside tests.",
+    "sinks": {
+      "java:noop": [
+        "NoopHostnameVerifier",
+        "NoopHostnameVerifier.INSTANCE",
+        "DefaultHostnameVerifier.INSTANCE",
+        "default hostname verification"
+      ],
+      "clojure:insecure": [
+        ":insecure\\?\\s+true",
+        "{:insecure? true}",
+        "{:insecure? false}",
+        "verified TLS"
+      ],
+      "julia:verify": [
+        "require_ssl_verification\\s*=\\s*false",
+        "HTTP.get(u; require_ssl_verification=false)",
+        "HTTP.get(u; require_ssl_verification=true)",
+        "verified TLS"
+      ]
+    }
+  },
+  {
+    "class": "ecb-more",
+    "kind": "sast",
+    "category": "weak-cryptography",
+    "cwe": "CWE-327",
+    "severity": "MEDIUM",
+    "framing": "flag",
+    "title": "ECB mode selected ({fw}) \u2014 review required",
+    "description": "Encryption uses ECB mode: {sink} ({fw}). ECB leaks plaintext patterns. This lexical rule flags the selection; the reviewer migrates to {safe}.",
+    "remediation": "Migrate to {safe}.",
+    "limitation": "Lexical, line-based: matches the mode name.",
+    "scopeT": "Single-line lexical match on ECB selection ({fw}).",
+    "fp": "Single-block uses are the rare accepted case.",
+    "recordDesc": "In {fw}, {sink} selects ECB. The remedy is {safe}.",
+    "applicability": "{fw} encryption; single-line lexical scope.",
+    "risk": "Pattern leakage; MEDIUM severity.",
+    "why": "{fw} selects ECB ({sink}).",
+    "fix": [
+      "Migrate to {safe}."
+    ],
+    "verifyT": "Rescan shows no ECB outside accepted uses.",
+    "sinks": {
+      "csharp:ecb": [
+        "CipherMode\\.ECB",
+        "CipherMode.ECB",
+        "CipherMode.CBC",
+        "an AEAD mode"
+      ],
+      "java:ecb": [
+        "/ECB",
+        "Cipher.getInstance(\"AES/ECB/PKCS5Padding\")",
+        "Cipher.getInstance(\"AES/CBC/PKCS5Padding\")",
+        "CBC or GCM"
+      ],
+      "ruby:ecb": [
+        "AES-[0-9]+-ECB",
+        "OpenSSL::Cipher.new(\"AES-128-ECB\")",
+        "OpenSSL::Cipher.new(\"AES-128-CBC\")",
+        "CBC or GCM"
+      ],
+      "javascript:ecb": [
+        "aes-[0-9]+-ecb",
+        "createCipheriv(\"aes-128-ecb\", k, iv)",
+        "createCipheriv(\"aes-128-cbc\", k, iv)",
+        "cbc or gcm"
+      ]
+    }
+  },
+  {
+    "class": "jwt-verify-off",
+    "kind": "sast",
+    "category": "broken-auth",
+    "cwe": "CWE-347",
+    "cweDef": {
+      "name": "Improper Verification of Cryptographic Signature",
+      "summary": "Skipping signature or expiry checks lets forged tokens pass as genuine."
+    },
+    "severity": "HIGH",
+    "framing": "flag",
+    "title": "JWT verification skipped ({fw}) \u2014 review required",
+    "description": "JWT checks are skipped: {sink} ({fw}). Ignored expiry, unverified parsing, disabled signatures, and none algorithms let forged tokens in. This lexical rule flags the skip; the reviewer enforces via {safe}.",
+    "remediation": "Enforce {safe}.",
+    "limitation": "Lexical, line-based: matches the skip.",
+    "scopeT": "Single-line lexical match on JWT verification ({fw}).",
+    "fp": "Test fixtures are the common false positive.",
+    "recordDesc": "With {sink}, {fw} skips JWT verification. The remedy is {safe}.",
+    "applicability": "{fw} token handling; single-line lexical scope.",
+    "risk": "Forged authentication; HIGH severity.",
+    "why": "{fw} skips JWT verification ({sink}).",
+    "fix": [
+      "Enforce {safe}."
+    ],
+    "verifyT": "Rescan shows enforced verification.",
+    "sinks": {
+      "javascript:ignoreexp": [
+        "verify\\s*\\([^)]*ignoreExpiration\\s*:\\s*true",
+        "jwt.verify(t, k, {ignoreExpiration: true})",
+        "jwt.verify(t, k, {})",
+        "enforced expiry"
+      ],
+      "java:claimsjwt": [
+        "parseClaimsJwt\\s*\\(",
+        "parser.parseClaimsJwt(t)",
+        "parser.parseClaimsJws(t)",
+        "signed JWS parsing"
+      ],
+      "ruby:decodefalse": [
+        "JWT\\.decode\\s*\\([^)]*,\\s*nil\\s*,\\s*false",
+        "JWT.decode(t, nil, false)",
+        "JWT.decode(t, key, true)",
+        "verified decoding"
+      ],
+      "go:signingnone": [
+        "SigningMethodNone",
+        "jwt.SigningMethodNone",
+        "jwt.SigningMethodHS256",
+        "an HMAC or RSA method"
+      ]
+    }
+  },
+  {
+    "class": "xxe-more",
+    "kind": "sast",
+    "category": "xxe",
+    "cwe": "CWE-611",
+    "severity": "HIGH",
+    "framing": "flag",
+    "title": "XXE-prone XML parsing ({fw}) \u2014 review required",
+    "description": "XML parsing resolves entities: {sink} ({fw}). External entities read files and probe networks. This lexical rule flags the parser; the reviewer disables entities via {safe}.",
+    "remediation": "Disable entities with {safe}.",
+    "limitation": "Lexical, line-based: matches the parser setting.",
+    "scopeT": "Single-line lexical match on XML parsing ({fw}).",
+    "fp": "Trusted documents are the common false positive.",
+    "recordDesc": "With {sink}, {fw} resolves entities. The remedy is {safe}.",
+    "applicability": "{fw} XML handling; single-line lexical scope.",
+    "risk": "File disclosure and SSRF; HIGH severity.",
+    "why": "{fw} resolves XML entities ({sink}).",
+    "fix": [
+      "Disable entities with {safe}."
+    ],
+    "verifyT": "Rescan shows hardened parsing; XXE probes rejected.",
+    "sinks": {
+      "ruby:rexml": [
+        "REXML::Document\\.new",
+        "REXML::Document.new(xml)",
+        "# REXML disabled",
+        "a hardened parser"
+      ],
+      "php:loader": [
+        "libxml_disable_entity_loader\\s*\\(\\s*false",
+        "libxml_disable_entity_loader(false)",
+        "libxml_disable_entity_loader(true)",
+        "an enabled loader guard"
+      ],
+      "scala:xml": [
+        "scala\\.xml\\.XML\\.load",
+        "scala.xml.XML.load(f)",
+        "# XML hardcoded",
+        "a hardened parser"
+      ]
+    }
+  },
+  {
+    "class": "sqli-extra-2",
+    "kind": "sast",
+    "category": "sql-injection",
+    "cwe": "CWE-89",
+    "severity": "HIGH",
+    "framing": "flag",
+    "title": "Framework SQL splice ({fw}) \u2014 review required",
+    "description": "A {fw} query splices values unsafely: {sink}. Macro formatting and #$ splices bypass parameterization. This lexical rule flags the splice; the reviewer parameterizes via {safe}.",
+    "remediation": "Use {safe}.",
+    "limitation": "Lexical, line-based: matches the splice.",
+    "scopeT": "Single-line lexical match on SQL splices ({fw}).",
+    "fp": "Fixed fragments are the common false positive.",
+    "recordDesc": "In {fw}, {sink} splices values into SQL. The remedy is {safe}.",
+    "applicability": "{fw} queries; single-line lexical scope.",
+    "risk": "Full database compromise; HIGH severity.",
+    "why": "{fw} splices SQL unsafely ({sink}).",
+    "fix": [
+      "Rewrite with {safe}."
+    ],
+    "verifyT": "Rescan shows no splice on untrusted input.",
+    "sinks": {
+      "rust:sqlx": [
+        "sqlx::query!\\s*\\([^)]*format!",
+        "sqlx::query!(format!(\"SELECT {}\", q))",
+        "sqlx::query!(\"SELECT 1\")",
+        "bind parameters"
+      ],
+      "scala:slick": [
+        "#\\$",
+        "sql\"SELECT * FROM #$t\"",
+        "sql\"SELECT * FROM $t\"",
+        "$ bindings"
+      ]
+    }
+  },
+  {
+    "class": "shell-risk",
+    "kind": "sast",
+    "category": "command-injection",
+    "cwe": "CWE-78",
+    "severity": "HIGH",
+    "framing": "flag",
+    "title": "Shell runs a variable ({fw}) \u2014 review required",
+    "description": "A shell executes variable content: {sink} ({fw}). Backticks, substitution, sourcing, and call operators turn variables into commands. This lexical rule flags the execution; the reviewer confirms trust or restructures via {safe}.",
+    "remediation": "Restructure with {safe}.",
+    "limitation": "Lexical, line-based: matches the execution.",
+    "scopeT": "Single-line lexical match on shell execution ({fw}).",
+    "fp": "Trusted variables are the common false positive.",
+    "recordDesc": "In {fw}, {sink} executes a variable. The remedy is {safe}.",
+    "applicability": "{fw} scripts; single-line lexical scope.",
+    "risk": "Command injection; HIGH severity.",
+    "why": "{fw} executes variables ({sink}).",
+    "fix": [
+      "Restructure with {safe}."
+    ],
+    "verifyT": "Rescan shows no execution on untrusted input.",
+    "sinks": {
+      "perl:backtick": [
+        "`[^`]*\\$",
+        "`$cmd`",
+        "`ls`",
+        "fixed commands"
+      ],
+      "ruby:backtick": [
+        "`[^`]*\\$",
+        "`$cmd`",
+        "`ls`",
+        "Open3 with args"
+      ],
+      "shell:subst": [
+        "\\$\\([^)]*\\$",
+        "$(cat $f)",
+        "$(cat fixed)",
+        "fixed commands"
+      ],
+      "shell:source": [
+        "source\\s+\\$",
+        "source $f",
+        "source fixed.sh",
+        "fixed paths"
+      ],
+      "powershell:amp": [
+        "&\\s+\\$",
+        "& $cmd",
+        "& \"fixed\"",
+        "fixed commands"
+      ]
+    }
+  },
+  {
+    "class": "java-proc-flag",
+    "kind": "sast",
+    "category": "command-injection",
+    "cwe": "CWE-78",
+    "severity": "HIGH",
+    "framing": "flag",
+    "title": "Java shell process ({lang}) \u2014 review required",
+    "description": "Java launches an explicit shell: {sink}. Shell arguments reintroduce injection. This lexical rule flags the launch; the reviewer uses direct execution via {safe}.",
+    "remediation": "Use {safe}.",
+    "limitation": "Lexical, line-based: matches the launch.",
+    "scopeT": "Single-line lexical match on process launches in {lang} code.",
+    "fp": "Fixed commands are the common false positive.",
+    "recordDesc": "In {lang}, {sink} spawns a shell. The remedy is {safe}.",
+    "applicability": "{lang} process launches; single-line lexical scope.",
+    "risk": "Command injection; HIGH severity.",
+    "why": "{lang} spawns a shell ({sink}).",
+    "fix": [
+      "Use {safe}."
+    ],
+    "verifyT": "Rescan shows no shell launch on untrusted input.",
+    "sinks": {
+      "java": [
+        "new ProcessBuilder\\s*\\(\\s*\"/bin/sh\"",
+        "new ProcessBuilder(\"/bin/sh\", c)",
+        "new ProcessBuilder(cmd)",
+        "direct binaries with args"
+      ]
+    }
+  }
+]

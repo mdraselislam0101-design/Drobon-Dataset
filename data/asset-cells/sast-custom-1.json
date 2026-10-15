@@ -1,0 +1,976 @@
+[
+  {
+    "class": "log-sensitive",
+    "kind": "sast",
+    "category": "sensitive-logging",
+    "cwe": "CWE-532",
+    "cweDef": {
+      "name": "Insertion of Sensitive Information into Log File",
+      "summary": "Passwords, tokens, or secrets are written to logs, where retention and access controls rarely match their sensitivity."
+    },
+    "severity": "MEDIUM",
+    "framing": "flag",
+    "title": "Sensitive value in log call ({lang}) \u2014 review required",
+    "description": "A {lang} log call outputs a value named like a credential: {sink}. Logs persist, replicate, and are read by operators and tools that must never see secrets. This lexical rule flags the call; the reviewer confirms the value is non-sensitive or redacts it.",
+    "remediation": "Stop logging the value; log {safe} instead, and scrub historic logs that already hold it.",
+    "limitation": "Lexical, line-based: matches credential-adjacent names in log calls regardless of actual content.",
+    "scopeT": "Single-line lexical match on credential-named values in {lang} log calls.",
+    "fp": "Logging field names, lengths, or presence flags (not values) is the common false positive.",
+    "recordDesc": "In {lang}, {sink} places a credential-named value on a log line. Log pipelines retain data for months and expose it to support tooling, so logged secrets effectively become shared. The remedy is logging {safe}.",
+    "applicability": "{lang} codebases emitting logs; single-line lexical scope.",
+    "risk": "Credential disclosure to log readers and retention stores; MEDIUM severity, HIGH when logs ship to third parties.",
+    "why": "{lang} log calls output credential-named values ({sink}), which persist in log stores.",
+    "fix": [
+      "Remove the value from the log call; emit {safe}.",
+      "Rotate any credential already written to logs.",
+      "Re-run the scan and confirm no credential-named value remains in log calls."
+    ],
+    "verifyT": "Rescan shows no credential-named value in log calls, and log samples hold no secrets.",
+    "sinks": {
+      "python": [
+        "(?:print|logging\\.(?:debug|info|warning|error))\\s*\\([^)]*(?:password|passwd|secret|token)",
+        "print(\"pw=\" + password)",
+        "print(\"user=\" + username)",
+        "presence flags or redacted markers"
+      ],
+      "javascript": [
+        "console\\.(?:log|info|debug)\\s*\\([^)]*(?:password|passwd|secret|token)",
+        "console.log(\"secret=\" + s)",
+        "console.log(\"user=\" + u)",
+        "presence flags or redacted markers"
+      ],
+      "java": [
+        "(?:logger\\.(?:info|debug|warn)|System\\.out\\.print)\\w*\\s*\\([^)]*(?:password|passwd|secret|token)",
+        "logger.info(\"token=\" + token)",
+        "logger.info(\"user=\" + user)",
+        "presence flags or redacted markers"
+      ],
+      "php": [
+        "(?:echo|error_log|print_r)\\s*\\(?[^;]*(?:password|passwd|secret|token)",
+        "echo \"secret=\" . $s;",
+        "echo \"user=\" . $u;",
+        "presence flags or redacted markers"
+      ],
+      "go": [
+        "(?:log\\.(?:Print|Fatal)|fmt\\.Print)\\w*\\s*\\([^)]*(?:password|passwd|secret|token)",
+        "log.Println(\"token=\" + t)",
+        "log.Println(\"user=\" + u)",
+        "presence flags or redacted markers"
+      ],
+      "ruby": [
+        "(?:puts|logger\\.(?:info|debug))\\s*\\(?[^#]*(?:password|passwd|secret|token)",
+        "puts \"password=#{p}\"",
+        "puts \"user=#{u}\"",
+        "presence flags or redacted markers"
+      ],
+      "csharp": [
+        "(?:Console\\.Write|Trace\\.Write)\\w*\\s*\\([^)]*(?:password|passwd|secret|token)",
+        "Trace.Write(\"secret=\" + s)",
+        "Trace.Write(\"user=\" + u)",
+        "presence flags or redacted markers"
+      ],
+      "c": [
+        "(?:printf|fprintf|puts)\\s*\\([^)]*(?:password|passwd|secret|token)",
+        "printf(\"token=%s\", token)",
+        "printf(\"user=%s\", user)",
+        "presence flags or redacted markers"
+      ],
+      "perl": [
+        "(?:print|warn|say)\\s+[^;]*(?:password|passwd|secret|token)",
+        "warn \"passwd=$p\"",
+        "warn \"user=$u\"",
+        "presence flags or redacted markers"
+      ],
+      "shell": [
+        "(?:echo|printf)\\s+[^\\n#]*(?:password|passwd|secret|token)\\s*=",
+        "echo \"password=$pw\"",
+        "echo \"user=$u\"",
+        "presence flags or redacted markers"
+      ],
+      "powershell": [
+        "Write-(?:Host|Output)\\s+[^\\n#]*(?:password|passwd|secret|token)",
+        "Write-Host \"password=$pw\"",
+        "Write-Host \"user=$u\"",
+        "presence flags or redacted markers"
+      ],
+      "kotlin": [
+        "(?:println|logger\\.(?:info|debug))\\s*\\(?[^\\n]*(?:password|passwd|secret|token)",
+        "println(\"token=$t\")",
+        "println(\"user=$u\")",
+        "presence flags or redacted markers"
+      ]
+    }
+  },
+  {
+    "class": "open-redirect-flag",
+    "kind": "sast",
+    "category": "open-redirect",
+    "cwe": "CWE-601",
+    "severity": "MEDIUM",
+    "framing": "flag",
+    "title": "Client-side or header redirect to computed address ({lang}) \u2014 review required",
+    "description": "A {lang} redirect assigns a computed address: {sink}. Untrusted input in the address turns the site into a phishing springboard. This lexical rule flags the assignment; the reviewer confirms the target is fixed or validated.",
+    "remediation": "Allow only relative paths or listed hosts ({safe}) before redirecting.",
+    "limitation": "Lexical, line-based: any computed redirect target matches. Call-shaped redirects are separate rules.",
+    "scopeT": "Single-line lexical match on computed redirect targets in {lang} code.",
+    "fp": "Appending trusted tracking parameters to a fixed URL is the common false positive.",
+    "recordDesc": "In {lang}, {sink} navigates to a computed address. Client-side and header redirects are as abusable as server-side ones when input shapes the target. The remedy is target validation via {safe}.",
+    "applicability": "{lang} code assigning redirect targets; single-line lexical scope.",
+    "risk": "Phishing via trusted-domain links; MEDIUM severity.",
+    "why": "{lang} redirects navigate to computed addresses ({sink}), so untrusted input enables phishing.",
+    "fix": [
+      "Validate the target with {safe}.",
+      "Drop untrusted redirect parameters in favor of fixed destinations.",
+      "Re-run the scan and confirm no open target remains."
+    ],
+    "verifyT": "Rescan shows no open redirect, and hostile targets are rejected.",
+    "sinks": {
+      "javascript": [
+        "location\\s*=\\s*[^;]*\\+",
+        "location = \"/go?u=\" + u",
+        "location = \"/home\"",
+        "a same-origin check"
+      ],
+      "php": [
+        "header\\s*\\(\\s*['\"]Location:",
+        "header(\"Location: $u\")",
+        "header(\"X-N: fixed\")",
+        "a same-origin check"
+      ],
+      "java": [
+        "[\"']redirect:",
+        "return \"redirect:\" + u;",
+        "return \"home\";",
+        "a same-origin check"
+      ]
+    }
+  },
+  {
+    "class": "ssrf-url",
+    "kind": "sast",
+    "category": "server-side-request-forgery",
+    "cwe": "CWE-918",
+    "cweDef": {
+      "name": "Server-Side Request Forgery (SSRF)",
+      "summary": "The server fetches a URL built from input, so attackers reach internal services and cloud metadata."
+    },
+    "severity": "HIGH",
+    "framing": "flag",
+    "title": "Server-side fetch of assembled URL ({lang}) \u2014 review required",
+    "description": "A {lang} HTTP client fetches a URL assembled from parts: {sink}. Untrusted input in the URL reaches internal hosts, metadata endpoints, and file URLs. This lexical rule flags the fetch; the reviewer confirms the host is fixed or allowlisted.",
+    "remediation": "Fetch only allowlisted hosts ({safe}); block metadata ranges, localhost, and non-HTTP schemes, and disable redirects or re-validate them.",
+    "limitation": "Lexical, line-based: any assembled fetch URL matches, including trusted ones.",
+    "scopeT": "Single-line lexical match on assembled fetch URLs in {lang} code.",
+    "fp": "Assembling fixed API paths on a fixed host is the common false positive.",
+    "recordDesc": "In {lang}, {sink} makes the server issue a request to a computed URL. SSRF weaponizes the server's network position: cloud metadata, internal admin ports, and intranet hosts. The remedy is host allowlisting via {safe}.",
+    "applicability": "{lang} server code fetching URLs; single-line lexical scope.",
+    "risk": "Internal network access and credential theft via metadata endpoints; HIGH severity.",
+    "why": "{lang} server fetches assemble URLs from parts ({sink}), so untrusted input reaches internal hosts.",
+    "fix": [
+      "Restrict fetch hosts with {safe}, blocking metadata, localhost, and private ranges.",
+      "Block file/gopher/dict schemes and re-validate redirect targets.",
+      "Re-run the scan and confirm no open fetch remains."
+    ],
+    "verifyT": "Rescan shows no open fetch, and metadata/internal probes are refused.",
+    "sinks": {
+      "python": [
+        "requests\\.(?:get|post|put|delete)\\s*\\([^)]*(?:\\+|\\{|%\\s)",
+        "requests.get(base + path)",
+        "requests.get(FIXED)",
+        "a host allowlist"
+      ],
+      "javascript": [
+        "fetch\\s*\\([^)]*(?:\\+|\\$\\{)",
+        "fetch(base + path)",
+        "fetch(FIXED)",
+        "a host allowlist"
+      ],
+      "java": [
+        "new\\s+URL\\s*\\([^)]*\\+",
+        "new URL(base + path)",
+        "new URL(FIXED)",
+        "a host allowlist"
+      ],
+      "go": [
+        "http\\.(?:Get|Post)\\s*\\([^)]*\\+",
+        "http.Get(base + path)",
+        "http.Get(FIXED)",
+        "a host allowlist"
+      ],
+      "ruby": [
+        "Net::HTTP\\.get\\s*\\([^)]*(?:\\+|#\\{)",
+        "Net::HTTP.get(uri + p)",
+        "Net::HTTP.get(FIXED)",
+        "a host allowlist"
+      ],
+      "csharp": [
+        "Get(?:String|Stream|ByteArray)?Async\\s*\\([^)]*\\+",
+        "GetStringAsync(base + p)",
+        "GetStringAsync(FIXED)",
+        "a host allowlist"
+      ],
+      "perl": [
+        "->get\\s*\\([^)]*(?:\"[^\"\\n]*\\$|\\.\\s*\\$)",
+        "$ua->get($base . $p)",
+        "$ua->get($fixed)",
+        "a host allowlist"
+      ]
+    }
+  },
+  {
+    "class": "jwt-alg-none",
+    "kind": "sast",
+    "category": "weak-cryptography",
+    "cwe": "CWE-327",
+    "severity": "HIGH",
+    "framing": "flag",
+    "title": "JWT 'none' algorithm ({lang}) \u2014 review required",
+    "description": "Configuration or code in {lang} names the JWT 'none' algorithm: {sink}. Tokens without signatures are accepted as genuine, so anyone can mint them. This lexical rule flags the name; the reviewer confirms it is test-only or removes it.",
+    "remediation": "Require a signature algorithm ({safe}) and reject 'none' explicitly in verification.",
+    "limitation": "Lexical, line-based: matches the name regardless of context.",
+    "scopeT": "Single-line lexical match on the JWT 'none' name in {lang} code or config.",
+    "fp": "Test vectors demonstrating rejection of 'none' are the common false positive.",
+    "recordDesc": "In {lang}, {sink} names unsecured JWTs. The 'none' algorithm exists for special cases, but verifiers that accept it let attackers forge any claim. The remedy is pinning {safe}.",
+    "applicability": "{lang} JWT verification configuration; single-line lexical scope.",
+    "risk": "Authentication bypass via self-minted tokens; HIGH severity.",
+    "why": "{lang} JWT handling names the 'none' algorithm ({sink}), so unsigned tokens verify as genuine.",
+    "fix": [
+      "Pin verification to {safe} and reject 'none' explicitly.",
+      "Audit issuers to confirm none mint unsigned tokens.",
+      "Re-run the scan and confirm no 'none' remains outside rejection tests."
+    ],
+    "verifyT": "Rescan shows no 'none' outside rejection tests, and unsigned tokens are refused.",
+    "sinks": {
+      "json": [
+        "\"alg\"\\s*:\\s*\"none\"",
+        "{\"alg\": \"none\"}",
+        "{\"alg\": \"HS256\"}",
+        "HS256/RS256 pinning"
+      ],
+      "python": [
+        "algorithms\\s*[=:]\\s*\\[[^\\]]*[\"']none[\"']",
+        "algorithms=[\"none\"]",
+        "algorithms=[\"HS256\"]",
+        "HS256/RS256 pinning"
+      ]
+    }
+  },
+  {
+    "class": "xxe-explicit",
+    "kind": "sast",
+    "category": "xml-external-entity",
+    "cwe": "CWE-611",
+    "severity": "HIGH",
+    "framing": "flag",
+    "title": "XML parser with entities enabled ({lang}) \u2014 review required",
+    "description": "An XML parser in {lang} is configured to resolve entities or load DTDs: {sink}. External entities in untrusted XML then read files and probe networks. This lexical rule flags the setting; the reviewer confirms the input is trusted or disables entities.",
+    "remediation": "Disable DTDs and external entities ({safe}) for any XML crossing a trust boundary.",
+    "limitation": "Lexical, line-based: matches the setting regardless of input trust. Factory-call XXE sinks are separate rules.",
+    "scopeT": "Single-line lexical match on entity-enabling XML settings in {lang} code.",
+    "fp": "Parsing trusted local configuration is the common false positive.",
+    "recordDesc": "In {lang}, {sink} switches entity processing on. XXE payloads abuse doctypes to exfiltrate files and scan networks through the parser's authority. The remedy is disabling entities via {safe}.",
+    "applicability": "{lang} XML parsing configuration; single-line lexical scope.",
+    "risk": "File disclosure and SSRF through malicious XML; HIGH severity.",
+    "why": "{lang} XML parsing enables entities ({sink}), so hostile documents read files and probe networks.",
+    "fix": [
+      "Apply {safe} to every XML parser on untrusted input.",
+      "Prefer data formats without entity features for new interfaces.",
+      "Re-run the scan and confirm no entity-enabling setting remains."
+    ],
+    "verifyT": "Rescan shows no entity-enabling setting, and XXE probes resolve to nothing.",
+    "sinks": {
+      "python": [
+        "resolve_entities\\s*=\\s*True",
+        "XMLParser(resolve_entities=True)",
+        "XMLParser(resolve_entities=False)",
+        "resolve_entities=False"
+      ],
+      "php": [
+        "LIBXML_NOENT|LIBXML_DTDLOAD",
+        "loadXML($x, LIBXML_NOENT)",
+        "loadXML($x)",
+        "no entity flags"
+      ],
+      "csharp": [
+        "DtdProcessing\\.Parse",
+        "DtdProcessing.Parse",
+        "DtdProcessing.Prohibit",
+        "DtdProcessing.Prohibit"
+      ],
+      "javascript": [
+        "noent\\s*:\\s*true",
+        "parseXml(s, {noent: true})",
+        "parseXml(s, {noent: false})",
+        "noent: false"
+      ]
+    }
+  },
+  {
+    "class": "csrf-exempt",
+    "kind": "sast",
+    "category": "csrf-protection",
+    "cwe": "CWE-352",
+    "cweDef": {
+      "name": "Cross-Site Request Forgery (CSRF)",
+      "summary": "State-changing requests lack unguessable tokens, so attacker sites ride the victim's session."
+    },
+    "severity": "MEDIUM",
+    "framing": "flag",
+    "title": "CSRF protection disabled ({lang}) \u2014 review required",
+    "description": "CSRF protection is switched off in {lang}: {sink}. State-changing endpoints then accept requests forged by attacker sites riding the victim's session. This lexical rule flags the switch; the reviewer confirms the endpoint is safe or re-enables protection.",
+    "remediation": "Re-enable CSRF checks ({safe}); exempt only safe, unauthenticated, or token-authenticated endpoints with a recorded reason.",
+    "limitation": "Lexical, line-based: matches the switch regardless of endpoint sensitivity.",
+    "scopeT": "Single-line lexical match on CSRF-disabling settings in {lang} code.",
+    "fp": "Stateless token-authenticated APIs are the common false positive \u2014 confirm no cookie session exists.",
+    "recordDesc": "In {lang}, {sink} removes the unguessable-token check browsers cannot forge. Exempted endpoints trust ambient credentials alone. The remedy is restoring {safe}.",
+    "applicability": "{lang} web handlers and configuration; single-line lexical scope.",
+    "risk": "Cross-site request forgery on state-changing endpoints; MEDIUM severity, HIGH for account and payment actions.",
+    "why": "{lang} CSRF protection is disabled ({sink}), so attacker sites can forge state-changing requests.",
+    "fix": [
+      "Restore {safe} on the endpoint.",
+      "If the endpoint must stay exempt, record why ambient credentials cannot abuse it.",
+      "Re-run the scan and confirm no unjustified exemption remains."
+    ],
+    "verifyT": "Rescan shows no unjustified exemption, and forged cross-site requests are rejected.",
+    "sinks": {
+      "python": [
+        "csrf_exempt",
+        "@csrf_exempt",
+        "@csrf_protect",
+        "@csrf_protect"
+      ],
+      "ruby": [
+        "skip_before_action[^#]*verify_authenticity_token",
+        "skip_before_action :verify_authenticity_token",
+        "protect_from_forgery with: :exception",
+        "protect_from_forgery"
+      ],
+      "csharp": [
+        "IgnoreAntiforgeryToken",
+        "[IgnoreAntiforgeryToken]",
+        "[ValidateAntiForgeryToken]",
+        "auto-validate filters"
+      ]
+    }
+  },
+  {
+    "class": "password-compare-hardcoded",
+    "kind": "sast",
+    "category": "hardcoded-credential",
+    "cwe": "CWE-798",
+    "severity": "MEDIUM",
+    "framing": "flag",
+    "title": "Credential compared to a literal ({lang}) \u2014 review required",
+    "description": "A credential-named value is compared to a quoted literal: {sink}. Hardcoded comparison secrets ship in source and binaries, and rotation needs a release. This lexical rule flags the comparison; the reviewer confirms it is test-only or moves the secret out.",
+    "remediation": "Compare against a value from {safe} and rotate the exposed literal.",
+    "limitation": "Lexical, line-based: matches literal comparisons regardless of environment. Generic secret assignments are separate rules.",
+    "scopeT": "Single-line lexical match on credential-to-literal comparisons in {lang} code.",
+    "fp": "Test fixtures comparing against dummy values are the common false positive.",
+    "recordDesc": "Comparing a credential to a source literal ({sink}) bakes the secret into every checkout and build. The remedy is loading the expected value from {safe}.",
+    "applicability": "{lang} authentication checks; single-line lexical scope.",
+    "risk": "Exposed secrets and unrotatable credentials; MEDIUM severity, HIGH when the literal guards production.",
+    "why": "{lang} credentials compare against source literals ({sink}), which leak through checkouts and builds.",
+    "fix": [
+      "Load the expected value from {safe} and compare in constant time.",
+      "Rotate the literal that was committed.",
+      "Re-run the scan and confirm no literal comparison remains outside tests."
+    ],
+    "verifyT": "Rescan shows no literal comparison outside tests, and rotation is complete.",
+    "sinks": {
+      "java": [
+        "(?:password|passwd|pwd)\\s*(?:==|\\.equals\\s*\\()\\s*[\"'][^\"']{4,}[\"']",
+        "password.equals(\"s3cret-x\")",
+        "check(password, stored)",
+        "a secret manager or KDF-verified hash"
+      ],
+      "javascript": [
+        "api[_-]?key\\s*(?:==|===)\\s*[\"'][^\"']{4,}[\"']",
+        "api_key === \"k9ej2\"",
+        "check(key, stored)",
+        "a secret manager"
+      ]
+    }
+  },
+  {
+    "class": "verbose-errors",
+    "kind": "sast",
+    "category": "information-disclosure",
+    "cwe": "CWE-209",
+    "cweDef": {
+      "name": "Generation of Error Message Containing Sensitive Information",
+      "summary": "Stack traces and debug errors leak paths, versions, and internals to whoever can trigger them."
+    },
+    "severity": "LOW",
+    "framing": "flag",
+    "title": "Stack trace or debug error printed ({lang}) \u2014 review required",
+    "description": "Code in {lang} prints a stack trace or debug error: {sink}. Traces leak paths, versions, library names, and code structure to whoever can trigger them. This lexical rule flags the print; the reviewer confirms it never reaches untrusted output.",
+    "remediation": "Log a correlation id with {safe} and show users a generic message; keep traces server-side.",
+    "limitation": "Lexical, line-based: matches the print regardless of output destination.",
+    "scopeT": "Single-line lexical match on trace-printing calls in {lang} code.",
+    "fp": "CLI tools printing traces to their own operator are the common false positive.",
+    "recordDesc": "In {lang}, {sink} serializes internals into an error channel. Attackers harvest traces for reconnaissance before deeper attacks. The remedy is generic user errors plus {safe}.",
+    "applicability": "{lang} error paths; single-line lexical scope.",
+    "risk": "Reconnaissance disclosure; LOW severity, higher on public endpoints.",
+    "why": "{lang} error paths print traces ({sink}), disclosing internals to whoever triggers them.",
+    "fix": [
+      "Replace the print with {safe} plus a generic user message.",
+      "Keep full traces in server logs only.",
+      "Re-run the scan and confirm no trace print reaches responses."
+    ],
+    "verifyT": "Rescan shows no trace print on response paths, and error probes return generic text.",
+    "sinks": {
+      "java": [
+        "printStackTrace\\s*\\(\\s*\\)",
+        "e.printStackTrace()",
+        "log.error(\"id={}\", id)",
+        "a correlation-id log call"
+      ],
+      "python": [
+        "traceback\\.print_exc\\s*\\(\\s*\\)",
+        "traceback.print_exc()",
+        "log.exception(\"id=%s\", id)",
+        "a correlation-id log call"
+      ],
+      "php": [
+        "debug_print_backtrace|debug_backtrace",
+        "debug_print_backtrace()",
+        "error_log($id)",
+        "a correlation-id log call"
+      ],
+      "javascript": [
+        "console\\.trace\\s*\\(",
+        "console.trace(err)",
+        "console.error(id)",
+        "a correlation-id log call"
+      ]
+    }
+  },
+  {
+    "class": "mass-assign",
+    "kind": "sast",
+    "category": "mass-assignment",
+    "cwe": "CWE-915",
+    "cweDef": {
+      "name": "Improperly Controlled Modification of Dynamically-Determined Object Attributes",
+      "summary": "Request fields bind directly to object attributes, so clients set privileged properties."
+    },
+    "severity": "MEDIUM",
+    "framing": "flag",
+    "title": "Request data bound wholesale ({lang}) \u2014 review required",
+    "description": "Request data is copied onto an object without a field list: {sink}. Clients can then set privileged attributes (roles, flags, ownership) the form never showed. This lexical rule flags the binding; the reviewer confirms an allowlist or picks fields explicitly.",
+    "remediation": "Bind through {safe}, assigning only listed fields from the request.",
+    "limitation": "Lexical, line-based: matches wholesale binding regardless of model guards.",
+    "scopeT": "Single-line lexical match on wholesale request binding in {lang} code.",
+    "fp": "Models with framework-level guarded attributes are the common false positive \u2014 confirm the guard.",
+    "recordDesc": "In {lang}, {sink} merges every request field into an object. Mass assignment turns hidden model attributes into client-writable inputs. The remedy is explicit binding via {safe}.",
+    "applicability": "{lang} request handlers binding input to models; single-line lexical scope.",
+    "risk": "Privilege escalation via hidden fields (is_admin, role); MEDIUM severity, HIGH on account objects.",
+    "why": "{lang} request data binds wholesale ({sink}), so clients can set privileged attributes.",
+    "fix": [
+      "Replace wholesale binding with {safe}.",
+      "Add framework guarded/fillable lists as defense in depth.",
+      "Re-run the scan and confirm no wholesale binding remains."
+    ],
+    "verifyT": "Rescan shows no wholesale binding, and privileged-field probes are ignored.",
+    "sinks": {
+      "javascript": [
+        "Object\\.assign\\s*\\([^)]*req\\.body",
+        "Object.assign(user, req.body)",
+        "Object.assign(user, pick(data))",
+        "an explicit field pick"
+      ],
+      "php": [
+        "extract\\s*\\(\\$_(?:GET|POST|REQUEST)",
+        "extract($_POST)",
+        "extract($safe)",
+        "explicit variable assignment"
+      ]
+    }
+  },
+  {
+    "class": "static-iv",
+    "kind": "sast",
+    "category": "weak-cryptography",
+    "cwe": "CWE-329",
+    "cweDef": {
+      "name": "Generation of Predictable IV with CBC Mode",
+      "summary": "A fixed initialization vector makes equal plaintexts encrypt equally, leaking patterns."
+    },
+    "severity": "MEDIUM",
+    "framing": "flag",
+    "title": "Hardcoded IV or nonce ({lang}) \u2014 review required",
+    "description": "An initialization vector or nonce is assigned a fixed literal: {sink}. Reused IVs make equal plaintexts encrypt equally and can destroy the security of stream-like modes. This lexical rule flags the literal; the reviewer confirms uniqueness or generates it randomly.",
+    "remediation": "Generate a fresh random IV per message ({safe}) and store it alongside the ciphertext.",
+    "limitation": "Lexical, line-based: matches literal IVs regardless of cipher mode.",
+    "scopeT": "Single-line lexical match on literal IV or nonce assignments.",
+    "fp": "Test vectors with fixed IVs are the common false positive \u2014 confirm test-only scope.",
+    "recordDesc": "A fixed IV ({sink}) repeats across messages, so patterns survive encryption and GCM-style modes fail catastrophically. Fresh randomness per message ({safe}) is the remedy.",
+    "applicability": "Encryption setup code assigning IVs or nonces; single-line lexical scope.",
+    "risk": "Pattern leakage and, for nonce-misuse-sensitive modes, full break; MEDIUM severity, HIGH for GCM/CTR reuse.",
+    "why": "Encryption uses a hardcoded IV ({sink}), so ciphertext patterns leak and nonce-reuse breaks modes.",
+    "fix": [
+      "Generate the IV randomly per message with {safe}.",
+      "Store the IV with the ciphertext; never reuse a (key, IV) pair.",
+      "Re-run the scan and confirm no literal IV remains outside test vectors."
+    ],
+    "verifyT": "Rescan shows no literal IV outside test vectors, and captures show unique IVs.",
+    "sinks": {
+      "universal": [
+        "(?:iv|IV|nonce)\\s*[=:]\\s*[\"'][A-Za-z0-9+/=]{8,}[\"']",
+        "iv = \"1234567890123456\"",
+        "iv = os.urandom(16)",
+        "a CSPRNG draw"
+      ]
+    }
+  },
+  {
+    "class": "format-string",
+    "kind": "sast",
+    "category": "format-string",
+    "cwe": "CWE-134",
+    "cweDef": {
+      "name": "Use of Externally-Controlled Format String",
+      "summary": "A variable format string lets attackers read and write memory through conversion specifiers."
+    },
+    "severity": "HIGH",
+    "framing": "flag",
+    "title": "Variable format string ({lang}) \u2014 review required",
+    "description": "A {lang} formatting call uses a variable as its format string: {sink}. Conversion specifiers in the value read and write process memory. This lexical rule flags the call; the reviewer confirms the value is fixed or passes it as an argument.",
+    "remediation": "Use a fixed format string ({safe}) and pass the value as an argument.",
+    "limitation": "Lexical, line-based: matches variable-only calls; fixed formats with variable arguments never match.",
+    "scopeT": "Single-line lexical match on variable format strings in {lang} code.",
+    "fp": "Wrapper functions forwarding a trusted format are the common false positive \u2014 confirm the source.",
+    "recordDesc": "In {lang}, {sink} interprets a variable as format text. Specifiers like %x and %n turn output routines into memory disclosure and write primitives. The remedy is fixed formats ({safe}).",
+    "applicability": "{lang} formatting calls; single-line lexical scope.",
+    "risk": "Memory disclosure and write; HIGH severity where the value is remotely influenced.",
+    "why": "{lang} formatting interprets a variable as format text ({sink}), enabling specifier attacks.",
+    "fix": [
+      "Replace the variable format with {safe}, passing the value as an argument.",
+      "Enable compiler format warnings to catch regressions.",
+      "Re-run the scan and confirm no variable format remains."
+    ],
+    "verifyT": "Rescan shows no variable format, and specifier probes print literally.",
+    "sinks": {
+      "c": [
+        "printf\\s*\\(\\s*[A-Za-z_]\\w*\\s*\\)",
+        "printf(userstr)",
+        "printf(\"%s\", userstr)",
+        "a fixed \"%s\" format"
+      ],
+      "cpp": [
+        "syslog\\s*\\([^,]+,\\s*[A-Za-z_]\\w*\\s*\\)",
+        "syslog(LOG_INFO, userstr)",
+        "syslog(LOG_INFO, \"%s\", userstr)",
+        "a fixed \"%s\" format"
+      ]
+    }
+  },
+  {
+    "class": "comment-secret",
+    "kind": "sast",
+    "category": "hardcoded-credential",
+    "cwe": "CWE-798",
+    "severity": "LOW",
+    "framing": "flag",
+    "title": "Credential noted in a work comment ({lang}) \u2014 review required",
+    "description": "A work-item comment names a credential with a value: {sink}. Comments ship to every checkout and are rarely scrubbed, so noted secrets persist indefinitely. This lexical rule flags the note; the reviewer confirms no live value or rotates it.",
+    "remediation": "Remove the value from the comment; track the work in {safe} without secrets.",
+    "limitation": "Lexical, line-based: matches credential-adjacent notes regardless of value liveness.",
+    "scopeT": "Single-line lexical match on credential notes in comments.",
+    "fp": "Placeholder-shaped notes (changeme, xxx) are the common false positive.",
+    "recordDesc": "A comment noting a credential ({sink}) distributes the value to every reader and archive of the source. Comments lack the handling controls of secret stores. The remedy is value-free tracking via {safe}.",
+    "applicability": "Source comments; single-line lexical scope.",
+    "risk": "Secret persistence in history and checkouts; LOW severity, raised when the value is live.",
+    "why": "Work comments note credential values ({sink}), which persist in every checkout.",
+    "fix": [
+      "Delete the value from the comment; keep only the task.",
+      "Rotate the value if it was ever live.",
+      "Re-run the scan and confirm no credential note remains."
+    ],
+    "verifyT": "Rescan shows no credential note, and history scrubbing is complete where needed.",
+    "sinks": {
+      "universal": [
+        "(?:TODO|FIXME|XXX|HACK)\\b[^#\\n]*(?:password|passwd|secret|token)\\s*[:=]",
+        "// TODO: password = hunter2-x",
+        "// TODO: refactor this",
+        "a secret manager plus a value-free ticket"
+      ]
+    }
+  },
+  {
+    "class": "http-literal",
+    "kind": "sast",
+    "category": "cleartext-transmission",
+    "cwe": "CWE-319",
+    "severity": "LOW",
+    "framing": "flag",
+    "title": "Cleartext http:// URL ({lang}) \u2014 review required",
+    "description": "Code references a cleartext HTTP URL: {sink}. Traffic to it is readable and modifiable by network observers. This lexical rule flags the literal; the reviewer confirms the endpoint is non-sensitive or upgrades it.",
+    "remediation": "Use the https:// equivalent ({safe}); keep http only for non-sensitive local endpoints with a comment.",
+    "limitation": "Lexical, line-based: matches the scheme regardless of endpoint sensitivity.",
+    "scopeT": "Single-line lexical match on http:// literals.",
+    "fp": "Localhost, documentation links, and legacy device endpoints are the common false positives.",
+    "recordDesc": "A cleartext URL ({sink}) sends bytes without confidentiality or integrity. Passive observers read credentials and tokens; active ones rewrite responses. The remedy is the https equivalent ({safe}).",
+    "applicability": "Source URLs; single-line lexical scope.",
+    "risk": "Eavesdropping and tampering; LOW severity, raised for authenticated or sensitive endpoints.",
+    "why": "Code references cleartext HTTP ({sink}), exposing the traffic to observers.",
+    "fix": [
+      "Replace the URL with {safe}.",
+      "For endpoints without TLS, document the exception and its compensating controls.",
+      "Re-run the scan and confirm no sensitive cleartext URL remains."
+    ],
+    "verifyT": "Rescan shows no sensitive cleartext URL, and traffic captures show TLS.",
+    "sinks": {
+      "universal": [
+        "http://[A-Za-z0-9]",
+        "url = \"http://api.example.com/v1\"",
+        "url = \"https://api.example.com/v1\"",
+        "the https:// equivalent"
+      ]
+    }
+  },
+  {
+    "class": "ws-literal",
+    "kind": "sast",
+    "category": "cleartext-transmission",
+    "cwe": "CWE-319",
+    "severity": "LOW",
+    "framing": "flag",
+    "title": "Cleartext ws:// URL ({lang}) \u2014 review required",
+    "description": "Code references a cleartext WebSocket URL: {sink}. Frames to it are readable and modifiable by network observers. This lexical rule flags the literal; the reviewer confirms the channel is non-sensitive or upgrades it.",
+    "remediation": "Use the wss:// equivalent ({safe}).",
+    "limitation": "Lexical, line-based: matches the scheme regardless of channel sensitivity.",
+    "scopeT": "Single-line lexical match on ws:// literals.",
+    "fp": "Local development sockets are the common false positive.",
+    "recordDesc": "A cleartext WebSocket URL ({sink}) carries frames without TLS. Session cookies and messages on the socket are exposed. The remedy is wss ({safe}).",
+    "applicability": "Source URLs; single-line lexical scope.",
+    "risk": "Eavesdropping and tampering on the socket; LOW severity, raised for authenticated channels.",
+    "why": "Code references cleartext WebSockets ({sink}), exposing frames to observers.",
+    "fix": [
+      "Replace the URL with {safe}.",
+      "For local-only sockets, document the exception.",
+      "Re-run the scan and confirm no sensitive cleartext socket remains."
+    ],
+    "verifyT": "Rescan shows no sensitive cleartext socket, and captures show TLS.",
+    "sinks": {
+      "universal": [
+        "ws://[A-Za-z0-9]",
+        "sock = \"ws://api.example.com/s\"",
+        "sock = \"wss://api.example.com/s\"",
+        "the wss:// equivalent"
+      ]
+    }
+  },
+  {
+    "class": "curl-pipe-shell",
+    "kind": "sast",
+    "category": "command-injection",
+    "cwe": "CWE-78",
+    "severity": "HIGH",
+    "framing": "flag",
+    "title": "Download piped to shell ({lang}) \u2014 review required",
+    "description": "A download is piped straight into a shell: {sink}. The executed bytes are whatever the network returned \u2014 tampering, truncation, or a compromised server runs attacker code. This lexical rule flags the pipe; the reviewer confirms verification or removes it.",
+    "remediation": "Download, verify ({safe}), then execute as separate steps; never pipe network bytes to a shell.",
+    "limitation": "Lexical, line-based: matches the pipe regardless of transport or verification.",
+    "scopeT": "Single-line lexical match on download-to-shell pipes in {lang} scripts.",
+    "fp": "Pipes over verified local files (not network) are the common false positive \u2014 confirm the source.",
+    "recordDesc": "Piping a download into a shell ({sink}) executes unverified network bytes with the user's authority. TLS alone does not make this safe: server compromise or partial reads still execute. The remedy is fetch-verify-run ({safe}).",
+    "applicability": "{lang} install scripts and runbooks; single-line lexical scope.",
+    "risk": "Remote code execution on installer runs; HIGH severity.",
+    "why": "Downloads pipe into a shell ({sink}), executing unverified network bytes.",
+    "fix": [
+      "Split into download, verify with {safe}, then run.",
+      "Pin releases by version and checksum.",
+      "Re-run the scan and confirm no download-to-shell pipe remains."
+    ],
+    "verifyT": "Rescan shows no download-to-shell pipe, and installs verify before running.",
+    "sinks": {
+      "shell": [
+        "curl\\s+[^|]*\\|\\s*(?:ba)?sh\\b",
+        "curl https://x.io/i.sh | sh",
+        "curl -o i.sh https://x.io/i.sh",
+        "checksum/signature verification"
+      ]
+    }
+  },
+  {
+    "class": "sudo-nopasswd",
+    "kind": "sast",
+    "category": "permissions",
+    "cwe": "CWE-732",
+    "severity": "HIGH",
+    "framing": "flag",
+    "title": "Passwordless sudo grant ({lang}) \u2014 review required",
+    "description": "Sudoers configuration grants passwordless execution: {sink}. Any process as that user gains the listed privileges without authentication, so one compromised account or script escalates silently. This lexical rule flags the grant; the reviewer confirms the scope is minimal or requires a password.",
+    "remediation": "Scope the grant to exact binaries ({safe}) or drop NOPASSWD so authentication gates it.",
+    "limitation": "Lexical, line-based: matches the tag regardless of command scope.",
+    "scopeT": "Single-line lexical match on NOPASSWD grants in sudoers configuration.",
+    "fp": "Automation accounts restricted to exact [(]non-shell[)] binaries are the common (accepted) case \u2014 confirm the list.",
+    "recordDesc": "A NOPASSWD sudo grant ({sink}) removes the authentication step from privilege escalation. Combined with broad commands it hands root to any process running as the user. The remedy is exact-command scoping ({safe}).",
+    "applicability": "Sudoers configuration; single-line lexical scope.",
+    "risk": "Silent privilege escalation; HIGH severity, critical with ALL commands.",
+    "why": "Sudo grants passwordless execution ({sink}), so compromise of the account silently escalates.",
+    "fix": [
+      "Restrict the grant with {safe} to exact binaries, never ALL.",
+      "Prefer requiring a password where automation allows.",
+      "Re-run the scan and confirm no broad NOPASSWD remains."
+    ],
+    "verifyT": "Rescan shows no broad NOPASSWD, and sudo -l audits minimal.",
+    "sinks": {
+      "shell": [
+        "NOPASSWD\\s*:",
+        "deploy ALL=(ALL) NOPASSWD: ALL",
+        "deploy ALL=(ALL) /usr/bin/systemctl",
+        "exact-command scoping"
+      ]
+    }
+  },
+  {
+    "class": "suid-bit",
+    "kind": "sast",
+    "category": "permissions",
+    "cwe": "CWE-732",
+    "severity": "MEDIUM",
+    "framing": "flag",
+    "title": "Setuid bit set ({lang}) \u2014 review required",
+    "description": "A file gains the setuid bit: {sink}. It then runs with the owner's privileges for every caller, so any flaw in it becomes privilege escalation. This lexical rule flags the bit; the reviewer confirms the binary is minimal and audited or drops the bit.",
+    "remediation": "Drop setuid in favor of {safe}; if it must stay, minimize the binary and audit it.",
+    "limitation": "Lexical, line-based: matches the bit regardless of binary safety.",
+    "scopeT": "Single-line lexical match on setuid grants in {lang} scripts.",
+    "fp": "System utilities designed for setuid are the common accepted case.",
+    "recordDesc": "Setting setuid ({sink}) promotes every caller to the file owner's privileges while the binary runs. Memory flaws, path handling, and environment inheritance all become escalation vectors. The remedy is capability-based design ({safe}).",
+    "applicability": "{lang} provisioning scripts; single-line lexical scope.",
+    "risk": "Local privilege escalation through the binary; MEDIUM severity, HIGH for custom setuid code.",
+    "why": "Files gain setuid ({sink}), running every caller with the owner's privileges.",
+    "fix": [
+      "Replace setuid with {safe}.",
+      "If setuid must stay, shrink the binary and audit its inputs.",
+      "Re-run the scan and confirm no unjustified setuid remains."
+    ],
+    "verifyT": "Rescan shows no unjustified setuid, and find audits no unexpected setuid files.",
+    "sinks": {
+      "shell": [
+        "chmod\\s+(?:[0-7]*4[0-7]{3}|u\\+s)",
+        "chmod 4755 helper",
+        "chmod 0755 helper",
+        "capabilities or a privileged helper service"
+      ]
+    }
+  },
+  {
+    "class": "pbkdf2-low-iter",
+    "kind": "sast",
+    "category": "weak-cryptography",
+    "cwe": "CWE-916",
+    "cweDef": {
+      "name": "Use of Password Hash With Insufficient Computational Effort",
+      "summary": "Fast password hashing lets attackers test billions of guesses per second on stolen hashes."
+    },
+    "severity": "MEDIUM",
+    "framing": "flag",
+    "title": "PBKDF2 with low iteration count ({lang}) \u2014 review required",
+    "description": "PBKDF2 is configured with a small iteration count: {sink}. Low effort lets attackers brute-force stolen hashes cheaply. This lexical rule flags counts under five digits; the reviewer confirms the value meets current guidance or raises it.",
+    "remediation": "Raise the count to {safe} or switch to a memory-hard function.",
+    "limitation": "Lexical, line-based: matches small numeric counts; variable-driven counts are missed.",
+    "scopeT": "Single-line lexical match on PBKDF2 iteration counts in {lang} code.",
+    "fp": "Test-only hashes are the common false positive \u2014 confirm test scope.",
+    "recordDesc": "In {lang}, {sink} sets PBKDF2's work factor. Iteration counts that were fine a decade ago now fall to GPUs in hours. Current guidance ({safe}) restores the cost asymmetry. The remedy is raising the count.",
+    "applicability": "{lang} password hashing; single-line lexical scope.",
+    "risk": "Cheap offline cracking of stolen hashes; MEDIUM severity.",
+    "why": "{lang} PBKDF2 uses a low iteration count ({sink}), making stolen hashes cheap to crack.",
+    "fix": [
+      "Raise iterations to {safe}.",
+      "Consider argon2/scrypt for new systems.",
+      "Re-run the scan and confirm no low count remains outside tests."
+    ],
+    "verifyT": "Rescan shows no low count outside tests, and hashing cost benchmarks meet policy.",
+    "sinks": {
+      "python": [
+        "pbkdf2_hmac\\s*\\([^)]*,\\s*[0-9]{1,4}\\b",
+        "hashlib.pbkdf2_hmac(\"sha256\", pw, salt, 1000)",
+        "hashlib.pbkdf2_hmac(\"sha256\", pw, salt, 210000)",
+        "210,000+ iterations"
+      ],
+      "java": [
+        "PBEKeySpec\\s*\\([^,]+,[^,]+,\\s*[0-9]{1,5}\\b",
+        "new PBEKeySpec(pw, salt, 1000, 256)",
+        "new PBEKeySpec(pw, salt, 210000, 256)",
+        "210,000+ iterations"
+      ]
+    }
+  },
+  {
+    "class": "bcrypt-low-cost",
+    "kind": "sast",
+    "category": "weak-cryptography",
+    "cwe": "CWE-916",
+    "severity": "LOW",
+    "framing": "flag",
+    "title": "bcrypt with low cost ({lang}) \u2014 review required",
+    "description": "bcrypt is configured with a single-digit cost: {sink}. Low cost makes stolen hashes cheap to crack. This lexical rule flags the value; the reviewer confirms it meets policy or raises it.",
+    "remediation": "Raise the cost to {safe}.",
+    "limitation": "Lexical, line-based: matches small numeric costs; variable-driven costs are missed.",
+    "scopeT": "Single-line lexical match on bcrypt cost in {lang} code.",
+    "fp": "Test-only hashes are the common false positive \u2014 confirm test scope.",
+    "recordDesc": "In {lang}, {sink} sets bcrypt's cost factor. Each increment doubles attacker work; single-digit costs fall quickly. The remedy is raising to {safe}.",
+    "applicability": "{lang} password hashing; single-line lexical scope.",
+    "risk": "Cheap offline cracking; LOW severity (single-digit costs are usually tests).",
+    "why": "{lang} bcrypt uses a low cost ({sink}), making stolen hashes cheap to crack.",
+    "fix": [
+      "Raise the cost to {safe}.",
+      "Re-hash existing passwords at next login.",
+      "Re-run the scan and confirm no low cost remains outside tests."
+    ],
+    "verifyT": "Rescan shows no low cost outside tests.",
+    "sinks": {
+      "go": [
+        "GenerateFromPassword\\s*\\([^)]*,\\s*[0-9]\\b",
+        "bcrypt.GenerateFromPassword(pw, 4)",
+        "bcrypt.GenerateFromPassword(pw, 12)",
+        "cost 12+"
+      ]
+    }
+  },
+  {
+    "class": "minlength-short",
+    "kind": "sast",
+    "category": "weak-policy",
+    "cwe": "CWE-521",
+    "cweDef": {
+      "name": "Weak Password Requirements",
+      "summary": "Short minimum lengths let users pick passwords that fall to guessing and cracking."
+    },
+    "severity": "LOW",
+    "framing": "flag",
+    "title": "Short password minimum length ({lang}) \u2014 review required",
+    "description": "A password length floor is set below eight characters: {sink}. Short minimums let users pick guessable passwords. This lexical rule flags the value; the reviewer confirms policy or raises it.",
+    "remediation": "Raise the minimum to {safe} and check chosen passwords against breach lists.",
+    "limitation": "Lexical, line-based: matches small numeric floors; variable-driven floors are missed.",
+    "scopeT": "Single-line lexical match on password length floors in {lang} code or markup.",
+    "fp": "Non-password fields sharing the attribute are the common false positive \u2014 confirm the field.",
+    "recordDesc": "A length floor under eight ({sink}) permits the weakest common passwords. Length is the cheapest password defense; the remedy is raising to {safe}.",
+    "applicability": "{lang} signup and credential forms; single-line lexical scope.",
+    "risk": "Guessable user passwords; LOW severity (one control among several).",
+    "why": "Password minimums below eight characters ({sink}) permit guessable passwords.",
+    "fix": [
+      "Raise the floor to {safe}.",
+      "Add breach-list screening for chosen passwords.",
+      "Re-run the scan and confirm no short floor remains."
+    ],
+    "verifyT": "Rescan shows no short floor, and short passwords are rejected.",
+    "sinks": {
+      "html": [
+        "minlength\\s*=\\s*[\"']?[0-7]\\b",
+        "<input type=\"password\" minlength=\"4\">",
+        "<input type=\"password\" minlength=\"12\">",
+        "12+ characters"
+      ],
+      "javascript": [
+        "minLength\\s*:\\s*[0-7]\\b",
+        "password: {minLength: 6}",
+        "password: {minLength: 12}",
+        "12+ characters"
+      ]
+    }
+  },
+  {
+    "class": "referrer-unsafe",
+    "kind": "sast",
+    "category": "information-disclosure",
+    "cwe": "CWE-200",
+    "cweDef": {
+      "name": "Exposure of Sensitive Information to an Unauthorized Actor",
+      "summary": "Sensitive data reaches parties who should never see it, through logs, errors, or metadata."
+    },
+    "severity": "LOW",
+    "framing": "flag",
+    "title": "Unsafe referrer policy ({lang}) \u2014 review required",
+    "description": "A page sets the most permissive referrer policy: {sink}. Full URLs \u2014 including tokens and ids in query strings \u2014 leak to every linked site. This lexical rule flags the policy; the reviewer confirms no sensitive query data or tightens it.",
+    "remediation": "Set {safe} so cross-origin links carry no full URL.",
+    "limitation": "Lexical, line-based: matches the policy regardless of URL sensitivity.",
+    "scopeT": "Single-line lexical match on referrer policy in {lang} markup.",
+    "fp": "Pages with no sensitive query data are the common accepted case.",
+    "recordDesc": "An unsafe-url referrer policy ({sink}) attaches the full page URL to outbound requests. Query strings routinely hold session-adjacent data. The remedy is {safe}.",
+    "applicability": "{lang} pages; single-line lexical scope.",
+    "risk": "URL disclosure to third parties; LOW severity.",
+    "why": "Pages send full URLs as referrers ({sink}), leaking query data to linked sites.",
+    "fix": [
+      "Set the policy to {safe}.",
+      "Move sensitive values out of query strings regardless.",
+      "Re-run the scan and confirm no unsafe policy remains."
+    ],
+    "verifyT": "Rescan shows no unsafe policy, and outbound requests carry trimmed referrers.",
+    "sinks": {
+      "html": [
+        "referrerpolicy\\s*=\\s*[\"']unsafe-url",
+        "<a referrerpolicy=\"unsafe-url\">",
+        "<a referrerpolicy=\"strict-origin\">",
+        "strict-origin-when-cross-origin or stricter"
+      ]
+    }
+  },
+  {
+    "class": "tls-version-old",
+    "kind": "sast",
+    "category": "weak-cryptography",
+    "cwe": "CWE-327",
+    "severity": "MEDIUM",
+    "framing": "flag",
+    "title": "Obsolete TLS/SSL version named ({lang}) \u2014 review required",
+    "description": "Configuration or code names an obsolete protocol version: {sink}. SSLv2/SSLv3 and TLS 1.0/1.1 are broken or deprecated; negotiating them exposes connections to known attacks. This lexical rule flags the name; the reviewer confirms it is documentation or removes it.",
+    "remediation": "Require {safe} and drop the obsolete name.",
+    "limitation": "Lexical, line-based: matches the name regardless of context (code, config, or prose).",
+    "scopeT": "Single-line lexical match on obsolete protocol names.",
+    "fp": "Changelog and documentation mentions are the common false positive.",
+    "recordDesc": "Naming {sink} keeps a broken protocol negotiable or documents its acceptance. Each obsolete version carries practical attacks (POODLE, BEAST-class, weak record handling). The remedy is {safe}.",
+    "applicability": "TLS configuration and version checks; single-line lexical scope.",
+    "risk": "Downgrade to broken protocols; MEDIUM severity.",
+    "why": "Obsolete protocol versions ({sink}) stay negotiable, exposing connections to known attacks.",
+    "fix": [
+      "Require {safe} and remove the obsolete name.",
+      "Test that handshakes reject the old versions.",
+      "Re-run the scan and confirm no obsolete name remains outside prose."
+    ],
+    "verifyT": "Rescan shows no obsolete name outside prose, and old-version handshakes fail.",
+    "sinks": {
+      "universal": [
+        "SSLv[23]\\b|TLSv1\\.[01]\\b",
+        "protocol = TLSv1.0",
+        "protocol = TLSv1.2",
+        "TLS 1.2+ only"
+      ]
+    }
+  },
+  {
+    "class": "cipher-weak-name",
+    "kind": "sast",
+    "category": "weak-cryptography",
+    "cwe": "CWE-327",
+    "severity": "MEDIUM",
+    "framing": "flag",
+    "title": "Weak cipher named ({lang}) \u2014 review required",
+    "description": "Configuration or code names a weak cipher: {sink}. RC4, single DES, and 3DES are broken or deprecated for protecting data. This lexical rule flags the name; the reviewer confirms it is documentation or removes it.",
+    "remediation": "Negotiate {safe} and drop the weak name.",
+    "limitation": "Lexical, line-based: matches the name regardless of context.",
+    "scopeT": "Single-line lexical match on weak cipher names.",
+    "fp": "Documentation and compatibility lists are the common false positive.",
+    "recordDesc": "Naming {sink} keeps a weak cipher available for negotiation or use. RC4 biases, DES key size, and 3DES block size each ended these ciphers' suitability. The remedy is {safe}.",
+    "applicability": "Cipher configuration; single-line lexical scope.",
+    "risk": "Confidentiality loss under a weak cipher; MEDIUM severity.",
+    "why": "Weak ciphers ({sink}) stay available, so connections may negotiate broken encryption.",
+    "fix": [
+      "Restrict negotiation to {safe}.",
+      "Verify weak ciphers are refused in handshakes.",
+      "Re-run the scan and confirm no weak name remains outside prose."
+    ],
+    "verifyT": "Rescan shows no weak name outside prose, and weak-cipher handshakes fail.",
+    "sinks": {
+      "universal": [
+        "\\b(?:RC4|3DES|DES-CBC|Blowfish)\\b",
+        "cipher = \"RC4\"",
+        "cipher = \"AES-256-GCM\"",
+        "AES-GCM/ChaCha20-Poly1305 suites"
+      ]
+    }
+  }
+]

@@ -1,0 +1,953 @@
+[
+  {
+    "class": "tls-cli",
+    "kind": "sast",
+    "category": "transport-security",
+    "cwe": "CWE-319",
+    "severity": "HIGH",
+    "framing": "flag",
+    "title": "TLS checks disabled ({fw}) \u2014 review required",
+    "description": "{fw} is told to skip TLS verification: {sink}. Scripted clients then accept any certificate, exposing automation credentials and data. This lexical rule flags the flag; the reviewer confirms it is test-only or removes it.",
+    "remediation": "Remove the flag and trust via {safe}.",
+    "limitation": "Lexical, line-based: matches the flag regardless of environment.",
+    "scopeT": "Single-line lexical match on TLS-disabling flags for {fw}.",
+    "fp": "Local bootstrap scripts are the common false positive \u2014 confirm test scope.",
+    "recordDesc": "For {fw}, {sink} turns authenticity checks off. Automation carries sensitive credentials, so its TLS must be strictest. The remedy is {safe}.",
+    "applicability": "Scripts and manifests invoking {fw}; single-line lexical scope.",
+    "risk": "Credential interception on automation paths; HIGH severity.",
+    "why": "{fw} invocations disable TLS checks ({sink}), so scripted clients trust any certificate.",
+    "fix": [
+      "Remove the flag and trust via {safe}.",
+      "For private CAs, install the CA on the runner.",
+      "Re-run the scan and confirm no disabling flag remains outside tests."
+    ],
+    "verifyT": "Rescan shows no disabling flag outside tests.",
+    "sinks": {
+      "shell:wget": [
+        "wget\\s+[^|]*--no-check-certificate",
+        "wget --no-check-certificate https://x",
+        "wget https://x",
+        "valid certificates"
+      ],
+      "shell:pip": [
+        "--trusted-host\\s+\\S+",
+        "pip install --trusted-host x",
+        "pip install pkg",
+        "valid certificates"
+      ],
+      "shell:git": [
+        "sslVerify\\s+false",
+        "git config http.sslVerify false",
+        "git config http.sslVerify true",
+        "valid certificates"
+      ],
+      "shell:npm": [
+        "strict-ssl\\s+false",
+        "npm config set strict-ssl false",
+        "npm config set strict-ssl true",
+        "valid certificates"
+      ],
+      "shell:helm": [
+        "--insecure-skip-tls-verify",
+        "helm upgrade --insecure-skip-tls-verify",
+        "helm upgrade",
+        "valid cluster certificates"
+      ],
+      "shell:ldap": [
+        "TLS_REQCERT\\s+never",
+        "TLS_REQCERT never",
+        "TLS_REQCERT demand",
+        "CA-issued directory certificates"
+      ],
+      "shell:mysql": [
+        "--ssl-mode\\s*=\\s*DISABLED",
+        "mysql --ssl-mode=DISABLED",
+        "mysql --ssl-mode=REQUIRED",
+        "REQUIRED or stricter modes"
+      ],
+      "shell:psql": [
+        "sslmode\\s*=\\s*disable",
+        "sslmode=disable",
+        "sslmode=require",
+        "require or verify-full"
+      ],
+      "shell:mongo": [
+        "tlsAllowInvalidCertificates",
+        "mongosh --tlsAllowInvalidCertificates",
+        "mongosh --tlsCAFile ca",
+        "CA verification"
+      ],
+      "yaml:k8s": [
+        "insecure-skip-tls-verify\\s*:\\s*true",
+        "insecure-skip-tls-verify: true",
+        "insecure-skip-tls-verify: false",
+        "valid cluster certificates"
+      ]
+    }
+  },
+  {
+    "class": "tls-verify-off-extra",
+    "kind": "sast",
+    "category": "transport-security",
+    "cwe": "CWE-319",
+    "severity": "HIGH",
+    "framing": "flag",
+    "title": "TLS verification weakened ({fw}) \u2014 review required",
+    "description": "{fw} weakens TLS verification: {sink}. The connection then trusts attackers' certificates. This lexical rule flags the setting; the reviewer confirms it is test-only or restores verification.",
+    "remediation": "Restore verification ({safe}).",
+    "limitation": "Lexical, line-based: matches the setting regardless of environment.",
+    "scopeT": "Single-line lexical match on TLS-weakening settings for {fw}.",
+    "fp": "Test fixtures are the common false positive \u2014 confirm test scope.",
+    "recordDesc": "For {fw}, {sink} weakens a TLS authenticity check. The remedy is {safe}.",
+    "applicability": "{fw} configuration; single-line lexical scope.",
+    "risk": "Machine-in-the-middle interception; HIGH severity.",
+    "why": "{fw} weakens TLS verification ({sink}), so attackers' certificates are trusted.",
+    "fix": [
+      "Restore verification with {safe}.",
+      "Re-run the scan and confirm no weakening remains outside tests."
+    ],
+    "verifyT": "Rescan shows no weakening outside tests.",
+    "sinks": {
+      "nginx:proxy": [
+        "proxy_ssl_verify\\s+off",
+        "proxy_ssl_verify off;",
+        "proxy_ssl_verify on;",
+        "proxy_ssl_verify on plus trusted CA"
+      ],
+      "haproxy:server": [
+        "verify\\s+none",
+        "server s x verify none",
+        "server s x verify required",
+        "verify required with a CA file"
+      ],
+      "perl:ssleay": [
+        "SSL_verify_mode\\s*(?:=>|=)\\s*(?:0|SSL_VERIFY_NONE)",
+        "SSL_verify_mode => 0",
+        "SSL_verify_mode => SSL_VERIFY_PEER",
+        "SSL_VERIFY_PEER"
+      ],
+      "ruby:chef": [
+        "ssl_verify_mode\\s+:verify_none",
+        "ssl_verify_mode :verify_none",
+        "ssl_verify_mode :verify_peer",
+        ":verify_peer"
+      ],
+      "python:unverified": [
+        "_create_unverified_context",
+        "ssl._create_unverified_context()",
+        "ssl.create_default_context()",
+        "create_default_context"
+      ]
+    }
+  },
+  {
+    "class": "service-open",
+    "kind": "sast",
+    "category": "secure-configuration",
+    "cwe": "CWE-284",
+    "severity": "HIGH",
+    "framing": "flag",
+    "title": "{fw} left open \u2014 review required",
+    "description": "{fw} runs with an open setting: {sink}. Open binds, trust auth, and disabled protections expose the service to unauthenticated networks. This lexical rule flags the setting; the reviewer confirms isolation or hardens it.",
+    "remediation": "Apply {safe} and verify from an untrusted network.",
+    "limitation": "Lexical, line-based: matches the setting regardless of network isolation.",
+    "scopeT": "Single-line lexical match on open settings for {fw}.",
+    "fp": "Isolated test instances are the common false positive \u2014 confirm isolation.",
+    "recordDesc": "For {fw}, {sink} leaves the service reachable or unauthenticated. Scanners find open services within hours of exposure. The remedy is {safe}.",
+    "applicability": "{fw} configuration; single-line lexical scope.",
+    "risk": "Unauthenticated access to the service; HIGH severity when reachable.",
+    "why": "{fw} runs open ({sink}), exposing it to unauthenticated networks.",
+    "fix": [
+      "Apply {safe}.",
+      "Bind to localhost or require authentication.",
+      "Re-run the scan and confirm no open setting remains reachable."
+    ],
+    "verifyT": "Rescan shows no open setting reachable, and outside probes fail.",
+    "sinks": {
+      "redis:bind": [
+        "bind\\s+0\\.0\\.0\\.0",
+        "bind 0.0.0.0",
+        "bind 127.0.0.1",
+        "loopback bind plus requirepass"
+      ],
+      "redis:protected": [
+        "protected-mode\\s+no",
+        "protected-mode no",
+        "protected-mode yes",
+        "protected-mode yes plus auth"
+      ],
+      "memcached:listen": [
+        "-l\\s+0\\.0\\.0\\.0",
+        "memcached -l 0.0.0.0",
+        "memcached -l 127.0.0.1",
+        "loopback listen"
+      ],
+      "mongo:bind": [
+        "bindIp\\s*:\\s*[^\\n]*0\\.0\\.0\\.0",
+        "bindIp: 0.0.0.0",
+        "bindIp: 127.0.0.1",
+        "loopback bind plus auth"
+      ],
+      "postgres:trust": [
+        "host\\s+\\S+\\s+\\S+\\s+\\S+\\s+trust",
+        "host all all 0.0.0.0/0 trust",
+        "host all all 0.0.0.0/0 scram-sha-256",
+        "scram-sha-256 auth"
+      ],
+      "mysql:skipgrant": [
+        "skip-grant-tables",
+        "skip-grant-tables",
+        "# grant tables enforced",
+        "remove the option"
+      ],
+      "bind:transfer": [
+        "allow-transfer\\s*\\{\\s*any",
+        "allow-transfer { any; };",
+        "allow-transfer { none; };",
+        "a secondaries-only ACL"
+      ],
+      "bind:recursion": [
+        "recursion\\s+yes",
+        "recursion yes;",
+        "recursion no;",
+        "no plus trusted-ACL recursion"
+      ],
+      "vsftpd:anon": [
+        "anonymous_enable\\s*=\\s*YES",
+        "anonymous_enable=YES",
+        "anonymous_enable=NO",
+        "NO plus local auth"
+      ],
+      "samba:guest": [
+        "guest\\s+ok\\s*=\\s*yes",
+        "guest ok = yes",
+        "guest ok = no",
+        "authenticated shares"
+      ],
+      "nfs:noroot": [
+        "no_root_squash",
+        "/data *(rw,no_root_squash)",
+        "/data *(rw,root_squash)",
+        "root_squash plus host ACLs"
+      ],
+      "dovecot:plain": [
+        "disable_plaintext_auth\\s*=\\s*no",
+        "disable_plaintext_auth = no",
+        "disable_plaintext_auth = yes",
+        "yes plus TLS"
+      ],
+      "mosquitto:anon": [
+        "allow_anonymous\\s+true",
+        "allow_anonymous true",
+        "allow_anonymous false",
+        "password_file plus TLS"
+      ],
+      "cassandra:auth": [
+        "authenticator:\\s*AllowAllAuthenticator",
+        "authenticator: AllowAllAuthenticator",
+        "authenticator: PasswordAuthenticator",
+        "PasswordAuthenticator"
+      ],
+      "couchdb:users": [
+        "require_valid_user\\s*=\\s*false",
+        "require_valid_user = false",
+        "require_valid_user = true",
+        "true plus admin accounts"
+      ],
+      "neo4j:auth": [
+        "auth_enabled\\s*=\\s*false",
+        "auth_enabled=false",
+        "auth_enabled=true",
+        "enabled auth"
+      ],
+      "vault:tls": [
+        "tls_disable\\s*=\\s*1",
+        "tls_disable = 1",
+        "tls_disable = 0",
+        "TLS listeners with certificates"
+      ],
+      "elastic:security": [
+        "xpack\\.security\\.enabled\\s*:\\s*false",
+        "xpack.security.enabled: false",
+        "xpack.security.enabled: true",
+        "enabled security plus TLS"
+      ],
+      "elastic:network": [
+        "network\\.host\\s*:\\s*0\\.0\\.0\\.0",
+        "network.host: 0.0.0.0",
+        "network.host: 127.0.0.1",
+        "loopback plus security"
+      ],
+      "kafka:plain": [
+        "listeners\\s*=[^\\n]*PLAINTEXT",
+        "listeners=PLAINTEXT://:9092",
+        "listeners=SASL_SSL://:9093",
+        "SASL_SSL listeners"
+      ],
+      "rabbitmq:loopback": [
+        "loopback_users\\.guest\\s*=\\s*false",
+        "loopback_users.guest = false",
+        "# loopback_users default",
+        "loopback-only guest plus users"
+      ],
+      "openvpn:cipher": [
+        "cipher\\s+none",
+        "cipher none",
+        "cipher AES-256-GCM",
+        "an AEAD cipher"
+      ],
+      "jmx:authoff": [
+        "com\\.sun\\.management\\.jmxremote\\.authenticate\\s*=\\s*false",
+        "com.sun.management.jmxremote.authenticate=false",
+        "# jmx authenticate default true",
+        "authenticated JMX plus TLS"
+      ]
+    }
+  },
+  {
+    "class": "docker-strict",
+    "kind": "sast",
+    "category": "container-security",
+    "cwe": "CWE-250",
+    "severity": "MEDIUM",
+    "framing": "flag",
+    "title": "Risky container build or runtime setting ({fw}) \u2014 review required",
+    "description": "Container configuration runs risky: {sink} ({fw}). Root users, network fetches at build, embedded secrets, and host-equivalent runtime flags each widen container breakout or supply-chain impact. This lexical rule flags the setting; the reviewer confirms necessity or hardens it.",
+    "remediation": "Apply {safe}.",
+    "limitation": "Lexical, line-based: matches the setting regardless of deployment trust.",
+    "scopeT": "Single-line lexical match on risky container settings ({fw}).",
+    "fp": "Trusted single-tenant builders are the common accepted case \u2014 confirm scope.",
+    "recordDesc": "For {fw}, {sink} weakens container isolation or build integrity. Containers share the host kernel, so each relaxation moves toward host equivalence. The remedy is {safe}.",
+    "applicability": "Containerfiles and compose files; single-line lexical scope.",
+    "risk": "Breakout, secret theft, or poisoned builds; MEDIUM severity, HIGH for privileged/host modes.",
+    "why": "Container configuration is risky ({sink} in {fw}), widening breakout and supply-chain impact.",
+    "fix": [
+      "Apply {safe}.",
+      "Re-run the scan and confirm no risky setting remains unjustified."
+    ],
+    "verifyT": "Rescan shows no unjustified risky setting.",
+    "sinks": {
+      "dockerfile:user": [
+        "USER\\s+root\\b",
+        "USER root",
+        "USER app",
+        "a non-root USER"
+      ],
+      "dockerfile:addurl": [
+        "ADD\\s+https?://",
+        "ADD https://x/f /f",
+        "COPY f /f",
+        "COPY plus verified fetches"
+      ],
+      "dockerfile:envsecret": [
+        "ENV\\s+\\w*(?:PASSWORD|SECRET|KEY|TOKEN)\\s*=",
+        "ENV DB_PASSWORD=s3cret",
+        "ENV APP_ENV=prod",
+        "runtime secret injection"
+      ],
+      "dockerfile:expose22": [
+        "EXPOSE\\s+[^\\n]*\\b22\\b",
+        "EXPOSE 80 22",
+        "EXPOSE 80",
+        "no SSH in containers"
+      ],
+      "yaml:priv": [
+        "privileged\\s*:\\s*true",
+        "privileged: true",
+        "privileged: false",
+        "dropped capabilities plus specific adds"
+      ],
+      "yaml:sockmount": [
+        "docker\\.sock",
+        "- /var/run/docker.sock:/var/run/docker.sock",
+        "- data:/data",
+        "no socket mount; use an API proxy"
+      ],
+      "yaml:capadd": [
+        "cap_add\\s*:[^\\n]*SYS_ADMIN",
+        "cap_add: [SYS_ADMIN]",
+        "cap_add: []",
+        "no SYS_ADMIN; add narrow caps"
+      ],
+      "yaml:nethost": [
+        "network_mode\\s*:\\s*[\"']?host",
+        "network_mode: host",
+        "network_mode: bridge",
+        "bridge networking"
+      ],
+      "yaml:pidhost": [
+        "pid\\s*:\\s*[\"']?host",
+        "pid: host",
+        "# default pid mode",
+        "default pid isolation"
+      ]
+    }
+  },
+  {
+    "class": "k8s-strict",
+    "kind": "sast",
+    "category": "container-security",
+    "cwe": "CWE-250",
+    "severity": "HIGH",
+    "framing": "flag",
+    "title": "Risky Kubernetes pod security ({fw}) \u2014 review required",
+    "description": "A pod spec weakens isolation: {sink} ({fw}). Privileged mode, host namespaces, writable roots, and root users each move workloads toward node equivalence. This lexical rule flags the setting; the reviewer confirms necessity or enforces the restricted standard.",
+    "remediation": "Apply {safe}.",
+    "limitation": "Lexical, line-based: matches the setting regardless of namespace trust.",
+    "scopeT": "Single-line lexical match on risky pod settings ({fw}).",
+    "fp": "System daemons needing host access are the common accepted case \u2014 confirm scope.",
+    "recordDesc": "For {fw}, {sink} relaxes pod isolation. Each relaxation compounds: privileged plus host path mounts equal node access. The remedy is {safe}.",
+    "applicability": "Pod specs; single-line lexical scope.",
+    "risk": "Container escape to the node; HIGH severity.",
+    "why": "Pod specs weaken isolation ({sink} in {fw}), approaching node equivalence.",
+    "fix": [
+      "Apply {safe}.",
+      "Enforce the restricted pod security standard by namespace.",
+      "Re-run the scan and confirm no risky setting remains unjustified."
+    ],
+    "verifyT": "Rescan shows no unjustified risky setting.",
+    "sinks": {
+      "yaml:hostnet": [
+        "hostNetwork\\s*:\\s*true",
+        "hostNetwork: true",
+        "hostNetwork: false",
+        "pod networking"
+      ],
+      "yaml:hostpid": [
+        "hostPID\\s*:\\s*true",
+        "hostPID: true",
+        "hostPID: false",
+        "pod PID namespace"
+      ],
+      "yaml:hostpath": [
+        "hostPath\\s*:",
+        "hostPath:",
+        "emptyDir: {}",
+        "emptyDir or CSI volumes"
+      ],
+      "yaml:escalate": [
+        "allowPrivilegeEscalation\\s*:\\s*true",
+        "allowPrivilegeEscalation: true",
+        "allowPrivilegeEscalation: false",
+        "false plus no_new_privs"
+      ],
+      "yaml:nonroot": [
+        "runAsNonRoot\\s*:\\s*false",
+        "runAsNonRoot: false",
+        "runAsNonRoot: true",
+        "runAsNonRoot: true"
+      ],
+      "yaml:rofs": [
+        "readOnlyRootFilesystem\\s*:\\s*false",
+        "readOnlyRootFilesystem: false",
+        "readOnlyRootFilesystem: true",
+        "readOnlyRootFilesystem: true"
+      ],
+      "yaml:runas0": [
+        "runAsUser\\s*:\\s*0\\b",
+        "runAsUser: 0",
+        "runAsUser: 1000",
+        "a non-zero runAsUser"
+      ],
+      "yaml:seccomp": [
+        "type\\s*:\\s*Unconfined",
+        "type: Unconfined",
+        "type: RuntimeDefault",
+        "RuntimeDefault seccomp"
+      ],
+      "yaml:allcaps": [
+        "add\\s*:[^\\n]*\\bALL\\b",
+        "add: [\"ALL\"]",
+        "add: [\"NET_BIND_SERVICE\"]",
+        "narrow capability adds"
+      ]
+    }
+  },
+  {
+    "class": "terraform-strict",
+    "kind": "sast",
+    "category": "access-control",
+    "cwe": "CWE-284",
+    "severity": "HIGH",
+    "framing": "flag",
+    "title": "Risky Terraform setting ({fw}) \u2014 review required",
+    "description": "Infrastructure as code weakens a control: {sink} ({fw}). Public data stores, wildcard IAM, all-traffic rules, and disabled encryption or protection each expose the account. This lexical rule flags the setting; the reviewer confirms necessity or hardens it.",
+    "remediation": "Apply {safe}.",
+    "limitation": "Lexical, line-based: matches the setting regardless of account scope.",
+    "scopeT": "Single-line lexical match on risky Terraform settings ({fw}).",
+    "fp": "Sandbox accounts are the common false positive \u2014 confirm account scope.",
+    "recordDesc": "For {fw}, {sink} encodes an open or unprotected resource. IaC makes the weakness repeatable across environments. The remedy is {safe}.",
+    "applicability": "Terraform configuration; single-line lexical scope.",
+    "risk": "Account or data exposure; HIGH severity.",
+    "why": "Terraform weakens a control ({sink} in {fw}), exposing the account repeatably.",
+    "fix": [
+      "Apply {safe}.",
+      "Re-run the scan and confirm no risky setting remains unjustified."
+    ],
+    "verifyT": "Rescan shows no unjustified risky setting, and plan audits clean.",
+    "sinks": {
+      "hcl:dbpublic": [
+        "publicly_accessible\\s*=\\s*true",
+        "publicly_accessible = true",
+        "publicly_accessible = false",
+        "private subnets"
+      ],
+      "hcl:skipsnap": [
+        "skip_final_snapshot\\s*=\\s*true",
+        "skip_final_snapshot = true",
+        "skip_final_snapshot = false",
+        "final snapshots"
+      ],
+      "hcl:delprot": [
+        "deletion_protection\\s*=\\s*false",
+        "deletion_protection = false",
+        "deletion_protection = true",
+        "deletion protection"
+      ],
+      "hcl:iamact": [
+        "\"Action\"\\s*:\\s*\"\\*\"",
+        "\"Action\": \"*\"",
+        "\"Action\": \"s3:GetObject\"",
+        "least-privilege actions"
+      ],
+      "hcl:iamres": [
+        "\"Resource\"\\s*:\\s*\"\\*\"",
+        "\"Resource\": \"*\"",
+        "\"Resource\": \"arn:...:bucket\"",
+        "least-privilege resources"
+      ],
+      "hcl:allproto": [
+        "protocol\\s*=\\s*\"-1\"",
+        "protocol = \"-1\"",
+        "protocol = \"tcp\"",
+        "named protocols plus ports"
+      ],
+      "hcl:ebsenc": [
+        "encrypted\\s*=\\s*false",
+        "encrypted = false",
+        "encrypted = true",
+        "encryption at rest"
+      ],
+      "hcl:rdsenc": [
+        "storage_encrypted\\s*=\\s*false",
+        "storage_encrypted = false",
+        "storage_encrypted = true",
+        "storage encryption"
+      ],
+      "hcl:kmsrot": [
+        "enable_key_rotation\\s*=\\s*false",
+        "enable_key_rotation = false",
+        "enable_key_rotation = true",
+        "automatic rotation"
+      ]
+    }
+  },
+  {
+    "class": "ci-risky",
+    "kind": "sast",
+    "category": "ci-security",
+    "cwe": "CWE-732",
+    "severity": "MEDIUM",
+    "framing": "flag",
+    "title": "Risky CI setting ({fw}) \u2014 review required",
+    "description": "A CI workflow runs risky: {sink} ({fw}). Broad tokens and privileged pull-request triggers let untrusted code reach secrets or push paths. This lexical rule flags the setting; the reviewer confirms necessity or scopes it.",
+    "remediation": "Apply {safe}.",
+    "limitation": "Lexical, line-based: matches the setting regardless of repository trust.",
+    "scopeT": "Single-line lexical match on risky CI settings ({fw}).",
+    "fp": "Trusted private repositories are the common accepted case \u2014 confirm trust.",
+    "recordDesc": "For {fw}, {sink} widens what workflow code can do. CI executes untrusted contributions, so token and trigger scope are security boundaries. The remedy is {safe}.",
+    "applicability": "CI workflow files; single-line lexical scope.",
+    "risk": "Secret theft or push-path abuse from untrusted code; MEDIUM severity, HIGH on public repos.",
+    "why": "CI runs with risky settings ({sink} in {fw}), widening untrusted code's reach.",
+    "fix": [
+      "Apply {safe}.",
+      "Re-run the scan and confirm no risky setting remains unjustified."
+    ],
+    "verifyT": "Rescan shows no unjustified risky setting.",
+    "sinks": {
+      "yaml:writeall": [
+        "permissions\\s*:\\s*write-all",
+        "permissions: write-all",
+        "permissions: read-all",
+        "per-job least privilege"
+      ],
+      "yaml:prtarget": [
+        "pull_request_target",
+        "on: [pull_request_target]",
+        "on: [pull_request]",
+        "pull_request plus pinned actions"
+      ]
+    }
+  },
+  {
+    "class": "git-risky",
+    "kind": "sast",
+    "category": "hardcoded-credential",
+    "cwe": "CWE-798",
+    "severity": "MEDIUM",
+    "framing": "flag",
+    "title": "Git credentials stored in plaintext ({fw}) \u2014 review required",
+    "description": "Git is told to keep credentials in a plaintext file: {sink}. Any reader of the home directory learns long-lived hosting credentials. This lexical rule flags the helper; the reviewer confirms necessity or switches to an OS store.",
+    "remediation": "Use {safe}.",
+    "limitation": "Lexical, line-based: matches the helper regardless of file protections.",
+    "scopeT": "Single-line lexical match on the git credential helper.",
+    "fp": "Throwaway containers are the common accepted case \u2014 confirm ephemerality.",
+    "recordDesc": "The store helper ({sink}) writes credentials to ~/.git-credentials in cleartext. The remedy is {safe}.",
+    "applicability": "Git configuration; single-line lexical scope.",
+    "risk": "Credential theft from the home directory; MEDIUM severity.",
+    "why": "Git keeps credentials in plaintext ({sink}), readable by any home-directory reader.",
+    "fix": [
+      "Switch the helper to {safe}.",
+      "Rotate credentials that were stored.",
+      "Re-run the scan and confirm no store helper remains."
+    ],
+    "verifyT": "Rescan shows no store helper, and rotation is complete.",
+    "sinks": {
+      "shell:credstore": [
+        "credential\\.helper\\s+store",
+        "git config credential.helper store",
+        "git config credential.helper cache",
+        "an OS keychain helper"
+      ]
+    }
+  },
+  {
+    "class": "ssh-strict",
+    "kind": "sast",
+    "category": "secure-configuration",
+    "cwe": "CWE-284",
+    "severity": "MEDIUM",
+    "framing": "flag",
+    "title": "Weak SSH daemon setting ({fw}) \u2014 review required",
+    "description": "sshd runs weakened: {sink} ({fw}). Skipped host checks, root login, password auth, and empty passwords each ease server or account compromise. This lexical rule flags the setting; the reviewer confirms necessity or hardens it.",
+    "remediation": "Apply {safe}.",
+    "limitation": "Lexical, line-based: matches the setting regardless of network exposure.",
+    "scopeT": "Single-line lexical match on sshd settings ({fw}).",
+    "fp": "Isolated lab hosts are the common false positive \u2014 confirm isolation.",
+    "recordDesc": "For {fw}, {sink} weakens SSH authentication or verification. SSH guards administrative access, so each relaxation is high-value. The remedy is {safe}.",
+    "applicability": "sshd configuration; single-line lexical scope.",
+    "risk": "Account or server compromise; MEDIUM severity, HIGH when internet-facing.",
+    "why": "sshd runs weakened ({sink} in {fw}), easing compromise of access.",
+    "fix": [
+      "Apply {safe}.",
+      "Re-run the scan and confirm no weak setting remains reachable."
+    ],
+    "verifyT": "Rescan shows no weak setting reachable.",
+    "sinks": {
+      "sshd:hostkey": [
+        "StrictHostKeyChecking\\s+no",
+        "StrictHostKeyChecking no",
+        "StrictHostKeyChecking yes",
+        "yes plus known_hosts"
+      ],
+      "sshd:root": [
+        "PermitRootLogin\\s+yes",
+        "PermitRootLogin yes",
+        "PermitRootLogin no",
+        "no plus sudo"
+      ],
+      "sshd:pwauth": [
+        "PasswordAuthentication\\s+yes",
+        "PasswordAuthentication yes",
+        "PasswordAuthentication no",
+        "key-only auth"
+      ],
+      "sshd:empty": [
+        "PermitEmptyPasswords\\s+yes",
+        "PermitEmptyPasswords yes",
+        "PermitEmptyPasswords no",
+        "no always"
+      ],
+      "sshd:x11": [
+        "X11Forwarding\\s+yes",
+        "X11Forwarding yes",
+        "X11Forwarding no",
+        "no unless needed"
+      ]
+    }
+  },
+  {
+    "class": "legacy-proto",
+    "kind": "sast",
+    "category": "cleartext-transmission",
+    "cwe": "CWE-319",
+    "severity": "MEDIUM",
+    "framing": "flag",
+    "title": "Cleartext legacy protocol ({fw}) \u2014 review required",
+    "description": "Code uses a cleartext legacy protocol or library: {sink} ({fw}). FTP and Telnet send credentials and data without protection. This lexical rule flags the use; the reviewer confirms isolation or migrates it.",
+    "remediation": "Migrate to {safe}.",
+    "limitation": "Lexical, line-based: matches the use regardless of network isolation.",
+    "scopeT": "Single-line lexical match on legacy protocol use ({fw}).",
+    "fp": "Isolated legacy segments are the common accepted case \u2014 confirm isolation.",
+    "recordDesc": "For {fw}, {sink} speaks a protocol without confidentiality. Observers harvest credentials passively. The remedy is {safe}.",
+    "applicability": "Code referencing legacy protocols; single-line lexical scope.",
+    "risk": "Credential and data interception; MEDIUM severity.",
+    "why": "Legacy cleartext protocols ({sink} in {fw}) expose credentials to observers.",
+    "fix": [
+      "Migrate the use to {safe}.",
+      "If migration is impossible, isolate the segment and document it.",
+      "Re-run the scan and confirm no unjustified use remains."
+    ],
+    "verifyT": "Rescan shows no unjustified use, and captures show encryption.",
+    "sinks": {
+      "universal:ftp": [
+        "(?:^|[^a-zA-Z])(?:tftp|ftp)://[A-Za-z0-9]",
+        "url = \"ftp://h/f\"",
+        "url = \"sftp://h/f\"",
+        "SFTP/FTPS"
+      ],
+      "python:telnet": [
+        "telnetlib",
+        "import telnetlib",
+        "import ssl",
+        "SSH libraries"
+      ],
+      "java:telnet": [
+        "TelnetClient",
+        "new TelnetClient()",
+        "new SSHClient()",
+        "SSH libraries"
+      ]
+    }
+  },
+  {
+    "class": "snmp-default",
+    "kind": "sast",
+    "category": "hardcoded-credential",
+    "cwe": "CWE-798",
+    "severity": "MEDIUM",
+    "framing": "flag",
+    "title": "Default SNMP community ({fw}) \u2014 review required",
+    "description": "SNMP runs with a default community string: {sink}. Defaults are the first guess in every scan and grant the configured MIB view. This lexical rule flags the default; the reviewer confirms necessity or replaces it.",
+    "remediation": "Set a strong community ({safe}) or move to SNMPv3 with authPriv.",
+    "limitation": "Lexical, line-based: matches the default regardless of ACLs.",
+    "scopeT": "Single-line lexical match on SNMP community defaults.",
+    "fp": "Read-only views behind strict ACLs are the common accepted case \u2014 confirm both.",
+    "recordDesc": "A default community ({sink}) hands the MIB view to anyone who guesses it \u2014 everyone. The remedy is {safe}.",
+    "applicability": "SNMP configuration; single-line lexical scope.",
+    "risk": "Network reconnaissance and device control; MEDIUM severity.",
+    "why": "SNMP uses default communities ({sink}), guessable by every scanner.",
+    "fix": [
+      "Replace the default with {safe}.",
+      "Restrict managers by ACL.",
+      "Re-run the scan and confirm no default remains."
+    ],
+    "verifyT": "Rescan shows no default, and default-guess probes fail.",
+    "sinks": {
+      "universal:community": [
+        "community\\s+(?:public|private)\\b",
+        "community public",
+        "community r4nd0m-x7",
+        "a random community or SNMPv3"
+      ]
+    }
+  },
+  {
+    "class": "server-info",
+    "kind": "sast",
+    "category": "information-disclosure",
+    "cwe": "CWE-200",
+    "severity": "LOW",
+    "framing": "flag",
+    "title": "Verbose server disclosure ({fw}) \u2014 review required",
+    "description": "A server advertises version detail or risky methods: {sink} ({fw}). Banners speed fingerprinting, and TRACE enables cross-site tracing. This lexical rule flags the setting; the reviewer confirms necessity or quiets it.",
+    "remediation": "Apply {safe}.",
+    "limitation": "Lexical, line-based: matches the setting regardless of exposure.",
+    "scopeT": "Single-line lexical match on disclosure settings ({fw}).",
+    "fp": "Internal-only servers are the common accepted case \u2014 confirm exposure.",
+    "recordDesc": "For {fw}, {sink} discloses version or method detail. Reconnaissance starts with banners. The remedy is {safe}.",
+    "applicability": "Web server configuration; single-line lexical scope.",
+    "risk": "Fingerprinting and method abuse; LOW severity.",
+    "why": "Servers disclose versions or methods ({sink} in {fw}), aiding reconnaissance.",
+    "fix": [
+      "Apply {safe}.",
+      "Re-run the scan and confirm no disclosure remains unjustified."
+    ],
+    "verifyT": "Rescan shows no unjustified disclosure.",
+    "sinks": {
+      "nginx:tokens": [
+        "server_tokens\\s+on",
+        "server_tokens on;",
+        "server_tokens off;",
+        "server_tokens off"
+      ],
+      "apache:tokens": [
+        "ServerTokens\\s+Full",
+        "ServerTokens Full",
+        "ServerTokens Prod",
+        "ServerTokens Prod"
+      ],
+      "apache:trace": [
+        "TraceEnable\\s+On",
+        "TraceEnable On",
+        "TraceEnable Off",
+        "TraceEnable Off"
+      ]
+    }
+  },
+  {
+    "class": "server-access",
+    "kind": "sast",
+    "category": "access-control",
+    "cwe": "CWE-284",
+    "severity": "MEDIUM",
+    "framing": "flag",
+    "title": "Open web-server access ({fw}) \u2014 review required",
+    "description": "A web server opens access wide: {sink} ({fw}). Directory listings and satisfied-any auth expose content and weaken gates. This lexical rule flags the setting; the reviewer confirms necessity or narrows it.",
+    "remediation": "Apply {safe}.",
+    "limitation": "Lexical, line-based: matches the setting regardless of content sensitivity.",
+    "scopeT": "Single-line lexical match on open access settings ({fw}).",
+    "fp": "Public file mirrors are the common accepted case \u2014 confirm intent.",
+    "recordDesc": "For {fw}, {sink} opens directory or auth behavior. Listings leak filenames; weak auth gates leak content. The remedy is {safe}.",
+    "applicability": "Web server configuration; single-line lexical scope.",
+    "risk": "Content disclosure and access bypass; MEDIUM severity.",
+    "why": "Web servers open access ({sink} in {fw}), exposing content.",
+    "fix": [
+      "Apply {safe}.",
+      "Re-run the scan and confirm no open access remains unjustified."
+    ],
+    "verifyT": "Rescan shows no unjustified open access.",
+    "sinks": {
+      "nginx:satisfy": [
+        "satisfy\\s+any",
+        "satisfy any;",
+        "satisfy all;",
+        "satisfy all"
+      ],
+      "apache:indexes": [
+        "Options\\s+\\+?Indexes",
+        "Options Indexes FollowSymLinks",
+        "Options -Indexes",
+        "-Indexes"
+      ]
+    }
+  },
+  {
+    "class": "framework-sqli",
+    "kind": "sast",
+    "category": "sql-injection",
+    "cwe": "CWE-89",
+    "severity": "HIGH",
+    "framing": "flag",
+    "title": "Framework SQL built from input ({fw}) \u2014 review required",
+    "description": "A {fw} data call assembles SQL from parts: {sink}. Framework helpers do not sanitize interpolated values. This lexical rule flags the assembly; the reviewer confirms every part is trusted or parameterizes it.",
+    "remediation": "Use the framework's binding ({safe}); never interpolate values.",
+    "limitation": "Lexical, line-based: any assembled query matches, including trusted ones.",
+    "scopeT": "Single-line lexical match on assembled framework SQL ({fw}).",
+    "fp": "Assembling fixed fragments is the common false positive.",
+    "recordDesc": "In {fw}, {sink} mixes SQL text with values. ORM and helper layers pass interpolated text straight to the driver. The remedy is bound parameters via {safe}.",
+    "applicability": "{fw} data calls; single-line lexical scope.",
+    "risk": "Full database compromise when untrusted input reaches the query; HIGH severity.",
+    "why": "{fw} SQL assembles from parts ({sink}), so untrusted input rewrites the statement.",
+    "fix": [
+      "Rewrite with {safe}, binding every value.",
+      "Map dynamic identifiers through an allowlist.",
+      "Re-run the scan and confirm no assembled query remains on untrusted input."
+    ],
+    "verifyT": "Rescan shows no assembled query on untrusted input, and quote payloads stay inert.",
+    "sinks": {
+      "php:wordpress": [
+        "\\$wpdb->query\\s*\\([^)]*(?:\"[^\"\\n]*\\$|\\.\\s*\\$)",
+        "$wpdb->query(\"SELECT $q\")",
+        "$wpdb->query($fixed)",
+        "$wpdb->prepare placeholders"
+      ],
+      "php:laravel": [
+        "DB::raw\\s*\\([^)]*(?:\"[^\"\\n]*\\$|\\.\\s*\\$)",
+        "DB::raw(\"a\" . $b)",
+        "DB::raw($fixed)",
+        "parameter bindings"
+      ],
+      "python:sqlalchemy": [
+        "text\\s*\\([^)]*(?:\\+|f['\"])",
+        "text(\"SELECT \" + c)",
+        "text(FIXED)",
+        "bindparams()"
+      ],
+      "python:djangoraw": [
+        "\\.raw\\s*\\([^)]*(?:\\+|%|\\{)",
+        "M.objects.raw(\"SELECT \" + c)",
+        "M.objects.raw(FIXED)",
+        "parameter lists"
+      ],
+      "python:djangoextra": [
+        "\\.extra\\s*\\(",
+        "qs.extra(where=[\"x=%s\" % v])",
+        "qs.filter(x=v)",
+        "filter() expressions"
+      ],
+      "ruby:activerecord": [
+        "\\.where\\s*\\([^)]*(?:\\+|#\\{)",
+        "M.where(\"x = #{v}\")",
+        "M.where(x: v)",
+        "hash conditions"
+      ],
+      "ruby:railsorder": [
+        "\\.order\\s*\\([^)]*params",
+        "M.order(params[:s])",
+        "M.order(:name)",
+        "an allowlisted column map"
+      ],
+      "ruby:railsfindsql": [
+        "find_by_sql\\s*\\([^)]*(?:\\+|#\\{)",
+        "find_by_sql(\"SELECT #{q}\")",
+        "find_by_sql(FIXED)",
+        "finder methods"
+      ],
+      "php:doctrine": [
+        "createQuery\\s*\\([^)]*(?:\"[^\"\\n]*\\$|\\.\\s*\\$)",
+        "createQuery(\"SELECT $q\")",
+        "createQuery($fixed)",
+        "setParameter bindings"
+      ],
+      "php:eloquent": [
+        "whereRaw\\s*\\([^)]*(?:\"[^\"\\n]*\\$|\\.\\s*\\$)",
+        "whereRaw(\"a = $b\")",
+        "where($fixed)",
+        "parameter bindings"
+      ],
+      "go:gorm": [
+        "\\.Where\\s*\\([^)]*\\+",
+        "db.Where(\"a = \" + b)",
+        "db.Where(\"a = ?\", b)",
+        "? placeholders"
+      ],
+      "java:springquery": [
+        "@Query\\s*\\([^)]*\\+",
+        "@Query(\"SELECT \" + f)",
+        "@Query(FIXED)",
+        ":named parameters"
+      ],
+      "php:drupal": [
+        "db_query\\s*\\([^)]*(?:\"[^\"\\n]*\\$|\\.\\s*\\$)",
+        "db_query(\"SELECT $q\")",
+        "db_query($fixed)",
+        ":placeholder args"
+      ],
+      "javascript:knex": [
+        "knex\\.raw\\s*\\([^)]*(?:\\+|\\$\\{)",
+        "knex.raw(\"SELECT \" + c)",
+        "knex.raw(FIXED)",
+        "? bindings"
+      ],
+      "javascript:prisma": [
+        "\\$queryRaw",
+        "await prisma.$queryRaw`SELECT ${x}`",
+        "await prisma.user.findMany()",
+        "parameterized $queryRaw or finders"
+      ],
+      "javascript:mongoose": [
+        "\\$where",
+        "find({$where: q})",
+        "find({name: q})",
+        "operator queries"
+      ],
+      "xml:mybatis": [
+        "\\$\\{[^}]*\\}",
+        "SELECT ${col} FROM t",
+        "SELECT #{col} FROM t",
+        "#{} bindings"
+      ]
+    }
+  }
+]
