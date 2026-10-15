@@ -34,6 +34,8 @@ const DAST_CHECK_TYPES = [
   'missing-response-header',
   'response-header-missing-directive',
   'response-header-matches',
+  'response-body-matches',
+  'response-header-host-differs',
   'cookie-missing-flag',
 ];
 
@@ -307,8 +309,10 @@ function normalizeHeaders(headers) {
 
 function headerHasDirective(values, directive) {
   const want = directive.toLowerCase();
+  // RFC list headers (e.g. Cache-Control) separate directives with commas; CSP
+  // separates directives with ';' and policies with ','. Split on both.
   return values.some((value) =>
-    value.split(';').some((part) => {
+    value.split(/[;,]/).some((part) => {
       const name = part.trim().split(/[=\s]/, 1)[0]?.toLowerCase();
       return name === want;
     }),
@@ -353,6 +357,35 @@ export function evalDastCheck(check, observation) {
       }
       return cookies.some((cookie) => !cookieHasFlag(cookie, check.flag));
     }
+    case 'response-body-matches': {
+      if (check.requireScheme !== undefined) {
+        // Scope check: only observations fetched over the required scheme are judged.
+        if (new URL(observation.url).protocol !== `${check.requireScheme}:`) {
+          return false;
+        }
+      }
+      if (typeof observation.body !== 'string') {
+        return false; // no body captured: nothing to match
+      }
+      // eslint-disable-next-line require-unicode-regexp
+      return new RegExp(check.valuePattern, 'i').test(observation.body);
+    }
+    case 'response-header-host-differs': {
+      const values = headers[check.header.toLowerCase()];
+      if (values === undefined || observation.status < 300 || observation.status > 399) {
+        return false; // not a redirect carrying this header
+      }
+      let target;
+      try {
+        target = new URL(values[0], observation.url);
+      } catch {
+        return false; // unparseable target: unknown, never a match
+      }
+      if (target.protocol !== 'http:' && target.protocol !== 'https:') {
+        return false; // non-web schemes are out of this check's scope
+      }
+      return target.hostname !== new URL(observation.url).hostname;
+    }
     default:
       throw new Error(`unknown check type "${check.type}"`);
   }
@@ -383,6 +416,14 @@ function checkDastCheck(errors, record) {
       allowed: ['type', 'header', 'valuePattern'],
       required: ['type', 'header', 'valuePattern'],
     },
+    'response-body-matches': {
+      allowed: ['type', 'valuePattern', 'requireScheme'],
+      required: ['type', 'valuePattern'],
+    },
+    'response-header-host-differs': {
+      allowed: ['type', 'header'],
+      required: ['type', 'header'],
+    },
   };
   const spec = specs[check['type']];
   checkClosed(errors, 'check', check, spec.allowed, spec.required);
@@ -398,6 +439,9 @@ function checkDastCheck(errors, record) {
   }
   if (check['flag'] !== undefined && !COOKIE_FLAGS.includes(check['flag'])) {
     errors.push(`check.flag: must be one of ${COOKIE_FLAGS.join(', ')}`);
+  }
+  if (check['requireScheme'] !== undefined && check['requireScheme'] !== 'http' && check['requireScheme'] !== 'https') {
+    errors.push('check.requireScheme: must be http or https');
   }
   if (check['valuePattern'] !== undefined) {
     checkBoundedText(errors, 'check.valuePattern', check['valuePattern'], MAX_PATTERN);

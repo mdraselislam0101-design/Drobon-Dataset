@@ -1,0 +1,51 @@
+{
+  "schemaVersion": "drobon.learning.lesson/v1",
+  "id": "lsn_dev_reflect_fix",
+  "title": "Replacing a name-based class lookup with an allow-list",
+  "summary": "See rule DPK-SAST-749 fire on a synthetic Java loader, replace the name lookup with a fixed map, and verify the finding is gone on rescan.",
+  "concept": "Class.forName resolves a class from a string at runtime. When that string comes from a request, a config value, or any input the program does not control, the caller chooses which code is loaded and constructed. The safe pattern is a fixed allow-list: input selects only from names the program already chose. This lesson pairs with pack rule DPK-SAST-749, which flags the lexical shape Class.forName( on one line. The rule is line-based and cannot prove data flow, so every hit is review-required: a constant name is a false positive.",
+  "objectives": [
+    "Explain why a runtime class lookup from input selects code.",
+    "Recognise Class.forName in review and in scan findings, and tell a constant name from an input-driven one.",
+    "Replace the lookup with a fixed allow-list and verify by rescan."
+  ],
+  "practice": {
+    "instruction": "Import the starter file into one of your OWN projects, run a SAST scan, and find rule DPK-SAST-749. Read the finding, confirm where the class name comes from, apply the fix (a fixed allow-list map), upload the fixed file, and run SAST again to verify the finding is no longer observed.",
+    "targetRuleId": "DPK-SAST-749",
+    "starterFiles": [
+      {
+        "path": "PluginLoader.java",
+        "content": "// SYNTHETIC learning fixture (not production code).\npublic class PluginLoader {\n    public Object load(String name) throws Exception {\n        return Class.forName(name).getDeclaredConstructor().newInstance();\n    }\n}\n"
+      }
+    ],
+    "fixInstruction": "Replace the name lookup with a fixed map of allowed names to classes, and reject any other name.",
+    "fixedFiles": [
+      {
+        "path": "PluginLoader.java",
+        "content": "// SYNTHETIC learning fixture (not production code).\nimport java.util.Map;\n\npublic class PluginLoader {\n    private static final Map<String, Class<?>> PLUGINS = Map.of(\"csv\", CsvPlugin.class, \"json\", JsonPlugin.class);\n\n    public Object load(String name) throws Exception {\n        Class<?> type = PLUGINS.get(name);\n        if (type == null) {\n            throw new IllegalArgumentException(\"unknown plugin\");\n        }\n        return type.getDeclaredConstructor().newInstance();\n    }\n}\n"
+      }
+    ]
+  },
+  "quiz": [
+    {
+      "prompt": "Why does a class lookup from input need an allow-list?",
+      "options": [
+        "The lookup then selects which code is loaded, so input must not choose freely",
+        "Class names load more slowly than map keys",
+        "Java does not allow Class.forName with a string"
+      ],
+      "answerIndex": 0,
+      "explanation": "The name decides the code that runs. A fixed map limits input to names the program already chose."
+    },
+    {
+      "prompt": "What does DPK-SAST-749 prove when it fires?",
+      "options": [
+        "That the name comes from untrusted input",
+        "That a Class.forName call is on that line; the reviewer must confirm where the name comes from",
+        "That the class is malicious"
+      ],
+      "answerIndex": 1,
+      "explanation": "The rule is lexical. It flags the call shape only, so the reviewer confirms the data source."
+    }
+  ]
+}

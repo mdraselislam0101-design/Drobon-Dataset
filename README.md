@@ -23,10 +23,10 @@ What lives where (by design — proven in `docs/SCOPE.md` by inventorying every 
 - **Production-data lock in force**: catalog expansion (GHSA/OSV/CVE/KEV/EPSS/…) is blocked until the authorized production stage — see `docs/INGESTION_PLAN.md`. The seed below is preserved as-is and assessed read-only.
 - **100 reviewed GHSA seed records** (50 npm + 50 pypi), imported 2026-10-14 via `scripts/import-ghsa.mjs` — reviewed advisories only, withdrawn excluded, every record with source URL + retrieval time.
 - **3 synthetic fixtures** (`*/samples/`, `DROBON-SAMPLE-###`) proving format/validator behavior; they assert nothing about the real world.
-- **18 starter pack rules** (8 SAST + 4 secrets + 6 DAST), all original Drobon content with executable example tests — no proprietary rule was copied from any commercial tool, ever.
-- **18 remediation entries** — one per pack rule, enforced by consistency tests (no finding without guidance).
-- **17 CWE knowledge entries** in our own words (all 15 app-referenced CWEs + 2 pack-only), each linking its canonical MITRE page; every CWE reference in packs/remediation must resolve here (enforced).
-- **8 audience starters**: 3 executable lessons (Student), 3 assessment templates (Security Professional), 2 passive-only engagement templates (Pentester).
+- **888 pack rules** (743 SAST + 89 secrets + 56 DAST), all original Drobon content with executable example tests — no proprietary rule was copied from any commercial tool, ever.
+- **888 remediation entries** — one per pack rule, enforced by consistency tests (no finding without guidance).
+- **48 CWE knowledge entries** in our own words (all 16 app-referenced CWEs + 32 pack-only), each linking its canonical MITRE page; every CWE reference in packs/remediation resolves here (enforced; see REQ-CWE-01 in `docs/REQUIREMENTS_MATRIX.json`).
+- **10 audience starters**: 5 executable lessons (Student contract; 2 are developer-focused `lsn_dev_*`), 3 assessment templates (Security Professional), 2 passive-only engagement templates (Pentester).
 - **OSV importer** (`scripts/import-osv.mjs`) for open aggregated data (mapping covered by fixture tests; live import needs network to api.osv.dev).
 - Coverage is a **growing seed, never a completeness claim**: an empty result means "not in this dataset", never "not vulnerable" (HONESTY.md rule 5).
 

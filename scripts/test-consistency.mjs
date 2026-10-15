@@ -29,7 +29,7 @@
  *
  * Usage: node scripts/test-consistency.mjs
  */
-import { appendFileSync, cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { appendFileSync, cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -299,6 +299,72 @@ const staleParsed = parseSeedCounts('**5 real records** (2 npm + 3 pypi)\n**1 fi
 assert(
   staleParsed !== null && staleParsed.real !== actualSeed.real,
   'negative: count parser surfaces stale numbers for comparison',
+);
+
+// --- 6b. pack/remediation/CWE count lines + retired cell reservations -------------------
+// Count-sync tripwire: README pack, remediation and CWE counts must equal the tree.
+// Manifest cells without a rule file must be exactly the retired reservations
+// listed in docs/ASSET_METHODOLOGY.md (IDs are reserved, never reused).
+const ruleIdsOnDisk = new Set(
+  ['sast', 'secrets', 'dast'].flatMap((kind) =>
+    readdirSync(join(ROOT, 'packs', kind, 'v1', 'rules')).map((file) => file.replace(/\.json$/, '')),
+  ),
+);
+const readmeText = readFileSync(join(ROOT, 'README.md'), 'utf8');
+const packLine = /\*\*(\d+) pack rules\*\* \((\d+) SAST \+ (\d+) secrets \+ (\d+) DAST\)/.exec(readmeText);
+const remediationLine = /\*\*(\d+) remediation entries\*\*/.exec(readmeText);
+const cweLine = /\*\*(\d+) CWE knowledge entries\*\*/.exec(readmeText);
+const countPrefix = (prefix) => [...ruleIdsOnDisk].filter((id) => id.startsWith(prefix)).length;
+const actualCounts = {
+  packTotal: ruleIdsOnDisk.size,
+  packSast: countPrefix('DPK-SAST-'),
+  packSecrets: countPrefix('DPK-SEC-'),
+  packDast: countPrefix('DPK-DAST-'),
+  remediation: readdirSync(join(ROOT, 'knowledge', 'remediation')).filter((f) => f.endsWith('.json')).length,
+  cwe: readdirSync(join(ROOT, 'knowledge', 'cwe')).filter((f) => f.endsWith('.json')).length,
+};
+assert(
+  packLine !== null && remediationLine !== null && cweLine !== null,
+  'count-sync: README keeps the pack, remediation and CWE count lines',
+);
+if (packLine !== null && remediationLine !== null && cweLine !== null) {
+  const readmeCounts = {
+    packTotal: Number(packLine[1]),
+    packSast: Number(packLine[2]),
+    packSecrets: Number(packLine[3]),
+    packDast: Number(packLine[4]),
+    remediation: Number(remediationLine[1]),
+    cwe: Number(cweLine[1]),
+  };
+  const drifted = Object.keys(actualCounts).filter((key) => readmeCounts[key] !== actualCounts[key]);
+  assert(
+    drifted.length === 0,
+    'count-sync: README pack/remediation/CWE counts match the tree',
+    drifted.map((key) => `${key}: README ${readmeCounts[key]} vs tree ${actualCounts[key]}`).join('; '),
+  );
+}
+const staleCountLine = /\*\*5 pack rules\*\* \((\d+) SAST \+ (\d+) secrets \+ (\d+) DAST\)/.exec(
+  '**5 pack rules** (1 SAST + 2 secrets + 2 DAST)',
+);
+assert(
+  staleCountLine !== null && Number(staleCountLine[1]) + Number(staleCountLine[2]) + Number(staleCountLine[3]) === 5,
+  'negative: count-sync parser reads the split form of the pack line',
+);
+const assetMethodology = readFileSync(join(ROOT, 'docs', 'ASSET_METHODOLOGY.md'), 'utf8');
+const retiredHeader = /Retired reservations \((\d+)\):/.exec(assetMethodology);
+const retiredIds = assetMethodology.slice(retiredHeader?.index ?? 0).split(/\n\n/)[0].match(/DPK-(?:SAST|SEC|DAST)-\d+/g) ?? [];
+const manifestCells = JSON.parse(readFileSync(join(ROOT, 'data', 'asset-cells', '.manifest.json'), 'utf8')).cells;
+const missingRuleCells = Object.values(manifestCells)
+  .map((cell) => cell.ruleId)
+  .filter((id) => !ruleIdsOnDisk.has(id))
+  .sort();
+assert(retiredHeader !== null, 'retired-reservations: ASSET_METHODOLOGY.md documents the retired cell IDs');
+assert(
+  retiredHeader !== null &&
+    Number(retiredHeader[1]) === retiredIds.length &&
+    retiredIds.slice().sort().join(',') === missingRuleCells.join(','),
+  'retired-reservations: manifest cells without rule files equal the documented retired list',
+  `documented ${retiredIds.length}, manifest-missing ${missingRuleCells.length}`,
 );
 
 // --- 7. negative: invalid CWE fixtures rejected --------------------------------------
@@ -800,6 +866,188 @@ assert(
   'positive: leak scanner stays silent on safe documentation lines',
   scannerFalseAlarms.join(' | '),
 );
+
+// --- generator fail-loud guard + quarantine invariant (Pump 3) ------------------
+// The live quarantine list must stay empty. A sandboxed generator run with one cell
+// that the schema rejects (languages[] "shell-posix") must exit non-zero and touch no
+// file: previously generated assets are never silently removed.
+const quarantineLive = readJson(join(ROOT, 'data', 'asset-cells', 'quarantine.json'));
+assert(
+  Array.isArray(quarantineLive.quarantined) && quarantineLive.quarantined.length === 0,
+  'invariant: data/asset-cells/quarantine.json lists zero quarantined cells',
+  JSON.stringify(quarantineLive.quarantined ?? null).slice(0, 200),
+);
+{
+  const guardRoot = mkdtempSync(join(tmpdir(), 'drobon-genguard-'));
+  cpSync(ROOT, guardRoot, {
+    recursive: true,
+    filter: (src) => !/[\\/]\.git([\\/]|$)/.test(src) && !/[\\/]node_modules([\\/]|$)/.test(src),
+  });
+  const countFiles = (dir) => readdirSync(dir, { withFileTypes: true }).reduce((n, e) => {
+    const full = join(dir, e.name);
+    return n + (e.isDirectory() ? countFiles(full) : 1);
+  }, 0);
+  const before = countFiles(join(guardRoot, 'packs')) + countFiles(join(guardRoot, 'knowledge'));
+  const manifestBefore = readFileSync(join(guardRoot, 'data', 'asset-cells', '.manifest.json'), 'utf8');
+  const cellPath = join(guardRoot, 'data', 'asset-cells', 'sast-calls-1.json');
+  const cellText = readFileSync(cellPath, 'utf8');
+  const key = '"shell": [';
+  assert(cellText.includes(key), 'guard: sandbox cell carries the shell key to mutate');
+  writeFileSync(cellPath, cellText.replace(key, '"shell-posix": ['));
+  let exitCode = 0;
+  let stderrText = '';
+  try {
+    execFileSync(process.execPath, [join(guardRoot, 'scripts', 'generate-assets.mjs')], { cwd: guardRoot, stdio: 'pipe' });
+  } catch (err) {
+    exitCode = typeof err.status === 'number' ? err.status : -1;
+    stderrText = String(err.stderr ?? '');
+  }
+  const after = countFiles(join(guardRoot, 'packs')) + countFiles(join(guardRoot, 'knowledge'));
+  const manifestAfter = readFileSync(join(guardRoot, 'data', 'asset-cells', '.manifest.json'), 'utf8');
+  assert(
+    exitCode !== 0 && stderrText.includes('quarantined'),
+    'guard: generator exits non-zero when a cell is quarantined',
+    `exit=${exitCode} stderr=${stderrText.slice(0, 120)}`,
+  );
+  assert(
+    after === before && manifestAfter === manifestBefore,
+    'guard: quarantined run removes or writes no assets and leaves the manifest untouched',
+    `files ${before}->${after}`,
+  );
+  rmSync(guardRoot, { recursive: true, force: true });
+}
+
+// --- SAST duplicate review tripwires (Pump 3) -----------------------------------
+// Groups = SAST rules that share an identical pattern source + flags. Same-language
+// repeats are true duplicates and must stay at zero. The other two counts are review
+// snapshots: a change means a new overlap appeared and must be re-classified, not
+// silently accepted (see docs/PACKS.md, "SAST duplicate review").
+{
+  const sastDir = join(ROOT, 'packs', 'sast', 'v1', 'rules');
+  const bySignature = new Map();
+  for (const file of readdirSync(sastDir).filter((f) => f.endsWith('.json')).sort()) {
+    const rule = JSON.parse(readFileSync(join(sastDir, file), 'utf8'));
+    const key = JSON.stringify((rule.patterns ?? []).map((p) => [p.source, p.flags ?? '']));
+    if (!bySignature.has(key)) bySignature.set(key, []);
+    bySignature.get(key).push(rule);
+  }
+  const groups = [...bySignature.values()].filter((g) => g.length >= 2);
+  const trueDuplicates = groups.filter((g) => new Set(g.map((r) => (r.languages ?? ['-'])[0])).size < g.length);
+  const crossCwe = groups.filter((g) => new Set(g.map((r) => r.cwe)).size > 1);
+  const possibleOverlap = groups.filter((g) => g.length >= 6);
+  assert(
+    trueDuplicates.length === 0,
+    'dup-review: no SAST rule pair shares both a pattern and a language (TRUE_DUPLICATE = 0)',
+    trueDuplicates.map((g) => g.map((r) => r.id).join('/')).join(' | '),
+  );
+  assert(
+    groups.length === 31 && groups.reduce((a, g) => a + g.length, 0) === 86,
+    'dup-review snapshot: 31 shared-pattern groups / 86 rules (re-classify if changed)',
+    `${groups.length} groups / ${groups.reduce((a, g) => a + g.length, 0)} rules`,
+  );
+  assert(
+    crossCwe.length === 13,
+    'dup-review snapshot: 13 shared-pattern groups disagree on CWE (owner CWE review open)',
+    `${crossCwe.length} groups`,
+  );
+  assert(
+    possibleOverlap.length === 4,
+    'dup-review snapshot: 4 POSSIBLE_OVERLAP groups (>=6 rules on a bare function name)',
+    `${possibleOverlap.length} groups`,
+  );
+}
+
+// --- four-UserType matrix tripwire (Pump 3) ------------------------------------
+// docs/AUDIENCES.md §5 carries one machine-readable `matrix-counts:` line; it must
+// equal the recomputed tree counts (no hand-typed numbers).
+{
+  const audText = readFileSync(join(ROOT, 'docs', 'AUDIENCES.md'), 'utf8');
+  const line = /^matrix-counts: (.+)$/m.exec(audText);
+  const jsonFiles = (dir) => readdirSync(join(ROOT, dir)).filter((f) => f.endsWith('.json'));
+  const lessonFiles = jsonFiles('learning/lessons');
+  const expected = {
+    devLessons: lessonFiles.filter((f) => f.startsWith('lsn_dev_')).length,
+    studentLessons: lessonFiles.length,
+    securityTemplates: jsonFiles('assessments/templates').length,
+    pentesterTemplates: jsonFiles('engagements').length,
+    remediation: jsonFiles('knowledge/remediation').length,
+    patterns: jsonFiles('knowledge/patterns').length,
+    records: jsonFiles('knowledge/records').length,
+    cwe: jsonFiles('knowledge/cwe').length,
+  };
+  const declared = line === null ? {} : Object.fromEntries(line[1].split(' ').map((kv) => kv.split('=')));
+  const drift = Object.keys(expected).filter((k) => String(expected[k]) !== declared[k]);
+  assert(line !== null, 'matrix: docs/AUDIENCES.md keeps the matrix-counts tripwire line');
+  assert(
+    drift.length === 0 && Object.keys(declared).length === Object.keys(expected).length,
+    'matrix: AUDIENCES matrix counts equal the tree',
+    drift.map((k) => `${k}: doc ${declared[k]} vs tree ${expected[k]}`).join('; '),
+  );
+}
+
+// --- SAST language reachability tripwire (Pump 4) -------------------------------
+// docs/PACKS.md carries the Main App catalog snapshot (id -> maturity) and one
+// `reachability-counts:` line. The engine analyzes only PARTIAL, CONFIG_ANALYSIS and
+// FULL families and gates a rule on rule.languages.includes(family) (no alias map).
+// The counts are recomputed here from the rule files; the Main App is not read.
+{
+  const doc = readFileSync(join(ROOT, 'docs', 'PACKS.md'), 'utf8');
+  const block = /^```app-language-catalog\n([\s\S]*?)\n```$/m.exec(doc);
+  let catalog = null;
+  try {
+    catalog = block ? JSON.parse(block[1]) : null;
+  } catch {
+    catalog = null;
+  }
+  assert(
+    catalog !== null && Object.keys(catalog).length === 53,
+    'reachability: docs/PACKS.md keeps the 53-id app catalog snapshot',
+  );
+  const analyzed = new Set(
+    Object.keys(catalog ?? {}).filter((id) => ['PARTIAL', 'CONFIG_ANALYSIS', 'FULL'].includes(catalog[id])),
+  );
+  const sastDir = join(ROOT, 'packs', 'sast', 'v1', 'rules');
+  const sastRules = readdirSync(sastDir).filter((f) => f.endsWith('.json')).map((f) => readJson(join(sastDir, f)));
+  let fully = 0;
+  let partial = 0;
+  let unreachable = 0;
+  let noLanguages = 0;
+  const ids = new Set();
+  for (const rule of sastRules) {
+    if (!Array.isArray(rule.languages)) {
+      noLanguages++;
+      continue;
+    }
+    rule.languages.forEach((id) => ids.add(id));
+    const ok = rule.languages.filter((id) => analyzed.has(id)).length;
+    if (ok === rule.languages.length) fully++;
+    else if (ok > 0) partial++;
+    else unreachable++;
+  }
+  const intersect = [...ids].filter((id) => catalog !== null && Object.hasOwn(catalog, id)).length;
+  const got = { fully, partial, unreachable, noLanguages, ids: ids.size, intersect };
+  const line = /^reachability-counts: (.+)$/m.exec(doc);
+  const declared = line === null ? {} : Object.fromEntries(line[1].split(' ').map((kv) => kv.split('=')));
+  const drift = Object.keys(got).filter((k) => String(got[k]) !== declared[k]);
+  assert(line !== null, 'reachability: docs/PACKS.md keeps the reachability-counts tripwire line');
+  assert(
+    drift.length === 0 && Object.keys(declared).length === Object.keys(got).length,
+    'reachability: PACKS.md reachability counts equal the SAST rules',
+    drift.map((k) => `${k}: doc ${declared[k]} vs tree ${got[k]}`).join('; '),
+  );
+
+  // Pump 4 mapping regression: `hcl` is not a language id the engine can match; the
+  // Terraform / HCL family is `terraform`. No SAST rule or pattern may carry `hcl`.
+  const patDir = join(ROOT, 'knowledge', 'patterns');
+  const patterns = readdirSync(patDir).filter((f) => f.endsWith('.json')).map((f) => readJson(join(patDir, f)));
+  const hclRules = sastRules.filter((r) => (r.languages ?? []).includes('hcl')).map((r) => r.id);
+  const hclPatterns = patterns.filter((p) => (p.targets ?? []).includes('hcl')).map((p) => p.id);
+  assert(
+    hclRules.length === 0 && hclPatterns.length === 0,
+    'reachability: no SAST rule or pattern uses the unreachable id `hcl` (mapped to terraform)',
+    `rules: ${hclRules.join(', ')}; patterns: ${hclPatterns.join(', ')}`,
+  );
+}
 
 // --- summary --------------------------------------------------------------------
 const total = passed + failed;

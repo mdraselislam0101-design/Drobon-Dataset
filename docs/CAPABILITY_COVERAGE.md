@@ -9,14 +9,14 @@ name the script that re-verifies the claim on every run.
 | Capability (app evidence) | Verdict | Dataset position | Machine check |
 |---|---|---|---|
 | SCA matching (`sca/provider.ts assess`) | REQUIRED | 100-record validated seed; breadth blocked | `validate.mjs`, `check-vectors.mjs` |
-| SAST detection (50 self-contained rules) | SUPPLEMENTAL | 22 original rules for a planned loader | `validate-packs.mjs`, `test-packs.mjs` |
-| Secrets detection (6 self-contained rules) | SUPPLEMENTAL | 8 original shape-only rules | `validate-packs.mjs`, `test-packs.mjs` |
-| DAST observation (8 passive checks) | SUPPLEMENTAL | 10 original passive checks | `validate-packs.mjs`, `test-packs.mjs` |
-| CWE classification (16 app-referenced ids) | REQUIRED | 20 entries (16 + pack-only 693/614/1004/1275) | `validate-cwe.mjs`, pin check |
-| Remediation content (app computes status) | REQUIRED | 40/40 pack-rule entries, content-only | `validate-audiences.mjs`, consistency |
-| Lessons (internal catalog, loader-future) | SUPPLEMENTAL | 3 lessons, practice validator-executed | `validate-audiences.mjs` |
-| Assessment templates (loader-future) | SUPPLEMENTAL | 3 templates, never pre-authorize | `validate-audiences.mjs` |
-| Engagement aids (no app consumer) | SUPPLEMENTAL | 2 standalone passive-only aids | `validate-audiences.mjs` |
+| SAST detection (app catalog-gated engine) | SUPPLEMENTAL | 743 Dataset rules (`DPK-SAST-*`); 500 fully reachable by Main App catalog ids, 217 with no analyzed tag (PACKS.md Pump 4) | `validate-packs.mjs`, `test-packs.mjs`, `test-consistency.mjs` (reachability) |
+| Secrets detection (shape-only) | SUPPLEMENTAL | 89 Dataset rules (`DPK-SEC-*`); no app secrets pack consumer | `validate-packs.mjs`, `test-packs.mjs` |
+| DAST observation (app: 8 hard-coded `DG-DAST-001..008` in `apps/api/src/scans/dast/rules.ts`, code not data) | SUPPLEMENTAL | 56 Dataset rules over 7 closed check types (loader-future; no app consumer of `packs/dast`) | `validate-packs.mjs`, `test-packs.mjs` (DAST evaluator rows) |
+| CWE classification (app-referenced ids) | REQUIRED | 48 entries in `knowledge/cwe/` (count re-derived Pump 4; app-referenced subset NOT re-counted) | `validate-cwe.mjs`, `test-consistency.mjs` |
+| Remediation content (app computes status) | REQUIRED | 888 remediation files, one per pack rule (Pump 4 count) | `validate-audiences.mjs`, `test-consistency.mjs` |
+| Lessons (internal catalog, loader-future) | SUPPLEMENTAL | 5 lessons (2 `lsn_dev_*`, 3 `lsn_pack_*`), practice validator-executed | `validate-audiences.mjs` |
+| Assessment templates (loader-future) | SUPPLEMENTAL | 3 templates, never pre-authorize (count re-derived Pump 4) | `validate-audiences.mjs` |
+| Engagement aids (no app consumer) | SUPPLEMENTAL | 2 standalone passive-only aids (count re-derived Pump 4) | `validate-audiences.mjs` |
 | SBOM data | NOT_REQUIRED | app emits CycloneDX 1.5 from inventory | - (absence re-grepped per audit) |
 | License intelligence | NOT_REQUIRED | inference out of product scope | - |
 | CVSS / threat intel / KEV / EPSS | NOT_REQUIRED | no fields; lock forbids feeds | - |
@@ -29,4 +29,7 @@ name the script that re-verifies the claim on every run.
 
 No schema or compatibility changes are required on the dataset side: record
 bounds, enums, and the record-to-advisory projection mirror the app contracts
-exactly (re-verified 2026-10-14). Re-verify this table at each app re-check.
+(verified 2026-10-14 at `c32c797`; NOT re-verified in Pump 4). Pump 4 re-derived the
+dataset counts above from the tree on 2026-10-15; app-side claims were not re-read
+except the DAST evaluator and the SAST language catalog (`c32c797`). Re-verify this
+table at each app re-check.
