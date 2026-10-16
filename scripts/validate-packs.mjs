@@ -612,7 +612,7 @@ function validateSastRule(record) {
     } else {
       record['languages'].forEach((entry, index) => {
         if (typeof entry !== 'string' || !LANGUAGE_PATTERN.test(entry)) {
-          errors.push(`languages[${index}]: must match ^[a-z][a-z0-9]{0,31}$ and exist in the app language catalog`);
+          errors.push(`languages[${index}]: must match ^[a-z][a-z0-9]{0,31}$ (app-catalog reachability is tracked separately in docs/PACKS.md)`);
         }
       });
     }
