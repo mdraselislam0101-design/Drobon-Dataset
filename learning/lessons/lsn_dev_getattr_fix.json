@@ -1,0 +1,51 @@
+{
+  "schemaVersion": "drobon.learning.lesson/v1",
+  "id": "lsn_dev_getattr_fix",
+  "title": "Replacing getattr with a dispatch table",
+  "summary": "See rule DPK-SAST-751 fire on a synthetic Python service, replace getattr with a dispatch table, and verify the finding is gone on rescan.",
+  "concept": "getattr looks up an attribute by name. When the name comes from a request or other input, the caller can reach any attribute of the object, including ones the service never meant to expose. The safe pattern is a dispatch table: a dictionary that maps only the names the program chose to the handlers it wants to run. This lesson pairs with pack rule DPK-SAST-751, which flags the lexical shape getattr( on one line. The rule cannot prove data flow, so a getattr with a constant name is a false positive that the reviewer should note.",
+  "objectives": [
+    "Explain why a name-based attribute lookup exposes more than intended.",
+    "Recognise getattr in review and in scan findings.",
+    "Replace the lookup with a dispatch table and verify by rescan."
+  ],
+  "practice": {
+    "instruction": "Import the starter file into one of your OWN projects, run a SAST scan, and find rule DPK-SAST-751. Read the finding, confirm where the action name comes from, apply the fix (a dispatch table of allowed actions), upload the fixed file, and run SAST again to verify the finding is no longer observed.",
+    "targetRuleId": "DPK-SAST-751",
+    "starterFiles": [
+      {
+        "path": "report_service.py",
+        "content": "# SYNTHETIC learning fixture (not production code).\nclass ReportService:\n    def run(self, action):\n        handler = getattr(self, action)\n        return handler()\n"
+      }
+    ],
+    "fixInstruction": "Replace getattr with a dictionary of allowed action names to handlers, and reject any other name.",
+    "fixedFiles": [
+      {
+        "path": "report_service.py",
+        "content": "# SYNTHETIC learning fixture (not production code).\nclass ReportService:\n    def _daily(self):\n        return \"daily report\"\n\n    def _weekly(self):\n        return \"weekly report\"\n\n    def run(self, action):\n        handlers = {\"daily\": self._daily, \"weekly\": self._weekly}\n        handler = handlers.get(action)\n        if handler is None:\n            raise ValueError(\"unknown action\")\n        return handler()\n"
+      }
+    ]
+  },
+  "quiz": [
+    {
+      "prompt": "Why is a dispatch table safer than getattr with a request value?",
+      "options": [
+        "The table holds only the names you chose, so input cannot reach other attributes",
+        "A table is always faster",
+        "getattr is not allowed in Python 3"
+      ],
+      "answerIndex": 0,
+      "explanation": "A dispatch table limits input to the keys you wrote. getattr resolves any attribute name the object has."
+    },
+    {
+      "prompt": "What is the right check after a fix?",
+      "options": [
+        "Rescan and confirm the rule no longer fires on the fixed file",
+        "Delete the rule from the scan",
+        "Skip the rescan if the code runs"
+      ],
+      "answerIndex": 0,
+      "explanation": "A rescan shows the finding is gone for the reviewed code path. Running the code alone does not show that."
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-052",
+  "title": "Django debug page disclosed in a response",
+  "description": "The response body carries a Django debug page. Debug output discloses code paths, versions, and internal state that help an attacker plan. This check reads one observed body and confirms the marker. Development-only output and production exposure look the same in one response.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-489",
+  "category": "debug-exposure",
+  "remediation": "Disable debug output in production and return a generic error page (a generic error page with a correlation ID).",
+  "limitation": "Marker text check on one body: it cannot tell development output from production exposure, and a quoted marker in documentation can match.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "DEBUG\\s*=\\s*True"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 500,
+        "headers": {
+          "content-type": "text/html"
+        },
+        "body": "You're seeing this error because you have <code>DEBUG = True</code>."
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 500,
+        "headers": {
+          "content-type": "text/html"
+        },
+        "body": "<code>DEBUG = False</code> in production."
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-0905"
+  ]
+}

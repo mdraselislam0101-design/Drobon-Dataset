@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-766",
+  "title": "SQL built by concatenation (apex) — review required",
+  "description": "A apex query call assembles SQL from parts: Database.querys*([^)]*+. If any part is untrusted input, the query structure itself is attacker-controlled. This lexical rule flags the assembly; the reviewer confirms every part is trusted or parameterizes it.",
+  "severity": "HIGH",
+  "cwe": "CWE-89",
+  "category": "sql-injection",
+  "remediation": "Parameterize with Database.queryWithBinds in user mode so input stays data; never interpolate values into SQL text.",
+  "limitation": "Lexical, line-based: any concatenated query matches, including trusted assembly. Input trust needs human review.",
+  "languages": [
+    "apex"
+  ],
+  "patterns": [
+    {
+      "source": "Database\\.query\\s*\\([^)]*\\+"
+    }
+  ],
+  "tests": [
+    {
+      "line": "Database.query('SELECT Id FROM Account WHERE Name = ' + name)",
+      "match": true
+    },
+    {
+      "line": "# audit: Database.query('SELECT Id FROM Account WHERE Name = ' + name) present",
+      "match": true
+    },
+    {
+      "line": "Database.queryWithBinds(QUERY, bindMap, AccessLevel.USER_MODE)",
+      "match": false
+    },
+    {
+      "line": "# verified: Database.queryWithBinds(QUERY, bindMap, AccessLevel.USER_MODE)",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-0922"
+  ]
+}

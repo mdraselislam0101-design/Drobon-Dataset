@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-799",
+  "title": "Request input written to a log call (java) — review required",
+  "description": "Code in java passes request-derived input to a log call. Line breaks and separators in that input can forge extra log entries or corrupt the log format, which hides activity and misleads the reviewer. This lexical rule flags the call; the reviewer confirms the value is neutralized before it is logged.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-117",
+  "category": "log-forging",
+  "remediation": "Encode or strip control characters from request values before logging, and log them as a quoted, structured field. Keep the request value out of the message template.",
+  "limitation": "Lexical, line-based: flags a request accessor on the same line as a log call. A value copied to a variable on an earlier line is not seen.",
+  "languages": [
+    "java"
+  ],
+  "patterns": [
+    {
+      "source": "\\blog(?:ger)?\\.(?:info|warn|warning|error|debug|severe|fine|log)\\s*\\([^\\n]*\\b(?:request|req)\\.getParameter\\s*\\("
+    }
+  ],
+  "tests": [
+    {
+      "line": "log.info(\"Failed to parse val=\" + request.getParameter(\"val\"));",
+      "match": true
+    },
+    {
+      "line": "# audit: log.info(\"Failed to parse val=\" + request.getParameter(\"val\")); present",
+      "match": true
+    },
+    {
+      "line": "String val = request.getParameter(\"val\");",
+      "match": false
+    },
+    {
+      "line": "# verified: String val = request.getParameter(\"val\");",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-0973"
+  ]
+}

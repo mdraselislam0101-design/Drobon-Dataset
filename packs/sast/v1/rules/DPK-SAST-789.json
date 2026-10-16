@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-789",
+  "title": "Regular expression built from a non-literal (javascript)",
+  "description": "Code in javascript constructs a RegExp from a runtime value. Attacker-chosen patterns can contain nested quantifiers that backtrack exponentially, so one request can occupy the event loop. This lexical rule flags the construction; the reviewer confirms the source is fixed or switches to a literal regex or a vetted pattern table.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1333",
+  "category": "denial-of-service",
+  "remediation": "Use a literal regular expression, or select from a vetted pattern table, or run user patterns through a linear-time engine such as RE2.",
+  "limitation": "Lexical, line-based: flags any non-literal RegExp argument. Whether the value is attacker-controlled is not analysed.",
+  "languages": [
+    "javascript"
+  ],
+  "patterns": [
+    {
+      "source": "new\\s+RegExp\\s*\\(\\s*[^\\s'\"\\x60/)]"
+    }
+  ],
+  "tests": [
+    {
+      "line": "const re = new RegExp(req.query.q);",
+      "match": true
+    },
+    {
+      "line": "# audit: const re = new RegExp(req.query.q); present",
+      "match": true
+    },
+    {
+      "line": "const re = new RegExp(\"^[a-z]+$\");",
+      "match": false
+    },
+    {
+      "line": "# verified: const re = new RegExp(\"^[a-z]+$\");",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-0945"
+  ]
+}

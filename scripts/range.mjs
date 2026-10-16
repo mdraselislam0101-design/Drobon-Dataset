@@ -21,6 +21,7 @@ const NPM_VERSION_PATTERN =
   /^v?(\d+|x|X|\*)(?:\.(\d+|x|X|\*))?(?:\.(\d+|x|X|\*))?(?:-([0-9A-Za-z.-]+))?(?:\+([0-9A-Za-z.-]+))?$/;
 const NPM_EXACT_VERSION = /^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/;
 const PYPI_SPEC_PATTERN = /^(===|==|~=|!=|<=|>=|<|>)\s*(.+)$/;
+const PYPI_LOCAL_FORBIDDEN_OPERATORS = new Set(['~=', '<=', '>=', '<', '>']);
 const PYPI_VERSION_PATTERN =
   /^(\d+!)?\d+(\.\d+)*((a|b|rc|alpha|beta|pre|preview)\d*)?(\.?(post|rev|r)\d*)?(\.?(dev)\d*)?(\+[a-zA-Z0-9]+(\.[a-zA-Z0-9]+)*)?$/i;
 
@@ -115,8 +116,16 @@ function validatePypiRange(range) {
       if (operator !== '==' && operator !== '!=') {
         return `"${spec}": wildcard only allowed with == / !=`;
       }
-      if (!PYPI_VERSION_PATTERN.test(version.slice(0, -2))) {
+      const prefix = version.slice(0, -2);
+      if (!PYPI_VERSION_PATTERN.test(prefix)) {
         return `bad version in "${spec}"`;
+      }
+      // PEP 440 Version matching: "It is invalid to have a prefix match containing a development or local release".
+      if (prefix.includes('+')) {
+        return `"${spec}": prefix match with a local release is invalid`;
+      }
+      if (/\.?dev\d*$/i.test(prefix)) {
+        return `"${spec}": prefix match with a development release is invalid`;
       }
     } else if (operator === '===') {
       if (/\s/.test(version)) {
@@ -125,6 +134,11 @@ function validatePypiRange(range) {
     } else {
       if (!PYPI_VERSION_PATTERN.test(version)) {
         return `bad version in "${spec}"`;
+      }
+      // PEP 440: local version identifiers are NOT permitted in ordered comparisons or ~=.
+      // They are allowed only with == / != / === (the spec's stated exceptions).
+      if (version.includes('+') && PYPI_LOCAL_FORBIDDEN_OPERATORS.has(operator)) {
+        return `"${spec}": local version identifiers are not permitted with ${operator}`;
       }
       if (operator === '~=') {
         const release = version.split(/[a-zA-Z+!]/)[0].split('.');
@@ -307,6 +321,19 @@ function evalNpm(parsed, range) {
 
 const PYPI_PRE_ORDER = { a: 0, alpha: 0, b: 1, beta: 1, rc: 2, pre: 2, preview: 2 };
 
+// PEP 440 normalization of a local label (the part after '+'): case-insensitive, and a purely numeric
+// segment is normalized as an integer (leading zeros removed; '0' stays '0'). Integers inside an
+// alphanumeric segment are NOT normalized ("1.0+foo0100" is already normalized). Compared by strict
+// string equality. The parser accepts only [a-z0-9] segments separated by '.', so '-' and '_' separators
+// are rejected (fail closed) rather than normalized.
+function normalizePypiLocal(label) {
+  return label
+    .toLowerCase()
+    .split('.')
+    .map((segment) => (/^\d+$/.test(segment) ? segment.replace(/^0+(?=\d)/, '') : segment))
+    .join('.');
+}
+
 function parsePypiVersion(version) {
   const trimmed = version.trim();
   const match = /^(\d+!)?(.+?)(\+[a-zA-Z0-9]+(\.[a-zA-Z0-9]+)*)?$/.exec(trimmed);
@@ -345,7 +372,7 @@ function parsePypiVersion(version) {
       }
       return Number(part);
     });
-  return { epoch, release, pre, post, dev };
+  return { epoch, release, pre, post, dev, local: match[3] ? normalizePypiLocal(match[3].slice(1)) : null };
 }
 
 function comparePypi(a, b) {
@@ -377,6 +404,47 @@ function comparePypi(a, b) {
   return compareNumbers(aDev[0], bDev[0]) || compareNumbers(aDev[1], bDev[1]);
 }
 
+function sameEpochRelease(a, b) {
+  if (a.epoch !== b.epoch) {
+    return false;
+  }
+  const length = Math.max(a.release.length, b.release.length);
+  for (let i = 0; i < length; i += 1) {
+    if ((a.release[i] ?? 0) !== (b.release[i] ?? 0)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// '>V' MUST NOT allow a post-release of V unless V is itself a post-release.
+// A post-release of V has V's epoch, release and pre-release segment, plus a post segment.
+function isPostReleaseOfExclusiveBound(candidate, bound) {
+  if (bound.post !== null || candidate.post === null) {
+    return false;
+  }
+  const samePre =
+    candidate.pre === null
+      ? bound.pre === null
+      : bound.pre !== null &&
+        candidate.pre.order === bound.pre.order &&
+        candidate.pre.num === bound.pre.num;
+  return samePre && sameEpochRelease(candidate, bound);
+}
+
+// '<V' MUST NOT allow a pre-release of V unless V is itself a pre-release.
+// Developmental releases are pre-releases too. Only a final V is checked here; a V with a pre, post
+// or dev segment is left to ordering, because this pump does not decide those forms.
+function isPreReleaseOfFinalBound(candidate, bound) {
+  if (bound.pre !== null || bound.post !== null || bound.dev !== null) {
+    return false;
+  }
+  if (candidate.pre === null && candidate.dev === null) {
+    return false;
+  }
+  return sameEpochRelease(candidate, bound);
+}
+
 function evalPypiSpecifier(parsed, spec) {
   const match = PYPI_SPEC_PATTERN.exec(spec.trim());
   if (!match) {
@@ -402,6 +470,20 @@ function evalPypiSpecifier(parsed, spec) {
   }
   const other = parsePypiVersion(version);
   const order = comparePypi(parsed, other);
+  // PEP 440 "Version matching" (D5): with a local label on the specifier, the candidate MUST carry an equal
+  // local label (strict string equality after normalization). Without one, the candidate label is ignored.
+  // '!=' is the inverse of this match. '===' is handled above as plain string equality.
+  if (operator === '==' || operator === '!=') {
+    const hit = order === 0 && (other.local === null || parsed.local === other.local);
+    return operator === '==' ? hit : !hit;
+  }
+  // PEP 440 exclusive ordered comparison (MUST NOT). Only '<' and '>' are affected.
+  if (operator === '>' && isPostReleaseOfExclusiveBound(parsed, other)) {
+    return false;
+  }
+  if (operator === '<' && isPreReleaseOfFinalBound(parsed, other)) {
+    return false;
+  }
   switch (operator) {
     case '==':
       return order === 0;
@@ -440,6 +522,12 @@ function evalPypi(parsed, range) {
  * as "unknown", never as match or no-match.
  */
 export function satisfiesRange(ecosystem, version, range) {
+  // Refuse invalid ranges instead of evaluating them: an invalid range must read as
+  // "unknown" to callers, never as a match or no-match (see header contract).
+  const invalid = validateRange(ecosystem, range);
+  if (invalid !== null) {
+    throw new Error(`invalid range: ${invalid}`);
+  }
   if (ecosystem === 'npm') {
     return evalNpm(parseNpmExact(version), range);
   }

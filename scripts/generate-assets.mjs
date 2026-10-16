@@ -70,12 +70,14 @@ function padRuleNumber(kind, n) {
 }
 
 // --- test execution -----------------------------------------------------------
-function runLineTests(source, flags, tests, denylist) {
+export function runLineTests(source, flags, tests, denylist) {
   // eslint-disable-next-line require-unicode-regexp
   const regex = new RegExp(source, flags ?? '');
   for (const test of tests) {
     let actual = regex.test(test.line);
-    if (actual && denylist.some((d) => test.line.includes(d))) actual = false;
+    // Denylist entries are case-insensitive substrings (docs/PACKS.md; same rule as validate-packs.mjs).
+    const lowered = test.line.toLowerCase();
+    if (actual && denylist.some((d) => lowered.includes(d.toLowerCase()))) actual = false;
     if (actual !== test.match) return `line ${JSON.stringify(test.line.slice(0, 70))}: got ${actual}, want ${test.match}`;
   }
   return null;
@@ -151,7 +153,32 @@ function buildSecretsCell(cell) {
     { line: `${v} = "xy"`, match: false },
     { line: `${v} = "EXAMPLE-NOT-A-REAL-VALUE"`, match: false },
   ];
+  // Optional appended cases (data-declared). They follow the four fixed tests so
+  // existing testIndex pointers never move. Malformed entries fail loudly here.
+  for (const [i, extra] of (cell.build.extraTests ?? []).entries()) {
+    if (typeof extra?.line !== 'string' || typeof extra?.match !== 'boolean') {
+      throw new Error(`secrets extraTests[${i}] must have string line and boolean match`);
+    }
+    tests.push({ line: extra.line, match: extra.match });
+  }
   return { source, flags: undefined, literal: fixture.slice(0, 60), safe: '', tests };
+}
+
+// The dataset's generic `shell` cells also tag the Main App `bash` family
+// (apps/api/src/scans/sast/languages.ts). `shell-posix` is not tagged: its id has a
+// hyphen, which the language id schema (^[a-z][a-z0-9]{0,31}$) rejects by design.
+// Dataset cell languages that name a Main App catalog family under a different id.
+// `hcl` is the HCL/Terraform surface: the catalog's `terraform` family ("Terraform / HCL",
+// extensions .tf/.hcl/.tfvars) is the one the engine gates on. Matching by id alone would
+// leave these rules unreachable (engine gate: rule.languages.includes(file.family)).
+const APP_LANGUAGE_ALIASES = { hcl: 'terraform' };
+
+function appLanguage(lang) {
+  return APP_LANGUAGE_ALIASES[lang] ?? lang;
+}
+
+function languageTags(lang) {
+  return lang === 'shell' ? ['shell', 'bash'] : [appLanguage(lang)];
 }
 
 function buildFiles({ kind, cellId, ruleId, patId, recId, cls, lang, signal, tests, extra }) {
@@ -168,7 +195,7 @@ function buildFiles({ kind, cellId, ruleId, patId, recId, cls, lang, signal, tes
     category: cls.category,
     remediation: fill(cls.remediation, vars),
     limitation: fill(cls.limitation, vars),
-    ...(kind === 'sast' ? { languages: [lang] } : {}),
+    ...(kind === 'sast' ? { languages: languageTags(lang) } : {}),
     ...(kind === 'dast' ? { check: signal.check } : { patterns: [{ source: signal.source, ...(signal.flags ? { flags: signal.flags } : {}) }] }),
     ...(kind === 'secrets' ? { confidence: extra?.confidence ?? cls.confidence ?? 'HIGH', denylist: ['EXAMPLE'], redact: true } : {}),
     tests: kind === 'dast' ? tests.map((t) => ({ observation: t.observation, match: t.match })) : tests,
@@ -179,7 +206,7 @@ function buildFiles({ kind, cellId, ruleId, patId, recId, cls, lang, signal, tes
     schemaVersion: 'drobon.knowledge.pattern/v1',
     id: patId,
     title: `Signal: ${ruleTitle}`,
-    targets: kind === 'dast' ? ['http'] : [lang],
+    targets: kind === 'dast' ? ['http'] : [appLanguage(lang)],
     signal:
       kind === 'dast'
         ? { kind: 'check', check: signal.check }
@@ -330,7 +357,7 @@ function main() {
         return;
       }
     }
-    const sigKey = kind === 'dast' ? `check:${JSON.stringify(signal.check)}` : `re:${lang}::${signal.source}::${signal.flags ?? ''}`;
+    const sigKey = kind === 'dast' ? `check:${JSON.stringify(signal.check)}` : `re:${appLanguage(lang)}::${signal.source}::${signal.flags ?? ''}`;
     if (seenSignals.has(sigKey)) {
       fail(`duplicate signal of ${seenSignals.get(sigKey)}`);
       return;
@@ -400,10 +427,14 @@ function main() {
       kind === 'dast'
         ? { kind: 'check', check: record.check }
         : { kind: 'regex', source: record.patterns[0].source, ...(record.patterns[0].flags ? { flags: record.patterns[0].flags } : {}) };
+    // Secrets examples point at the rule's own test line (ruleRef + testIndex) so
+    // credential-shaped text never leaves packs/secrets; other kinds keep inline lines.
     const examples =
       kind === 'dast'
         ? record.tests.map((t) => ({ observation: t.observation, match: t.match }))
-        : record.tests.map((t) => ({ line: t.line, match: t.match }));
+        : kind === 'secrets'
+          ? record.tests.map((t, testIndex) => ({ ruleRef: record.id, testIndex, match: t.match }))
+          : record.tests.map((t) => ({ line: t.line, match: t.match }));
     const pattern = {
       schemaVersion: 'drobon.knowledge.pattern/v1',
       id: patId,
@@ -454,7 +485,18 @@ function main() {
         signal = { source: built.source, flags: built.flags, literal: built.literal, safe: built.safe };
         tests = built.tests;
       }
-      gateAndStage({ kind: job.kind, cellId: job.cellId, cls: job.cls, lang: job.lang, signal, tests, extra: { name: cell.name, fw: cell.fw, safe: cell.safe, confidence: cell.build?.confidence } });
+      // Per-cell text overrides (documented deprecation, see docs/ASSET_METHODOLOGY.md).
+      // Only whitelisted text fields and severity may be overridden; IDs, kind,
+      // class and sinks are never overridable, so ID allocation is unaffected.
+      const OVERRIDABLE = ['title', 'description', 'remediation', 'limitation', 'why', 'fix', 'verifyT', 'recordDesc', 'risk', 'fp', 'scopeT', 'severity'];
+      const overrides = cell.overrides ?? {};
+      for (const key of Object.keys(overrides)) {
+        if (!OVERRIDABLE.includes(key)) {
+          throw new Error(`cell ${job.cellId}: override "${key}" is not allowed`);
+        }
+      }
+      const effCls = Object.keys(overrides).length > 0 ? { ...job.cls, ...overrides } : job.cls;
+      gateAndStage({ kind: job.kind, cellId: job.cellId, cls: effCls, lang: job.lang, signal, tests, extra: { name: cell.name, fw: cell.fw, safe: cell.safe, confidence: cell.build?.confidence } });
     } else if (job.cls.framing === 'call') {
       const signal = composeCallCell(job.cls, job.lang, job.sink);
       gateAndStage({ kind: job.kind, cellId: job.cellId, cls: job.cls, lang: job.lang, signal, tests: signal.tests, extra: { fw: job.fw } });
@@ -462,6 +504,19 @@ function main() {
       const signal = composeFlagCell(job.cls, job.lang, job.sink);
       gateAndStage({ kind: job.kind, cellId: job.cellId, cls: job.cls, lang: job.lang, signal, tests: signal.tests, extra: { fw: job.fw } });
     }
+  }
+
+  // Fail-loud guard (Pump 3): a quarantined cell means its previously generated
+  // files would be silently removed below (stale-file cleanup) and the run would
+  // still exit 0. Refuse before touching any file; the report goes to stderr.
+  if (quarantined.length > 0) {
+    process.stderr.write(
+      `generate-assets: FAIL — ${quarantined.length} cell(s) quarantined; no files written or removed.\n` +
+        quarantined.map((q) => `  - ${q.cell}: ${q.reason}`).join('\n') +
+        '\n',
+    );
+    process.exitCode = 1;
+    return;
   }
 
   // Write wanted files; remove stale generated files via previous manifest.

@@ -1,0 +1,42 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-067",
+  "title": "PHP error with a source path disclosed",
+  "description": "The response body carries a error. PHP display_errors prints the message with the file path and line number, which reveals server layout.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-209",
+  "category": "debug-exposure",
+  "remediation": "Set display_errors to Off in production and log errors instead (display_errors = Off with log_errors = On).",
+  "limitation": "Pattern on one body: a PHP message quoted in a bug report can match.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?:Fatal error|Warning|Notice|Parse error): [^\\n]{0,200}\\.php on line \\d+"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "content-type": "text/html"
+        },
+        "body": "Warning: Undefined variable $cart in /var/www/html/shop.php on line 14"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "content-type": "text/html"
+        },
+        "body": "Warning: your cart is empty."
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-0964"
+  ]
+}

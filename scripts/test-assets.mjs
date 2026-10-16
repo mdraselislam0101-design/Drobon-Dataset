@@ -6,7 +6,7 @@
  * in both directions; pattern signals must mirror a linked rule's signal.
  * Runs in `npm test`.
  */
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { evalDastCheck } from './validate-packs.mjs';
 import { PATTERN_SCHEMA, RECORD_SCHEMA, validatePattern, validateRecord } from './validate-assets.mjs';
@@ -68,6 +68,33 @@ for (const [id, { file, record }] of records) {
 }
 
 // --- 3. executable: pattern examples run against the signal ------------------
+// A regex example is either an inline `line`, or a pointer `{ ruleRef, testIndex, match }`
+// to a test line already stored in the owning rule file. The pointer form keeps
+// credential-shaped text inside packs/ fixtures only (see test-consistency's gate).
+// Failure messages report the index, never the line text.
+function resolveRegexExample(entry) {
+  if (entry.ruleRef === undefined) {
+    return typeof entry.line === 'string' ? { line: entry.line } : { error: 'regex-kind example needs a line' };
+  }
+  if (typeof entry.ruleRef !== 'string' || !Number.isInteger(entry.testIndex)) {
+    return { error: 'ruleRef example needs a string ruleRef and an integer testIndex' };
+  }
+  const file = ['sast', 'secrets', 'dast']
+    .map((kind) => join(ROOT, 'packs', kind, 'v1', 'rules', `${entry.ruleRef}.json`))
+    .find((candidate) => existsSync(candidate));
+  if (file === undefined) {
+    return { error: `ruleRef ${entry.ruleRef} has no rule file` };
+  }
+  const rule = JSON.parse(readFileSync(file, 'utf8'));
+  const test = Array.isArray(rule.tests) ? rule.tests[entry.testIndex] : undefined;
+  if (test === undefined || typeof test.line !== 'string') {
+    return { error: `${entry.ruleRef} tests[${entry.testIndex}] has no line` };
+  }
+  if (test.match !== entry.match) {
+    return { error: `${entry.ruleRef} tests[${entry.testIndex}] polarity differs from the example` };
+  }
+  return { line: test.line };
+}
 for (const [id, { record }] of patterns) {
   const examples = record.examples ?? [];
   const pos = examples.filter((t) => t.match === true).length;
@@ -84,12 +111,14 @@ for (const [id, { record }] of patterns) {
     }
     if (regex !== null) {
       examples.forEach((entry, index) => {
-        if (typeof entry.line !== 'string') {
-          mismatches.push(`examples[${index}]: regex-kind example needs a line`);
+        const resolved = resolveRegexExample(entry);
+        if (resolved.error !== undefined) {
+          mismatches.push(`examples[${index}]: ${resolved.error}`);
           return;
         }
-        if (regex.test(entry.line) !== entry.match) {
-          mismatches.push(`examples[${index}]: got ${String(regex.test(entry.line))}, want ${String(entry.match)} :: ${entry.line.slice(0, 80)}`);
+        const actual = regex.test(resolved.line);
+        if (actual !== entry.match) {
+          mismatches.push(`examples[${index}]: got ${String(actual)}, want ${String(entry.match)}`);
         }
       });
     }

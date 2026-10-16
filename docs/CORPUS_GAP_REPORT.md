@@ -9,6 +9,8 @@ for planning. 100,000 is a quality-gated target, not a promise: no
 per-category share of it is justified, so no per-category percentages are
 given. Volumes from upstream are unquoted (null / NOT_MEASURED).
 
+> **Status note (2026-10-16): the counts in this file are the 2026-10-14 snapshot and are superseded.** Current counts are in `docs/CORPUS_TARGETS.json` and `docs/PACKS.md`: validated 2058; SAST rules 787; secrets rules 93; DAST rules 64; SCA rule packs 0; SCA advisory-record items 84 (kept separate); verified production 0; publish-ready 0. The 100K framing above predates the per-category 1,000 planning target. Targets are planning goals, not permission to add records. Shopify `shpat_` and the SCA schema remain BLOCKED pending source and owner decisions (see `docs/PACKS.md`, Batch 6 entry).
+
 ## Counted categories (10)
 
 | Category | Actual | Required fields / quality | Identity + dedup | Eligible sources | License eligibility | Validation | Justified target / gap | Limitations + maintenance |

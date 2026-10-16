@@ -1,0 +1,42 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-053",
+  "title": "Java stack frame disclosed in a response",
+  "description": "The response body carries a Java stack frame. Debug output discloses code paths, versions, and internal state that help an attacker plan. This check reads one observed body and confirms the marker. Development-only output and production exposure look the same in one response.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-489",
+  "category": "debug-exposure",
+  "remediation": "Disable debug output in production and return a generic error page (a generic error page with a correlation ID).",
+  "limitation": "Marker text check on one body: it cannot tell development output from production exposure, and a quoted marker in documentation can match.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "\\bat [\\w$.<>]+\\([\\w$]+\\.java:\\d+\\)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 500,
+        "headers": {
+          "content-type": "text/html"
+        },
+        "body": "java.lang.NullPointerException\n\tat com.example.App.run(App.java:42)"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 500,
+        "headers": {
+          "content-type": "text/html"
+        },
+        "body": "The service is at capacity; retry later."
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-0906"
+  ]
+}

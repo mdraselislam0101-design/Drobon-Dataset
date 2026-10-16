@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-781",
+  "title": "Result of send() ignored (solidity) — review required",
+  "description": "A solidity contract calls send() as a bare statement. send() returns false on failure instead of reverting, so ignoring its result lets the contract continue as if the transfer completed. This lexical rule flags a send whose result is not consumed; the reviewer confirms the failure path is handled.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-252",
+  "category": "error-handling",
+  "remediation": "Use a require on the returned bool, or a pull-payment pattern.",
+  "limitation": "Lexical, line-based: a bare send call matches. Calls on a parenthesised receiver, such as payable(x).send, are not matched. A user-defined send method (for example an ERC-777 token send) can match and is not a boolean call.",
+  "languages": [
+    "solidity"
+  ],
+  "patterns": [
+    {
+      "source": "(?<!(?:=|\\(|,|&|\\||!|\\?|return|require|assert|if)\\s*)\\b[A-Za-z_][\\w.\\[\\]]*\\.send\\s*\\("
+    }
+  ],
+  "tests": [
+    {
+      "line": "recipient.send(amount);",
+      "match": true
+    },
+    {
+      "line": "# audit: recipient.send(amount); present",
+      "match": true
+    },
+    {
+      "line": "bool ok = recipient.send(amount);",
+      "match": false
+    },
+    {
+      "line": "# verified: bool ok = recipient.send(amount);",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-0937"
+  ]
+}

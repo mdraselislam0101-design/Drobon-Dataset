@@ -83,6 +83,22 @@
           "type": "missing-response-header",
           "header": "Expect-CT"
         },
+        "overrides": {
+          "title": "Expect-CT header absent (deprecated header, informational)",
+          "description": "Expect-CT is a deprecated response header. Chromium deprecated it from version 107, and browsers enforce Certificate Transparency without it. Its absence does not weaken a current browser. This informational check is kept so the deprecated header is not reintroduced as a requirement.",
+          "remediation": "No action needed. Do not add the deprecated Expect-CT header.",
+          "limitation": "Header-name check on a deprecated header. Absence is not a current weakness.",
+          "why": "Expect-CT is deprecated; its absence does not weaken current browsers.",
+          "fix": [
+            "Do not add the deprecated Expect-CT header."
+          ],
+          "verifyT": "Rescan reports this check as informational; no Expect-CT header is required.",
+          "recordDesc": "Expect-CT is deprecated in current browsers. Its absence is informational and carries no current exposure.",
+          "risk": "Informational: no current exposure from absence; LOW severity.",
+          "fp": "Any deployment: the header is deprecated, so absence is expected.",
+          "scopeT": "Single response: header absence, informational only.",
+          "severity": "LOW"
+        },
         "tests": [
           {
             "observation": {
@@ -895,59 +911,6 @@
         ]
       },
       {
-        "suffix": "csp-noframe",
-        "lang": "http",
-        "name": "CSP without frame-ancestors",
-        "safe": "frame-ancestors 'none'",
-        "check": {
-          "type": "response-header-missing-directive",
-          "header": "Content-Security-Policy",
-          "directive": "frame-ancestors"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Content-Security-Policy": "default-src 'self'"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Content-Security-Policy": "script-src 'self'"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Content-Security-Policy": "default-src 'self'; frame-ancestors 'none'"
-              }
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "http://app.example/",
-              "status": 200,
-              "headers": {
-                "Content-Security-Policy": "frame-ancestors 'self'"
-              }
-            },
-            "match": false
-          }
-        ]
-      },
-      {
         "suffix": "hsts-nosub",
         "lang": "http",
         "name": "HSTS without includeSubDomains",
@@ -1107,5 +1070,291 @@
         ]
       }
     ]
-  }
+  },
+  {
+      "class": "mixed-content",
+      "kind": "dast",
+      "category": "mixed-content",
+      "cwe": "CWE-319",
+      "severity": "MEDIUM",
+      "framing": "custom",
+      "title": "{name} on an HTTPS page",
+      "description": "The HTTPS response references a {name} over cleartext HTTP. Browsers block or warn on active mixed content, but passive resources still cross the network unprotected. This check reads one observed response body and confirms the cleartext reference.",
+      "remediation": "Serve every subresource over HTTPS ({safe}).",
+      "limitation": "Body text check on one response: it matches common markup tags only, not CSS url() or script-built URLs, and it does not prove the browser fetched the resource.",
+      "scopeT": "Single HTTPS response body: confirm no cleartext subresource reference.",
+      "fp": "Markup inside comments or documentation text can match the same tag shape.",
+      "recordDesc": "{name} over cleartext HTTP on an HTTPS page. The remedy is {safe}.",
+      "applicability": "HTTPS pages that reference subresources.",
+      "risk": "Cleartext subresources can be read or altered in transit; MEDIUM severity.",
+      "why": "The HTTPS page references a {name} over http://.",
+      "fix": [
+        "Change every subresource reference to https://.",
+        "Use upgrade-insecure-requests only as a transition aid."
+      ],
+      "verifyT": "Rescan shows no cleartext subresource reference on the page.",
+      "cells": [
+        {
+          "suffix": "http-subresource",
+          "lang": "http",
+          "name": "HTTP subresource",
+          "safe": "HTTPS URLs for every script, style, image, and frame",
+          "check": {
+            "type": "response-body-matches",
+            "valuePattern": "<(?:script|img|link|iframe|audio|video|source)\\b[^>]*\\s(?:src|href)\\s*=\\s*[\"']http://",
+            "requireScheme": "https"
+          },
+          "tests": [
+            {
+              "observation": {
+                "url": "https://app.example/",
+                "status": 200,
+                "headers": {
+                  "content-type": "text/html"
+                },
+                "body": "<script src=\"http://cdn.example/app.js\"></script>"
+              },
+              "match": true
+            },
+            {
+              "observation": {
+                "url": "https://app.example/",
+                "status": 200,
+                "headers": {
+                  "content-type": "text/html"
+                },
+                "body": "<script src=\"https://cdn.example/app.js\"></script>"
+              },
+              "match": false
+            },
+            {
+              "observation": {
+                "url": "http://app.example/",
+                "status": 200,
+                "headers": {
+                  "content-type": "text/html"
+                },
+                "body": "<script src=\"http://cdn.example/app.js\"></script>"
+              },
+              "match": false
+            },
+            {
+              "observation": {
+                "url": "https://app.example/",
+                "status": 200,
+                "headers": {
+                  "content-type": "text/html"
+                },
+                "body": "<html xmlns=\"http://www.w3.org/1999/xhtml\"></html>"
+              },
+              "match": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "class": "debug-exposure",
+      "kind": "dast",
+      "category": "debug-exposure",
+      "cwe": "CWE-489",
+      "severity": "MEDIUM",
+      "framing": "custom",
+      "title": "{name} disclosed in a response",
+      "description": "The response body carries a {name}. Debug output discloses code paths, versions, and internal state that help an attacker plan. This check reads one observed body and confirms the marker. Development-only output and production exposure look the same in one response.",
+      "remediation": "Disable debug output in production and return a generic error page ({safe}).",
+      "limitation": "Marker text check on one body: it cannot tell development output from production exposure, and a quoted marker in documentation can match.",
+      "scopeT": "Single response body: confirm no debug marker is returned.",
+      "fp": "Quoted examples in documentation or log excerpts can match the marker.",
+      "recordDesc": "A {name} in a response body exposes internal detail. The remedy is {safe}.",
+      "applicability": "HTTP responses from application servers and frameworks.",
+      "risk": "Internal paths, versions, and state disclosed to any client; MEDIUM severity.",
+      "why": "The response body carries a {name}.",
+      "fix": [
+        "Turn debug mode off in production.",
+        "Return a generic error with a correlation ID."
+      ],
+      "verifyT": "Rescan shows no debug marker in responses.",
+      "cells": [
+        {
+          "suffix": "python-traceback",
+          "lang": "http",
+          "name": "Python traceback",
+          "safe": "a generic error page with a correlation ID",
+          "check": {
+            "type": "response-body-matches",
+            "valuePattern": "Traceback \\(most recent call last\\)"
+          },
+          "tests": [
+            {
+              "observation": {
+                "url": "https://app.example/",
+                "status": 500,
+                "headers": {
+                  "content-type": "text/html"
+                },
+                "body": "Traceback (most recent call last):\n  File \"app.py\", line 12"
+              },
+              "match": true
+            },
+            {
+              "observation": {
+                "url": "https://app.example/",
+                "status": 200,
+                "headers": {
+                  "content-type": "text/html"
+                },
+                "body": "Recent calls are listed on the dashboard."
+              },
+              "match": false
+            }
+          ]
+        },
+        {
+          "suffix": "java-stack-frame",
+          "lang": "http",
+          "name": "Java stack frame",
+          "safe": "a generic error page with a correlation ID",
+          "check": {
+            "type": "response-body-matches",
+            "valuePattern": "\\bat [\\w$.<>]+\\([\\w$]+\\.java:\\d+\\)"
+          },
+          "tests": [
+            {
+              "observation": {
+                "url": "https://app.example/",
+                "status": 500,
+                "headers": {
+                  "content-type": "text/html"
+                },
+                "body": "java.lang.NullPointerException\n\tat com.example.App.run(App.java:42)"
+              },
+              "match": true
+            },
+            {
+              "observation": {
+                "url": "https://app.example/",
+                "status": 500,
+                "headers": {
+                  "content-type": "text/html"
+                },
+                "body": "The service is at capacity; retry later."
+              },
+              "match": false
+            }
+          ]
+        },
+        {
+          "suffix": "django-debug",
+          "lang": "http",
+          "name": "Django debug page",
+          "safe": "a generic error page with a correlation ID",
+          "check": {
+            "type": "response-body-matches",
+            "valuePattern": "DEBUG\\s*=\\s*True"
+          },
+          "tests": [
+            {
+              "observation": {
+                "url": "https://app.example/",
+                "status": 500,
+                "headers": {
+                  "content-type": "text/html"
+                },
+                "body": "You're seeing this error because you have <code>DEBUG = True</code>."
+              },
+              "match": true
+            },
+            {
+              "observation": {
+                "url": "https://app.example/",
+                "status": 500,
+                "headers": {
+                  "content-type": "text/html"
+                },
+                "body": "<code>DEBUG = False</code> in production."
+              },
+              "match": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "class": "redirect-host-change",
+      "kind": "dast",
+      "category": "open-redirect",
+      "cwe": "CWE-601",
+      "severity": "LOW",
+      "framing": "custom",
+      "title": "Redirect to another host ({name})",
+      "description": "The response redirects to a different host through its {name}. A redirect to another host is not a vulnerability by itself. It becomes one when an attacker chooses the target. This check reads one observed redirect and confirms the host changes.",
+      "remediation": "Redirect only to relative paths or an allow-listed host ({safe}).",
+      "limitation": "Single-response check: it cannot tell whether the target is attacker-controlled. Passive scope only; no redirect is followed.",
+      "scopeT": "Single redirect response: confirm the target host differs from the request host.",
+      "fp": "Intentional redirects to a partner or identity provider are the common accepted case.",
+      "recordDesc": "A redirect through {name} can send users to another host. The remedy is {safe}.",
+      "applicability": "HTTP redirects from web applications.",
+      "risk": "Users sent to another host; severity depends on whether the target is attacker-chosen. LOW here because the check is passive.",
+      "why": "The redirect {name} points to a different host.",
+      "fix": [
+        "Redirect to relative paths.",
+        "Validate the target against an allow-list."
+      ],
+      "verifyT": "Rescan shows the redirect stays on the request host or an allow-listed host.",
+      "cells": [
+        {
+          "suffix": "cross-host",
+          "lang": "http",
+          "name": "Location header",
+          "safe": "a relative path or an allow-listed host",
+          "check": {
+            "type": "response-header-host-differs",
+            "header": "Location"
+          },
+          "tests": [
+            {
+              "observation": {
+                "url": "https://app.example/login",
+                "status": 302,
+                "headers": {
+                  "Location": "https://other.example/home"
+                }
+              },
+              "match": true
+            },
+            {
+              "observation": {
+                "url": "https://app.example/login",
+                "status": 302,
+                "headers": {
+                  "Location": "/home"
+                }
+              },
+              "match": false
+            },
+            {
+              "observation": {
+                "url": "https://app.example/login",
+                "status": 200,
+                "headers": {
+                  "Location": "https://other.example/"
+                }
+              },
+              "match": false
+            },
+            {
+              "observation": {
+                "url": "https://app.example/login",
+                "status": 302,
+                "headers": {
+                  "Location": "https://app.example/x"
+                }
+              },
+              "match": false
+            }
+          ]
+        }
+      ]
+    }
 ]

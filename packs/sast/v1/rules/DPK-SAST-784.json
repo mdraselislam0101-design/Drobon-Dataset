@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-784",
+  "title": "Unchecked size multiplication in malloc (c)",
+  "description": "C code computes an allocation size by multiplying two runtime values inside malloc. If the product wraps around, malloc returns a short buffer and later writes overrun it. This lexical rule flags the multiplication; the reviewer confirms the operands are bounded or switches to calloc(count, size) or a checked product.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-190",
+  "category": "integer-overflow",
+  "remediation": "Check the multiplication before allocating, or use calloc(count, size), which checks the product itself.",
+  "limitation": "Lexical, line-based: flags any multiplication of identifiers inside malloc. Bounds established on earlier lines are not seen.",
+  "languages": [
+    "c"
+  ],
+  "patterns": [
+    {
+      "source": "\\bmalloc\\s*\\(\\s*\\w+\\s*\\*\\s*\\w"
+    }
+  ],
+  "tests": [
+    {
+      "line": "buf = malloc(count * sizeof(int));",
+      "match": true
+    },
+    {
+      "line": "# audit: buf = malloc(count * sizeof(int)); present",
+      "match": true
+    },
+    {
+      "line": "buf = malloc(sizeof(int));",
+      "match": false
+    },
+    {
+      "line": "# verified: buf = malloc(sizeof(int));",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-0940"
+  ]
+}
