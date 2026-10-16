@@ -373,6 +373,37 @@ assert(isSafeNextUrl('https://api.github.com/advisories?page=2') && !isSafeNextU
     'dup-page: identical repeated item collapses to one file (no --2 shard)', files.join(','));
 }
 
+// --- reordered input is deterministic: same accepted set, byte-identical output
+// Dedup/merge path contract (pump Phase 6): reordering the incoming advisory
+// sequence must never change which records are accepted or their bytes —
+// only the processing order may differ.
+{
+  const items = ['GHSA-1111-1111-1111', 'GHSA-2222-2222-2222', 'GHSA-3333-3333-3333', 'GHSA-4444-4444-4444'];
+  const runWith = async (order, outDir) => {
+    const sb = sandbox();
+    const fetchImpl = async () => response(200, order.map((id) => advisory(id)));
+    const summary = await runImport({
+      fetchImpl, ecosystems: ['npm'], outRoot: join(sb, outDir), quarantineRoot: sb, retry: noWait,
+      retrievedAt: '2026-10-14T00:00:00.000Z', batchId: 'reorder-test', limit: 10,
+    });
+    const files = readdirSync(join(sb, outDir, 'npm')).sort();
+    const contents = files.map((f) => [f, readFileSync(join(sb, outDir, 'npm', f), 'utf8')]);
+    return { summary, files, contents };
+  };
+  const forward = await runWith(items, 'a');
+  const shuffled = await runWith([items[2], items[0], items[3], items[1]], 'b');
+  assert(forward.summary.accepted === 4 && shuffled.summary.accepted === 4,
+    'reordered input: same accepted count (4)', `${forward.summary.accepted}/${shuffled.summary.accepted}`);
+  assert(JSON.stringify(forward.files) === JSON.stringify(shuffled.files),
+    'reordered input: identical staged file set', JSON.stringify([forward.files, shuffled.files]));
+  assert(JSON.stringify(forward.contents) === JSON.stringify(shuffled.contents),
+    'reordered input: staged files byte-identical across orderings', '');
+  // Harness self-check: the comparison must be order-sensitive enough to catch
+  // a real divergence (a missing file in one run fails the set comparison).
+  assert(forward.files.length === 4 && forward.files[0] === 'GHSA-1111-1111-1111.json',
+    'reordered input: harness observes the expected four files', forward.files.join(','));
+}
+
 for (const dir of ROOT_SINK) {
   rmSync(dir, { recursive: true, force: true });
 }
