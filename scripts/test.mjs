@@ -70,6 +70,7 @@ const NEGATIVE = {
   'not-an-object.json': 'must be an object',
   'invalid-range.json': 'affected[0].range',
   'invalid-ghsa-id.json': 'GHSA-xxxx-yyyy-zzzz',
+  'duplicate-affected.json': 'exact-duplicate affected entry',
 };
 for (const [name, needle] of Object.entries(NEGATIVE)) {
   const file = join(ROOT, 'test', 'invalid', name);

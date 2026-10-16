@@ -268,6 +268,66 @@ computed.advisoryIds = advisoryIds.size;
   }
 }
 
+// --- 7. COVERAGE_MAP recomputed from rule files (stale-map gate) ------------
+{
+  const map = JSON.parse(read('docs/COVERAGE_MAP.json'));
+  const rulesOf = (family) => readdirSync(join(ROOT, 'packs', family, 'v1', 'rules'))
+    .filter((f) => f.endsWith('.json'))
+    .map((f) => JSON.parse(readFileSync(join(ROOT, 'packs', family, 'v1', 'rules', f), 'utf8')));
+  const sastRules = rulesOf('sast');
+  const secretRules = rulesOf('secrets');
+  const dastRules = rulesOf('dast');
+  const catTally = (rules) => Object.fromEntries([...rules.reduce((m, r) => m.set(r.category, (m.get(r.category) ?? 0) + 1), new Map())].sort((a, b) => (a[0] < b[0] ? -1 : 1)));
+  assert(map.domains.sast.rules === sastRules.length,
+    `coverage-map: sast rules ${map.domains.sast.rules} match recomputed ${sastRules.length}`);
+  assert(map.domains.sast.patterns === sastRules.reduce((n, r) => n + r.patterns.length, 0),
+    'coverage-map: sast pattern total matches recomputed sum');
+  assert(JSON.stringify(map.domains.sast.categories) === JSON.stringify(catTally(sastRules)),
+    'coverage-map: sast category tally matches recomputed');
+  assert(map.domains.sast.languageTagCount === new Set(sastRules.flatMap((r) => r.languages ?? [])).size,
+    'coverage-map: sast language-tag count matches recomputed');
+  assert(map.domains.sast.universalRulesOmittingLanguages === sastRules.filter((r) => !('languages' in r)).length,
+    'coverage-map: universal-rule count matches recomputed');
+  assert(map.domains.secrets.rules === secretRules.length,
+    `coverage-map: secrets rules ${map.domains.secrets.rules} match recomputed ${secretRules.length}`);
+  assert(JSON.stringify(map.domains.secrets.categories) === JSON.stringify(catTally(secretRules)),
+    'coverage-map: secrets category tally matches recomputed');
+  assert(map.domains.dast.rules === dastRules.length,
+    `coverage-map: dast rules ${map.domains.dast.rules} match recomputed ${dastRules.length}`);
+  assert(JSON.stringify(map.domains.dast.categories) === JSON.stringify(catTally(dastRules)),
+    'coverage-map: dast category tally matches recomputed');
+  const checkTally = Object.fromEntries([...dastRules.reduce((m, r) => m.set(r.check.type, (m.get(r.check.type) ?? 0) + 1), new Map())].sort((a, b) => (a[0] < b[0] ? -1 : 1)));
+  assert(JSON.stringify(map.domains.dast.checkTypes) === JSON.stringify(checkTally),
+    'coverage-map: dast check-type tally matches recomputed');
+  // SCA seed tally recomputed exactly like test-consistency counts the corpus.
+  const npmFiles = readdirSync(join(ROOT, 'vuln-intel', 'npm')).filter((f) => f.endsWith('.json'));
+  const pypiFiles = readdirSync(join(ROOT, 'vuln-intel', 'pypi')).filter((f) => f.endsWith('.json'));
+  const items = new Set();
+  const ids = new Set();
+  for (const [dir, files] of [['npm', npmFiles], ['pypi', pypiFiles]]) {
+    for (const f of files) {
+      const raw = JSON.parse(readFileSync(join(ROOT, 'vuln-intel', dir, f), 'utf8'));
+      for (const record of Array.isArray(raw) ? raw : [raw]) {
+        items.add(`${record.source}\u0000${record.id}\u0000${record.ecosystem}\u0000${record.package}`);
+        ids.add(record.id);
+      }
+    }
+  }
+  assert(map.domains.sca.advisorySeedFiles === npmFiles.length + pypiFiles.length,
+    `coverage-map: seed files ${map.domains.sca.advisorySeedFiles} match recomputed ${npmFiles.length + pypiFiles.length}`);
+  assert(map.domains.sca.advisorySeedItems === items.size,
+    `coverage-map: seed identity items ${map.domains.sca.advisorySeedItems} match recomputed ${items.size}`);
+  assert(map.domains.advisory.advisories === ids.size,
+    `coverage-map: unique advisory ids ${map.domains.advisory.advisories} match recomputed ${ids.size}`);
+  assert(Array.isArray(map.blockedExpansions) && map.blockedExpansions.length >= 5
+    && map.blockedExpansions.every((e) => typeof e.status === 'string' && typeof e.nextLegitimateStep === 'string' && e.nextLegitimateStep.length > 0),
+    'coverage-map: every blocked expansion carries status + next legitimate step');
+  assert(map.blockedExpansions.every((e) => e.status.startsWith('BLOCKED_') || e.status.endsWith('_BY_DESIGN') || e.status === 'UNREACHABLE_VOCAB'),
+    'coverage-map: blocked-expansion statuses use honest vocabulary', '');
+  assert(Array.isArray(map.verifiedGaps) && map.verifiedGaps.length >= 3,
+    'coverage-map: verified gaps documented with next legitimate steps');
+}
+
 process.stdout.write(`\ndoc-drift: ${passed} passed, ${failed} failed\n`);
 if (failed > 0) process.exitCode = 1;
 

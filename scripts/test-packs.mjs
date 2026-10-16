@@ -463,6 +463,55 @@ for (const [label, line, match] of GEN_CASES) {
   }
   assert(violations.length === 0, 'metadata: every credential-value secrets rule ships a denylist (or is evidence-only)', violations.join(','));
   assert(secWithEvidenceOmittingDenylist >= 1, 'metadata: evidence-only exemption is exercised by a shipped rule (DPK-SEC-004)');
+  const redactViolations = ruleFiles
+    .filter((file) => file.includes('packs/secrets'))
+    .map((file) => JSON.parse(readFileSync(file, 'utf8')))
+    .filter((rule) => rule.schemaVersion === 'drobon.pack.secrets/v1')
+    .filter((rule) => rule.redact !== true)
+    .map((rule) => rule.id);
+  assert(redactViolations.length === 0, 'redaction contract: all secrets rules promise redact:true', redactViolations.join(','));
+}
+
+// --- DAST malformed-observation robustness -----------------------------------
+// A runtime loader can feed the evaluator anything. The contract is total:
+// evalDastCheck never throws on malformed observations; missing pieces behave
+// as "nothing observed" and the check evaluates false.
+{
+  const MALFORMED = [
+    ['no headers key', { url: 'http://a/', status: 200, body: '' }],
+    ['headers null', { url: 'http://a/', status: 200, body: '', headers: null }],
+    ['headers array', { url: 'http://a/', status: 200, body: '', headers: ['x'] }],
+    ['no body key', { url: 'http://a/', status: 200, headers: {} }],
+    ['url unparseable', { url: 'ht!tp://%%%', status: 200, body: '', headers: {} }],
+    ['url non-string', { url: 42, status: 200, body: '', headers: {} }],
+  ];
+  for (const [label, observation] of MALFORMED) {
+    for (const check of [
+      { type: 'http-url' },
+      { type: 'missing-response-header', header: 'X-Frame-Options' },
+      { type: 'response-header-missing-directive', header: 'Content-Security-Policy', directive: 'frame-ancestors' },
+      { type: 'response-header-matches', header: 'Server', valuePattern: 'nginx' },
+      { type: 'cookie-missing-flag', flag: 'Secure' },
+      { type: 'response-body-matches', valuePattern: 'admin' },
+      { type: 'response-body-matches', valuePattern: 'admin', requireScheme: 'https' },
+      { type: 'response-header-host-differs', header: 'Location' },
+    ]) {
+      let thrown = null;
+      let hit = null;
+      try {
+        hit = evalDastCheck(check, observation);
+      } catch (err) {
+        thrown = err.message;
+      }
+      assert(thrown === null && typeof hit === 'boolean', `dast robustness: ${label} / ${check.type} never throws`, thrown ?? String(hit));
+    }
+  }
+  // Absence of the sensitive header must still be a finding on an otherwise
+  // well-formed observation with a null header map (robustness ≠ vacuous).
+  assert(
+    evalDastCheck({ type: 'missing-response-header', header: 'X-Frame-Options' }, { url: 'https://a/', headers: null }) === true,
+    'dast robustness: missing-header finding survives a null header map',
+  );
 }
 
 // --- summary -----------------------------------------------------------------
