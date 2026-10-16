@@ -21,11 +21,11 @@ engine, usertype, report-outcome, paid-tool benchmark, remaining work.
 
 | Metric | Result | Numerator / Denominator | Evidence |
 |---|---|---|---|
-| **Main App-to-Dataset verified coverage** | **72.8%** | 37.87 pts / 52 dataset-dependent requirements | ledger §5.1 |
+| **Main App-to-Dataset verified coverage** | **72.9%** | 37.89 pts / 52 dataset-dependent requirements | ledger §5.1 (recomputed 2026-10-16 gap-closure pump) |
 | — Dataset-required-only (runtime seam) | 64.2% | 14.76 / 23 | SCA-intel + CWE + remediation rows |
 | SAST (packs) | 68.8% | 6.19 / 9 | 792 rules; reachability 549/792 |
 | SCA / vuln-intel | 66.7% | 9.33 / 14 | 100-file seed; 0/100,000 breadth |
-| Secrets | 81.9% | 4.91 / 6 | 93 rules; 42/46 provider classes |
+| Secrets | 82.2% | 4.93 / 6 | 94 rules (DPK-SEC-105 Shopify); 43/46 provider classes |
 | DAST | 75.0% | 3.00 / 4 | 65 rules / 7 check types |
 | Other: Remediation | 50.0% | 1.00 / 2 | 950 files; loader missing |
 | Other: Findings/CWE | 66.7% | 2.00 / 3 | 61 CWE entries; version pin open |
@@ -33,8 +33,8 @@ engine, usertype, report-outcome, paid-tool benchmark, remaining work.
 | Other: Reports | 84.3% | 8.43 / 10 | 13 report outcomes, see §4 |
 | DEVELOPER workflow | 73.5% | 18.38 / 25 | tagged ledger rows |
 | STUDENT workflow | 72.5% | 12.33 / 17 | lessons+remediation+findings |
-| SECURITY_PROFESSIONAL | 75.5% | 27.17 / 36 | assessments+intel+packs |
-| PENTESTER | 72.6% | 15.25 / 21 | engagement aids+dast packs+intel |
+| SECURITY_PROFESSIONAL | 75.5% | 27.20 / 36 | assessments+intel+packs |
+| PENTESTER | 72.7% | 15.27 / 21 | engagement aids+dast packs+intel |
 | **Intended report-outcome coverage** | **72.5%** | 9.43 / 13 report types (A–G subreqs) | §4 |
 | **End-to-end verified capability** | **63.5%** | 33 / 52 fully verified | evidence-chain complete rows |
 | **Dataset quality/test verification** | **100%** | 950/950 rule packs with ≥1 executed positive+negative test; 100/100 advisory rows schema+provenance valid; 16/16 interop vectors | pack-tests 3,966; validate 103; check-vectors |
@@ -62,7 +62,7 @@ product gating, not intelligence coverage (see §6).
 |---|---|---|---|---|---|---|---|---|
 | SAST | 6 | 2 | 0 | 1 | 0 | 0 | 68.8% (6.19/9) | pack loader (GAP-005); reachability 549/792 |
 | SCA-intel | 9 | 2 | 1 | 0 | 2 | 0 | 66.7% (9.33/14) | breadth 0/100k (GAP-001); license (GAP-002) |
-| Secrets | 4 | 1 | 0 | 1 | 0 | 0 | 81.9% (4.91/6) | loader (GAP-006); Shopify evidence (GAP-012) |
+| Secrets | 4 | 1 | 0 | 1 | 0 | 0 | 82.2% (4.93/6) | loader (GAP-006); probe-gap rules owner-gated (GAP-013) |
 | DAST | 3 | 0 | 0 | 1 | 0 | 0 | 75.0% (3.00/4) | loader (GAP-007) |
 | Remediation | 1 | 0 | 0 | 1 | 0 | 0 | 50.0% (1.00/2) | merge-loader (GAP-008) |
 | Findings/CWE | 2 | 0 | 0 | 0 | 1 | 0 | 66.7% (2.00/3) | CWE version pin (BLK-016) |
@@ -133,7 +133,7 @@ intelligence; they are excluded from every coverage denominator above.
 | Category | Files | Valid | Unique usable | Dup/overlap | Provenance complete | Tested pos+neg | In functioning engine | E2E verified | Production authorized |
 |---|---|---|---|---|---|---|---|---|---|
 | SAST rules | 792 | 792 | 792 | 0 | original content (n/a) | 792 | 0 (loader future) | via pack-tests | 0 |
-| Secrets rules | 93 | 93 | 93 | 0 | original | 93 | 0 (loader future) | pack-tests | 0 |
+| Secrets rules | 94 | 94 | 94 | 0 | original | 94 | 0 (loader future) | pack-tests | 0 |
 | DAST rules | 65 | 65 | 65 | 0 | original | 65 | 0 (loader future) | pack-tests | 0 |
 | SCA rule packs | 0 | – | – | – | – | – | – | – | – (planning target 1,000; owner-gated) |
 | Advisory records | 100 files | 100 | 84 items / 78 ids | 9 split shards (0 conflicts) | 100/100 | vectors 16/16 | dataset-side matcher (simulator) | check-vectors | **0 (lock)** |
@@ -200,14 +200,51 @@ owner gates move or the app workstream lands the loaders.
 
 ---
 
+## 12. Gap-closure pump addendum (2026-10-16, this repository state)
+
+Safe authorized work completed on top of the baseline audit (all verified):
+
+1. **GAP-012 CLOSED — Shopify `shpat_` rule authored (DPK-SEC-105).** Official
+   source evidence obtained: Shopify's own developer docs set
+   `adminApiAccessToken` to an `shpat_`-prefixed value
+   (https://shopify.dev/docs/api/shopify-app-remix/latest/guide-custom-apps,
+   retrieved 2026-10-16). Body format is NOT officially documented — the rule
+   lower-bounds the body at 32 alphanumerics and says so in its limitation;
+   `shpss_`/`shpca_` are pinned as non-matches (different token types). No
+   category change was needed (`service-token` retained). Generated via
+   `data/asset-cells/secrets-4.json`; full count cascade updated (secrets 94,
+   pack total 951, patterns 951, remediation 951, records 911, Σvalidated
+   2074). Resolves COVERAGE_MAP BE-1 and BLOCKER_REGISTER BLK-020
+   (`resolvedForRecord` BLK-R03).
+2. **GAP-015 CLOSED — flow-DSL design documentation** (`docs/PACK_FLOW_DSL_PROPOSAL.md`,
+   PROPOSAL ONLY; no schema change; owner decision surface A/B/C).
+3. **GAP-025 CLOSED — lesson content**: `lsn_pack_shelltrue_fix` (Dropping
+   shell=True, paired with DPK-SAST-003; practice files validator-executed;
+   lessons 5 → 6).
+4. **Stale-claim fixes**: app secrets rule count corrected 7 → 6
+   (DG-SEC-001..006, recounted from source); `docs/AUDIENCES.md` prose drift
+   fixed (911/52 → 951/61); CAPABILITY_COVERAGE method note re-dated.
+5. Coverage recomputed (dashboard above reflects post-closure numbers); the
+   baseline remains in git history (`640808e`).
+
+**Remaining classes after closure:** (a) owner/license/production
+authorization — 19 open blockers (`docs/BLOCKER_REGISTER.json`), P0s GAP-001..004;
+(b) Main App workstream (class E) — 5 loaders + engine/mapping work
+(GAP-005..011, 017..020, 023); (c) evidence/owner-gated growth (GAP-013/014/016/
+022/024). No safe authorized Dataset-side work remains in this workspace.
+
+---
+
 ## Final verdict (exactly one)
 
-> ## BLOCKED — OWNER/LICENSE/PRODUCTION AUTHORIZATION REQUIRED
+> ## BLOCKED — TECHNICAL GAPS AND OWNER AUTHORIZATION REQUIRED
 
-Technical implementation completion is 78.8% and every P0 gap is authorization-
-blocked (license grant, per-source redistribution, production stage approval;
-0/100,000 verified-production). Coverage gaps also remain (72.8% verified of the
-dataset-dependent scope; loaders are class-E app work), but the binding
-constraint on completion and release is the owner/license/production gate set.
-This verdict applies to the defined scope in this document; it is not a claim
-of vulnerability-detection completeness or parity with any commercial product.
+Both blocker classes remain after all safe authorized work was completed this
+pump: (1) owner/license/production authorization (19 open blockers; G6/G8/G16/G17
+blocked; 0/100,000 verified-production; release NO-GO), and (2) genuine
+technical gaps at product level — Main App loaders/integration (class E, 6
+rows), flow-rule expressibility (R-SAST-P-04), reachability (R-SAST-P-03),
+CVSS/OWASP/prioritization + exploitability outputs (R-REP-05/06). Verified
+Dataset-dependent coverage stands at 72.9% (37.89/52) post-closure. This
+verdict applies to the defined scope in this document; it is not a claim of
+vulnerability-detection completeness or parity with any commercial product.

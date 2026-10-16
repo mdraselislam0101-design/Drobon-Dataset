@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "drobon.learning.lesson/v1",
+  "id": "lsn_pack_shelltrue_fix",
+  "title": "Dropping shell=True in subprocess calls",
+  "summary": "See rule DPK-SAST-003 fire on a synthetic Python report job that runs a subprocess with shell=True, replace the shell string with an argument list, and verify the finding is gone on rescan.",
+  "concept": "Passing shell=True to subprocess runs the command string through the system shell. Any attacker-influenced part of that string can add shell metacharacters (;, &&, |, backticks) and turn one intended command into several — command injection. The safe pattern is an argument list with shell=False: the arguments are passed to the program directly and are never re-parsed as shell syntax. This lesson pairs with pack rule DPK-SAST-003, which flags the lexical shape shell=True on one line. The rule cannot prove data flow, so a fully static command with shell=True still fires and the reviewer should note that.",
+  "objectives": [
+    "Explain why a shell command string is an injection surface when any part is dynamic.",
+    "Recognise shell=True in review and in scan findings.",
+    "Replace the shell string with an argument list and verify by rescan."
+  ],
+  "practice": {
+    "instruction": "Import the starter file into one of your OWN projects, run a SAST scan, and find rule DPK-SAST-003. Read the finding, confirm which part of the command is dynamic, apply the fix (an argument list with shell=False), upload the fixed file, and run SAST again to verify the finding is no longer observed.",
+    "targetRuleId": "DPK-SAST-003",
+    "starterFiles": [
+      {
+        "path": "report_job.py",
+        "content": "# SYNTHETIC learning fixture (not production code).\nimport subprocess\n\ndef export_report(date):\n    return subprocess.run(f\"report --date {date}\", shell=True)\n"
+      }
+    ],
+    "fixInstruction": "Pass the program and its arguments as a list with shell=False so the date value is never parsed as shell syntax.",
+    "fixedFiles": [
+      {
+        "path": "report_job.py",
+        "content": "# SYNTHETIC learning fixture (not production code).\nimport subprocess\n\ndef export_report(date):\n    return subprocess.run([\"report\", \"--date\", date], shell=False)\n"
+      }
+    ]
+  },
+  "quiz": [
+    {
+      "prompt": "Why is an argument list with shell=False safer than a shell command string?",
+      "options": [
+        "Arguments are passed to the program directly and are not re-parsed as shell syntax",
+        "An argument list is always faster",
+        "shell=False disables all security checks"
+      ],
+      "answerIndex": 0,
+      "explanation": "With shell=False the date value stays one argument; with shell=True the shell would split and interpret metacharacters inside it."
+    },
+    {
+      "prompt": "What does a DPK-SAST-003 finding prove?",
+      "options": [
+        "A shell=True flag is present and the command deserves review — not that the code is exploitable",
+        "The code is definitely exploitable",
+        "The value is a live credential"
+      ],
+      "answerIndex": 0,
+      "explanation": "The rule is lexical: it flags the flag itself. Review decides whether any part of the command is attacker-influenced."
+    },
+    {
+      "prompt": "What is the right check after the fix?",
+      "options": [
+        "Rescan and confirm the rule no longer fires on the fixed file",
+        "Delete the rule from the scan",
+        "Skip the rescan if the code runs"
+      ],
+      "answerIndex": 0,
+      "explanation": "A rescan shows the finding is gone for the reviewed code path. Running the code alone does not show that."
+    }
+  ]
+}
