@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-773",
+  "title": "Dynamic SQL executed from text (mysql) — review required",
+  "description": "A mysql routine executes a statement built as text. If any part of that text is untrusted input, the statement structure is attacker-controlled. This lexical rule flags the execution; the reviewer confirms the text is constant or parameterized.",
+  "severity": "HIGH",
+  "cwe": "CWE-89",
+  "category": "sql-injection",
+  "remediation": "Use a constant statement with ? placeholders and EXECUTE USING, and keep input out of the statement text.",
+  "limitation": "Lexical, line-based: any dynamic execution form matches, including constant statements.",
+  "languages": [
+    "sql"
+  ],
+  "patterns": [
+    {
+      "source": "\\bPREPARE\\s+\\w+\\s+FROM\\s+CONCAT\\s*\\("
+    }
+  ],
+  "tests": [
+    {
+      "line": "PREPARE stmt FROM CONCAT('SELECT * FROM t WHERE id = ', @id);",
+      "match": true
+    },
+    {
+      "line": "# audit: PREPARE stmt FROM CONCAT('SELECT * FROM t WHERE id = ', @id); present",
+      "match": true
+    },
+    {
+      "line": "PREPARE stmt FROM 'SELECT * FROM t WHERE id = ?';",
+      "match": false
+    },
+    {
+      "line": "# verified: PREPARE stmt FROM 'SELECT * FROM t WHERE id = ?';",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-0929"
+  ]
+}

@@ -48,18 +48,18 @@ One shared intelligence base serves all four user types. Membership is by direct
 
 | UserType | Dataset content it draws on | Count (tree) | Status |
 |---|---|---|---|
-| DEVELOPER | Remediation guidance (shared, every pack rule); developer lessons `lsn_dev_*` | remediation 901; dev lessons 2 | Data present; no app consumer |
+| DEVELOPER | Remediation guidance (shared, every pack rule); developer lessons `lsn_dev_*` | remediation 909; dev lessons 2 | Data present; no app consumer |
 | STUDENT | Lessons `learning/lessons/*` (includes the 2 `lsn_dev_*` lessons; no audience field) | lessons 5 | Data present; overlap with DEVELOPER by design until audience field is approved |
-| SECURITY_PROFESSIONAL | Assessment templates `tmpl_*`; shared packs (SAST 761 / secrets 89 / DAST 51) and CWE knowledge | templates 3; CWE 50 | Data present; templates never pre-declare authorization |
+| SECURITY_PROFESSIONAL | Assessment templates `tmpl_*`; shared packs (SAST 769 / secrets 89 / DAST 51) and CWE knowledge | templates 3; CWE 50 | Data present; templates never pre-declare authorization |
 | PENTESTER | Passive engagement templates `eng_*` (no offensive content) | engagement templates 2 | Data present; passive-only by design |
 
-Shared base (all four types): packs 901 rules, patterns 901 (all referenced by a rule), records 861 (cover 861 patterns; the 40 legacy patterns without a record file fall under the open records/patterns retention decision), remediation 901, CWE 50.
+Shared base (all four types): packs 909 rules, patterns 909 (all referenced by a rule), records 869 (cover 869 patterns; the 40 legacy patterns without a record file fall under the open records/patterns retention decision), remediation 909, CWE 50.
 
 **Honest state:** no UserType has a live app consumer from this repo. Dataset presence does not imply Main App engine or loader capability (see the language-reachability snapshot in `docs/PACKS.md`).
 
 Tripwire line (format is load-bearing; read by `test-consistency`):
 
-matrix-counts: devLessons=2 studentLessons=5 securityTemplates=3 pentesterTemplates=2 remediation=901 patterns=901 records=861 cwe=50
+matrix-counts: devLessons=2 studentLessons=5 securityTemplates=3 pentesterTemplates=2 remediation=909 patterns=909 records=869 cwe=50
 
 **Gaps (not closed in Pump 3):**
 - DEVELOPER has 2 executable lessons; a broader developer curriculum needs new lesson files, which require explicit approval (new-file rule).
@@ -80,14 +80,14 @@ Read-only audit of the four UserTypes against the working tree and the Main App 
 
 | UserType | Checked | Result |
 |---|---|---|
-| DEVELOPER | `knowledge/remediation/` (901 files); lessons `lsn_dev_*` (2 files) | Counts match the tripwire. Remediation is shared, not forked. No app consumer. |
+| DEVELOPER | `knowledge/remediation/` (909 files); lessons `lsn_dev_*` (2 files) | Counts match the tripwire. Remediation is shared, not forked. No app consumer. |
 | STUDENT | `learning/lessons/` (5 files) | Counts match. The 2 `lsn_dev_*` lessons also sit in this set. No lesson has an `audience` or `userType` field (0 of 5), so overlap with DEVELOPER stays by design until the owner decides the audience field (§2). |
 | SECURITY_PROFESSIONAL | `assessments/templates/` (3); CWE (48) | Counts match. All three templates list only `scope`: `inScopeHosts`, `outOfScopeHosts`, and notes. None pre-declares authorization. Notes say "review-only" or "passive only". |
 | PENTESTER | `engagements/` (2) | Counts match. Checklists require written authorization, check that the target matches the declared scope exactly, and say that anything beyond passive reads needs a new written scope. No offensive or exploit content was found. A grep for `exploit`, `payload`, and `attack` in `engagements/` and `assessments/templates/` matched one benign triage phrase in `tmpl_api_review.json` ("exploitability notes"), and nothing else. |
 
 Cross-check against the Main App (read-only): `packages/shared/src/authz.ts` `USER_TYPES` = `DEVELOPER`, `STUDENT`, `SECURITY_PROFESSIONAL`, `PENTESTER`. The four Dataset types match these four ids. The Main App treats UserType as classification, not authorization, and the Dataset does the same.
 
-Shared base for all four types (Batch 2 counts): packs 901 rules; patterns 901; records 861 (the 40 record-less patterns are the legacy set, see `docs/PACKS.md` Pump 5); remediation 901; CWE 50.
+Shared base for all four types (Batch 2 counts): packs 909 rules; patterns 909; records 869 (the 40 record-less patterns are the legacy set, see `docs/PACKS.md` Pump 5); remediation 909; CWE 50.
 
 Gaps found and left open (owner decisions, see `docs/OWNER_ACTION_REQUIRED.md` §6):
 - Lesson audience field (none exists; DEVELOPER and STUDENT overlap).

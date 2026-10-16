@@ -169,7 +169,9 @@ Catalog snapshot (Main App `apps/api/src/scans/sast/languages.ts`, commit `c32c7
 - Catalog: 53 ids. Dataset language ids: 108 (Pump 4, after `hcl` alias applied). Intersect: 41. Dataset ids not in catalog: 67.
 - SAST rules (743), counted per rule against analyzed catalog ids: fully reachable (every tag analyzed) 500; partially reachable 25; no analyzed tag 217; no `languages` field 1 (DPK-SAST-004, universal convention).
 
-reachability-counts: fully=518 partial=25 unreachable=217 noLanguages=1 ids=112 intersect=45
+reachability-counts: fully=526 partial=25 unreachable=217 noLanguages=1 ids=112 intersect=45
+
+- SAST Batch 2 (2026-10-16): 8 new language-specific rules, SAST 761 -> 769. Added: Elixir Ecto/Repo SQL concatenation, VB.NET `SqlCommand` concatenation with `&`, PL/SQL `EXECUTE IMMEDIATE ... ||`, MySQL `PREPARE ... FROM CONCAT(`, Erlang `erl_eval:expr` code evaluation, Erlang and Apex MD5 selection, Erlang `verify_none` and Dart `badCertificateCallback` TLS verification off. Excluded as duplicates of an existing rule: Erlang `rand:uniform` (random-3), Erlang `verify_none` (tls-langs). Not added: Apex `Math.random` and VB.NET `New Random` (same detection as Java and C#). Solidity `unchecked` and `send` need new CWE records (CWE-190, CWE-252), which are not in `knowledge/cwe/`.
 
 - Rule-tag view: the `universal` tag appears on 10 rules and is not a catalog id, so those rules fall into partial or unreachable.
 - Mapped in Pump 4: `hcl` → `terraform` (Terraform / HCL family, extensions `.tf`/`.hcl`/`.tfvars`). Applied to DPK-SAST-018, 021, 325–333, 711–717 (18 rules) and their 18 patterns via the generator's `APP_LANGUAGE_ALIASES` and count-asserted legacy splices. Rule-level change: +18 fully reachable (16 generated + 2 legacy), −2 partial, −16 unreachable.

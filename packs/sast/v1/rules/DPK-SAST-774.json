@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-774",
+  "title": "Dynamic SQL executed from text (plsql) — review required",
+  "description": "A plsql routine executes a statement built as text. If any part of that text is untrusted input, the statement structure is attacker-controlled. This lexical rule flags the execution; the reviewer confirms the text is constant or parameterized.",
+  "severity": "HIGH",
+  "cwe": "CWE-89",
+  "category": "sql-injection",
+  "remediation": "Use bind variables passed with USING, and keep input out of the statement text.",
+  "limitation": "Lexical, line-based: any dynamic execution form matches, including constant statements.",
+  "languages": [
+    "sql"
+  ],
+  "patterns": [
+    {
+      "source": "\\bEXECUTE\\s+IMMEDIATE\\s+'[^']*'\\s*\\|\\|"
+    }
+  ],
+  "tests": [
+    {
+      "line": "EXECUTE IMMEDIATE 'SELECT * FROM users WHERE id = ' || v_id;",
+      "match": true
+    },
+    {
+      "line": "# audit: EXECUTE IMMEDIATE 'SELECT * FROM users WHERE id = ' || v_id; present",
+      "match": true
+    },
+    {
+      "line": "EXECUTE IMMEDIATE 'SELECT * FROM users WHERE id = :1' USING v_id;",
+      "match": false
+    },
+    {
+      "line": "# verified: EXECUTE IMMEDIATE 'SELECT * FROM users WHERE id = :1' USING v_id;",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-0930"
+  ]
+}
