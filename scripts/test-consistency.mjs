@@ -941,8 +941,8 @@ assert(
     trueDuplicates.map((g) => g.map((r) => r.id).join('/')).join(' | '),
   );
   assert(
-    groups.length === 31 && groups.reduce((a, g) => a + g.length, 0) === 86,
-    'dup-review snapshot: 31 shared-pattern groups / 86 rules (re-classify if changed)',
+    groups.length === 32 && groups.reduce((a, g) => a + g.length, 0) === 88,
+    'dup-review snapshot: 32 shared-pattern groups / 88 rules (re-classify if changed; Batch 4 Kotlin/Java language split reviewed)',
     `${groups.length} groups / ${groups.reduce((a, g) => a + g.length, 0)} rules`,
   );
   assert(

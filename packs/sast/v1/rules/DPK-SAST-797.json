@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-797",
+  "title": "PyYAML load without a safe loader (python)",
+  "description": "Code in python calls yaml.load without a Loader argument. The default loader can construct arbitrary Python objects from tags, so untrusted YAML can execute code. This lexical rule flags the call; the reviewer confirms trust or uses yaml.safe_load(stream).",
+  "severity": "HIGH",
+  "cwe": "CWE-502",
+  "category": "unsafe-deserialization",
+  "remediation": "Use yaml.safe_load(stream), or pass Loader=SafeLoader explicitly.",
+  "limitation": "Lexical, line-based: flags any yaml.load call on a line with no Loader= argument. Loader= set on a later line is not seen.",
+  "languages": [
+    "python"
+  ],
+  "patterns": [
+    {
+      "source": "\\byaml\\.load\\s*\\((?![^\\n]*Loader\\s*=)"
+    }
+  ],
+  "tests": [
+    {
+      "line": "config = yaml.load(stream)",
+      "match": true
+    },
+    {
+      "line": "# audit: config = yaml.load(stream) present",
+      "match": true
+    },
+    {
+      "line": "config = yaml.load(stream, Loader=yaml.SafeLoader)",
+      "match": false
+    },
+    {
+      "line": "# verified: config = yaml.load(stream, Loader=yaml.SafeLoader)",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-0953"
+  ]
+}

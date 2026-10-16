@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-786",
+  "title": "Shared static SimpleDateFormat (java)",
+  "description": "A Java class keeps a SimpleDateFormat in a static field. SimpleDateFormat is not thread-safe, so concurrent requests that format or parse through the shared instance can corrupt each other's data. This lexical rule flags the static field; the reviewer moves the formatter to DateTimeFormatter or a per-call formatter.",
+  "severity": "LOW",
+  "cwe": "CWE-567",
+  "category": "race-condition",
+  "remediation": "Create a formatter per call, or wrap one in a ThreadLocal, or use java.time.format.DateTimeFormatter, which is immutable.",
+  "limitation": "Lexical, line-based: flags a static SimpleDateFormat field regardless of whether it is ever shared across threads.",
+  "languages": [
+    "java"
+  ],
+  "patterns": [
+    {
+      "source": "\\bstatic\\s(?:final\\s)?SimpleDateFormat\\b"
+    }
+  ],
+  "tests": [
+    {
+      "line": "private static final SimpleDateFormat FMT = new SimpleDateFormat(\"yyyy-MM-dd\");",
+      "match": true
+    },
+    {
+      "line": "# audit: private static final SimpleDateFormat FMT = new SimpleDateFormat(\"yyyy-MM-dd\"); present",
+      "match": true
+    },
+    {
+      "line": "private static final ThreadLocal<SimpleDateFormat> FMT = ThreadLocal.withInitial(() -> new SimpleDateFormat(\"yyyy-MM-dd\"));",
+      "match": false
+    },
+    {
+      "line": "# verified: private static final ThreadLocal<SimpleDateFormat> FMT = ThreadLocal.withInitial(() -> new SimpleDateFormat(\"yyyy-MM-dd\"));",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-0942"
+  ]
+}

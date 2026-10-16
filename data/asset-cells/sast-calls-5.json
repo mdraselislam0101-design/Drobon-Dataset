@@ -1,0 +1,382 @@
+[
+  {
+    "class": "pickle-load",
+    "kind": "sast",
+    "category": "unsafe-deserialization",
+    "cwe": "CWE-502",
+    "severity": "HIGH",
+    "framing": "call",
+    "title": "Pickle deserialization ({lang})",
+    "description": "Python code reconstructs objects from pickle bytes with {sink}. Pickle runs callables recorded in the byte stream while loading, so bytes from an untrusted source can execute code. This lexical rule flags the load; the reviewer confirms the source is trusted or switches to {safe}.",
+    "remediation": "Replace pickle with {safe}. If pickle must remain for internal state, authenticate the bytes with an HMAC key and verify it before loading.",
+    "limitation": "Lexical, line-based: matches the pickle load call regardless of where the bytes came from.",
+    "scopeT": "Single-line lexical match on pickle load calls in Python code.",
+    "fp": "Pickles written and read by the same trusted process are the common false positive.",
+    "recordDesc": "Python pickle loads execute callables named in the byte stream, so bytes from an attacker are code execution. The remedy is {safe}.",
+    "applicability": "Python code that loads pickle data from files, caches, queues, or network sources; single-line lexical scope.",
+    "risk": "Remote code execution when untrusted bytes reach a pickle load; HIGH severity.",
+    "why": "Python pickle loads run code embedded in the byte stream ({sink}).",
+    "fix": [
+      "Switch the format to {safe} with explicit field mapping.",
+      "If pickle is required for internal state, authenticate the bytes with an HMAC before loading."
+    ],
+    "verifyT": "Rescan shows no pickle load on untrusted input.",
+    "sinks": {
+      "python:pickle": [
+        "pickle\\.loads?",
+        "pickle.load",
+        "JSON or a typed schema with validation"
+      ]
+    }
+  },
+  {
+    "class": "yaml-unsafe-load",
+    "kind": "sast",
+    "category": "unsafe-deserialization",
+    "cwe": "CWE-502",
+    "severity": "HIGH",
+    "framing": "flag",
+    "title": "PyYAML load without a safe loader ({lang})",
+    "description": "Code in {lang} calls yaml.load without a Loader argument. The default loader can construct arbitrary Python objects from tags, so untrusted YAML can execute code. This lexical rule flags the call; the reviewer confirms trust or uses {safe}.",
+    "remediation": "Use {safe}, or pass Loader=SafeLoader explicitly.",
+    "limitation": "Lexical, line-based: flags any yaml.load call on a line with no Loader= argument. Loader= set on a later line is not seen.",
+    "scopeT": "Single-line lexical match on yaml.load calls without a Loader argument.",
+    "fp": "Trusted, build-time configuration files are the common false positive.",
+    "recordDesc": "PyYAML yaml.load without a safe loader can build arbitrary objects from YAML tags. Untrusted YAML can run code. The remedy is {safe}.",
+    "applicability": "Python code parsing YAML from files, requests, or stored data; single-line lexical scope.",
+    "risk": "Code execution from attacker-supplied YAML; HIGH severity.",
+    "why": "PyYAML yaml.load without a safe loader builds arbitrary Python objects.",
+    "fix": [
+      "Use {safe} for untrusted YAML.",
+      "Pass Loader=SafeLoader explicitly when yaml.load is kept."
+    ],
+    "verifyT": "Rescan shows every yaml.load on untrusted input names a safe loader.",
+    "sinks": {
+      "python:pyyaml": [
+        "\\byaml\\.load\\s*\\((?![^\\n]*Loader\\s*=)",
+        "config = yaml.load(stream)",
+        "config = yaml.load(stream, Loader=yaml.SafeLoader)",
+        "yaml.safe_load(stream)"
+      ]
+    }
+  },
+  {
+    "class": "java-xmldecoder",
+    "kind": "sast",
+    "category": "unsafe-deserialization",
+    "cwe": "CWE-502",
+    "severity": "HIGH",
+    "framing": "call",
+    "title": "XMLDecoder object deserialization ({lang})",
+    "description": "Java code builds an XMLDecoder with {sink}. XMLDecoder instantiates objects and invokes methods named in the XML document, so untrusted XML reaches code execution. This lexical rule flags the construction; the reviewer confirms trust or switches to {safe}.",
+    "remediation": "Replace XMLDecoder with {safe}. Never feed XMLDecoder data that an external party controls.",
+    "limitation": "Lexical, line-based: matches the constructor regardless of the input source.",
+    "scopeT": "Single-line lexical match on XMLDecoder construction in Java code.",
+    "fp": "XMLDecoder reading files the application wrote itself is the common false positive.",
+    "recordDesc": "XMLDecoder turns XML elements into object construction and method calls. Attacker-controlled XML is a known code execution route. The remedy is {safe}.",
+    "applicability": "Java code that decodes XML documents from files, requests, or stored data; single-line lexical scope.",
+    "risk": "Remote code execution when untrusted XML reaches XMLDecoder; HIGH severity.",
+    "why": "XMLDecoder builds objects and calls methods from XML, so untrusted XML runs code ({sink}).",
+    "fix": [
+      "Parse data with {safe} against a fixed schema.",
+      "Keep XMLDecoder only for trusted, application-written files."
+    ],
+    "verifyT": "Rescan shows no XMLDecoder on untrusted input.",
+    "sinks": {
+      "java:beans": [
+        "new\\s+XMLDecoder",
+        "new XMLDecoder",
+        "a schema-validated JAXB unmarshaller"
+      ]
+    }
+  },
+  {
+    "class": "java-spel-parse",
+    "kind": "sast",
+    "category": "code-injection",
+    "cwe": "CWE-917",
+    "severity": "HIGH",
+    "framing": "call",
+    "title": "Expression parsing ({lang})",
+    "description": "Java code parses an expression string with {sink}. Spring Expression Language evaluates method calls and property access, so an expression built from untrusted input can run code on the server. This lexical rule flags the parse call; the reviewer confirms the string is fixed or uses {safe}.",
+    "remediation": "Parse only fixed expressions. Evaluate user-influenced data through {safe} and keep user input out of the expression text.",
+    "limitation": "Lexical, line-based: matches the parse call regardless of where the string came from.",
+    "scopeT": "Single-line lexical match on expression-parser calls in Java code.",
+    "fp": "Fixed expressions defined in code are the common false positive.",
+    "recordDesc": "An expression language evaluates code-like syntax. If user input becomes expression text, the attacker writes the expression. The remedy is {safe}.",
+    "applicability": "Java code that evaluates expressions in Spring or other EL-based frameworks; single-line lexical scope.",
+    "risk": "Code execution on the server when untrusted text becomes an expression; HIGH severity.",
+    "why": "Expression text built from input is evaluated as code ({sink}).",
+    "fix": [
+      "Keep expression text constant and pass user data as variables through {safe}.",
+      "Use a SimpleEvaluationContext to restrict reachable methods when expressions are dynamic."
+    ],
+    "verifyT": "Rescan shows no parse call whose text comes from untrusted input.",
+    "sinks": {
+      "java:spring": [
+        "parseExpression",
+        "parser.parseExpression",
+        "a fixed expression with variables bound through SimpleEvaluationContext"
+      ]
+    },
+    "cweDef": {
+      "name": "Improper Neutralization of Special Elements used in an Expression Language Statement ('Expression Language Injection')",
+      "summary": "When user text becomes part of an expression evaluated by a framework, the attacker writes code-like syntax that the framework executes."
+    }
+  },
+  {
+    "class": "java-shared-dateformat",
+    "kind": "sast",
+    "category": "race-condition",
+    "cwe": "CWE-567",
+    "severity": "LOW",
+    "framing": "flag",
+    "title": "Shared static SimpleDateFormat ({lang})",
+    "description": "A Java class keeps a SimpleDateFormat in a static field. SimpleDateFormat is not thread-safe, so concurrent requests that format or parse through the shared instance can corrupt each other's data. This lexical rule flags the static field; the reviewer moves the formatter to {safe}.",
+    "remediation": "Create a formatter per call, or wrap one in a ThreadLocal, or use java.time.format.DateTimeFormatter, which is immutable.",
+    "limitation": "Lexical, line-based: flags a static SimpleDateFormat field regardless of whether it is ever shared across threads.",
+    "scopeT": "Single-line lexical match on static SimpleDateFormat fields in Java code.",
+    "fp": "Single-threaded tools and batch jobs are the common false positive.",
+    "recordDesc": "A shared SimpleDateFormat mutates internal state during formatting and parsing. Concurrent use yields wrong dates or exceptions. The remedy is {safe}.",
+    "applicability": "Java servlets, services, and components holding formatter fields; single-line lexical scope.",
+    "risk": "Corrupted timestamps and cross-request data mix-ups under concurrency; LOW severity.",
+    "why": "A static SimpleDateFormat field is shared by every thread that uses the class.",
+    "fix": [
+      "Use java.time.format.DateTimeFormatter, which is immutable and thread-safe.",
+      "Create the SimpleDateFormat inside each method call."
+    ],
+    "verifyT": "Rescan shows no static mutable formatter field.",
+    "sinks": {
+      "java:text": [
+        "\\bstatic\\s(?:final\\s)?SimpleDateFormat\\b",
+        "private static final SimpleDateFormat FMT = new SimpleDateFormat(\"yyyy-MM-dd\");",
+        "private static final ThreadLocal<SimpleDateFormat> FMT = ThreadLocal.withInitial(() -> new SimpleDateFormat(\"yyyy-MM-dd\"));",
+        "DateTimeFormatter or a per-call formatter"
+      ]
+    },
+    "cweDef": {
+      "name": "Unsynchronized Access to Shared Data in a Multithreaded Context",
+      "summary": "Shared static state accessed by concurrent threads without synchronization can be corrupted, leaking data between requests."
+    }
+  },
+  {
+    "class": "android-js-bridge",
+    "kind": "sast",
+    "category": "mobile-security",
+    "cwe": "CWE-749",
+    "severity": "HIGH",
+    "framing": "call",
+    "title": "WebView JavaScript bridge ({lang})",
+    "description": "Android code in {lang} exposes a Java object to web content with {sink}. Any page loaded in that WebView can call the exposed methods, so content from a remote origin can reach native code. This lexical rule flags the registration; the reviewer confirms the WebView only loads trusted content or switches to {safe}.",
+    "remediation": "Remove the bridge, or expose only @JavascriptInterface methods on a reviewed allowlist to WebViews that load first-party content.",
+    "limitation": "Lexical, line-based: matches the registration call. Whether the WebView loads remote content is not analysed.",
+    "scopeT": "Single-line lexical match on addJavascriptInterface calls in Android code.",
+    "fp": "WebViews that only load bundled first-party assets are the common false positive.",
+    "recordDesc": "In {lang}, addJavascriptInterface gives web content a path into native Java objects. Untrusted page content can call every exposed method. The remedy is {safe}.",
+    "applicability": "Android apps using WebView; single-line lexical scope.",
+    "risk": "Native method invocation from attacker-controlled web content on older Android versions; HIGH severity.",
+    "why": "Exposed Java objects are reachable from every page the WebView loads ({sink}).",
+    "fix": [
+      "Expose only the narrow methods a page needs, through {safe}.",
+      "Load only trusted origins into WebViews that expose a bridge."
+    ],
+    "verifyT": "Rescan shows no bridge on a WebView that loads remote content.",
+    "sinks": {
+      "java:android": [
+        "addJavascriptInterface",
+        "webView.addJavascriptInterface",
+        "a @JavascriptInterface allowlist on first-party pages"
+      ],
+      "kotlin:android": [
+        "addJavascriptInterface",
+        "webView.addJavascriptInterface",
+        "a @JavascriptInterface allowlist on first-party pages"
+      ]
+    }
+  },
+  {
+    "class": "c-malloc-multiply",
+    "kind": "sast",
+    "category": "integer-overflow",
+    "cwe": "CWE-190",
+    "severity": "MEDIUM",
+    "framing": "flag",
+    "title": "Unchecked size multiplication in malloc ({lang})",
+    "description": "C code computes an allocation size by multiplying two runtime values inside malloc. If the product wraps around, malloc returns a short buffer and later writes overrun it. This lexical rule flags the multiplication; the reviewer confirms the operands are bounded or switches to {safe}.",
+    "remediation": "Check the multiplication before allocating, or use calloc(count, size), which checks the product itself.",
+    "limitation": "Lexical, line-based: flags any multiplication of identifiers inside malloc. Bounds established on earlier lines are not seen.",
+    "scopeT": "Single-line lexical match on malloc arguments that multiply identifiers.",
+    "fp": "Compile-time constant sizes and operands bounded on earlier lines are common false positives.",
+    "recordDesc": "Allocation sizes computed by multiplication can wrap, so the allocated buffer is smaller than the code expects. The remedy is {safe}.",
+    "applicability": "C code allocating memory from computed sizes; single-line lexical scope.",
+    "risk": "Heap buffer overflow after an undersized allocation; MEDIUM severity.",
+    "why": "A multiplied allocation size can overflow and return a buffer that is too small.",
+    "fix": [
+      "Use calloc(count, size), which checks the multiplication.",
+      "Reject operands whose product exceeds SIZE_MAX / size before calling malloc."
+    ],
+    "verifyT": "Rescan shows no unchecked multiplication inside malloc on untrusted sizes.",
+    "sinks": {
+      "c:libc": [
+        "\\bmalloc\\s*\\(\\s*\\w+\\s*\\*\\s*\\w",
+        "buf = malloc(count * sizeof(int));",
+        "buf = malloc(sizeof(int));",
+        "calloc(count, size) or a checked product"
+      ]
+    }
+  },
+  {
+    "class": "go-http-no-timeout",
+    "kind": "sast",
+    "category": "denial-of-service",
+    "cwe": "CWE-400",
+    "severity": "MEDIUM",
+    "framing": "call",
+    "title": "Default Go HTTP server without timeouts ({lang})",
+    "description": "Go code starts a server with {sink}. The package-level function uses a default http.Server with no read, write, or header timeouts, so slow clients can hold connections open indefinitely. This lexical rule flags the call; the reviewer switches to {safe}.",
+    "remediation": "Create an http.Server with ReadHeaderTimeout, ReadTimeout, WriteTimeout, and IdleTimeout set, then call its ListenAndServe method.",
+    "limitation": "Lexical, line-based: matches the package-level call. A server configured on a separate line is not recognised.",
+    "scopeT": "Single-line lexical match on the package-level ListenAndServe calls in Go code.",
+    "fp": "Internal services behind a proxy that enforces timeouts are the common false positive.",
+    "recordDesc": "The package-level ListenAndServe uses a server without timeouts. Slowloris-style clients can exhaust connections. The remedy is {safe}.",
+    "applicability": "Go services that start an HTTP listener; single-line lexical scope.",
+    "risk": "Connection exhaustion from slow or idle clients; MEDIUM severity.",
+    "why": "The package-level call creates a server without timeouts ({sink}).",
+    "fix": [
+      "Build a server with {safe} and call its ListenAndServe method."
+    ],
+    "verifyT": "Rescan shows no package-level listener in production code.",
+    "sinks": {
+      "go:net-http": [
+        "http\\.ListenAndServe(?:TLS)?",
+        "http.ListenAndServe",
+        "an http.Server with ReadHeaderTimeout and ReadTimeout set"
+      ]
+    }
+  },
+  {
+    "class": "js-dynamic-regex",
+    "kind": "sast",
+    "category": "denial-of-service",
+    "cwe": "CWE-1333",
+    "severity": "MEDIUM",
+    "framing": "flag",
+    "title": "Regular expression built from a non-literal ({lang})",
+    "description": "Code in {lang} constructs a RegExp from a runtime value. Attacker-chosen patterns can contain nested quantifiers that backtrack exponentially, so one request can occupy the event loop. This lexical rule flags the construction; the reviewer confirms the source is fixed or switches to {safe}.",
+    "remediation": "Use a literal regular expression, or select from a vetted pattern table, or run user patterns through a linear-time engine such as RE2.",
+    "limitation": "Lexical, line-based: flags any non-literal RegExp argument. Whether the value is attacker-controlled is not analysed.",
+    "scopeT": "Single-line lexical match on RegExp constructors with a non-literal first argument.",
+    "fp": "Patterns assembled from constants inside the module are the common false positive.",
+    "recordDesc": "A RegExp built from input inherits the input complexity. Backtracking on crafted patterns is a denial-of-service route. The remedy is {safe}.",
+    "applicability": "JavaScript and TypeScript code building regular expressions at runtime; single-line lexical scope.",
+    "risk": "Event-loop blocking from catastrophic backtracking; MEDIUM severity.",
+    "why": "A RegExp constructed from runtime text can carry a pattern that backtracks exponentially.",
+    "fix": [
+      "Use a fixed regex literal and validate input against it.",
+      "Run user-supplied patterns through a linear-time engine such as RE2."
+    ],
+    "verifyT": "Rescan shows no RegExp built from untrusted text.",
+    "sinks": {
+      "javascript:regexp": [
+        "new\\s+RegExp\\s*\\(\\s*[^\\s'\"\\x60/)]",
+        "const re = new RegExp(req.query.q);",
+        "const re = new RegExp(\"^[a-z]+$\");",
+        "a literal regex or a vetted pattern table"
+      ]
+    },
+    "cweDef": {
+      "name": "Inefficient Regular Expression Complexity",
+      "summary": "A regular expression with exponential worst-case backtracking lets crafted input consume CPU. Patterns built from untrusted text are the usual route."
+    }
+  },
+  {
+    "class": "python-dynamic-regex",
+    "kind": "sast",
+    "category": "denial-of-service",
+    "cwe": "CWE-1333",
+    "severity": "MEDIUM",
+    "framing": "flag",
+    "title": "Regular expression compiled from a non-literal ({lang})",
+    "description": "Code in {lang} passes a runtime value to re.compile or a related re function. Attacker-chosen patterns can backtrack exponentially and tie up a worker. This lexical rule flags the call; the reviewer confirms the pattern is fixed or switches to {safe}.",
+    "remediation": "Use a raw string literal, or select from a vetted pattern table, or use the regex module with a timeout where patterns must be dynamic.",
+    "limitation": "Lexical, line-based: flags any non-literal first argument. Trusted variables are flagged as well.",
+    "scopeT": "Single-line lexical match on re function calls whose first argument is not a string literal.",
+    "fp": "Patterns held in trusted module-level constants are the common false positive.",
+    "recordDesc": "Python regular expressions backtrack on crafted patterns. A pattern from input can exhaust CPU. The remedy is {safe}.",
+    "applicability": "Python code building regular expressions at runtime; single-line lexical scope.",
+    "risk": "CPU exhaustion from catastrophic backtracking; MEDIUM severity.",
+    "why": "A pattern compiled from runtime text can backtrack exponentially.",
+    "fix": [
+      "Use a raw string literal for patterns that must be fixed.",
+      "Reject user patterns, or bound them with a timeout-capable engine."
+    ],
+    "verifyT": "Rescan shows no re function fed from untrusted text.",
+    "sinks": {
+      "python:re": [
+        "\\bre\\.(?:compile|search|match|fullmatch|findall|finditer|sub)\\s*\\(\\s*(?!r?['\"])[A-Za-z_]",
+        "pattern = re.compile(request.args['q'])",
+        "pattern = re.compile(r'^[a-z]+$')",
+        "a raw string literal or a vetted pattern table"
+      ]
+    }
+  },
+  {
+    "class": "timing-compare-secret",
+    "kind": "sast",
+    "category": "timing-side-channel",
+    "cwe": "CWE-208",
+    "severity": "MEDIUM",
+    "framing": "flag",
+    "title": "Ordinary equality on a signature or MAC ({lang})",
+    "description": "Code in {lang} compares a signature, digest, or HMAC with ordinary equality. Ordinary comparison returns at the first differing byte, so response timing can reveal how much of the expected value matched. This lexical rule flags the comparison; the reviewer switches to {safe}.",
+    "remediation": "Compare authentication values with a constant-time function such as the one named in the safe alternative.",
+    "limitation": "Lexical, line-based: matches identifiers containing signature, digest, or hmac. It does not prove the value is secret or that timing is observable.",
+    "scopeT": "Single-line lexical match on equality tests against signature, digest, or HMAC identifiers.",
+    "fp": "Public checksums and content hashes compared for integrity are the common false positive.",
+    "recordDesc": "Ordinary comparison of a MAC or signature leaks timing information about the expected value. The remedy is {safe}.",
+    "applicability": "{lang} code verifying signatures, digests, or HMACs; single-line lexical scope.",
+    "risk": "Byte-by-byte forgery of authentication tags through timing measurements; MEDIUM severity.",
+    "why": "Ordinary equality on a MAC returns early and leaks how much of it matched.",
+    "fix": [
+      "Compare with {safe}.",
+      "Verify the MAC over the exact bytes before any parsing."
+    ],
+    "verifyT": "Rescan shows no ordinary equality on signature or MAC identifiers.",
+    "sinks": {
+      "python:hmac": [
+        "\\b\\w*(?:signature|digest|hmac)\\w*\\s*==(?!=)\\s*(?!None\\b)[\\w(]",
+        "if signature == expected_sig:",
+        "if hmac.compare_digest(signature, expected_sig):",
+        "hmac.compare_digest"
+      ],
+      "javascript:crypto": [
+        "\\b\\w*(?:signature|digest|hmac)\\w*\\s*===?\\s*(?!null\\b|undefined\\b)[\\w(]",
+        "if (signature === expected) {",
+        "if (crypto.timingSafeEqual(a, b)) {",
+        "crypto.timingSafeEqual"
+      ],
+      "java:security": [
+        "\\b\\w*(?:signature|digest|hmac)\\w*\\.equals\\s*\\(",
+        "if (signature.equals(expected)) {",
+        "if (MessageDigest.isEqual(a, b)) {",
+        "MessageDigest.isEqual"
+      ],
+      "php:hash": [
+        "\\$\\w*(?:signature|digest|hmac)\\w*\\s*==(?!=)",
+        "if ($signature == $expected) {",
+        "if (hash_equals($signature, $expected)) {",
+        "hash_equals"
+      ],
+      "ruby:secure": [
+        "\\b\\w*(?:signature|digest|hmac)\\w*\\s*==(?!=)",
+        "return signature == expected",
+        "ActiveSupport::SecurityUtils.secure_compare(signature, expected)",
+        "secure_compare"
+      ]
+    },
+    "cweDef": {
+      "name": "Observable Timing Discrepancy",
+      "summary": "Ordinary comparison of secrets or MACs returns at the first differing byte, which leaks timing to a remote observer. Constant-time comparison closes the channel."
+    }
+  }
+]
