@@ -203,6 +203,7 @@ Existing pipeline (kept, reused): hypothesis → cell class (original) →
 generator (`generate-assets.mjs`) → declared tests (pos/neg/edge in the cell) →
 executed suites → dedup/consistency checks → determinism gate → release
 process. `rehearse.mjs` already provides step 3–8 for *ingestion* research
+
 (deterministic corpora with expected duplicate/shard/alias scenarios).
 
 Phase 4 assessment: the pipeline already satisfies steps 1–10 for rule
@@ -227,3 +228,42 @@ example inside this suite's own safe-text corpus; the example was reworded
 (root cause in the fixture text, not the scanner). Full suite after all
 Phase 4 changes: 15,496 assertions across 10 runners, exit 0; all 9
 validators exit 0; ingestion gates stay fail-closed.
+
+## 9. Validation addendum (Phase 5 run, 2026-10-17)
+
+`scripts/test-agent-policy.mjs` executed as part of `npm test`: **91 passed,
+0 failed** (the Phase 4 suite of 72 plus 19 focused hardening asserts). The
+Phase 5 audit treated the policy core as a security boundary and fixed five
+defect classes at root cause in `scripts/agent-policy.mjs` (tests were not
+weakened):
+
+1. **Mutable trust state** — `TRUSTED_ORIGINS`/`UNTRUSTED_SOURCES`/
+   `INSTRUCTION_HIERARCHY` were unfrozen arrays and `DEFAULT_TOOL_POLICY` was
+   only shallow-frozen (entries writable). All exported constants are now
+   frozen deeply; mutation attempts are impossible and asserted.
+2. **Prototype-assisted confusion/aliasing** — `ctx.requestedBy`,
+   `policy.tools[toolId]`, and budget limits could be satisfied through the
+   prototype chain (`Object.create({requestedBy: ...})`, `toolId =
+   '__proto__'`, inherited `wallClockMs`). All identity-bearing lookups now
+   require own properties.
+3. **Hostile-value crashes (fail-open class)** — reason strings called
+   `String(value)`, which throws on an attacker-supplied `toString`. A
+   `safeEcho` helper now type-tags non-primitives without invoking user code,
+   strips control characters (log-injection hardening), and caps echoes at 64
+   characters.
+4. **Scope fail-open** — a missing or non-string `ctx.scope` skipped the scope
+   check entirely. Concrete-scope tools now deny undeclared scopes
+   (`scope-missing`); only an explicit `scope: '*'` policy entry opts out.
+5. **Alternate field names** — `requested_by`/`requester`, `toolPolicy`, and
+   `wall_clock_ms` were already ignored (fail-closed); tests now pin that
+   behavior so a future refactor cannot silently widen it.
+
+Stated limits (unchanged): `detectEmbeddedInstructions` is an advisory
+hardening heuristic, not a proof that content is safe; the load-bearing
+controls remain deny-by-default permissions, own-property identity,
+fail-closed budgets, and independent finding verification. The module remains
+deterministic and side-effect-free (asserted), and nothing here claims an
+agent runtime, a model, `net.fetch`, or any external service exists or was
+exercised — no runtime is configured. Full suite after all Phase 5 changes:
+15,553 assertions across 10 runners, exit 0; all validators exit 0;
+ingestion gates stay fail-closed.

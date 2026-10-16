@@ -28,6 +28,7 @@ import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { evalDastCheck, lintRedos, validatePackFile } from './validate-packs.mjs';
 import { validatePattern, validateRecord } from './validate-assets.mjs';
+import { CANONICAL_CWE_VERSION } from './validate-cwe.mjs';
 
 const ROOT = process.cwd();
 const CELLS_DIR = join(ROOT, 'data', 'asset-cells');
@@ -325,6 +326,9 @@ function main() {
       name: cls.cweDef.name,
       summary: `${cls.cweDef.summary} Drobon summary in our own words; canonical definition at the linked MITRE page.`,
       url: `https://cwe.mitre.org/data/definitions/${number}.html`,
+      // Per-entry catalog version (Phase 5): repo-pinned canonical value from
+      // validate-cwe.mjs; validated in-repo only, never fetched from MITRE.
+      cweVersion: CANONICAL_CWE_VERSION,
     });
     if (!onDisk) emittedCwe.add(id);
     return null;

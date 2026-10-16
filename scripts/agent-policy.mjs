@@ -25,10 +25,10 @@
  */
 
 /** Origins whose text is policy-grade (never content-attacker-controlled). */
-export const TRUSTED_ORIGINS = ['system-policy', 'task-brief', 'tool-contract'];
+export const TRUSTED_ORIGINS = Object.freeze(['system-policy', 'task-brief', 'tool-contract']);
 
 /** Origins that are attacker-controllable by default. */
-export const UNTRUSTED_SOURCES = [
+export const UNTRUSTED_SOURCES = Object.freeze([
   'repo-file',
   'repo-comment',
   'repo-doc',
@@ -37,47 +37,74 @@ export const UNTRUSTED_SOURCES = [
   'scan-artifact',
   'web-content',
   'unknown',
-];
+]);
 
 /** Instruction hierarchy, highest authority first. */
-export const INSTRUCTION_HIERARCHY = [
+export const INSTRUCTION_HIERARCHY = Object.freeze([
   'system-policy',
   'task-brief',
   'tool-contract',
   'untrusted-content',
-];
+]);
 
 /**
  * Default tool permission map (docs/AGENT_ARCHITECTURE.md §4).
  * Deny-by-default: only entries listed here exist at all, and `allowed: false`
  * entries are explicit denials. `net.fetch` is denied while the Production
- * Intelligence Lock is active.
+ * Intelligence Lock is active. Deeply frozen: neither the map nor any entry can
+ * be mutated after import (a shallow freeze left entries writable).
  */
 export const DEFAULT_TOOL_POLICY = Object.freeze({
-  tools: {
-    'read.file': { allowed: true, scope: 'scan' },
-    'exec.validator': { allowed: true, scope: 'validators' },
-    'exec.tests': { allowed: true, scope: 'tests' },
-    'write.scratch': { allowed: true, scope: 'scratch' },
-    'net.fetch': { allowed: false, scope: 'net' },
-  },
+  tools: Object.freeze({
+    'read.file': Object.freeze({ allowed: true, scope: 'scan' }),
+    'exec.validator': Object.freeze({ allowed: true, scope: 'validators' }),
+    'exec.tests': Object.freeze({ allowed: true, scope: 'tests' }),
+    'write.scratch': Object.freeze({ allowed: true, scope: 'scratch' }),
+    'net.fetch': Object.freeze({ allowed: false, scope: 'net' }),
+  }),
 });
 
 /** Instruction-shape heuristics for content that tries to act like policy. */
 const EMBEDDED_INSTRUCTION_PATTERNS = Object.freeze([
-  { id: 'ignore-previous', re: /\bignore\s+(?:all\s+|any\s+)?(?:previous|prior|earlier|above|system|these)\s+(?:instructions?|rules?|prompts?|guidelines?)\b/i },
-  { id: 'disregard', re: /\bdisregard\s+(?:the\s+)?(?:previous|prior|earlier|above|system|all)\b/i },
-  { id: 'you-must-now', re: /\byou\s+(?:must|shall|should|will|have\s+to)\s+now\b/i },
-  { id: 'from-now-on', re: /\bfrom\s+now\s+on\b/i },
-  { id: 'new-instructions', re: /\bnew\s+(?:system\s+)?instructions?\b/i },
-  { id: 'system-prompt', re: /\bsystem\s+prompt\b/i },
-  { id: 'role-reassign', re: /\b(?:you\s+are\s+now|act\s+as\s+(?:an?\s+)?(?:unrestricted|jailbroken|different)|pretend\s+(?:to\s+be|you))\b/i },
-  { id: 'tool-smuggling', re: /\b(?:invoke|call|execute|run)\s+(?:the\s+)?(?:tool|command|function)\b/i },
-  { id: 'tag-injection', re: /<\/?(?:assistant|system|tool|function)>/i },
-  { id: 'exfiltration', re: /\b(?:send|post|exfiltrate|upload|leak|print)\b[^.]{0,48}\b(?:secret|secrets|token|credential|credentials|password|passwords|api\s*key)s?\b/i },
-  { id: 'override-policy', re: /\boverrides?\b[^.]{0,32}\b(?:policy|permission|permissions|rules?|restrictions?|model)\b/i },
-  { id: 'hide-from-user', re: /\b(?:do\s+not|never|don't)\s+(?:tell|inform|show|alert|notify)\s+the\s+user\b/i },
+  Object.freeze({ id: 'ignore-previous', re: /\bignore\s+(?:all\s+|any\s+)?(?:previous|prior|earlier|above|system|these)\s+(?:instructions?|rules?|prompts?|guidelines?)\b/i }),
+  Object.freeze({ id: 'disregard', re: /\bdisregard\s+(?:the\s+)?(?:previous|prior|earlier|above|system|all)\b/i }),
+  Object.freeze({ id: 'you-must-now', re: /\byou\s+(?:must|shall|should|will|have\s+to)\s+now\b/i }),
+  Object.freeze({ id: 'from-now-on', re: /\bfrom\s+now\s+on\b/i }),
+  Object.freeze({ id: 'new-instructions', re: /\bnew\s+(?:system\s+)?instructions?\b/i }),
+  Object.freeze({ id: 'system-prompt', re: /\bsystem\s+prompt\b/i }),
+  Object.freeze({ id: 'role-reassign', re: /\b(?:you\s+are\s+now|act\s+as\s+(?:an?\s+)?(?:unrestricted|jailbroken|different)|pretend\s+(?:to\s+be|you))\b/i }),
+  Object.freeze({ id: 'tool-smuggling', re: /\b(?:invoke|call|execute|run)\s+(?:the\s+)?(?:tool|command|function)\b/i }),
+  Object.freeze({ id: 'tag-injection', re: /<\/?(?:assistant|system|tool|function)>/i }),
+  Object.freeze({ id: 'exfiltration', re: /\b(?:send|post|exfiltrate|upload|leak|print)\b[^.]{0,48}\b(?:secret|secrets|token|credential|credentials|password|passwords|api\s*key)s?\b/i }),
+  Object.freeze({ id: 'override-policy', re: /\boverrides?\b[^.]{0,32}\b(?:policy|permission|permissions|rules?|restrictions?|model)\b/i }),
+  Object.freeze({ id: 'hide-from-user', re: /\b(?:do\s+not|never|don't)\s+(?:tell|inform|show|alert|notify)\s+the\s+user\b/i }),
 ]);
+
+/**
+ * Echo an untrusted value into a reason/origin string without letting it crash
+ * the module (hostile `toString`/`Symbol.toPrimitive`), forge log lines
+ * (control characters), or flood logs (length cap). Never returns the raw
+ * attacker object.
+ * @param {unknown} value
+ * @returns {string}
+ */
+function safeEcho(value) {
+  let text;
+  if (typeof value === 'string') {
+    text = value;
+  } else if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
+    text = String(value);
+  } else if (value === null) {
+    text = 'null';
+  } else if (value === undefined) {
+    text = 'undefined';
+  } else {
+    text = `[${typeof value}]`;
+  }
+  // Strip C0/C1 control characters (log-injection hardening) and cap length.
+  // eslint-disable-next-line no-control-regex
+  return text.replace(/[\u0000-\u001f\u007f-\u009f]/g, '?').slice(0, 64);
+}
 
 /**
  * Classify an input origin. Unknown origins are untrusted (fail-closed).
@@ -86,12 +113,16 @@ const EMBEDDED_INSTRUCTION_PATTERNS = Object.freeze([
  */
 export function classifyUntrusted(origin) {
   if (typeof origin !== 'string' || origin.length === 0) {
-    return { origin: String(origin), trusted: false, reason: 'unknown-origin' };
+    return { origin: safeEcho(origin), trusted: false, reason: 'unknown-origin' };
   }
   if (TRUSTED_ORIGINS.includes(origin)) {
-    return { origin, trusted: true, reason: 'policy-grade-origin' };
+    return { origin: safeEcho(origin), trusted: true, reason: 'policy-grade-origin' };
   }
-  return { origin, trusted: false, reason: UNTRUSTED_SOURCES.includes(origin) ? 'listed-untrusted-source' : 'unknown-origin' };
+  return {
+    origin: safeEcho(origin),
+    trusted: false,
+    reason: UNTRUSTED_SOURCES.includes(origin) ? 'listed-untrusted-source' : 'unknown-origin',
+  };
 }
 
 /**
@@ -105,7 +136,7 @@ export function detectEmbeddedInstructions(text) {
   const findings = [];
   for (const { id, re } of EMBEDDED_INSTRUCTION_PATTERNS) {
     const m = re.exec(text);
-    if (m) findings.push({ id, match: m[0] });
+    if (m) findings.push({ id, match: safeEcho(m[0]) });
   }
   return findings;
 }
@@ -119,11 +150,14 @@ export function detectEmbeddedInstructions(text) {
  */
 export function checkToolPermission(policy, toolId, ctx = {}) {
   // Fail-closed requester check: the requester must be an explicitly named
-  // policy-grade actor. Missing/null/unknown requesters are untrusted.
-  const requestedBy = ctx?.requestedBy;
+  // policy-grade actor, carried as the call context's OWN property (a
+  // prototype-inherited `requestedBy` is not evidence of who is asking).
+  // Missing/null/unknown requesters are untrusted.
+  const ctxIsObject = ctx !== null && typeof ctx === 'object';
+  const requestedBy = ctxIsObject && Object.hasOwn(ctx, 'requestedBy') ? ctx.requestedBy : undefined;
   const POLICY_GRADE_REQUESTERS = ['system-policy', 'task-brief', 'tool-contract'];
   if (typeof requestedBy !== 'string' || !POLICY_GRADE_REQUESTERS.includes(requestedBy)) {
-    return { allowed: false, reason: `untrusted-requester:${String(requestedBy)}` };
+    return { allowed: false, reason: `untrusted-requester:${safeEcho(requestedBy)}` };
   }
   if (policy === null || typeof policy !== 'object' || typeof policy.tools !== 'object' || policy.tools === null) {
     return { allowed: false, reason: 'no-policy' };
@@ -131,16 +165,24 @@ export function checkToolPermission(policy, toolId, ctx = {}) {
   if (typeof toolId !== 'string' || toolId.length === 0) {
     return { allowed: false, reason: 'unknown-tool' };
   }
-  const entry = policy.tools[toolId];
+  // The tool entry must be an OWN property of the policy's tool map:
+  // prototype lookups (`__proto__`, `constructor`, `toString`, ...) never
+  // authorize anything.
+  const entry = Object.hasOwn(policy.tools, toolId) ? policy.tools[toolId] : undefined;
   if (entry === undefined || entry === null || typeof entry !== 'object') {
     return { allowed: false, reason: 'unknown-tool' };
   }
   if (entry.allowed !== true) {
     return { allowed: false, reason: 'denied-by-policy' };
   }
-  if (typeof entry.scope === 'string' && entry.scope !== '*' && typeof ctx?.scope === 'string') {
+  if (typeof entry.scope === 'string' && entry.scope !== '*') {
+    // Fail-closed scope binding: a concrete scope entry requires the call to
+    // DECLARE a matching scope. A missing/non-string scope is not a wildcard.
+    if (typeof ctx?.scope !== 'string') {
+      return { allowed: false, reason: 'scope-missing' };
+    }
     if (ctx.scope !== entry.scope) {
-      return { allowed: false, reason: `scope-escape:${ctx.scope}` };
+      return { allowed: false, reason: `scope-escape:${safeEcho(ctx.scope)}` };
     }
   }
   return { allowed: true, reason: 'ok' };
@@ -151,7 +193,8 @@ const BUDGET_FIELDS = ['wallClockMs', 'maxToolCalls', 'maxTokens', 'maxWriteByte
 /**
  * Fail-closed budget check. Missing fields are simply not constrained, but a
  * budget object with no numeric fields at all is rejected (fail-closed), as is
- * any NaN/negative/overspent value.
+ * any NaN/negative/overspent value. Limits must be OWN properties: a
+ * prototype-inherited `wallClockMs` is not a granted budget.
  * @param {Record<string, number>|null|undefined} budget
  * @param {Record<string, number>|null|undefined} spent
  * @returns {{allowed: boolean, reason: string}}
@@ -162,7 +205,7 @@ export function checkBudget(budget, spent = {}) {
   }
   const constrained = [];
   for (const field of BUDGET_FIELDS) {
-    if (!(field in budget)) continue;
+    if (!Object.hasOwn(budget, field)) continue;
     const limit = budget[field];
     const used = spent?.[field] ?? 0;
     if (typeof limit !== 'number' || !Number.isFinite(limit) || limit < 0) {

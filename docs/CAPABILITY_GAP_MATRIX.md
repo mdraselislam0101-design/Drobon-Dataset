@@ -6,7 +6,7 @@ each gap would be closed — evidence-first. Baseline: branch
 `arena/9fe99288-drobon-dataset` @ `7b683d9` (= remote tip at inspection).
 Companion canon (not duplicated here): `docs/CAPABILITY_COVERAGE.md` (app
 capability → dataset position), `DROBON_COVERAGE_EVIDENCE.json` (64-requirement
-ledger, 72.9% verified coverage), `DROBON_REMAINING_WORK.csv` (GAP-001..024),
+ledger, 74.8% verified coverage), `DROBON_REMAINING_WORK.csv` (GAP-001..024),
 `docs/COMPLETION_MATRIX.json` (CAP-* rows), `docs/AGENT_ARCHITECTURE.md`
 (AI-agent design; area F detail), `docs/DATASET_APP_CONTRACT.md`.
 
@@ -79,7 +79,7 @@ framework-flavored sinks lexically (e.g. `cross-site-scripting` 26,
 `sql-injection` 66, `code-injection` 76 rules; cell classes like
 `xss-sink-call` per language); **no sanitizer semantics** (escaping/parameter-
 binding awareness absent). 5. **Tests:** every rule has executed positive +
-negative fixtures (`test-packs` 3970/3970 PASS). 6. **Gap:** sources and
+negative fixtures (`test-packs` 3978/3978 PASS). 6. **Gap:** sources and
 sanitizers unmodeled; sink lists are lexical strings, not framework APIs. 7.
 **Proposed approach:** extend cell classes with source/sanitizer annotations
 once a consumer can use them (CGM-A2 phase 2). 8. **Alternatives:** none
@@ -93,11 +93,11 @@ annotations must ship pos+neg tests per annotation. 11. **Deps:** CGM-A2. 12.
 ### CGM-B1 · Original lexical & structural detectors
 1. **ID:** CGM-B1. 2. **Outcome:** find insecure code/HTTP patterns. 3.
 **Status:** `PARTIAL` (lexical `VERIFIED`-grade; structural not present). 4.
-**Evidence:** 951 original rules (792 SAST + 94 Secrets + 65 DAST), 951
-patterns, 951 remediations; provenance `origin: 'original-authored'` + cell
-lineage (951 = 911 cell-generated + 40 legacy); DAST rules are structured
+**Evidence:** 953 original rules (792 SAST + 96 Secrets + 65 DAST), 953
+patterns, 953 remediations; provenance `origin: 'original-authored'` + cell
+lineage (953 = 913 cell-generated + 40 legacy); DAST rules are structured
 header/cookie/body checks over parsed HTTP input (`docs/FORMAT.md` closed
-vocabulary). 5. **Tests:** `test-packs` 3970, `test-assets` 7498,
+vocabulary). 5. **Tests:** `test-packs` 3978, `test-assets` 7514,
 `validate-packs` 954 files, `validate-assets` 1862 — all PASS this run. 6.
 **Gap:** no structural AST detectors (see CGM-A2); reachability <100% (549/792
 fully reachable under app catalog; documented per-rule in `docs/PACKS.md`). 7.
@@ -106,7 +106,7 @@ evidence + tests (research pipeline §9). 8. **Alternatives:** DSL (proposal
 only). 9. **Security:** rules fire conservatively; `limitation` field mandatory
 per rule. 10. **Acceptance:** every new rule ≥1 positive + ≥1 negative executed
 test (enforced by `test-assets` linkage). 11. **Deps:** none. 12. **Perf:**
-linear regex scan; deterministic. 13. **Status note:** "951 rules" is breadth,
+linear regex scan; deterministic. 13. **Status note:** "953 rules" is breadth,
 not measured real-world detection rate (see CGM-I2).
 
 ### CGM-B2 · Semantic vulnerability conditions & taint / data-flow detection
@@ -276,16 +276,21 @@ coverage. 10. **Acceptance:** invariants stay machine-checked. 11. **Deps:** —
 
 ### CGM-D1 · Context-aware secret detection
 1. **ID:** CGM-D1. 2. **Outcome:** detect credential shapes with context. 3.
-**Status:** `PARTIAL`. 4. **Evidence:** 94 rules (`DPK-SEC-*`) shape-only with
+**Status:** `PARTIAL`. 4. **Evidence:** 96 rules (`DPK-SEC-*`) shape-only with
 `confidence`, `denylist` veto, `matchOnlyEvidence` class; context = line regex
-+ allowlisted non-secret placeholders (e.g. `password=EXAMPLE` negatives). 5.
-**Tests:** `test-packs` denylist-veto mutants; `test-assets` linkage 951/951;
-edge tests for DPK-SEC-105 (11). 6. **Gap:** no entropy/liveness/context-window
-analysis; probe gaps documented (GAP-013: ADO `Password=`, unquoted
-`DB_PASSWORD=`/`export`, YAML `password:`, URI symbol passwords). 7.
-**Approach:** evidence-gated authoring via `data/asset-cells/secrets-5.json`
-(new file) per gap — engineering backlog (BLK-008 resolved Phase 4: no owner
-gate on technical authoring). 8. **Alternatives:** liveness probing (forbidden
++ allowlisted non-secret placeholders (e.g. `password=EXAMPLE` negatives).
+Phase 5 probe-gap closure (2026-10-17): DPK-SEC-106 (unquoted password
+assignments — env `export`/`DB_PASSWORD=`, YAML `password:`, ADO `Password=;`)
+and DPK-SEC-107 (URL userinfo passwords containing symbols) authored via
+`data/asset-cells/secrets-5.json`. 5. **Tests:** `test-packs` denylist-veto
+mutants; `test-assets` linkage 953/953; edge tests for DPK-SEC-105 (11);
+DPK-SEC-106 carries 16 executed tests and DPK-SEC-107 carries 14 (pos/neg/
+boundary/malformed with exact outcomes). 6. **Gap:** no entropy/liveness/
+context-window analysis; GAP-013 probe gaps CLOSED 2026-10-17 — documented
+residual recall boundary: pure-alphanumeric userinfo passwords shorter than
+12 characters match neither DPK-SEC-063 nor DPK-SEC-107. 7. **Approach:**
+probe-gap rules authored evidence-gated via `data/asset-cells/secrets-5.json`
+(BLK-008 resolved Phase 4: no owner gate on technical authoring). 8. **Alternatives:** liveness probing (forbidden
 policy). 9. **Security:** shape ≠ live credential (mandatory limitation text).
 10. **Acceptance:** each new rule ≥1 pos + ≥2 neg + leak-scan safety. 11.
 **Deps:** —. 12. **Perf:** linear. 13. **Limits:** documented per rule.
@@ -440,8 +445,12 @@ verification is deterministic-only.
 integration pending). 4. **Evidence:** `scripts/agent-policy.mjs`
 (`classifyUntrusted`, `detectEmbeddedInstructions`, instruction-hierarchy
 constant: system policy > task > untrusted content); synthetic injection cases
-in `scripts/test-agent-policy.mjs`. 5. **Tests:** `test-agent-policy` 72/72 (Phase 4 run) — 12 injection shapes
-flagged; 8 safe texts unflagged; untrusted content cannot widen permissions. 6. **Gap:** no live agent to
+in `scripts/test-agent-policy.mjs`. 5. **Tests:** `test-agent-policy` 91/91 (Phase 5 run) — 12 injection shapes
+flagged; 8 safe texts unflagged; untrusted content cannot widen permissions; +19 Phase 5
+hardening asserts (deep-frozen policy constants, own-property requester/tool/
+budget identity vs prototype aliasing, hostile `toString` values denied without
+throwing, control-character log-injection echoes sanitized, alternate field
+names fail closed). 6. **Gap:** no live agent to
 enforce at runtime yet. 7. **Approach:** any future agent MUST route
 untrusted content through this module (contract documented). 8.
 **Alternatives:** regex-only filtering (insufficient alone; ours is
@@ -458,7 +467,9 @@ unknown tool/missing policy/insufficient scope → deny; `checkBudget` fail-clos
 NaN/negative/overflow → deny); importer resilience primitives exist
 (`scripts/retry.mjs`, `checkpoint.mjs`, per-page checkpoints);
 `requireGates()` fail-closed startup. 5. **Tests:** `test-agent-policy` permission/budget suites (within the
-72/72); `test-importers` 49 (mocked retry/checkpoint). 6. **Gap:** runtime executor to enforce budgets live;
+91/91; Phase 5 hardening: concrete-scope tools deny missing/non-string scope
+`scope-missing`, prototype-inherited budget limits rejected); `test-importers`
+49 (mocked retry/checkpoint). 6. **Gap:** runtime executor to enforce budgets live;
 cancellation semantics need a runtime. 7. **Approach:** W3 + shared core; spec
 defines timeouts/cancellation for future runtime. 8. **Alternatives:** —. 9.
 **Security:** fail-closed on any policy gap. 10. **Acceptance:** deny-by-default
@@ -495,9 +506,9 @@ must be impossible. 10. **Acceptance:** app tests. 11. **Deps:** app. 12.
 **Status:** `PARTIAL` (dataset content side strong; rendering app-side
 unverified). 4. **Evidence:** every rule has `description`, `remediation`,
 `limitation`; patterns carry `examples` (pos+neg), `fpNotes`, `scope`;
-remediation 951 entries keyed `ruleId`; CWE 61 own-words summaries with
+remediation 953 entries keyed `ruleId`; CWE 61 own-words summaries with
 canonical links; severity is rule-fixed (contract §2). 5. **Tests:**
-`validate-audiences` 962 files; `test-consistency` CWE resolution. 6. **Gap:**
+`validate-audiences` 964 files; `test-consistency` CWE resolution. 6. **Gap:**
 no CVSS/OWASP mapping (GAP-010, lock + app decision); app finding fields
 (paths/lines/context) not dataset-controlled. 7. **Approach:** app workstream
 for rendering; dataset keeps evidence content. 8. **Alternatives:** —. 9.
@@ -544,7 +555,7 @@ unsigned.
 
 ### CGM-H1 · Proposed fix guidance only (advisory snippets/diffs)
 1. **ID:** CGM-H1. 2. **Outcome:** suggest, never apply. 3. **Status:**
-`VERIFIED`. 4. **Evidence:** 951 remediation entries are guidance text
+`VERIFIED`. 4. **Evidence:** 953 remediation entries are guidance text
 (`knowledge/remediation/`, schema `drobon.knowledge.remediation/v1` content
 fields only; status stays app-computed); contract: fixes shown as advisory
 snippets/diffs only (DATASET_APP_CONTRACT); code-mutation ban is a standing
@@ -583,7 +594,7 @@ asserts. 11. **Deps:** —. 12. **Perf:** digest ≈ seconds. 13. **Limits:** �
 ### CGM-I2 · False-positive / false-negative measurement
 1. **ID:** CGM-I2. 2. **Outcome:** quantify detector error. 3. **Status:**
 `PARTIAL`. 4. **Evidence:** per-rule synthetic pos/neg fixtures give
-fixture-level TP/FN (951 rules × executed tests); FP classes documented
+fixture-level TP/FN (953 rules × executed tests); FP classes documented
 (`fpNotes`, limitations); **no** real-world precision/recall — no defensible
 real ground-truth set exists (explicitly not claimed anywhere). 5. **Tests:**
 `test-packs`/`test-assets` totals (§Validation). 6. **Gap:** real-world
@@ -614,7 +625,7 @@ timings ≠ production hardware.
 1. **ID:** CGM-I4. 2. **Outcome:** honest, recomputable coverage. 3.
 **Status:** `VERIFIED`. 4. **Evidence:** `DROBON_COVERAGE_METHODOLOGY.md`
 (fixed denominators, no weighting, PARTIAL = pass/total subreqs);
-`DROBON_COVERAGE_EVIDENCE.json` 64-req ledger recomputed (72.9% = 37.89/52 —
+`DROBON_COVERAGE_EVIDENCE.json` 64-req ledger recomputed (74.8% = 38.90/52 —
 re-derived Phase 3 + unchanged Phase 4); doc-drift count-recompute asserts. 5.
 **Tests:** doc-drift (asserts grew Phase 4 — see §Validation). 6. **Gap:** —.
 7. **Approach:** status quo. 8. **Alternatives:** —. 9. **Security:** inflated
@@ -656,11 +667,12 @@ sandbox CI parity assumed.
 Counted per grouped capability ID (CGM-A1..I5 = 43 ids). Top gaps by value:
 CGM-A2/B2 semantic analysis (architectural), CGM-F1..F6 agent runtime (seam
 ready, policy core tested), CGM-G4 fix verification (app), CGM-C1/C3
-app-side verification, CGM-D1 probe-gap authoring (evidence-gated backlog).
+app-side verification, CGM-D1 context analysis (entropy/liveness — probe
+gaps GAP-013 closed 2026-10-17 by DPK-SEC-106/107).
 
-## Validation (Phase 4 run, 2026-10-17)
+## Validation (Phase 4 run, 2026-10-17; Phase 5 run appended 2026-10-17)
 
-- `npm test` exit 0 — test 600/600, pack-tests 3970/3970, audience-tests
+- **Phase 4:** `npm test` exit 0 — test 600/600, pack-tests 3970/3970, audience-tests
   2897/2897, asset-tests 7498/7498, consistency 208/208, rehearsal 78/78,
   importers 49/49, **agent-policy 72/72 (new)**, doc-drift 119/119 (104 →
   119: Phase 4 pins added), determinism 5/5 — **15,496 assertions total**
@@ -673,9 +685,20 @@ app-side verification, CGM-D1 probe-gap authoring (evidence-gated backlog).
   16/16.
 - Fail-closed: `requireGates()` throws "production ingestion BLOCKED by 4/4
   gates" (reproduced).
-- Coverage: **72.9% (37.90/52)** recomputed on the canonical methodology
-  (R-SAST-P-03 reachability recount 549→560; SAST engine bucket 68.8%→69.0%;
-  DEVELOPER 73.5%→73.6%; denominator unchanged). finalStatusCounts now:
-  CLOSED_VERIFIED 34 · BLOCKED_OWNER_AUTHORIZATION 5 · BLOCKED_APP_IMPLEMENTATION 8 ·
-  NOT_APPLICABLE_WITH_REASON 8 · BLOCKED_MISSING_REQUIREMENT 5 ·
-  OPEN_DATASET_WORK 2 · IMPLEMENTED_NOT_VERIFIED 1 · BLOCKED_SOURCE_LICENSE 1.
+- **Phase 5 (2026-10-17):** `npm test` exit 0 — test 600/600, pack-tests
+  3978/3978, audience-tests 2903/2903, asset-tests 7514/7514, consistency
+  216/216 (CWE version-metadata asserts added), rehearsal 78/78, importers
+  49/49, **agent-policy 91/91 (Phase 5 hardening, 72 → 91)**, doc-drift
+  119/119, determinism 5/5 — **15,553 assertions total** (runner sums
+  recomputed). Validators (each exit 0): validate-packs 956, validate-assets
+  1866, validate-audiences 964, validate-cwe 61 (all entries carry
+  `cweVersion: "4.20"`), validate-matrix (inventory recomputed; no license
+  file), validate-sources, validate-corpus, check-vectors 16/16.
+  Fail-closed: `requireGates()` throws "production ingestion BLOCKED by 4/4
+  gates" (reproduced). Coverage: **74.8% (38.90/52)** recomputed on the
+  canonical methodology (formula reproduced all 18 pre-change buckets
+  exactly before the R-CWE-03 flip; denominator unchanged). finalStatusCounts
+  now: CLOSED_VERIFIED 35 · BLOCKED_OWNER_AUTHORIZATION 5 ·
+  BLOCKED_APP_IMPLEMENTATION 8 · NOT_APPLICABLE_WITH_REASON 8 ·
+  BLOCKED_MISSING_REQUIREMENT 5 · OPEN_DATASET_WORK 1 ·
+  IMPLEMENTED_NOT_VERIFIED 1 · BLOCKED_SOURCE_LICENSE 1.

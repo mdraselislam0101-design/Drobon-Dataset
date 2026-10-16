@@ -1,7 +1,7 @@
 # PACK_FLOW_DSL_PROPOSAL.md — expressing flow rules in rule packs (PROPOSAL ONLY)
 
 Status: **PROPOSAL ONLY (2026-10-16).** No schema, validator, generator, rule, or
-test has changed. Rule-pack counts stay 951; the flow gap stays visible as
+test has changed. Rule-pack counts stay 953; the flow gap stays visible as
 ledger row `R-SAST-P-04` (VERIFIED_PARTIAL 1/2). This document exists to close
 backlog item GAP-015 (design documentation) and to give the owner a concrete
 decision surface. It grants nothing and invents no detection.

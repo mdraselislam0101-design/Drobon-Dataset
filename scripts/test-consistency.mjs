@@ -34,7 +34,8 @@ import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { validateCwePath } from './validate-cwe.mjs';
+import { validateCwePath, CANONICAL_CWE_VERSION } from './validate-cwe.mjs';
+import { validatePackFile } from './validate-packs.mjs';
 import { validateMatrixPath } from './validate-matrix.mjs';
 import { validateSourcesPath } from './validate-sources.mjs';
 import { validateCorpusSet, validateCorpusTargetsPath, validateDecisionsPath, validateRoadmapPath } from './validate-corpus.mjs';
@@ -85,12 +86,14 @@ const readJson = (file) => JSON.parse(readFileSync(file, 'utf8'));
 const cweFiles = collectJsonFiles(join(ROOT, 'knowledge', 'cwe'));
 assert(cweFiles.length >= 10, `consistency: CWE knowledge present (found ${cweFiles.length})`);
 const cweIds = new Set();
+const cweVersions = new Map();
 for (const file of cweFiles) {
   const errors = validateCwePath(file);
   const record = errors.length === 0 ? readJson(file) : null;
   assert(errors.length === 0, `positive: ${file.split('/').slice(-3).join('/')} validates`, errors.join('; '));
   if (record !== null) {
     cweIds.add(record.id);
+    cweVersions.set(record.id, record.cweVersion);
     const fileName = file.split('/').pop().replace(/\.json$/, '');
     assert(record.id === fileName, `layout: knowledge/cwe/${fileName}.json matches id`);
   }
@@ -130,6 +133,74 @@ for (const file of remediationFiles) {
   }
 }
 assert(dangling.length === 0, 'consistency: every CWE reference resolves', `dangling: ${dangling.join(', ')}`);
+
+// --- 3b. CWE version metadata chain + legacy exception policy -----------------------
+// Every applicable CWE ref must resolve to an entry that carries explicit valid
+// version metadata equal to the repo-pinned canonical value. Failures name the
+// offending asset. This is a repo-local consistency check only: no external CWE
+// catalog is consulted, and nothing here is externally verified.
+{
+  const refVersionProblems = (refs) =>
+    refs
+      .filter((ref) => ref.cwe !== undefined)
+      .filter((ref) => !cweIds.has(ref.cwe) || cweVersions.get(ref.cwe) !== CANONICAL_CWE_VERSION)
+      .map((ref) => `${ref.asset} → ${ref.cwe}`);
+  const realRefs = [
+    ...packRuleFiles.map((file) => {
+      const rule = readJson(file);
+      return { asset: rule.id, cwe: rule.cwe };
+    }),
+    ...remediationFiles.map((file) => {
+      const entry = readJson(file);
+      return { asset: entry.ruleId, cwe: entry.standardId };
+    }),
+  ];
+  const versionProblems = refVersionProblems(realRefs);
+  assert(
+    versionProblems.length === 0,
+    `consistency: every CWE ref carries repo-pinned version metadata (${CANONICAL_CWE_VERSION})`,
+    versionProblems.slice(0, 5).join(' | '),
+  );
+  // Negative self-check of the same predicate: absent targets and targets whose
+  // entry lacks the canonical version are both flagged, with the asset named.
+  const synthetic = [
+    { asset: 'SYNTH-ABSENT', cwe: 'CWE-999999' },
+    { asset: 'SYNTH-OMITTED', cwe: undefined },
+  ];
+  const syntheticFlagged = refVersionProblems(synthetic);
+  assert(
+    syntheticFlagged.length === 1 && syntheticFlagged[0].startsWith('SYNTH-ABSENT'),
+    'negative: ref-version chain flags an absent CWE target and skips omitted refs',
+    syntheticFlagged.join(' | '),
+  );
+  // Legacy exception policy (explicit + tested): "omit when uncertain" is the
+  // only permitted exception to carrying a CWE ref (validate-packs accepts a
+  // rule without `cwe`). Every PRESENT ref must resolve to a versioned entry
+  // (asserted above). Zero pack rules currently use the exception — pin that.
+  {
+    const sample = readJson(packRuleFiles[0]);
+    delete sample.cwe;
+    const omitErrors = validatePackFile(sample).filter((error) => error.toLowerCase().includes('cwe'));
+    assert(
+      omitErrors.length === 0,
+      'legacy exception policy: a CWE ref may be omitted ("omit when uncertain")',
+      omitErrors.join('; '),
+    );
+    const omitted = packRuleFiles.map((file) => readJson(file)).filter((rule) => rule.cwe === undefined);
+    assert(
+      omitted.length === 0,
+      'legacy exception policy: zero pack rules omit their CWE ref today (count pinned)',
+      omitted.map((rule) => rule.id).join(', '),
+    );
+  }
+  // Pin sync: the contract doc pin and the validator constant must agree.
+  const contractDoc = readFileSync(join(ROOT, 'docs', 'DATASET_APP_CONTRACT.md'), 'utf8');
+  assert(
+    contractDoc.includes(`MITRE CWE ${CANONICAL_CWE_VERSION}`),
+    `consistency: DATASET_APP_CONTRACT pins MITRE CWE ${CANONICAL_CWE_VERSION} (matches validate-cwe.mjs)`,
+    'doc pin text missing',
+  );
+}
 
 // --- 4. coverage report ----------------------------------------------------------
 const count = (dir) => {
@@ -371,6 +442,9 @@ assert(
 const NEGATIVE_CWE = {
   'cwe-leading-zero.json': 'id: must match',
   'cwe-wrong-url.json': 'canonical',
+  'cwe-missing-version.json': 'missing required property "cweVersion"',
+  'cwe-malformed-version.json': 'cweVersion: must match',
+  'cwe-mismatched-version.json': 'repo-pinned catalog version',
 };
 for (const [name, needle] of Object.entries(NEGATIVE_CWE)) {
   const file = join(ROOT, 'test', 'invalid-cwe', name);

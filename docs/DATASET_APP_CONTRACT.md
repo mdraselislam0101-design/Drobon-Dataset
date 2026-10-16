@@ -14,9 +14,9 @@ compatibility: validating JSON against a schema is not integration.
 | SAST rule pack | `drobon.pack.sast/v1` | `packs/sast/v1/rules/DPK-SAST-###.json` | stable, never reused (26 retired reservations pinned) |
 | Secrets rule pack | `drobon.pack.secrets/v1` | `packs/secrets/v1/rules/DPK-SEC-###.json` | same |
 | DAST rule pack | `drobon.pack.dast/v1` | `packs/dast/v1/rules/DPK-DAST-###.json` | same |
-| Pattern | `drobon.knowledge.pattern/v1` | `knowledge/patterns/DPK-PAT-####.json` | 1:1 with rules (951) |
-| Record | `drobon.knowledge.record/v1` | `knowledge/records/DPK-REC-####.json` | 911 (40 legacy patterns intentionally without a record — BLK-013) |
-| Remediation | `drobon.knowledge.remediation/v1` | `knowledge/remediation/DPK-*.json` | 1:1 with rules (951), keyed by `ruleId` |
+| Pattern | `drobon.knowledge.pattern/v1` | `knowledge/patterns/DPK-PAT-####.json` | 1:1 with rules (953) |
+| Record | `drobon.knowledge.record/v1` | `knowledge/records/DPK-REC-####.json` | 913 (40 legacy patterns intentionally without a record — BLK-013) |
+| Remediation | `drobon.knowledge.remediation/v1` | `knowledge/remediation/DPK-*.json` | 1:1 with rules (953), keyed by `ruleId` |
 | Advisory record | `drobon.vuln-intel/v1` | `vuln-intel/{npm,pypi}/*.json` | identity `(provenance.source, id, ecosystem, package)`; files≠advisories≠items |
 | CWE knowledge | `drobon.knowledge.cwe/v1` | `knowledge/cwe/*.json` | MITRE id, own-words summary + pinned URL |
 | Lesson / template / engagement | `drobon.learning.lesson/v1` etc. | `learning/lessons/`, `assessments/templates/`, `engagements/` | `lsn_*` / template ids |
@@ -28,7 +28,7 @@ compatibility: validating JSON against a schema is not integration.
 - **Severity** enum: `CRITICAL|HIGH|MEDIUM|LOW|INFO` (advisory) / `HIGH|MEDIUM|LOW` (rules) — rule severity is rule-fixed, never client-influenced.
 - **Category** enums per pack (secrets: `service-token`, `service-credential`, `cloud-credential`, `generic-credential`, `private-key`, `hardcoded-credential`).
 - **Language tags** (`packs`/`knowledge`): `^[a-z][a-z0-9]{0,31}$` — **hyphenated app catalog ids are inexpressible** (`github-actions`, `shell-posix`, `android-manifest`). Mapping table and its owner-gated options: `docs/PACKS.md` (reachability section). `languages` omitted ⇒ universal (matches App `sast/rules.ts`: `languages: undefined` = universal).
-- **CWE**: every rule/remediation CWE must resolve in `knowledge/cwe/` (consistency-tested). **CWE version pinned: MITRE CWE 4.20** (the version the entries' relationships were read against; recorded 2026-10-17 per the Phase 4 engineering decision — per-entry version metadata remains follow-up work). OWASP and CVSS fields are **absent by design** — no App contract consumes them and the production lock forbids importing scored feeds; `docs/CAPABILITY_COVERAGE.md` records this.
+- **CWE**: every rule/remediation CWE must resolve in `knowledge/cwe/` (consistency-tested). **CWE version pinned: MITRE CWE 4.20** (the version the entries' relationships were read against; recorded 2026-10-17 per the Phase 4 engineering decision). Per-entry `cweVersion: "4.20"` metadata is present on all 61 `knowledge/cwe/` entries and enforced by `validate-cwe.mjs` (Phase 5, 2026-10-17) against the repo-pinned value only — this is a repo-local consistency check; no external catalog is fetched and nothing is externally verified. OWASP and CVSS fields are **absent by design** — no App contract consumes them and the production lock forbids importing scored feeds; `docs/CAPABILITY_COVERAGE.md` records this.
 - **Linking**: rule.`patternRefs` ↔ pattern.`linkedRules`; record.`relatedPatterns`/`relatedRules`; remediation keyed `ruleId` — all integrity-checked (0 dangling, 2026-10-16 sweep).
 - **Provenance** (advisories): `provenance.{source, sourceUrl, retrievedAt, license}` mandatory for real records (validator-enforced). Original content: `origin: 'original-authored'`.
 - **Fixtures**: `fixture: true` + `DROBON-SAMPLE-###` ids; never counted in production metrics; validator rejects fixture-impostors.

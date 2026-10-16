@@ -46,14 +46,16 @@ superseded by this table.
 | D-13 40 legacy records | keep documented retention exception (count-driven creation = padding) | decided (keep) |
 | D-14 `universal` rules | **implemented:** 10 rules now omit `languages` (any-file convention); generator updated; reachability recounted | implemented |
 | D-15 shell-posix reach | accept PARTIAL (follows D-9) | decided (keep) |
-| D-16 CWE pinning | **implemented (doc-level):** MITRE CWE 4.20 pinned in DATASET_APP_CONTRACT; per-entry metadata = follow-up | implemented |
+| D-16 CWE pinning | **implemented:** MITRE CWE 4.20 pinned in DATASET_APP_CONTRACT + per-entry `cweVersion: "4.20"` on all 61 entries (validator-enforced against the repo pin only; no external fetch) | implemented |
 | D-17 D5 local labels | keep fail-closed rejection (widening = paired parser+tests backlog) | decided (keep) |
 | D-18 generator denylist fix | confirmed (byte-identical, tested) | decided (keep) |
 | D-19 SCA schema | keep `packs/sca` at 0 until GATE-4 consumer + D-2 rights exist (no filler) | decided (keep) |
 
 Verification after these changes: full suite + all validators green; corpus
-counts unchanged (951/911/951/61/94/65/792); coverage recomputed on the
-canonical methodology (72.9% = 37.90/52; SAST engine 69.0%; DEVELOPER 73.6%).
+counts at that run unchanged (951/911/951/61/94/65/792; Phase 5 recount
+2026-10-17 after DPK-SEC-106/107 = 953/913/953/61/96/65/792); coverage recomputed on the
+canonical methodology at that run (72.9% = 37.90/52; SAST engine 69.0%; DEVELOPER
+73.6%; Phase 5 recount 2026-10-17 after R-CWE-03 = 74.8% = 38.90/52).
 Nothing here touches D-1/D-2/GATE-1..4 or the Production Intelligence Lock.
 
 ---
@@ -79,7 +81,7 @@ exists — all-rights-reserved default, `docs/LICENSE_DECISION_RECORD.md` §1);
 BLK-002 (all five `docs/OWNER_DECISIONS.json` entries undecided;
 `vuln-intel/sources.json` `redistribution: UNVERIFIED` for GHSA and OSV).
 Provenance itself is complete (100/100 seed records carry
-`source/sourceUrl/retrievedAt/license` pointers; 951/951 original artifacts
+`source/sourceUrl/retrievedAt/license` pointers; 953/953 original artifacts
 carry `origin` lineage) — provenance is **not** the blocker; **rights** are.
 
 **Independent-review requirements:** GATE-3 — a named human reviewer must open
@@ -384,11 +386,11 @@ Statuses use: `VERIFIED` · `RECOMMENDATION_ONLY` · `BLOCKED_OWNER_DECISION` ·
 
 1. **ID:** D-13. 2. **Question:** create `DPK-REC` records for the 40 legacy
    patterns (DPK-PAT-0001..), or keep the documented retention exception?
-3. **Current value:** 951 patterns, 911 records, exactly 40 patterns without
-   a record link (recomputed 2026-10-17 from `relatedPatterns`); exception
+3. **Current value:** 953 patterns, 913 records, exactly 40 patterns without
+   a record link (recomputed 2026-10-17, Phase 5, from `relatedPatterns`); exception
    documented in `docs/DATASET_APP_CONTRACT.md` §1. 4. **Options:** create
    (via cells + validate + recount) / keep exception. 5. **Implications:**
-   counts move 911→951 only through validated authoring (never padding);
+   counts move 913→953 only through validated authoring (never padding);
    knowledge depth for early rules. 6. **RECOMMENDATION (not an approval):**
    both honest — create only if the coverage is wanted. 7. **Deps:** none.
 8. **BC:** additive. 9. **Evidence:** decision; if created, full recount +
@@ -520,7 +522,7 @@ comparisons; no redistribution question). Full gate rows:
 | C2 | OSV — `https://osv.dev` (`api.osv.dev`) | 0 records imported; importer `scripts/import-osv.mjs` staged, fixture-tested; **proposed** | per-home-database terms (no single license) | `docs/LICENSE_REVIEW.md` §2; `sources.json`; accessed 2026-10-14 | per-record origin + home id | permitted only under each record's home terms | per-entry origin resolution required; blanket license must never be inferred | `RIGHTS_UNRESOLVED` | owner (+ counsel): authorize per-home-terms policy + fail-closed exclusion list |
 | C3 | NVD — `https://nvd.nist.gov` (API 2.0) | 0 data, 0 keys, no importer run; roadmap reference only (**not imported**) | U.S. public domain (17 USC) + required notice + API Terms of Use for keys | `docs/LICENSE_REVIEW.md` §3; `NOTICE` §4; accessed 2026-10-14 | product notice: "This product uses data from the NVD API but is not endorsed or certified by the NVD." | lay read: permitted with notice; key needs ToU acceptance | no verified consumer need today | `NOT_PROPOSED` (for any batch today) | owner: confirm need first; only then key + notice + D-2 row |
 | C4 | MITRE CWE — `https://cwe.mitre.org` | knowledge layer: 61 entries **present** = own-words summaries + canonical links (no MITRE text copied) | CWE Terms of Use (royalty-free incl. commercial; reproduce notice on copies) | `docs/LICENSE_REVIEW.md` §4; `knowledge/cwe/*` `license` links; accessed 2026-10-14 | canonical link per entry | lay read: permitted with notice | acknowledgment-level decision open; verbatim copying would need re-review | `REVIEW_REQUIRED` (acknowledgment) | owner: confirm own-words-plus-links scope needs no further clearance |
-| C5 | Original DROBON content | 951 rules, 951 patterns, 911 records, 951 remediations, 61 CWE summaries, 6 lessons, 3 templates, 2 engagements, 16 vectors, cells/tooling/docs/fixtures — **present** | **no LICENSE file — all rights reserved by default** | `docs/LICENSE_DECISION_RECORD.md` §1; `README.md` License TODO | n/a (own work) | **no grant exists** | none — absence is explicit | `RIGHTS_UNRESOLVED` | owner: D-1 written grant |
+| C5 | Original DROBON content | 953 rules, 953 patterns, 913 records, 953 remediations, 61 CWE summaries, 6 lessons, 3 templates, 2 engagements, 16 vectors, cells/tooling/docs/fixtures — **present** | **no LICENSE file — all rights reserved by default** | `docs/LICENSE_DECISION_RECORD.md` §1; `README.md` License TODO | n/a (own work) | **no grant exists** | none — absence is explicit | `RIGHTS_UNRESOLVED` | owner: D-1 written grant |
 | C6 | KEV / EPSS / commercial feeds | **absent** — no importer, schema fields, or records | n/a | `docs/SOURCE_RELEASE_GATE.md` S6 | n/a | n/a | n/a | `NOT_PROPOSED` | any future proposal needs a new S-row + consumer seam |
 | C7 | Shopify official docs — `https://shopify.dev/docs/api/shopify-app-remix/latest/guide-custom-apps` | evidence-only: `shpat_` prefix fact used to design DPK-SEC-105; **no data copied** | shopify.dev terms (nominative reference to a public fact) | BLK-R03 record, accessed 2026-10-16 | nominative reference in rule provenance notes | n/a — general security knowledge / public fact | none material | `NOT_APPLICABLE` | none required; re-review only if text were copied |
 | C8 | npm semver (`node-semver`) & PEP 440 (PyPA) specs | behavioral specs referenced by `docs/FORMAT.md` range engine; **no text copied** | specification documents | `docs/FORMAT.md`; `interop/provider-vectors.json` pins behavior | spec cited nominatively | n/a — behavioral conformance, facts | none material | `NOT_APPLICABLE` | none |
@@ -543,8 +545,8 @@ All rows are claimed original DROBON authorship. Existing evidence is
 
 | Content class | Paths | Authorship/provenance evidence | License/grant today | Missing evidence | Rights-holder action | Scope questions the grant must answer | Verification before GATE-2/G6 |
 |---|---|---|---|---|---|---|---|
-| Rule packs (951) | `packs/{sast,secrets,dast}/v1/rules/` | `origin: 'original-authored'`; cell lineage `data/asset-cells/` → `scripts/generate-assets.mjs`; determinism digest | none (all rights reserved) | written ownership grant; any employer/contractor assignment statement | owner chooses license(s) + commits grant file(s) | modification · redistribution · sublicensing · commercial distribution · VPS deployment — all currently **NOT covered** | grant file + matrix flip + tripwire update + suite green |
-| Patterns (951) / Records (911) / Remediation (951) | `knowledge/{patterns,records,remediation}/` | same lineage; `origin` fields | none | same | same | same | same |
+| Rule packs (953) | `packs/{sast,secrets,dast}/v1/rules/` | `origin: 'original-authored'`; cell lineage `data/asset-cells/` → `scripts/generate-assets.mjs`; determinism digest | none (all rights reserved) | written ownership grant; any employer/contractor assignment statement | owner chooses license(s) + commits grant file(s) | modification · redistribution · sublicensing · commercial distribution · VPS deployment — all currently **NOT covered** | grant file + matrix flip + tripwire update + suite green |
+| Patterns (953) / Records (913) / Remediation (953) | `knowledge/{patterns,records,remediation}/` | same lineage; `origin` fields | none | same | same | same | same |
 | CWE summaries (61) | `knowledge/cwe/` | own-words summaries + pinned canonical links (no MITRE prose) | none (own words); MITRE Terms govern the links | grant for the summaries themselves | same | nominative use of MITRE names/numbers should be expressly permitted in the grant scope | same + D-2 C4 acknowledgment |
 | Lessons (6) / Templates (3) / Engagements (2) | `learning/lessons/`, `assessments/templates/`, `engagements/` | `origin`/ids per schema | none | same | same | same | same |
 | Provider vectors (16) | `interop/provider-vectors.json` | original behavior pins referencing real records | none | same | same | vectors reference third-party ids — grant should cover original vector text only | same |
@@ -571,7 +573,7 @@ gate never implies another.
 | # | Evaluation (brief §12) | Repo gate(s) | Purpose | Entry criteria | Required evidence | Approver | Pass / fail / blocking | State now | What changes it |
 |---|---|---|---|---|---|---|---|---|---|
 | 1 | Engineering & structural validation | G1–G3 (RELEASE_READINESS_MATRIX) | schemas, rules, tests | repo at baseline | validators + full suite exit 0 | maintainer | fail on any validator/test error | **OPEN (PASS)** — re-run 2026-10-17: 9 validators PASS, 15,569 tests PASS | regression would close it |
-| 2 | Provenance & lineage completeness | G5 | every record attributable | ingestion of any real record | 100/100 seed provenance-complete; lineage 951 = 911 cell + 40 legacy; 0 orphan/quarantined | maintainer | fail on missing provenance | **OPEN (PASS)** | provenance regression |
+| 2 | Provenance & lineage completeness | G5 | every record attributable | ingestion of any real record | 100/100 seed provenance-complete; lineage 953 = 913 cell + 40 legacy; 0 orphan/quarantined | maintainer | fail on missing provenance | **OPEN (PASS)** | provenance regression |
 | 3 | D-1 original-content rights | GATE-2 / G6 | grant for own work | owner decision | grant file(s) + LICENSE_DECISION_RECORD §4 + matrix flips | owner | **blocking** | **CLOSED** — BLK-001 | D-1 reply + grant commit |
 | 4 | D-2 source redistribution rights | GATE-2 / G6 | per-source rights | per-source verdicts | section C rows flipped with evidence; counsel notes where obtained | owner (+ counsel) | **blocking** | **CLOSED** — BLK-002 | D-2 reply per source |
 | 5 | Stage approval | GATE-1 | lift lock for named batch | D-2 done | written approval: stage, sources, maintainer, license basis | owner | **blocking** | **CLOSED** — no approval exists | approval text + date + decider |

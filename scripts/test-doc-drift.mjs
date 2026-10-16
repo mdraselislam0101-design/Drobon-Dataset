@@ -346,11 +346,11 @@ if (existsSync(join(ROOT, 'DROBON_COVERAGE_EVIDENCE.json'))) {
     ? readdirSync(join(ROOT, dir)).filter((f) => re.test(f)).length : 0;
   const claims = [
     ['sast rules', countFiles('packs/sast/v1/rules', /^DPK-.*\.json$/), 792],
-    ['secrets rules', countFiles('packs/secrets/v1/rules', /^DPK-.*\.json$/), 94],
+    ['secrets rules', countFiles('packs/secrets/v1/rules', /^DPK-.*\.json$/), 96],
     ['dast rules', countFiles('packs/dast/v1/rules', /^DPK-.*\.json$/), 65],
-    ['patterns', countFiles('knowledge/patterns', /^DPK-PAT-.*\.json$/), 951],
-    ['records', countFiles('knowledge/records', /^DPK-REC-.*\.json$/), 911],
-    ['remediation', countFiles('knowledge/remediation', /^DPK-.*\.json$/), 951],
+    ['patterns', countFiles('knowledge/patterns', /^DPK-PAT-.*\.json$/), 953],
+    ['records', countFiles('knowledge/records', /^DPK-REC-.*\.json$/), 913],
+    ['remediation', countFiles('knowledge/remediation', /^DPK-.*\.json$/), 953],
     ['cwe', countFiles('knowledge/cwe', /\.json$/), 61],
     ['lessons', countFiles('learning/lessons', /\.json$/), 6],
     ['templates', countFiles('assessments/templates', /\.json$/), 3],
