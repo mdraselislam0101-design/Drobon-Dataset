@@ -7,7 +7,7 @@ writes comes from hand-designed cell data (`data/asset-cells/*.json`) plus
 fixed composition templates. Nothing is fetched, copied, or inferred from
 third-party rule sets.
 
-## 1. One cell = one detection purpose = three assets
+## 1. One cell = one detection purpose = four assets
 
 A cell is a (vulnerability class, language/tool) pair, e.g.
 `sast:weak-hash-md5:java`. Each passing cell produces exactly:

@@ -1,0 +1,204 @@
+{
+  "schemaVersion": "drobon.release.readiness/v1",
+  "note": "Phase 10 release-readiness matrix. Machine-readable companion to docs/RELEASE_GATE.md. PASS is only used with direct evidence; owner-only and production-lock items stay BLOCKED_*; unchecked items stay NOT_ASSESSED. Status vocabulary: PASS | FAIL | BLOCKED | NOT_IMPLEMENTED | NOT_ASSESSED | NOT_APPLICABLE | BLOCKED_OWNER_DECISION | BLOCKED_PRODUCTION_LOCK.",
+  "asOf": "2026-10-16",
+  "verdict": "BLOCKED — OWNER/PRODUCTION AUTHORIZATION REQUIRED",
+  "verdictBasis": "All technical gates within the authorized scope are implemented and evidenced (G1-G5, G7, G9-G15). Licensing approval (G6), production-data authorization (G8), and owner decisions (G16) are mandatory and unresolved; final production eligibility (G17) therefore cannot pass. No technical defect remains open inside the authorized scope.",
+  "derivedFrom": {
+    "requirements": "docs/REQUIREMENTS_MATRIX.json",
+    "corpusTargets": "docs/CORPUS_TARGETS.json",
+    "releaseGateDoc": "docs/RELEASE_GATE.md",
+    "ownerDecisions": "docs/OWNER_DECISIONS.json",
+    "ingestionGates": "docs/INGESTION_GATES.json",
+    "countingPolicy": "docs/COUNTING_POLICY.md"
+  },
+  "gates": [
+    {
+      "id": "G1",
+      "title": "Repository integrity",
+      "acceptanceCriteria": "Clean tracked tree at verification; identity matches declared branch/HEAD; no stray artifacts",
+      "verificationCommand": "git status --porcelain && git rev-parse HEAD",
+      "status": "PASS",
+      "evidence": ["git status clean on arena/9fe99288-drobon-dataset", "baseline HEAD 12edda1 verified 2026-10-16"],
+      "lastVerified": "2026-10-16",
+      "blockingFindings": [],
+      "ownerAction": ""
+    },
+    {
+      "id": "G2",
+      "title": "Schema correctness",
+      "acceptanceCriteria": "Every advisory/pack/asset/audience file validates against the executable specs",
+      "verificationCommand": "npm run validate && npm run validate:packs && npm run validate:assets && npm run validate:audiences && npm run validate:cwe && npm run validate:sources",
+      "status": "PASS",
+      "evidence": ["validate 103 files 0 errors", "validate-packs 953 files 0 errors", "validate-assets 1860 files 0 errors", "validate-audiences 960 files 0 errors", "validate-cwe 61 files 0 errors"],
+      "lastVerified": "2026-10-16",
+      "blockingFindings": [],
+      "ownerAction": ""
+    },
+    {
+      "id": "G3",
+      "title": "Rule quality and test coverage",
+      "acceptanceCriteria": "Every rule has >=1 positive and >=1 negative executed test; ReDoS lint enforced; semantic metadata rules enforced",
+      "verificationCommand": "npm run validate:packs && node scripts/test-packs.mjs && node scripts/test-assets.mjs",
+      "status": "PASS",
+      "evidence": ["950/950 rules pos+neg executed", "pack-tests 3910/3910", "asset-tests 7490/7490", "secrets denylist/matchOnlyEvidence semantic rule + fixtures (this pump)"],
+      "lastVerified": "2026-10-16",
+      "blockingFindings": [],
+      "ownerAction": ""
+    },
+    {
+      "id": "G4",
+      "title": "Data identity and dedup",
+      "acceptanceCriteria": "Identity keys unique; shards collapse to one item; 0 conflict tuples; retired IDs reserved and pinned",
+      "verificationCommand": "npm run dedup-report && node scripts/test-consistency.mjs",
+      "status": "PASS",
+      "evidence": ["dedup-report: files 100 -> items 84, conflictTuples 0", "26 retired reservations pinned by consistency suite"],
+      "lastVerified": "2026-10-16",
+      "blockingFindings": [],
+      "ownerAction": ""
+    },
+    {
+      "id": "G5",
+      "title": "Provenance completeness",
+      "acceptanceCriteria": "Every real record carries source+sourceUrl+retrievedAt; original content has git authorship evidence",
+      "verificationCommand": "npm run validate && npm run provenance",
+      "status": "PASS",
+      "evidence": ["100/100 real records provenance-complete", "provenance-report RECORDED per file", "4/100 upstream existence spot-check 2026-10-16 (sample only, not 100% verification)"],
+      "lastVerified": "2026-10-16",
+      "blockingFindings": [],
+      "ownerAction": ""
+    },
+    {
+      "id": "G6",
+      "title": "Licensing/redistribution approval",
+      "acceptanceCriteria": "LICENSE grant exists OR every production-bound source has owner-signed redistribution decision; matrix licenseStatus flipped with evidence",
+      "verificationCommand": "node scripts/validate-matrix.mjs docs/REQUIREMENTS_MATRIX.json && node scripts/test-doc-drift.mjs",
+      "status": "BLOCKED_OWNER_DECISION",
+      "evidence": ["No LICENSE file (tripwire-enforced)", "OWNER_DECISIONS.json 5/5 OWNER_DECISION_REQUIRED", "LICENSE_REVIEW.md is evidence, never authorization"],
+      "lastVerified": "2026-10-16",
+      "blockingFindings": ["F-05: license grant absent; redistribution UNVERIFIED for GHSA/OSV"],
+      "ownerAction": "Choose license grant(s); confirm per-source redistribution (LICENSE_DECISION_RECORD.md §4)"
+    },
+    {
+      "id": "G7",
+      "title": "Source verification",
+      "acceptanceCriteria": "Provenance fields complete on every real record AND sampled upstream existence checks documented with date and sample size",
+      "verificationCommand": "npm run validate && (sampled gh api /advisories/<id> spot-checks)",
+      "status": "PASS",
+      "evidence": ["100/100 sourceUrl+retrievedAt", "4/100 live sample 2026-10-16: GHSA-24ch-f2g6-9hhh, GHSA-2gpf-2492-q9jh, GHSA-48qf-xh34-q73r, GHSA-x937-hj6v-793p all exist and match package/severity/range"],
+      "lastVerified": "2026-10-16",
+      "blockingFindings": ["Sample size 4/100 — 96 records not re-verified against upstream this run"],
+      "ownerAction": ""
+    },
+    {
+      "id": "G8",
+      "title": "Production-data authorization",
+      "acceptanceCriteria": "All four INGESTION_GATES SATISFIED with written evidence before any catalog expansion",
+      "verificationCommand": "node scripts/ingestion-gates.mjs",
+      "status": "BLOCKED_PRODUCTION_LOCK",
+      "evidence": ["INGESTION_GATES.json 4/4 BLOCKED", "requireGates() fail-closed at importer startup", "0 new advisories imported this pump (mocked tests only)"],
+      "lastVerified": "2026-10-16",
+      "blockingFindings": ["F-15: production lock in force"],
+      "ownerAction": "Written stage approval (GATE-1), license decision (GATE-2), reviewer capacity (GATE-3), app provider design (GATE-4)"
+    },
+    {
+      "id": "G9",
+      "title": "Cross-reference integrity",
+      "acceptanceCriteria": "0 dangling patternRefs/relatedPatterns/remediation/CWE/lesson targets",
+      "verificationCommand": "node scripts/test-consistency.mjs && node scripts/test-assets.mjs",
+      "status": "PASS",
+      "evidence": ["consistency-tests 208/208", "linkage: 950 rules <-> 950 patterns both directions", "0 unresolved CWE refs"],
+      "lastVerified": "2026-10-16",
+      "blockingFindings": [],
+      "ownerAction": ""
+    },
+    {
+      "id": "G10",
+      "title": "Documentation consistency",
+      "acceptanceCriteria": "Every stated count recomputes from files; drift fails CI; license-field semantics documented",
+      "verificationCommand": "npm run test:drift",
+      "status": "PASS",
+      "evidence": ["scripts/test-doc-drift.mjs gate (this pump)", "PROVENANCE_POLICY.md §6 semantics", "stale counts fixed in README/CORPUS_GAP_REPORT/CAPABILITY_COVERAGE/SCA_RULE_SCHEMA_PROPOSAL/REQUIREMENTS_MATRIX notes"],
+      "lastVerified": "2026-10-16",
+      "blockingFindings": [],
+      "ownerAction": ""
+    },
+    {
+      "id": "G11",
+      "title": "Security-toolchain hardening",
+      "acceptanceCriteria": "Importer/generator/validator attack surface reviewed; safe filename handling; leak scan clean; CI least-privilege; no network in tests",
+      "verificationCommand": "node scripts/test-importers.mjs && node scripts/test-consistency.mjs && npm run validate:packs",
+      "status": "PASS",
+      "evidence": ["filename injection fixture rejected (GHSA id grammar before write)", "leak scan clean outside audited secrets zone", "ci.yml permissions: contents: read", "importer tests use injected fetch (no network)"],
+      "lastVerified": "2026-10-16",
+      "blockingFindings": [],
+      "ownerAction": ""
+    },
+    {
+      "id": "G12",
+      "title": "Reproducibility",
+      "acceptanceCriteria": "Generation+validation deterministic across two runs in a fresh copy; outputs byte-identical",
+      "verificationCommand": "node scripts/test-determinism.mjs",
+      "status": "NOT_ASSESSED",
+      "evidence": [],
+      "lastVerified": "",
+      "blockingFindings": ["determinism gate lands in Batch H of this pump"],
+      "ownerAction": ""
+    },
+    {
+      "id": "G13",
+      "title": "Full regression tests",
+      "acceptanceCriteria": "Entire npm test + all validators green on this exact tree, exit 0",
+      "verificationCommand": "npm test && npm run validate && npm run validate:sources && npm run validate:corpus && npm run validate:packs && npm run validate:audiences && npm run validate:cwe && npm run validate:matrix && npm run test:vectors",
+      "status": "NOT_ASSESSED",
+      "evidence": [],
+      "lastVerified": "",
+      "blockingFindings": ["final regression run lands in Batch H of this pump"],
+      "ownerAction": ""
+    },
+    {
+      "id": "G14",
+      "title": "Dataset/App separation",
+      "acceptanceCriteria": "No app code bundled; no dataset copied into app; seam contract only",
+      "verificationCommand": "grep -r boundary checks + SCOPE.md seam inventory",
+      "status": "PASS",
+      "evidence": ["repo contains data+tooling only (inventory 4066 files)", "SCOPE.md seam inventory", "no Main App sources present"],
+      "lastVerified": "2026-10-16",
+      "blockingFindings": [],
+      "ownerAction": ""
+    },
+    {
+      "id": "G15",
+      "title": "CI/release workflow integrity",
+      "acceptanceCriteria": "CI runs every validator + drift + importer tests; least-privilege permissions; fail-closed",
+      "verificationCommand": "inspect .github/workflows/ci.yml",
+      "status": "NOT_ASSESSED",
+      "evidence": [],
+      "lastVerified": "",
+      "blockingFindings": ["ci.yml update lands in Batch G/H of this pump"],
+      "ownerAction": ""
+    },
+    {
+      "id": "G16",
+      "title": "Owner decisions",
+      "acceptanceCriteria": "Every OWNER_DECISIONS entry resolved with decider + date",
+      "verificationCommand": "node scripts/validate-corpus.mjs",
+      "status": "BLOCKED_OWNER_DECISION",
+      "evidence": ["OWNER_DECISIONS.json 5/5 OWNER_DECISION_REQUIRED", "OWNER_ACTION_REQUIRED.md §6-§7 open items"],
+      "lastVerified": "2026-10-16",
+      "blockingFindings": ["F-11: 18 open decision items"],
+      "ownerAction": "Written owner decisions (LICENSE_DECISION_RECORD.md §4 + OWNER_ACTION_REQUIRED.md)"
+    },
+    {
+      "id": "G17",
+      "title": "Final production eligibility",
+      "acceptanceCriteria": "G1-G16 all PASS AND verifiedProductionCount > 0 at target scale AND release authorization recorded",
+      "verificationCommand": "composite (all gates)",
+      "status": "BLOCKED_OWNER_DECISION",
+      "evidence": ["verifiedProductionCount 0/100,000", "G6/G8/G16 blocked"],
+      "lastVerified": "2026-10-16",
+      "blockingFindings": ["F-15"],
+      "ownerAction": "All G6+G8+G16 owner actions"
+    }
+  ]
+}

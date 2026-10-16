@@ -8,8 +8,8 @@ No step here authorizes ingestion.
 
 | Source | Endpoint / method | Pagination | Rate limits | Incremental |
 |---|---|---|---|---|
-| GHSA | REST advisory API (`type=reviewed`, withdrawn excluded) via `import-ghsa.mjs` | `per_page=100`; **gap: importer fetches one page only (no Link-following) - staging must add Link pagination before breadth batches** | 60 req/hr anon, 5000 req/hr with free owner token (confirm at staging); token never committed | `sort=updated` + per-record `retrievedAt`; re-query windows, skip existing files |
-| OSV | `POST api.osv.dev/v1/query` per package via `import-osv.mjs`, or GCS dumps | `page_token` loop exists (5-page cap - raise deliberately at staging) | none currently (FAQ); 32 MiB HTTP/1.1 cap - use HTTP/2 | `modified_id.csv` (per-eco + global) streamed until last-processed timestamp |
+| GHSA | REST advisory API (`type=reviewed`, withdrawn excluded) via `import-ghsa.mjs` | `per_page=100`; Link pagination implemented (`--max-pages`, default 10, cap 50; repeated-cursor guard; checkpoint/resume via tmp cursors) — recount 2026-10-16 replaced the earlier "one page only" note | 60 req/hr anon, 5000 req/hr with free owner token (confirm at staging); token never committed | `sort=updated` + per-record `retrievedAt`; re-query windows, skip existing files |
+| OSV | `POST api.osv.dev/v1/query` per package via `import-osv.mjs`, or GCS dumps | `page_token` loop with `--max-pages` (default 5, cap 20 - raise deliberately at staging) | none currently (FAQ); 32 MiB HTTP/1.1 cap - use HTTP/2 | `modified_id.csv` (per-eco + global) streamed until last-processed timestamp |
 | NVD | REST API 2.0 (no importer; none needed today) | `startIndex`/`resultsPerPage` | 5 req/30s anon, 50 req/30s keyed; ~6s sleep recommended | `lastModStartDate/lastModEndDate`, poll no more than every 2h |
 
 All retrieval is read-only, server-side, batched, and logged (source, window,
