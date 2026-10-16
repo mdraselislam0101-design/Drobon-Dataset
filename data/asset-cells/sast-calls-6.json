@@ -1,0 +1,61 @@
+[
+  {
+    "class": "log-forging-request",
+    "kind": "sast",
+    "category": "log-forging",
+    "cwe": "CWE-117",
+    "severity": "MEDIUM",
+    "framing": "flag",
+    "cweDef": {
+      "name": "Improper Output Neutralization for Logs",
+      "summary": "Log messages built from external input can forge entries or corrupt the log format when special characters are not neutralized."
+    },
+    "title": "Request input written to a log call ({lang}) — review required",
+    "description": "Code in {lang} passes request-derived input to a log call. Line breaks and separators in that input can forge extra log entries or corrupt the log format, which hides activity and misleads the reviewer. This lexical rule flags the call; the reviewer confirms the value is neutralized before it is logged.",
+    "remediation": "Encode or strip control characters from request values before logging, and log them as a quoted, structured field. Keep the request value out of the message template.",
+    "limitation": "Lexical, line-based: flags a request accessor on the same line as a log call. A value copied to a variable on an earlier line is not seen.",
+    "scopeT": "Single-line lexical match on request accessors inside log calls.",
+    "fp": "Values already validated against a strict allowlist before logging are the common false positive.",
+    "recordDesc": "Request input written verbatim to logs in {lang} allows forged entries and format corruption. Neutralizing the value or logging it as a structured field removes the injection.",
+    "applicability": "Application code that logs values taken from HTTP requests; single-line lexical scope.",
+    "risk": "Forged or corrupted log entries that hide activity or mislead review; MEDIUM severity.",
+    "why": "Request input reaches a log call unneutralized ({sink}).",
+    "fix": [
+      "Neutralize control characters in request values before logging.",
+      "Log request values as quoted structured fields, not inside the message text."
+    ],
+    "verifyT": "Rescan shows request values logged only after neutralization or as structured fields.",
+    "sinks": {
+      "java:logrequest": [
+        "\\blog(?:ger)?\\.(?:info|warn|warning|error|debug|severe|fine|log)\\s*\\([^\\n]*\\b(?:request|req)\\.getParameter\\s*\\(",
+        "log.info(\"Failed to parse val=\" + request.getParameter(\"val\"));",
+        "String val = request.getParameter(\"val\");",
+        "request value logged as a structured field"
+      ],
+      "python:logrequest": [
+        "\\b(?:logging|logger|log)\\.(?:info|warning|warn|error|debug|exception|critical)\\s*\\([^\\n]*\\brequest\\.(?:args|form|values|GET|POST)\\b",
+        "logging.info(\"Failed to parse val=%s\", request.args.get(\"val\"))",
+        "val = request.args.get(\"val\")",
+        "request value logged as a structured field"
+      ],
+      "javascript:logrequest": [
+        "\\b(?:console|logger|log)\\.(?:log|info|warn|error|debug)\\s*\\([^\\n]*\\b(?:req|request)\\.(?:query|body|params)\\b",
+        "console.log(\"Failed to parse val=\" + req.query.val);",
+        "const val = req.query.val;",
+        "request value logged as a structured field"
+      ],
+      "php:logrequest": [
+        "\\b(?:error_log|Log::(?:info|warning|error|debug))\\s*\\([^\\n]*\\$_(?:GET|POST|REQUEST|COOKIE)\\b",
+        "error_log(\"Failed to parse val=\" . $_GET[\"val\"]);",
+        "$val = $_GET[\"val\"];",
+        "request value logged as a structured field"
+      ],
+      "go:logrequest": [
+        "\\blog\\.(?:Printf|Println|Print|Fatalf)\\s*\\([^\\n]*\\b(?:r|req|request)\\.(?:URL\\.Query|FormValue|PostFormValue)\\b",
+        "log.Printf(\"Failed to parse val=%s\", r.FormValue(\"val\"))",
+        "val := r.FormValue(\"val\")",
+        "request value logged as a structured field"
+      ]
+    }
+  }
+]
