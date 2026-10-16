@@ -328,6 +328,42 @@ computed.advisoryIds = advisoryIds.size;
     'coverage-map: verified gaps documented with next legitimate steps');
 }
 
+// --- 8. DROBON_COVERAGE_EVIDENCE.json counts recomputed (audit staleness gate)
+if (existsSync(join(ROOT, 'DROBON_COVERAGE_EVIDENCE.json'))) {
+  const ev = JSON.parse(read('DROBON_COVERAGE_EVIDENCE.json'));
+  assert(ev.schemaVersion === 'drobon.coverage.evidence/v1', 'coverage-evidence: schemaVersion pinned');
+  const reqs = Array.isArray(ev.requirements) ? ev.requirements : [];
+  assert(reqs.length >= 50, `coverage-evidence: requirement ledger present (got ${reqs.length})`);
+  const ids = reqs.map((r) => r.id);
+  assert(new Set(ids).size === ids.length, 'coverage-evidence: requirement ids unique');
+  const vocab = ['VERIFIED_FULL', 'VERIFIED_PARTIAL', 'IMPLEMENTED_NOT_VERIFIED', 'MISSING_DATASET',
+    'MISSING_ENGINE_OR_INTEGRATION', 'NOT_IMPLEMENTED', 'BLOCKED_OWNER_DECISION', 'BLOCKED_LICENSE',
+    'BLOCKED_PRODUCTION_LOCK', 'BLOCKED_EXTERNAL_DEPENDENCY', 'NOT_ASSESSED', 'NOT_APPLICABLE_WITH_JUSTIFICATION'];
+  assert(reqs.every((r) => vocab.includes(r.status)),
+    'coverage-evidence: status vocabulary respected', '');
+  // every dataset-item count claim must match the tree
+  const countFiles = (dir, re) => existsSync(join(ROOT, dir))
+    ? readdirSync(join(ROOT, dir)).filter((f) => re.test(f)).length : 0;
+  const claims = [
+    ['sast rules', countFiles('packs/sast/v1/rules', /^DPK-.*\.json$/), 792],
+    ['secrets rules', countFiles('packs/secrets/v1/rules', /^DPK-.*\.json$/), 93],
+    ['dast rules', countFiles('packs/dast/v1/rules', /^DPK-.*\.json$/), 65],
+    ['patterns', countFiles('knowledge/patterns', /^DPK-PAT-.*\.json$/), 950],
+    ['records', countFiles('knowledge/records', /^DPK-REC-.*\.json$/), 910],
+    ['remediation', countFiles('knowledge/remediation', /^DPK-.*\.json$/), 950],
+    ['cwe', countFiles('knowledge/cwe', /\.json$/), 61],
+    ['lessons', countFiles('learning/lessons', /\.json$/), 5],
+    ['templates', countFiles('assessments/templates', /\.json$/), 3],
+    ['engagements', countFiles('engagements', /\.json$/), 2],
+    ['advisory files', countFiles('vuln-intel/npm', /^GHSA-.*\.json$/) + countFiles('vuln-intel/pypi', /^GHSA-.*\.json$/), 100],
+  ];
+  for (const [label, actual, expected] of claims) {
+    assert(actual === expected, `coverage-evidence recount: ${label} ${actual} == audit claim ${expected}`, '');
+  }
+  assert(ev.summary && typeof ev.summary.pct?.mainAppToDataset?.[0] === 'number',
+    'coverage-evidence: percentages carry numerator/denominator triplets');
+}
+
 process.stdout.write(`\ndoc-drift: ${passed} passed, ${failed} failed\n`);
 if (failed > 0) process.exitCode = 1;
 
