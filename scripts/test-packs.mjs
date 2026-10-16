@@ -167,6 +167,7 @@ const NEGATIVE = {
   'sast-bad-id.json': 'must match',
   'sast-bad-cwe.json': 'cwe: must match',
   'secrets-bad-confidence.json': 'confidence',
+  'secrets-missing-denylist.json': 'denylist: required unless matchOnlyEvidence',
   'dast-unknown-check.json': 'must be one of',
 };
 for (const [name, needle] of Object.entries(NEGATIVE)) {
@@ -436,6 +437,32 @@ for (const [label, line, match] of GEN_CASES) {
   // Harness self-check: a vetoed line labelled as a match must be reported, not silently accepted.
   const result = runLineTests(GEN_SECRET_PATTERN, '', [{ line: 'password = "example secret value"', match: true }], ['EXAMPLE']);
   assert(typeof result === 'string', 'generator/validator agree: vetoed line labelled as match is reported', String(result));
+}
+
+// --- Rule metadata semantics (Batch D, audit F-07) ---------------------------
+// 1. SAST `languages` omission = universal (docs/PACKS.md contract): valid, and
+//    the empty array stays invalid (1..10 bound) so "no languages" cannot be
+//    spelled two ways. DPK-SAST-004 is the shipped example of the omission.
+// 2. Secrets `denylist` is required for credential-value rules; only
+//    evidence-only rules (matchOnlyEvidence: true, e.g. DPK-SEC-004 PEM
+//    headers) may omit it. Enforced by validate-packs + fixture above.
+{
+  const sast004 = JSON.parse(readFileSync(join(ROOT, 'packs', 'sast', 'v1', 'rules', 'DPK-SAST-004.json'), 'utf8'));
+  assert(!('languages' in sast004), 'metadata: DPK-SAST-004 omits languages (documented any-file contract)');
+  const omittedOk = validatePackFile({ ...sast004 });
+  assert(omittedOk.length === 0, 'metadata: languages-omitting SAST rule validates (universal semantics)', omittedOk.join('; '));
+  const emptyBad = validatePackFile({ ...sast004, languages: [] });
+  assert(emptyBad.some((e) => e.includes('languages: must have 1..')), 'metadata: empty languages array rejected (one spelling only)', emptyBad.join('; '));
+  let secWithEvidenceOmittingDenylist = 0;
+  let violations = [];
+  for (const file of ruleFiles) {
+    const rule = JSON.parse(readFileSync(file, 'utf8'));
+    if (rule.schemaVersion !== 'drobon.pack.secrets/v1') continue;
+    if (rule.matchOnlyEvidence === true) secWithEvidenceOmittingDenylist += 1;
+    if (rule.denylist === undefined && rule.matchOnlyEvidence !== true) violations.push(rule.id);
+  }
+  assert(violations.length === 0, 'metadata: every credential-value secrets rule ships a denylist (or is evidence-only)', violations.join(','));
+  assert(secWithEvidenceOmittingDenylist >= 1, 'metadata: evidence-only exemption is exercised by a shipped rule (DPK-SEC-004)');
 }
 
 // --- summary -----------------------------------------------------------------

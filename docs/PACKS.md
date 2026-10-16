@@ -60,7 +60,7 @@ Credential-shape rules — the data twin of the app's `SecretsRule` contract. Sh
 
 - `confidence` (required): `LOW`/`MEDIUM`/`HIGH` — detection confidence only.
 - `patterns`: same contract as SAST (1–8, `"i"` only, ReDoS lint, example-executed).
-- `denylist` (optional, ≤20 entries of 1–64 chars): case-insensitive substrings that VETO a match (placeholders, documentation values). The validator applies the veto when executing tests.
+- `denylist` (required unless `matchOnlyEvidence: true`; otherwise optional, ≤20 entries of 1–64 chars): case-insensitive substrings that VETO a match (placeholders, documentation values). The validator applies the veto when executing tests. Credential-value rules must ship one; only evidence-only rules (headers/carriers without material) may omit it (semantic rule, validator-enforced).
 - `redact` (required): MUST be `true` — a pack rule ships only if it promises evidence redaction of matched material.
 - `matchOnlyEvidence` (optional bool): evidence is the match alone (for headers/carriers without material, e.g. PEM headers).
 - No `languages`: secrets rules are universal.

@@ -610,6 +610,12 @@ function validateSecretsRule(record) {
   if (record['matchOnlyEvidence'] !== undefined && typeof record['matchOnlyEvidence'] !== 'boolean') {
     errors.push('matchOnlyEvidence: must be a boolean');
   }
+  // Semantic contract (docs/PACKS.md): a credential-value rule must ship a
+  // placeholder veto. Only evidence-only rules (matchOnlyEvidence: true —
+  // headers/carriers without material) may omit the denylist.
+  if (record['denylist'] === undefined && record['matchOnlyEvidence'] !== true) {
+    errors.push('denylist: required unless matchOnlyEvidence is true (credential-value rules must veto documentation placeholders)');
+  }
   const compiled = checkPatterns(errors, record);
   const denylist = checkDenylist(errors, record);
   checkLineTests(errors, record, compiled, denylist);
