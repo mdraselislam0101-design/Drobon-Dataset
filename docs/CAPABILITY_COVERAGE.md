@@ -11,9 +11,9 @@ name the script that re-verifies the claim on every run.
 | SCA matching (`sca/provider.ts assess`) | REQUIRED | 100-record validated seed; breadth blocked | `validate.mjs`, `check-vectors.mjs` |
 | SAST detection (app catalog-gated engine) | SUPPLEMENTAL | 787 Dataset rules (`DPK-SAST-*`); 544 fully reachable by Main App catalog ids, 217 with no analyzed tag (PACKS.md Pump 4) | `validate-packs.mjs`, `test-packs.mjs`, `test-consistency.mjs` (reachability) |
 | Secrets detection (shape-only) | SUPPLEMENTAL | 89 Dataset rules (`DPK-SEC-*`); no app secrets pack consumer | `validate-packs.mjs`, `test-packs.mjs` |
-| DAST observation (app: 8 hard-coded `DG-DAST-001..008` in `apps/api/src/scans/dast/rules.ts`, code not data) | SUPPLEMENTAL | 51 Dataset rules over 7 closed check types (loader-future; no app consumer of `packs/dast`) | `validate-packs.mjs`, `test-packs.mjs` (DAST evaluator rows) |
-| CWE classification (app-referenced ids) | REQUIRED | 56 entries in `knowledge/cwe/` (count re-derived in Batch 1; app-referenced subset NOT re-counted) | `validate-cwe.mjs`, `test-consistency.mjs` |
-| Remediation content (app computes status) | REQUIRED | 927 remediation files, one per pack rule (Batch 4 count) | `validate-audiences.mjs`, `test-consistency.mjs` |
+| DAST observation (app: 8 hard-coded `DG-DAST-001..008` in `apps/api/src/scans/dast/rules.ts`, code not data) | SUPPLEMENTAL | 64 Dataset rules over 7 closed check types (loader-future; no app consumer of `packs/dast`) | `validate-packs.mjs`, `test-packs.mjs` (DAST evaluator rows) |
+| CWE classification (app-referenced ids) | REQUIRED | 60 entries in `knowledge/cwe/` (count re-derived in Batch 1; app-referenced subset NOT re-counted) | `validate-cwe.mjs`, `test-consistency.mjs` |
+| Remediation content (app computes status) | REQUIRED | 940 remediation files, one per pack rule (Batch 5 count) | `validate-audiences.mjs`, `test-consistency.mjs` |
 | Lessons (internal catalog, loader-future) | SUPPLEMENTAL | 5 lessons (2 `lsn_dev_*`, 3 `lsn_pack_*`), practice validator-executed | `validate-audiences.mjs` |
 | Assessment templates (loader-future) | SUPPLEMENTAL | 3 templates, never pre-authorize (count re-derived Pump 4) | `validate-audiences.mjs` |
 | Engagement aids (no app consumer) | SUPPLEMENTAL | 2 standalone passive-only aids (count re-derived Pump 4) | `validate-audiences.mjs` |

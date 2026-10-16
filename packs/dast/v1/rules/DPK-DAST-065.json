@@ -1,0 +1,53 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-065",
+  "title": "Server file path disclosed in a response",
+  "description": "The response body contains a server-side source path (an absolute source path). Absolute paths reveal the deployment layout and framework, which narrows the search for file-based flaws.",
+  "severity": "LOW",
+  "cwe": "CWE-209",
+  "category": "information-disclosure",
+  "remediation": "Strip absolute paths from error text and return relative names only (relative names in user-visible messages).",
+  "limitation": "Pattern on one body: a Windows or Unix path in a download link or log excerpt can match.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?:[A-Za-z]:\\\\(?:inetpub|Windows|Users)\\\\|/(?:var/www|home/[\\w.-]+|srv|opt)/[\\w./-]+\\.(?:php|py|rb|js|java|cs|go)\\b)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 500,
+        "headers": {
+          "content-type": "text/html"
+        },
+        "body": "Failed to load C:\\inetpub\\wwwroot\\app.aspx"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 500,
+        "headers": {
+          "content-type": "text/html"
+        },
+        "body": "Failed at /home/deploy/app/server.py line 9"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "content-type": "text/html"
+        },
+        "body": "Download the file from /home/deploy/README.md"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-0962"
+  ]
+}

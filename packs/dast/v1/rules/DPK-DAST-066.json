@@ -1,0 +1,42 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-066",
+  "title": "Node.js stack frame disclosed in a response",
+  "description": "The response body carries a Node.js stack frame. Node.js stack frames expose file paths, line numbers, and internal module names to any client that can trigger the error.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-209",
+  "category": "debug-exposure",
+  "remediation": "Disable stack output in production and return a generic error page (a generic error page with a correlation ID).",
+  "limitation": "Pattern on one body: a Node.js trace quoted in a help article can match. Development output and production exposure look the same.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "\\bat [^\\n]{0,120}\\.(?:js|mjs|cjs):\\d+:\\d+"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 500,
+        "headers": {
+          "content-type": "text/plain"
+        },
+        "body": "Error: boom\n    at Object.<anonymous> (/srv/app/server.js:12:5)"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 500,
+        "headers": {
+          "content-type": "text/plain"
+        },
+        "body": "Error handled; see the server log for details."
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-0963"
+  ]
+}
