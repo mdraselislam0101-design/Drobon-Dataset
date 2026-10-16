@@ -26,6 +26,7 @@ import {
   SAFE_NEXT_PREFIX,
 } from './import-ghsa.mjs';
 import { fetchOsvForPackage, parseArgs as parseOsvArgs } from './import-osv.mjs';
+import { quarantineRecord } from './quarantine.mjs';
 import { HttpError } from './retry.mjs';
 
 const ROOT = resolve(new URL('.', import.meta.url).pathname, '..');
@@ -402,6 +403,26 @@ assert(isSafeNextUrl('https://api.github.com/advisories?page=2') && !isSafeNextU
   // a real divergence (a missing file in one run fails the set comparison).
   assert(forward.files.length === 4 && forward.files[0] === 'GHSA-1111-1111-1111.json',
     'reordered input: harness observes the expected four files', forward.files.join(','));
+}
+
+// --- quarantine path safety (Phase 7 toolchain security) ---------------------
+// safeFileStem must keep EVERY write inside <root>/quarantine/<batch>/: batch or
+// id values of '.', '..', or separator-bearing strings are filename-forged.
+{
+  const sb = sandbox();
+  const rec = advisory('GHSA-7777-7777-7777');
+  const out = quarantineRecord(sb, '..', 'GHSA', 'GHSA-7777-7777-7777', rec, 'traversal attempt');
+  assert(out.file.startsWith(join(sb, 'quarantine')) && out.file.includes(`${join('quarantine', 'item')}`),
+    'security: batch ".." cannot escape the quarantine directory', out.file);
+  assert(!existsSync(join(sb, 'REASONS.md')) && !existsSync(join(sb, 'GHSA-GHSA-7777-7777-7777.json')),
+    'security: no files written outside quarantine/', '');
+  const out2 = quarantineRecord(sb, '../../etc', 'GHSA', '../../evil', rec, 'traversal attempt 2');
+  assert(out2.file.startsWith(join(sb, 'quarantine')),
+    'security: separator-bearing batch/id are neutralized', out2.file);
+  assert(out2.file.endsWith('GHSA-.._.._evil.json'),
+    'security: forged id stays a single neutralized path component', out2.file);
+  assert(readdirSync(sb).join(',') === 'quarantine',
+    'security: sandbox root contains only the quarantine directory', readdirSync(sb).join(','));
 }
 
 for (const dir of ROOT_SINK) {
