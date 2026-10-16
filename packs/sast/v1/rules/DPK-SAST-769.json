@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-769",
+  "title": "Value-carrying external call (solidity) — review required",
+  "description": "A solidity contract sends value through an external call. The recipient can call back into this contract before its state updates, which allows re-entrant withdrawals. This lexical rule flags the call; the reviewer confirms state is updated first and a reentrancy guard applies.",
+  "severity": "HIGH",
+  "cwe": "CWE-841",
+  "category": "race-condition",
+  "remediation": "Update state before the external call, and use a reentrancy guard and checks-effects-interactions order.",
+  "limitation": "Lexical, line-based: every value-carrying call matches. Re-entry needs control-flow review.",
+  "languages": [
+    "solidity"
+  ],
+  "patterns": [
+    {
+      "source": "\\.call\\s*\\{\\s*value\\s*:"
+    }
+  ],
+  "tests": [
+    {
+      "line": "(bool ok, ) = msg.sender.call{value: amount}(\"\");",
+      "match": true
+    },
+    {
+      "line": "# audit: (bool ok, ) = msg.sender.call{value: amount}(\"\"); present",
+      "match": true
+    },
+    {
+      "line": "token.transfer(msg.sender, amount);",
+      "match": false
+    },
+    {
+      "line": "# verified: token.transfer(msg.sender, amount);",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-0925"
+  ]
+}

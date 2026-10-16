@@ -1,0 +1,298 @@
+[
+  {
+    "class": "tx-origin-auth",
+    "kind": "sast",
+    "category": "access-control",
+    "cwe": "CWE-287",
+    "severity": "HIGH",
+    "framing": "flag",
+    "title": "tx.origin used for authorization ({lang}) — review required",
+    "description": "A {lang} contract reads tx.origin in an authorization check. tx.origin is the externally owned account that started the transaction, so an intermediary contract the owner calls can pass the check. This lexical rule flags the read; the reviewer confirms tx.origin never decides access.",
+    "remediation": "Authorize with {safe} and keep tx.origin out of access checks.",
+    "limitation": "Lexical, line-based: any tx.origin reference matches, including non-authorization reads such as logging.",
+    "scopeT": "Single-line lexical match on tx.origin reads in {lang} code.",
+    "fp": "Logging tx.origin for diagnostics is the common false positive.",
+    "recordDesc": "In {lang}, the check compares the transaction originator. A phishing contract relays a call from the victim, so the origin still matches the owner. The remedy is {safe}.",
+    "applicability": "{lang} contracts with owner or role checks; single-line lexical scope.",
+    "risk": "Unauthorized privileged actions through a phishing contract; HIGH severity.",
+    "why": "{lang} authorization reads tx.origin, which any intermediary contract can carry.",
+    "fix": [
+      "Replace tx.origin checks with {safe}.",
+      "Re-run the scan and confirm no tx.origin authorization remains."
+    ],
+    "verifyT": "Rescan shows no tx.origin reference in an access check.",
+    "sinks": {
+      "solidity": [
+        "\\btx\\.origin\\b",
+        "require(tx.origin == owner);",
+        "require(msg.sender == owner);",
+        "msg.sender"
+      ]
+    }
+  },
+  {
+    "class": "delegatecall-untrusted",
+    "kind": "sast",
+    "category": "code-injection",
+    "cwe": "CWE-829",
+    "severity": "HIGH",
+    "framing": "flag",
+    "title": "delegatecall to a variable target ({lang}) — review required",
+    "description": "A {lang} contract runs delegatecall. The callee code executes in this contract storage and balance context, so a target chosen or upgraded by an attacker can rewrite owner variables and drain funds. This lexical rule flags the call; the reviewer confirms the target is fixed.",
+    "remediation": "Delegatecall only to {safe}; never to an address derived from input.",
+    "limitation": "Lexical, line-based: every delegatecall matches, including fixed proxy targets.",
+    "scopeT": "Single-line lexical match on delegatecall in {lang} code.",
+    "fp": "Fixed library or proxy implementations are the common false positive.",
+    "recordDesc": "In {lang}, a delegatecall runs foreign code against the caller storage. Storage slots line up by position, so a hostile target can overwrite ownership variables. The remedy is {safe}.",
+    "applicability": "{lang} contracts using delegatecall; single-line lexical scope.",
+    "risk": "Storage takeover and fund loss when the target is attacker-influenced; HIGH severity.",
+    "why": "{lang} delegatecall runs external code with this contract storage.",
+    "fix": [
+      "Pin the delegatecall target to {safe}.",
+      "Re-run the scan and confirm each delegatecall target is fixed."
+    ],
+    "verifyT": "Rescan shows every delegatecall target is a fixed, reviewed implementation.",
+    "sinks": {
+      "solidity": [
+        "\\.delegatecall\\s*\\(",
+        "(bool ok, ) = target.delegatecall(data);",
+        "(bool ok, ) = target.call(data);",
+        "a fixed, owner-set implementation address"
+      ]
+    }
+  },
+  {
+    "class": "selfdestruct-unguarded",
+    "kind": "sast",
+    "category": "access-control",
+    "cwe": "CWE-284",
+    "severity": "HIGH",
+    "framing": "call",
+    "title": "Contract self-destruct via {sink} ({lang}) — review required",
+    "description": "The {lang} sink {sink} removes the contract code and forwards its balance. Without a guard, anyone who reaches the call can destroy the contract. This lexical rule flags the call; the reviewer confirms it sits behind an owner-only path.",
+    "remediation": "Remove {sink} or gate it behind {safe}.",
+    "limitation": "Lexical, line-based: any selfdestruct call matches, including guarded calls.",
+    "scopeT": "Single-line lexical match on selfdestruct calls in {lang} code.",
+    "fp": "A guarded, owner-only migration path is the common false positive.",
+    "recordDesc": "In {lang}, {sink} destroys the contract and sends its balance away. An unguarded path lets any caller erase the deployed code and funds. The remedy is {safe}.",
+    "applicability": "{lang} contracts with lifecycle functions; single-line lexical scope.",
+    "risk": "Loss of contract state and funds through an unguarded destroy; HIGH severity.",
+    "why": "{lang} calls {sink}, which removes the contract code.",
+    "fix": [
+      "Remove {sink} or gate it behind {safe}.",
+      "Re-run the scan and confirm each destroy path is owner-only."
+    ],
+    "verifyT": "Rescan shows any remaining selfdestruct sits behind an owner-only guard.",
+    "sinks": {
+      "solidity": [
+        "selfdestruct",
+        "selfdestruct",
+        "an owner-only, reviewed migration path"
+      ]
+    }
+  },
+  {
+    "class": "value-call-reentrancy",
+    "kind": "sast",
+    "category": "race-condition",
+    "cwe": "CWE-841",
+    "severity": "HIGH",
+    "framing": "flag",
+    "cweDef": {
+      "name": "Improper Enforcement of Behavioral Workflow",
+      "summary": "The software does not enforce the required order of operations, so an attacker can repeat or interleave steps, for example by re-entering a function before its state is updated."
+    },
+    "title": "Value-carrying external call ({lang}) — review required",
+    "description": "A {lang} contract sends value through an external call. The recipient can call back into this contract before its state updates, which allows re-entrant withdrawals. This lexical rule flags the call; the reviewer confirms state is updated first and a reentrancy guard applies.",
+    "remediation": "Update state before the external call, and use {safe}.",
+    "limitation": "Lexical, line-based: every value-carrying call matches. Re-entry needs control-flow review.",
+    "scopeT": "Single-line lexical match on value-carrying calls in {lang} code.",
+    "fp": "Calls to trusted, fixed recipients are the common false positive.",
+    "recordDesc": "In {lang}, a value-carrying call hands control to the recipient. If state is updated after the call, the recipient re-enters and repeats the withdrawal. The remedy is {safe}.",
+    "applicability": "{lang} contracts that send value; single-line lexical scope.",
+    "risk": "Repeated withdrawals and drained balances; HIGH severity.",
+    "why": "{lang} sends value with an external call before its state update.",
+    "fix": [
+      "Update state before the call and use {safe}.",
+      "Re-run the scan and confirm each value call follows the checks-effects-interactions order."
+    ],
+    "verifyT": "Rescan shows value calls only after state updates, with a reentrancy guard in place.",
+    "sinks": {
+      "solidity": [
+        "\\.call\\s*\\{\\s*value\\s*:",
+        "(bool ok, ) = msg.sender.call{value: amount}(\"\");",
+        "token.transfer(msg.sender, amount);",
+        "a reentrancy guard and checks-effects-interactions order"
+      ]
+    }
+  },
+  {
+    "class": "weak-randomness-block",
+    "kind": "sast",
+    "category": "weak-cryptography",
+    "cwe": "CWE-330",
+    "severity": "MEDIUM",
+    "framing": "flag",
+    "title": "Block values used as randomness ({lang}) — review required",
+    "description": "A {lang} contract hashes block values to derive a random result. Block producers and observers can predict or influence these values, so the outcome is not random. This lexical rule flags the derivation; the reviewer confirms the value is not used for chance.",
+    "remediation": "Use {safe} for any outcome that needs unpredictability.",
+    "limitation": "Lexical, line-based: any hash over a block value matches, including non-random uses such as cache keys.",
+    "scopeT": "Single-line lexical match on block values hashed into a result in {lang} code.",
+    "fp": "Hashing block values for cache keys or deduplication is the common false positive.",
+    "recordDesc": "In {lang}, a hash over block values produces a result that block producers can predict or steer. Predictable chance lets an attacker win lotteries and games. The remedy is {safe}.",
+    "applicability": "{lang} contracts with games, lotteries, or selection logic; single-line lexical scope.",
+    "risk": "Predictable outcomes and unfair selection; MEDIUM severity.",
+    "why": "{lang} hashes block values into a result, which producers can influence.",
+    "fix": [
+      "Derive randomness with {safe}.",
+      "Re-run the scan and confirm no block value decides a chance outcome."
+    ],
+    "verifyT": "Rescan shows no block value hashed into a chance outcome.",
+    "sinks": {
+      "solidity": [
+        "keccak256\\s*\\(\\s*abi\\.encodePacked\\s*\\([^)]*\\bblock\\.(?:timestamp|number)",
+        "keccak256(abi.encodePacked(block.timestamp, msg.sender))",
+        "keccak256(abi.encodePacked(seed, msg.sender))",
+        "a commit-reveal scheme or a verifiable randomness oracle"
+      ]
+    }
+  },
+  {
+    "class": "ecrecover-unchecked",
+    "kind": "sast",
+    "category": "authentication",
+    "cwe": "CWE-347",
+    "severity": "HIGH",
+    "framing": "flag",
+    "title": "Signature recovery without signer checks ({lang}) — review required",
+    "description": "A {lang} contract recovers a signer with ecrecover. Malformed input returns the zero address, and a malleable signature can verify under a second encoding. This lexical rule flags the recovery; the reviewer confirms the result is checked against the expected signer and a nonce.",
+    "remediation": "Check the recovered signer against the expected address, add {safe}, and reject high-s signatures.",
+    "limitation": "Lexical, line-based: every ecrecover call matches, including checked calls.",
+    "scopeT": "Single-line lexical match on ecrecover calls in {lang} code.",
+    "fp": "Verification helpers that already check the signer and nonce are the common false positive.",
+    "recordDesc": "In {lang}, ecrecover recovers a signer from signature parts. Unchecked results can be the zero address, and malleable signatures replay under a second encoding. The remedy is {safe}.",
+    "applicability": "{lang} contracts verifying off-chain signatures; single-line lexical scope.",
+    "risk": "Forged authorizations and signature replay; HIGH severity.",
+    "why": "{lang} recovers a signer without a zero-address or nonce check.",
+    "fix": [
+      "Add {safe} after the recovery.",
+      "Re-run the scan and confirm each recovered signer is validated."
+    ],
+    "verifyT": "Rescan shows each ecrecover result is checked against the expected signer.",
+    "sinks": {
+      "solidity": [
+        "\\becrecover\\s*\\(",
+        "address signer = ecrecover(hash, v, r, s);",
+        "address signer = owner;",
+        "a zero-address check and a nonce"
+      ]
+    }
+  },
+  {
+    "class": "apex-without-sharing",
+    "kind": "sast",
+    "category": "access-control",
+    "cwe": "CWE-284",
+    "severity": "HIGH",
+    "framing": "flag",
+    "title": "Apex class ignores sharing rules ({lang}) — review required",
+    "description": "An Apex class declares without sharing, so record access ignores the running user sharing rules. Callers may read or change records they cannot reach in the UI. This lexical rule flags the declaration; the reviewer confirms the class enforces its own access checks.",
+    "remediation": "Declare the class {safe}, or enforce access explicitly.",
+    "limitation": "Lexical, line-based: any without sharing declaration matches, including system-context jobs that need it.",
+    "scopeT": "Single-line lexical match on sharing declarations in Apex code.",
+    "fp": "System-mode batch or utility classes that need full access are the common false positive.",
+    "recordDesc": "In Apex, a without sharing declaration runs record access in system context. A user-reachable entry point then exposes records the caller should not see. The remedy is {safe}.",
+    "applicability": "Apex classes with sharing declarations; single-line lexical scope.",
+    "risk": "Cross-user record disclosure or modification; HIGH severity.",
+    "why": "Apex class declared without sharing runs in system context.",
+    "fix": [
+      "Declare the class {safe}.",
+      "Re-run the scan and confirm each without sharing class is justified."
+    ],
+    "verifyT": "Rescan shows without sharing only on reviewed system-context classes.",
+    "sinks": {
+      "apex": [
+        "\\bwithout\\s+sharing\\b",
+        "public without sharing class AccountService {",
+        "public with sharing class AccountService {",
+        "with sharing"
+      ]
+    }
+  },
+  {
+    "class": "dynamic-sql-exec",
+    "kind": "sast",
+    "category": "sql-injection",
+    "cwe": "CWE-89",
+    "severity": "HIGH",
+    "framing": "flag",
+    "title": "Dynamic SQL executed from text ({fw}) — review required",
+    "description": "A {fw} routine executes a statement built as text. If any part of that text is untrusted input, the statement structure is attacker-controlled. This lexical rule flags the execution; the reviewer confirms the text is constant or parameterized.",
+    "remediation": "Use {safe}, and keep input out of the statement text.",
+    "limitation": "Lexical, line-based: any dynamic execution form matches, including constant statements.",
+    "scopeT": "Single-line lexical match on dynamic SQL execution in {fw} code.",
+    "fp": "A constant statement text assembled from fixed identifiers is the common false positive.",
+    "recordDesc": "In {fw}, the execution call runs SQL text it was given. Input that reaches the text rewrites the statement, and placeholders are the safe path. The remedy is {safe}.",
+    "applicability": "{fw} routines and stored procedures; single-line lexical scope.",
+    "risk": "Full database compromise through injected statements; HIGH severity.",
+    "why": "{fw} executes SQL text built at runtime.",
+    "fix": [
+      "Use {safe}.",
+      "Re-run the scan and confirm each dynamic statement is constant or parameterized."
+    ],
+    "verifyT": "Rescan shows dynamic execution only with constant text or bound parameters.",
+    "sinks": {
+      "sql:tsql": [
+        "\\bEXEC(?:UTE)?\\s*\\(\\s*@",
+        "EXEC(@sql)",
+        "EXEC sp_helpdb",
+        "sp_executesql with typed parameters"
+      ],
+      "sql:plpgsql": [
+        "\\bEXECUTE\\s+'[^']*'\\s*\\|\\|",
+        "EXECUTE 'SELECT * FROM users WHERE id = ' || v_id;",
+        "EXECUTE 'SELECT * FROM users WHERE id = $1' USING v_id;",
+        "USING placeholders in EXECUTE"
+      ]
+    }
+  },
+  {
+    "class": "atom-exhaustion",
+    "kind": "sast",
+    "category": "denial-of-service",
+    "cwe": "CWE-400",
+    "cweDef": {
+      "name": "Uncontrolled Resource Consumption",
+      "summary": "The software does not limit the resources a input can consume, so repeated or large input exhausts memory, CPU, or other shared limits."
+    },
+    "severity": "MEDIUM",
+    "framing": "call",
+    "title": "Atom created from input via {sink} ({lang}) — review required",
+    "description": "The {lang} sink {sink} creates an atom from text. Atoms are not garbage collected and the VM has a fixed atom limit, so attacker-chosen text can exhaust the table and crash the node. This lexical rule flags the sink; the reviewer confirms the text is trusted or bounded.",
+    "remediation": "Use {safe} for external text.",
+    "limitation": "Lexical, line-based: any atom conversion matches, including constant input.",
+    "scopeT": "Single-line lexical match on atom creation in {lang} code.",
+    "fp": "Converting constant or internal names is the common false positive.",
+    "recordDesc": "In {lang}, {sink} creates atoms from runtime text. Atoms are never reclaimed, so unbounded input drives the VM past its atom limit and takes the node down. The remedy is {safe}.",
+    "applicability": "{lang} services converting external text to atoms; single-line lexical scope.",
+    "risk": "Node crash and denial of service; MEDIUM severity.",
+    "why": "{lang} converts runtime text to atoms via {sink} with no bound.",
+    "fix": [
+      "Use {safe}.",
+      "Re-run the scan and confirm no unbounded atom conversion of external text remains."
+    ],
+    "verifyT": "Rescan shows no atom conversion of untrusted text.",
+    "sinks": {
+      "elixir": [
+        "String\\.to_atom",
+        "String.to_atom",
+        "String.to_existing_atom with a fixed allowlist"
+      ],
+      "erlang": [
+        "list_to_atom",
+        "list_to_atom",
+        "list_to_existing_atom with a fixed allowlist"
+      ]
+    }
+  }
+]
