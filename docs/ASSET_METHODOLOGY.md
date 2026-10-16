@@ -1,4 +1,4 @@
-# ASSET_METHODOLOGY.md — how the generated intelligence set is authored (906 pack rules, 906 patterns, 866 generated records)
+# ASSET_METHODOLOGY.md — how the generated intelligence set is authored (901 pack rules, 901 patterns, 861 generated records)
 
 Date: 2026-10-15. This document states the authoring method so an auditor
 can tell systematic original work from padding. The generator
@@ -66,11 +66,12 @@ re-running the generator on unchanged data produces byte-identical files.
 generated file independently (schema, execution, linkage, leak scan,
 inventory), so generator output is evidence, never self-certification.
 
-Retired reservations (21): the manifest keeps the IDs of cells whose source
+Retired reservations (26): the manifest keeps the IDs of cells whose source
 was removed from `data/asset-cells/` but whose rule files were never
 generated. Those IDs stay reserved, because `docs/PACKS.md` says rule IDs are
 never reused. The consistency suite pins this list: any other manifest cell
-without a rule file fails the test. Retired: DPK-SAST-048, DPK-SAST-508,
+without a rule file fails the test. Retired: DPK-DAST-015, DPK-DAST-018, DPK-DAST-019, DPK-DAST-020, DPK-DAST-048,
+DPK-SAST-048, DPK-SAST-508,
 DPK-SAST-518, DPK-SAST-535, DPK-SAST-538, DPK-SAST-539, DPK-SAST-551,
 DPK-SAST-595, DPK-SAST-631, DPK-SAST-634, DPK-SEC-009, DPK-SEC-012,
 DPK-SEC-013, DPK-SEC-027, DPK-SEC-035, DPK-SEC-038, DPK-SEC-041,

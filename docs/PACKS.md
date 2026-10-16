@@ -281,7 +281,7 @@ Reproduced with the Pump 3 definition (identical pattern source and flags): 31 g
 ### Records, retired IDs, and generator invariants
 
 - Patterns 888; records 848. The 40 patterns without a record are exactly the 40 `legacy` manifest entries.
-- Retired reservations: 21, the list in `docs/ASSET_METHODOLOGY.md`. They equal the manifest cells that have no rule file (21). None exists as a rule, pattern, or remediation file.
+- Retired reservations: 26, the list in `docs/ASSET_METHODOLOGY.md`. They equal the manifest cells that have no rule file (26). Batch 2 (2026-10-16) retired five exact-duplicate DAST cells, each with the same check signature as an earlier rule that is kept: DPK-DAST-015 (= 002), DPK-DAST-019 (= 005), DPK-DAST-020 (= 007), DPK-DAST-018 (= 009), DPK-DAST-048 (= 010). None exists as a rule, pattern, or remediation file.
 - Generator byte-stability: a regenerate in a disposable copy changed 0 of 3584 files.
 - Quarantine: setting `confidence: "BOGUS"` on the secrets class in `data/asset-cells/secrets.json` made `generate-assets` exit 1 with "43 cell(s) quarantined". 0 of 3584 files changed. One class-level field quarantines all its cells.
 
