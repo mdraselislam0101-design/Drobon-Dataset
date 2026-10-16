@@ -306,5 +306,75 @@
         "list_to_existing_atom with a fixed allowlist"
       ]
     }
+  },
+  {
+    "class": "unchecked-arithmetic",
+    "kind": "sast",
+    "category": "integer-overflow",
+    "cwe": "CWE-190",
+    "severity": "MEDIUM",
+    "framing": "flag",
+    "cweDef": {
+      "name": "Integer Overflow or Wraparound",
+      "summary": "The software performs arithmetic whose result can exceed the range of its type. The logic then assumes the value stays larger or valid, so the value wraps around or becomes very small or negative."
+    },
+    "title": "Overflow checks disabled by unchecked block ({lang}) — review required",
+    "description": "A {lang} contract opens an unchecked block. Solidity 0.8 and later checks arithmetic by default, and the unchecked block turns those checks off, so overflow and underflow inside it wrap silently. This lexical rule flags the block; the reviewer confirms every operand inside it is bounded.",
+    "remediation": "Use {safe}.",
+    "limitation": "Lexical, line-based: every unchecked block matches, including loop counters that cannot overflow. Bounds need human review.",
+    "scopeT": "Single-line lexical match on unchecked blocks in {lang} code.",
+    "fp": "Loop counters bounded by an array length are the common false positive.",
+    "recordDesc": "In {lang} 0.8 and later, arithmetic reverts on overflow unless it sits in an unchecked block. Inside such a block, a value can wrap around and pass later comparisons. The remedy is {safe}.",
+    "applicability": "{lang} contracts compiled with Solidity 0.8 or later that use unchecked blocks; single-line lexical scope.",
+    "risk": "Silent wraparound in balances, supply, or reward math, which can drain or mint value; MEDIUM severity pending the reviewer's bound analysis.",
+    "why": "{lang} disables overflow checks inside an unchecked block.",
+    "fix": [
+      "Remove the unchecked block or limit it to {safe}.",
+      "Re-run the scan and confirm each unchecked operand has a proven bound."
+    ],
+    "verifyT": "Rescan shows unchecked blocks only around operands with a documented bound.",
+    "sinks": {
+      "solidity": [
+        "\\bunchecked\\s*\\{",
+        "unchecked { balance += amount; }",
+        "balance += amount;",
+        "checked arithmetic, with unchecked kept to proven-bounded loop counters"
+      ]
+    }
+  },
+  {
+    "class": "unchecked-send",
+    "kind": "sast",
+    "category": "error-handling",
+    "cwe": "CWE-252",
+    "severity": "MEDIUM",
+    "framing": "flag",
+    "cweDef": {
+      "name": "Unchecked Return Value",
+      "summary": "The software does not check the return value of a call or function that reports failure. Later logic then assumes the operation succeeded even when it did not."
+    },
+    "title": "Result of send() ignored ({lang}) — review required",
+    "description": "A {lang} contract calls send() as a bare statement. send() returns false on failure instead of reverting, so ignoring its result lets the contract continue as if the transfer completed. This lexical rule flags a send whose result is not consumed; the reviewer confirms the failure path is handled.",
+    "remediation": "Use {safe}.",
+    "limitation": "Lexical, line-based: a bare send call matches. Calls on a parenthesised receiver, such as payable(x).send, are not matched. A user-defined send method (for example an ERC-777 token send) can match and is not a boolean call.",
+    "scopeT": "Single-line lexical match on bare send() calls in {lang} code.",
+    "fp": "A user-defined send method that does not return a boolean is the common false positive.",
+    "recordDesc": "In {lang}, send() forwards Ether with a fixed gas stipend and returns false on failure. A contract that ignores the result keeps running after a failed transfer, so its state can disagree with the funds actually moved. The remedy is {safe}.",
+    "applicability": "{lang} contracts that send Ether with send(); deprecated by the Solidity docs, but present in existing code; single-line lexical scope.",
+    "risk": "Inconsistent accounting after a failed Ether transfer; MEDIUM severity pending the reviewer's analysis of the state change.",
+    "why": "{lang} ignores the boolean result of send(), so a failed transfer goes unnoticed.",
+    "fix": [
+      "Replace the bare call with {safe}.",
+      "Re-run the scan and confirm every send() result is consumed."
+    ],
+    "verifyT": "Rescan shows every send() result used in a require, an if, or an assignment.",
+    "sinks": {
+      "solidity": [
+        "(?<!(?:=|\\(|,|&|\\||!|\\?|return|require|assert|if)\\s*)\\b[A-Za-z_][\\w.\\[\\]]*\\.send\\s*\\(",
+        "recipient.send(amount);",
+        "bool ok = recipient.send(amount);",
+        "a require on the returned bool, or a pull-payment pattern"
+      ]
+    }
   }
 ]
