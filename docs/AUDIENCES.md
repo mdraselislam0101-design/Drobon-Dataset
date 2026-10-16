@@ -87,7 +87,7 @@ Read-only audit of the four UserTypes against the working tree and the Main App 
 
 Cross-check against the Main App (read-only): `packages/shared/src/authz.ts` `USER_TYPES` = `DEVELOPER`, `STUDENT`, `SECURITY_PROFESSIONAL`, `PENTESTER`. The four Dataset types match these four ids. The Main App treats UserType as classification, not authorization, and the Dataset does the same.
 
-Shared base for all four types (log-forging batch counts): packs 950 rules; patterns 950; records 910 (the 40 record-less patterns are the legacy set, see `docs/PACKS.md` Pump 5); remediation 950; CWE 61.
+Shared base for all four types (log-forging batch counts): packs 951 rules; patterns 951; records 911 (the 40 record-less patterns are the legacy set, see `docs/PACKS.md` Pump 5); remediation 951; CWE 61.
 
 Gaps found and left open (owner decisions, see `docs/OWNER_ACTION_REQUIRED.md` §6):
 - Lesson audience field (none exists; DEVELOPER and STUDENT overlap).

@@ -9,12 +9,12 @@ name the script that re-verifies the claim on every run.
 | Capability (app evidence) | Verdict | Dataset position | Machine check |
 |---|---|---|---|
 | SCA matching (`sca/provider.ts assess`) | REQUIRED | 100-record validated seed; breadth blocked | `validate.mjs`, `check-vectors.mjs` |
-| SAST detection (app catalog-gated engine) | SUPPLEMENTAL | 792 Dataset rules (`DPK-SAST-*`); 549 fully reachable by Main App catalog ids, 217 with no analyzed tag (PACKS.md Pump 4) | `validate-packs.mjs`, `test-packs.mjs`, `test-consistency.mjs` (reachability) |
+| SAST detection (app catalog-gated engine) | SUPPLEMENTAL | 792 Dataset rules (`DPK-SAST-*`); 549 fully reachable by Main App catalog ids + 11 any-file (omitted `languages`), 207 with no analyzed tag (PACKS.md, Phase 4 recount) | `validate-packs.mjs`, `test-packs.mjs`, `test-consistency.mjs` (reachability) |
 | Secrets detection (shape-only) | SUPPLEMENTAL | 94 Dataset rules (`DPK-SEC-*`; recount 2026-10-16, DPK-SEC-105 added); no app secrets pack consumer | `validate-packs.mjs`, `test-packs.mjs` |
 | DAST observation (app: 8 hard-coded `DG-DAST-001..008` in `apps/api/src/scans/dast/rules.ts`, code not data) | SUPPLEMENTAL | 65 Dataset rules over 7 closed check types (recount 2026-10-16; loader-future; no app consumer of `packs/dast`) | `validate-packs.mjs`, `test-packs.mjs` (DAST evaluator rows) |
 | CWE classification (app-referenced ids) | REQUIRED | 61 entries in `knowledge/cwe/` (count re-derived in Batch 1; app-referenced subset NOT re-counted) | `validate-cwe.mjs`, `test-consistency.mjs` |
-| Remediation content (app computes status) | REQUIRED | 950 remediation files, one per pack rule (log-forging batch count) | `validate-audiences.mjs`, `test-consistency.mjs` |
-| Lessons (internal catalog, loader-future) | SUPPLEMENTAL | 5 lessons (2 `lsn_dev_*`, 3 `lsn_pack_*`), practice validator-executed | `validate-audiences.mjs` |
+| Remediation content (app computes status) | REQUIRED | 951 remediation files, one per pack rule (recount 2026-10-17) | `validate-audiences.mjs`, `test-consistency.mjs` |
+| Lessons (internal catalog, loader-future) | SUPPLEMENTAL | 6 lessons (2 `lsn_dev_*`, 4 `lsn_pack_*`), practice validator-executed | `validate-audiences.mjs` |
 | Assessment templates (loader-future) | SUPPLEMENTAL | 3 templates, never pre-authorize (count re-derived Pump 4) | `validate-audiences.mjs` |
 | Engagement aids (no app consumer) | SUPPLEMENTAL | 2 standalone passive-only aids (count re-derived Pump 4) | `validate-audiences.mjs` |
 | SBOM data | NOT_REQUIRED | app emits CycloneDX 1.5 from inventory | - (absence re-grepped per audit) |

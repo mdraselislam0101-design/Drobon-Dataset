@@ -103,7 +103,7 @@ Verified Coverage % = 100 × Σ verified points / count(applicable requirements)
 - An untested pattern is not a proven detection (all 950 patterns carry
   executed positive+negative tests — pack-tests 3,966).
 - High rule count ≠ broad real-world coverage (reachability is reported
-  separately: 549/792 under the app catalog).
+  separately: 560/792 reachable in the app engine (549 catalog-gated + 11 any-file), 25 partial, 207 unreachable).
 - The 1,000-rule-per-pack figure is a **planning target**; current counts are
   evidence-gated and are never padded.
 - Vendor claims come only from public documentation accessed 2026-10-16

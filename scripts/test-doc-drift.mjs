@@ -364,6 +364,42 @@ if (existsSync(join(ROOT, 'DROBON_COVERAGE_EVIDENCE.json'))) {
     'coverage-evidence: percentages carry numerator/denominator triplets');
 }
 
+// --- 9. Phase 4 pins: capability matrix, agent architecture, any-file convention ----
+{
+  const cap = read('docs/CAPABILITY_COVERAGE.md');
+  const mRem = /(\d+) remediation files/.exec(cap);
+  assert(mRem !== null && Number(mRem[1]) === computed.remediation,
+    `capability-coverage: remediation files = ${computed.remediation}`, mRem?.[0] ?? 'pattern missing');
+  const mLsn = /(\d+) lessons \(/.exec(cap);
+  assert(mLsn !== null && Number(mLsn[1]) === computed.lessons,
+    `capability-coverage: lessons = ${computed.lessons}`, mLsn?.[0] ?? 'pattern missing');
+
+  assert(existsSync(join(ROOT, 'docs', 'CAPABILITY_GAP_MATRIX.md')), 'capability-gap-matrix document exists');
+  const cgm = read('docs/CAPABILITY_GAP_MATRIX.md');
+  for (const status of ['VERIFIED', 'PARTIAL', 'NOT_IMPLEMENTED', 'NOT_VERIFIED', 'BLOCKED', 'NOT_APPLICABLE_WITH_REASON']) {
+    assert(cgm.includes(status), `capability-gap-matrix uses status ${status}`);
+  }
+  assert((cgm.match(/CGM-[A-I]\d+/g) ?? []).length >= 40,
+    'capability-gap-matrix carries >= 40 capability ids', String((cgm.match(/CGM-[A-I]\d+/g) ?? []).length));
+
+  assert(existsSync(join(ROOT, 'docs', 'AGENT_ARCHITECTURE.md')), 'agent-architecture document exists');
+  const ag = read('docs/AGENT_ARCHITECTURE.md');
+  assert(ag.includes('no agent/model runtime is configured'),
+    'agent-architecture states the no-runtime honesty line');
+  assert(ag.includes('checkToolPermission') && ag.includes('checkBudget'),
+    'agent-architecture documents the deterministic policy core');
+  const pkg = JSON.parse(read('package.json'));
+  assert(typeof pkg.scripts?.test === 'string' && pkg.scripts.test.includes('test-agent-policy'),
+    'package.json test chain runs the agent-policy suite');
+
+  // any-file convention (Phase 4): no SAST rule may carry the `universal` language id
+  const sastDir = join(ROOT, 'packs', 'sast', 'v1', 'rules');
+  const tagged = readdirSync(sastDir).filter((f) => f.endsWith('.json'))
+    .map((f) => JSON.parse(readFileSync(join(sastDir, f), 'utf8')))
+    .filter((r) => (r.languages ?? []).includes('universal')).map((r) => r.id);
+  assert(tagged.length === 0, 'any-file convention: zero SAST rules carry the `universal` language id', tagged.join(','));
+}
+
 process.stdout.write(`\ndoc-drift: ${passed} passed, ${failed} failed\n`);
 if (failed > 0) process.exitCode = 1;
 

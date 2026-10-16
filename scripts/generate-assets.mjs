@@ -195,7 +195,11 @@ function buildFiles({ kind, cellId, ruleId, patId, recId, cls, lang, signal, tes
     category: cls.category,
     remediation: fill(cls.remediation, vars),
     limitation: fill(cls.limitation, vars),
-    ...(kind === 'sast' ? { languages: languageTags(lang) } : {}),
+    // Any-file rules (cell language key `universal`) omit `languages` entirely:
+    // the Main App contract treats a missing `languages` field as universal
+    // (`languages: undefined` = any file, DPK-SAST-004 convention). The literal
+    // tag `universal` is not a catalog id and would leave the rule unreachable.
+    ...(kind === 'sast' && lang !== 'universal' ? { languages: languageTags(lang) } : {}),
     ...(kind === 'dast' ? { check: signal.check } : { patterns: [{ source: signal.source, ...(signal.flags ? { flags: signal.flags } : {}) }] }),
     ...(kind === 'secrets' ? { confidence: extra?.confidence ?? cls.confidence ?? 'HIGH', denylist: ['EXAMPLE'], redact: true } : {}),
     tests: kind === 'dast' ? tests.map((t) => ({ observation: t.observation, match: t.match })) : tests,

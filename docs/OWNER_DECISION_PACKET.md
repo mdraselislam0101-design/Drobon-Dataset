@@ -13,9 +13,48 @@ release authorization. Companion machine-readable records:
 
 **How to reply:** for each decision, fill the `Owner decision:` line with the
 option (or your own wording), the **decider**, and the **date**, plus an
-`Evidence ref:` if you attach one. Only that flips any status. Every field
-that would record your answer is deliberately blank. Until you reply, every
-item stays `BLOCKED_*`.
+`Evidence ref:` if you attach one. Only that flips an owner-gated status. Every
+field that would record your answer is deliberately blank. Until you reply,
+every owner-gated item stays `BLOCKED_*` — **except** the technical items
+resolved by Phase 4 engineering decision (addendum below), which you may still
+ratify or override.
+
+---
+
+## P0 — PHASE 4 ADDENDUM (2026-10-17): technical decisions resolved
+
+The Phase 4 brief authorized evidence-backed **technical** decisions (naming,
+schema conventions, validation policy) without owner sign-off, while keeping
+genuinely owner/rights-holder/counsel/reviewer-dependent items blocked.
+Accordingly: **15 technical decisions (D-5..D-19 / BLK-005..019) were resolved
+by engineering decision — these are NOT owner approvals and remain ratifiable
+by you.** Full rationale + evidence per item: `docs/BLOCKER_REGISTER.json`
+`resolvedForRecord` BLK-R05..R19. **D-1..D-4 remain exactly as written below
+and are unchanged.** The per-block `Status:` lines for D-5..D-19 are
+superseded by this table.
+
+| ID | Phase 4 resolution (2026-10-17) | Kind |
+|---|---|---|
+| D-5 npm prerelease | current semantics adopted as provider contract (vectors pinned); change needs GATE-4 co-design | decided (keep) |
+| D-6 PyPI pre-release | current semantics adopted as provider contract | decided (keep) |
+| D-7 DPK-SEC-007 denylist | keep as-is (vetoing `${` could hide real values) | decided (keep) |
+| D-8 probe-gap rules | no owner gate on technical authoring; sub-gaps = evidence-gated backlog (GAP-013) | decided (backlog) |
+| D-9 hyphenated ids | keep schema fail-closed; widening needs app-catalog co-design (GATE-4); aliases rejected | decided (keep) |
+| D-10 DPK-SAST-018 tag | **implemented:** `python` tag removed (HCL-shaped patterns, no Python tests) | implemented |
+| D-11 `bash` dual-tag | confirmed (documented, deterministic, tested) | decided (keep) |
+| D-12 CROSS_CWE groups | accepted as original mapping aids with documented limits (no MITRE endorsement) | decided (keep) |
+| D-13 40 legacy records | keep documented retention exception (count-driven creation = padding) | decided (keep) |
+| D-14 `universal` rules | **implemented:** 10 rules now omit `languages` (any-file convention); generator updated; reachability recounted | implemented |
+| D-15 shell-posix reach | accept PARTIAL (follows D-9) | decided (keep) |
+| D-16 CWE pinning | **implemented (doc-level):** MITRE CWE 4.20 pinned in DATASET_APP_CONTRACT; per-entry metadata = follow-up | implemented |
+| D-17 D5 local labels | keep fail-closed rejection (widening = paired parser+tests backlog) | decided (keep) |
+| D-18 generator denylist fix | confirmed (byte-identical, tested) | decided (keep) |
+| D-19 SCA schema | keep `packs/sca` at 0 until GATE-4 consumer + D-2 rights exist (no filler) | decided (keep) |
+
+Verification after these changes: full suite + all validators green; corpus
+counts unchanged (951/911/951/61/94/65/792); coverage recomputed on the
+canonical methodology (72.9% = 37.90/52; SAST engine 69.0%; DEVELOPER 73.6%).
+Nothing here touches D-1/D-2/GATE-1..4 or the Production Intelligence Lock.
 
 ---
 
