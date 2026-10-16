@@ -818,5 +818,120 @@
       "name": "Insertion of Sensitive Information Into Debugging Code",
       "summary": "Debug and profiler tooling left enabled in production exposes request and configuration detail to clients that hold its token."
     }
+  },
+  {
+    "class": "header-weak-script",
+    "kind": "dast",
+    "category": "security-headers",
+    "cwe": "CWE-693",
+    "severity": "MEDIUM",
+    "framing": "custom",
+    "title": "Weak {name} header value",
+    "description": "The response carries {name}, which lets any host supply script. A wildcard script source lets an injected script run, because the policy does not block it. This check matches the wildcard directly.",
+    "remediation": "Strengthen the value ({safe}).",
+    "limitation": "Value check: a host wildcard such as *.example.com is out of scope. It cannot confirm the deployment context.",
+    "scopeT": "Single response header value: script-src only.",
+    "fp": "Transitional deployments are the common accepted case.",
+    "recordDesc": "{name} with a wildcard source lets any host supply script. The policy then stops injected scripts only partly.",
+    "applicability": "HTTP responses carrying the header.",
+    "risk": "Script execution from any host; MEDIUM severity.",
+    "why": "{name} allows script from any host.",
+    "fix": [
+      "Strengthen to {safe}."
+    ],
+    "verifyT": "Rescan observes explicit script sources.",
+    "cells": [
+      {
+        "suffix": "script-wildcard",
+        "lang": "http",
+        "name": "Content-Security-Policy script-src wildcard",
+        "safe": "explicit script source lists",
+        "check": {
+          "type": "response-header-matches",
+          "header": "Content-Security-Policy",
+          "valuePattern": "script-src(?=\\s)[^;*]*?(?<=\\s)\\*(?=\\s*(?:;|$))"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "script-src *"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "script-src 'self' *"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "default-src 'self'; script-src *"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "script-src 'self' https://cdn.example.com"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "script-src *.example.com"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "default-src *"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "script-src-elem *"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {}
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
   }
 ]

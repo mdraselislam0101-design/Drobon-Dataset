@@ -1,4 +1,4 @@
-# ASSET_METHODOLOGY.md — how the generated intelligence set is authored (944 pack rules, 944 patterns, 904 generated records)
+# ASSET_METHODOLOGY.md — how the generated intelligence set is authored (945 pack rules, 945 patterns, 905 generated records)
 
 Date: 2026-10-15. This document states the authoring method so an auditor
 can tell systematic original work from padding. The generator

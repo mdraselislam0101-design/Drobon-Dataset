@@ -485,7 +485,18 @@ function main() {
         signal = { source: built.source, flags: built.flags, literal: built.literal, safe: built.safe };
         tests = built.tests;
       }
-      gateAndStage({ kind: job.kind, cellId: job.cellId, cls: job.cls, lang: job.lang, signal, tests, extra: { name: cell.name, fw: cell.fw, safe: cell.safe, confidence: cell.build?.confidence } });
+      // Per-cell text overrides (documented deprecation, see docs/ASSET_METHODOLOGY.md).
+      // Only whitelisted text fields and severity may be overridden; IDs, kind,
+      // class and sinks are never overridable, so ID allocation is unaffected.
+      const OVERRIDABLE = ['title', 'description', 'remediation', 'limitation', 'why', 'fix', 'verifyT', 'recordDesc', 'risk', 'fp', 'scopeT', 'severity'];
+      const overrides = cell.overrides ?? {};
+      for (const key of Object.keys(overrides)) {
+        if (!OVERRIDABLE.includes(key)) {
+          throw new Error(`cell ${job.cellId}: override "${key}" is not allowed`);
+        }
+      }
+      const effCls = Object.keys(overrides).length > 0 ? { ...job.cls, ...overrides } : job.cls;
+      gateAndStage({ kind: job.kind, cellId: job.cellId, cls: effCls, lang: job.lang, signal, tests, extra: { name: cell.name, fw: cell.fw, safe: cell.safe, confidence: cell.build?.confidence } });
     } else if (job.cls.framing === 'call') {
       const signal = composeCallCell(job.cls, job.lang, job.sink);
       gateAndStage({ kind: job.kind, cellId: job.cellId, cls: job.cls, lang: job.lang, signal, tests: signal.tests, extra: { fw: job.fw } });
