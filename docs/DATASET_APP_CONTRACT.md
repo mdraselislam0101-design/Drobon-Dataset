@@ -14,9 +14,9 @@ compatibility: validating JSON against a schema is not integration.
 | SAST rule pack | `drobon.pack.sast/v1` | `packs/sast/v1/rules/DPK-SAST-###.json` | stable, never reused (26 retired reservations pinned) |
 | Secrets rule pack | `drobon.pack.secrets/v1` | `packs/secrets/v1/rules/DPK-SEC-###.json` | same |
 | DAST rule pack | `drobon.pack.dast/v1` | `packs/dast/v1/rules/DPK-DAST-###.json` | same |
-| Pattern | `drobon.knowledge.pattern/v1` | `knowledge/patterns/DPK-PAT-####.json` | 1:1 with rules (953) |
-| Record | `drobon.knowledge.record/v1` | `knowledge/records/DPK-REC-####.json` | 913 (40 legacy patterns intentionally without a record — BLK-013) |
-| Remediation | `drobon.knowledge.remediation/v1` | `knowledge/remediation/DPK-*.json` | 1:1 with rules (953), keyed by `ruleId` |
+| Pattern | `drobon.knowledge.pattern/v1` | `knowledge/patterns/DPK-PAT-####.json` | 1:1 with rules (954) |
+| Record | `drobon.knowledge.record/v1` | `knowledge/records/DPK-REC-####.json` | 914 (40 legacy patterns intentionally without a record — BLK-013) |
+| Remediation | `drobon.knowledge.remediation/v1` | `knowledge/remediation/DPK-*.json` | 1:1 with rules (954), keyed by `ruleId` |
 | Advisory record | `drobon.vuln-intel/v1` | `vuln-intel/{npm,pypi}/*.json` | identity `(provenance.source, id, ecosystem, package)`; files≠advisories≠items |
 | CWE knowledge | `drobon.knowledge.cwe/v1` | `knowledge/cwe/*.json` | MITRE id, own-words summary + pinned URL |
 | Lesson / template / engagement | `drobon.learning.lesson/v1` etc. | `learning/lessons/`, `assessments/templates/`, `engagements/` | `lsn_*` / template ids |
@@ -114,8 +114,36 @@ inventory (`docs/SCOPE.md` method line) and updating this document.
 - Runtime loading of any Dataset asset (no App loader; class E).
 - Production advisory breadth (0/100,000; GATE-1..4 BLOCKED).
 
-## 9. Changelog
+## 9. Provider design acceptance requirements (GATE-4 preparation — 2026-10-17)
 
+Status: `PREPARED — NOT ACCEPTED`. These are the requirements a future
+App-side provider design must satisfy for GATE-4 evidence. Only the App owner/
+design authority can accept a design; this section invents none and unlocks
+nothing. The Null provider (`VULN_INTEL_PROVIDER=none`) stays locked until a
+design is accepted **in the App repository** and cited in
+`docs/INGESTION_GATES.json` GATE-4 `statusEvidence`.
+
+| # | Requirement | Acceptance criteria (evidence the App design must show) |
+|---|---|---|
+| P1 | Dataset version + schema compatibility | Design pins the supported `DATASET-APP/x.y` contract version and schema ids from §1; rejects unknown/unsupported versions fail-closed |
+| P2 | External storage + independent delivery | Dataset ships outside the App source/build (release artifact or server-side store); delivery path documented; **no Dataset asset is embedded, vendored, or bundled into Main App code or builds** |
+| P3 | Integrity verification + provenance | Loader verifies the SHA-256 manifest (`scripts/manifest.mjs`) before use; per-record provenance passes through to the consumer; unverifiable artifacts are refused |
+| P4 | Explicit enablement + fail-closed startup | Loading is opt-in behind explicit configuration; startup without a valid Dataset **degrades to the documented empty/no-op provider behavior** — never half-loaded, never crash-open |
+| P5 | Missing / invalid / stale / unauthorized Dataset | Each state has a defined, tested behavior (refuse load + logged reason); stale rights/reviews (INGESTION_PROTOCOL §13) are treated as unauthorized; zero-match semantics documented per §3 |
+| P6 | Update / revocation / rollback | Version update procedure, revocation handling (quarantine/refuse), and rollback to a prior verified version are documented and rehearsed; rollback restores byte-identical prior behavior |
+| P7 | Contract tests | Executable tests pin: record→advisory projection (the 16 interop vectors), range semantics, identity/dedup, fixture isolation, P1–P6 states; CI runs them on every App change touching the seam |
+| P8 | No automatic production loading | Even with a valid Dataset, production-data loading requires separate authorization (`requireGates()` semantics mirrored App-side); a production count of 0 must remain visibly 0 |
+| P9 | Config-lock amendment | The design states the exact App config-lock change it needs (current lock: `VULN_INTEL_PROVIDER=none`); the change is made only in the App repo by App maintainers |
+
+GATE-4 acceptance evidence = the App-repo design document + maintainer
+acceptance record + the P1–P9 test transcripts. Until all three exist, GATE-4
+remains `BLOCKED` ("No provider design exists; Null provider still locked").
+
+## 10. Changelog
+
+- **1.1 (2026-10-17):** section 9 added (GATE-4 provider design acceptance
+  requirements, prepared only); pattern/record/remediation counts refreshed to
+  the Phase 9+ tree (954/914/954).
 - **1.0 (2026-10-16):** first versioned contract; compiled from the
   finalization pump's source re-verification (`c32c797`), the 16-vector
   interop pins, and the full integrity/determinism gates.

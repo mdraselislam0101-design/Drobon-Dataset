@@ -125,3 +125,97 @@ sourceUrl) and the ingestionLog row. Only then do items count.
   the batch verifies. Approval expiry and refresh cadence are owner-set
   (see OWNER_ACTION_REQUIRED.md section 2); until set, approvals are
   single-batch and non-extending.
+
+## 12. Stage-approval record — GATE-1 evidence template (prepared 2026-10-17, awaiting owner)
+
+Status: `TEMPLATE — NOT AN APPROVAL`. Nothing in this section authorizes any
+action. GATE-1 (`docs/INGESTION_GATES.json`) stays `BLOCKED` until the owner
+supplies a filled record with decider + date, and the gate file is updated in
+the same change. A filled template is evidence; it becomes authorization only
+when recorded under the policy below.
+
+### 12.1 What one approval must specify (fill every field; blanks = invalid)
+
+| Field | Content required | Example shape (illustrative only) |
+|---|---|---|
+| Approval scope | Exactly which work this authorizes: development-only, staging rehearsal, production ingestion of named batch(es), redistribution, publication — each explicitly yes/no | "production ingestion of batch GHSA-2026-001 ONLY; redistribution NO; publication NO" |
+| Stage | `staging-rehearsal` or `production-batch-<id>` (never "all"/"future") | `production-batch-GHSA-2026-001` |
+| Sources in scope | Named source(s) + exact endpoints/windows; unlisted sources stay prohibited | "GHSA reviewed advisories, window 2026-01-01..2026-06-30, npm+PyPI" |
+| Asset classes in scope | Record classes the batch may create (e.g. `advisory-record`); everything else excluded | "`advisory-record` only" |
+| Maintainer | Who executes the batch (operator identity) | name/handle |
+| License basis per source | The D-2 outcome this batch relies on (per source, with evidence ref) | "D-2 C1 approved 2026-10-XX by …; CC-BY-4.0 attribution per section 4" |
+| Conditions | Constraints that travel with the approval: dry-run first, batch size cap, quarantine handling, review requirements | "dry-run first; <= 500 candidates; every sourceUrl opened (GATE-3)" |
+| Expiry / re-review | Explicit date or "single-batch, non-extending" (default while D-4 undecided) | "single-batch, non-extending" |
+| Prohibited actions | Stated explicitly even though the defaults already prohibit them | "no production DB, no VPS upload, no App bundling, no release/tag" |
+| Decider + date | Owner identity + YYYY-MM-DD; the register records exactly this | "Jane Owner, 2026-10-20" |
+| Evidence ref | Where the written approval is stored (file path, ticket, signed mail archive) | "docs/owner-approvals/2026-10-20.md" |
+
+### 12.2 Recording rules
+
+1. The filled record is stored verbatim (never paraphrased into existence) and
+   cited from `docs/INGESTION_GATES.json` GATE-1 `statusEvidence` when the gate
+   flips — the flip commit contains both.
+2. GATE-1 evidence alone never suffices: GATE-2 (rights), GATE-3 (reviewer),
+   GATE-4 (consumer contract) must each hold their own evidence
+   (`scripts/ingestion-gates.mjs` fails closed on any BLOCKED gate).
+3. An approval whose expiry passes (once D-4 semantics exist) reverts to
+   blocked automatically — stale approval is not silent permission.
+4. No approval may authorize: Main App modification, production database
+   changes, VPS upload, bundling, release/tag, or history rewriting.
+
+## 13. Source liveness, revocation, and rights staleness (design + acceptance criteria; 2026-10-17)
+
+Status: `DESIGN — NOT IMPLEMENTED`. No liveness checker exists today; source
+terms reviews are point-in-time (`docs/LICENSE_REVIEW.md`, reviewed 2026-10-14).
+This section defines what must exist before multi-batch production use and how
+cadence decisions will be recorded. **BLK-004 stays open until the owner
+records the cadence values.**
+
+### 13.1 What can change and what it invalidates
+
+| Change | Effect on retained assets | Required response |
+|---|---|---|
+| Upstream terms change (license, ToU) | Records ingested under the old terms are suspect; rights decision goes stale | Re-run the per-source review (`docs/LICENSE_REVIEW.md` method); quarantine new batches from that source until re-cleared; never assume grandfathering |
+| Source revokes access or withdraws advisories | Provenance may become unverifiable; withdrawn advisories must be excluded | Withdrawn-check at every import (already designed); unverifiable records are quarantined, not silently kept as production |
+| Reviewer/owner decision expires (per D-4 cadence) | Approvals lapse | Gate evidence marked stale; importers stay fail-closed until re-approval |
+| Upstream advisory is corrected | Retained record may be wrong | Incident rule (`docs/HONESTY.md`): fix forward in a new commit, keep the wrong version visible in history with a `docs/` note |
+
+### 13.2 Staleness detection (how "stale" becomes visible)
+
+- Every rights review carries `reviewedAt` (already in `vuln-intel/sources.json`
+  and LICENSE_REVIEW). A review older than the owner-set re-review interval is
+  **stale**: the source's `redistribution` must be treated as `UNVERIFIED`
+  again until re-reviewed.
+- Every gate decision carries `decidedAt` (already in INGESTION_GATES).
+  Approvals with expiry (D-4) past their date are stale: GATE-1 evidence no
+  longer counts.
+- Detection is a **manual review trigger plus a scripted date check** at batch
+  time (a validator addition, not a network call): compare `reviewedAt` /
+  `decidedAt` against the owner-set interval and fail the batch if stale.
+  No scheduled jobs, no third-party services, no polling of upstream terms.
+
+### 13.3 Cadence record (owner decision placeholders — UNDECIDED)
+
+| Cadence parameter | Value | Decider | Decided at |
+|---|---|---|---|
+| Rights re-review interval | `UNDECIDED` (D-4) | — | — |
+| Approval expiry | `UNDECIDED` (D-4; default = single-batch, non-extending) | — | — |
+| Corpus refresh cadence | `UNDECIDED` (D-4) | — | — |
+
+Cadence policy (recorded): none yet — see `docs/OWNER_DECISION_CHECKLIST.md`
+D-CADENCE. This table fills only from a written owner decision naming decider
+and date; nothing else may populate it.
+
+### 13.4 Acceptance criteria (before this design counts as implemented)
+
+1. A batch-time staleness check exists with unit tests (stale review, stale
+   approval, fresh both — each outcome pinned).
+2. Re-review procedure documented per source with a filled example (what was
+   re-read, what changed, who signed).
+3. Revocation response rehearsed synthetically (a fixture source "revoked":
+   batch fails closed, retained assets flagged, quarantine path exercised).
+4. All of the above stay green in `npm test`; no network dependency is
+   introduced; the production lock is never weakened by the checker.
+
+Until 1–4 are implemented and tested, source-liveness verification is
+**NOT_IMPLEMENTED** — never claim otherwise.

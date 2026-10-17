@@ -60,6 +60,40 @@ Nothing here touches D-1/D-2/GATE-1..4 or the Production Intelligence Lock.
 
 ---
 
+## P1 — 2026-10-17 BLOCKER-RESOLUTION PUMP ADDENDUM: prepared decision packages (nothing decided)
+
+State after this pump: **all statuses unchanged** — OWNER_DECISIONS.json stays
+5/5 `OWNER_DECISION_REQUIRED`, GATE-1..4 stay `BLOCKED`, BLK-001..004 stay
+open. This pump prepared evidence packages only. A prepared decision is not an
+approved decision.
+
+Prepared artifacts (cross-referenced from `docs/BLOCKER_REGISTER.json`
+`preparedArtifacts`):
+
+| Deliverable | Location | Serves |
+|---|---|---|
+| GATE-1 stage-approval evidence template | `docs/INGESTION_PROTOCOL.md` §12 | D-3 / BLK-003 |
+| GATE-3 reviewer-readiness checklist + review package + sign-off format | `docs/REVIEW_PACKAGE.md` | D-3 / BLK-003 |
+| GATE-4 provider design acceptance requirements (P1–P9) | `docs/DATASET_APP_CONTRACT.md` §9 | D-3 / GATE-4 |
+| Source-liveness, revocation, staleness design + cadence record | `docs/INGESTION_PROTOCOL.md` §13 | D-4 / BLK-004 |
+| Per-source rights/redistribution checklist | `docs/SOURCE_RELEASE_GATE.md` S1–S6 (existing, cited) | D-2 / BLK-002 |
+| Original-content rights checklist | section D below (existing, cited) | D-1 / BLK-001 |
+| Remaining-work classification (8-way) | `DROBON_REMAINING_WORK.csv` `classification` column (22 rows) | all |
+| Draft license (explicitly NOT APPROVED) | `docs/PROPRIETARY_LICENSE_DRAFT.md` | D-1 |
+
+Open questions this pump made explicit beyond the per-source license/
+attribution/redistribution questions already listed in sections B–C —
+**retention and staleness questions the owner must also answer**:
+
+| Subject | Retention/staleness question |
+|---|---|
+| GHSA | If CC-BY-4.0 terms or the advisory-database license ever change, do already-ingested records stay redistributable, or must they be quarantined? (Design default: quarantine until re-cleared — INGESTION_PROTOCOL §13.1) |
+| OSV | When a home database's terms are unmapped at batch time, is exclusion sufficient, or must prior records from that home be re-reviewed? |
+| NVD | If ever used, how long does the NVD notice obligation persist after any later removal of NVD-derived records? |
+| CWE | Does the own-words-plus-links acknowledgment need periodic re-confirmation (e.g. at each CWE version bump)? |
+| ORIGINAL_CONTENT | If a grant is later replaced, what happens to copies distributed under the old grant (irrevocable vs prospective)? Owner should state this in the grant. |
+| All | Which re-review interval makes rights decisions go stale? (D-CADENCE; default while undecided: single-batch, non-extending) |
+
 ## A. Executive decision summary
 
 **Current release verdict (unchanged, re-verified):** `BLOCKED — OWNER/PRODUCTION
@@ -522,7 +556,7 @@ comparisons; no redistribution question). Full gate rows:
 | C2 | OSV — `https://osv.dev` (`api.osv.dev`) | 0 records imported; importer `scripts/import-osv.mjs` staged, fixture-tested; **proposed** | per-home-database terms (no single license) | `docs/LICENSE_REVIEW.md` §2; `sources.json`; accessed 2026-10-14 | per-record origin + home id | permitted only under each record's home terms | per-entry origin resolution required; blanket license must never be inferred | `RIGHTS_UNRESOLVED` | owner (+ counsel): authorize per-home-terms policy + fail-closed exclusion list |
 | C3 | NVD — `https://nvd.nist.gov` (API 2.0) | 0 data, 0 keys, no importer run; roadmap reference only (**not imported**) | U.S. public domain (17 USC) + required notice + API Terms of Use for keys | `docs/LICENSE_REVIEW.md` §3; `NOTICE` §4; accessed 2026-10-14 | product notice: "This product uses data from the NVD API but is not endorsed or certified by the NVD." | lay read: permitted with notice; key needs ToU acceptance | no verified consumer need today | `NOT_PROPOSED` (for any batch today) | owner: confirm need first; only then key + notice + D-2 row |
 | C4 | MITRE CWE — `https://cwe.mitre.org` | knowledge layer: 61 entries **present** = own-words summaries + canonical links (no MITRE text copied) | CWE Terms of Use (royalty-free incl. commercial; reproduce notice on copies) | `docs/LICENSE_REVIEW.md` §4; `knowledge/cwe/*` `license` links; accessed 2026-10-14 | canonical link per entry | lay read: permitted with notice | acknowledgment-level decision open; verbatim copying would need re-review | `REVIEW_REQUIRED` (acknowledgment) | owner: confirm own-words-plus-links scope needs no further clearance |
-| C5 | Original DROBON content | 953 rules, 953 patterns, 913 records, 953 remediations, 61 CWE summaries, 6 lessons, 3 templates, 2 engagements, 16 vectors, cells/tooling/docs/fixtures — **present** | **no LICENSE file — all rights reserved by default** | `docs/LICENSE_DECISION_RECORD.md` §1; `README.md` License TODO | n/a (own work) | **no grant exists** | none — absence is explicit | `RIGHTS_UNRESOLVED` | owner: D-1 written grant |
+| C5 | Original DROBON content | 954 rules, 954 patterns, 914 records, 954 remediations, 61 CWE summaries, 6 lessons, 3 templates, 2 engagements, 16 vectors, cells/tooling/docs/fixtures — **present** | **no LICENSE file — all rights reserved by default** | `docs/LICENSE_DECISION_RECORD.md` §1; `README.md` License TODO | n/a (own work) | **no grant exists** | none — absence is explicit | `RIGHTS_UNRESOLVED` | owner: D-1 written grant |
 | C6 | KEV / EPSS / commercial feeds | **absent** — no importer, schema fields, or records | n/a | `docs/SOURCE_RELEASE_GATE.md` S6 | n/a | n/a | n/a | `NOT_PROPOSED` | any future proposal needs a new S-row + consumer seam |
 | C7 | Shopify official docs — `https://shopify.dev/docs/api/shopify-app-remix/latest/guide-custom-apps` | evidence-only: `shpat_` prefix fact used to design DPK-SEC-105; **no data copied** | shopify.dev terms (nominative reference to a public fact) | BLK-R03 record, accessed 2026-10-16 | nominative reference in rule provenance notes | n/a — general security knowledge / public fact | none material | `NOT_APPLICABLE` | none required; re-review only if text were copied |
 | C8 | npm semver (`node-semver`) & PEP 440 (PyPA) specs | behavioral specs referenced by `docs/FORMAT.md` range engine; **no text copied** | specification documents | `docs/FORMAT.md`; `interop/provider-vectors.json` pins behavior | spec cited nominatively | n/a — behavioral conformance, facts | none material | `NOT_APPLICABLE` | none |
@@ -545,8 +579,8 @@ All rows are claimed original DROBON authorship. Existing evidence is
 
 | Content class | Paths | Authorship/provenance evidence | License/grant today | Missing evidence | Rights-holder action | Scope questions the grant must answer | Verification before GATE-2/G6 |
 |---|---|---|---|---|---|---|---|
-| Rule packs (953) | `packs/{sast,secrets,dast}/v1/rules/` | `origin: 'original-authored'`; cell lineage `data/asset-cells/` → `scripts/generate-assets.mjs`; determinism digest | none (all rights reserved) | written ownership grant; any employer/contractor assignment statement | owner chooses license(s) + commits grant file(s) | modification · redistribution · sublicensing · commercial distribution · VPS deployment — all currently **NOT covered** | grant file + matrix flip + tripwire update + suite green |
-| Patterns (953) / Records (913) / Remediation (953) | `knowledge/{patterns,records,remediation}/` | same lineage; `origin` fields | none | same | same | same | same |
+| Rule packs (954) | `packs/{sast,secrets,dast}/v1/rules/` | `origin: 'original-authored'`; cell lineage `data/asset-cells/` → `scripts/generate-assets.mjs`; determinism digest | none (all rights reserved) | written ownership grant; any employer/contractor assignment statement | owner chooses license(s) + commits grant file(s) | modification · redistribution · sublicensing · commercial distribution · VPS deployment — all currently **NOT covered** | grant file + matrix flip + tripwire update + suite green |
+| Patterns (954) / Records (914) / Remediation (954) | `knowledge/{patterns,records,remediation}/` | same lineage; `origin` fields | none | same | same | same | same |
 | CWE summaries (61) | `knowledge/cwe/` | own-words summaries + pinned canonical links (no MITRE prose) | none (own words); MITRE Terms govern the links | grant for the summaries themselves | same | nominative use of MITRE names/numbers should be expressly permitted in the grant scope | same + D-2 C4 acknowledgment |
 | Lessons (6) / Templates (3) / Engagements (2) | `learning/lessons/`, `assessments/templates/`, `engagements/` | `origin`/ids per schema | none | same | same | same | same |
 | Provider vectors (16) | `interop/provider-vectors.json` | original behavior pins referencing real records | none | same | same | vectors reference third-party ids — grant should cover original vector text only | same |
@@ -572,8 +606,8 @@ gate never implies another.
 
 | # | Evaluation (brief §12) | Repo gate(s) | Purpose | Entry criteria | Required evidence | Approver | Pass / fail / blocking | State now | What changes it |
 |---|---|---|---|---|---|---|---|---|---|
-| 1 | Engineering & structural validation | G1–G3 (RELEASE_READINESS_MATRIX) | schemas, rules, tests | repo at baseline | validators + full suite exit 0 | maintainer | fail on any validator/test error | **OPEN (PASS)** — re-run 2026-10-17: 9 validators PASS, 15,569 tests PASS | regression would close it |
-| 2 | Provenance & lineage completeness | G5 | every record attributable | ingestion of any real record | 100/100 seed provenance-complete; lineage 953 = 913 cell + 40 legacy; 0 orphan/quarantined | maintainer | fail on missing provenance | **OPEN (PASS)** | provenance regression |
+| 1 | Engineering & structural validation | G1–G3 (RELEASE_READINESS_MATRIX) | schemas, rules, tests | repo at baseline | validators + full suite exit 0 | maintainer | fail on any validator/test error | **OPEN (PASS)** — re-run 2026-10-17: 8 validators + vectors PASS, 15,730 tests PASS | regression would close it |
+| 2 | Provenance & lineage completeness | G5 | every record attributable | ingestion of any real record | 100/100 seed provenance-complete; lineage 954 = 914 cell + 40 legacy; 0 orphan/quarantined | maintainer | fail on missing provenance | **OPEN (PASS)** | provenance regression |
 | 3 | D-1 original-content rights | GATE-2 / G6 | grant for own work | owner decision | grant file(s) + LICENSE_DECISION_RECORD §4 + matrix flips | owner | **blocking** | **CLOSED** — BLK-001 | D-1 reply + grant commit |
 | 4 | D-2 source redistribution rights | GATE-2 / G6 | per-source rights | per-source verdicts | section C rows flipped with evidence; counsel notes where obtained | owner (+ counsel) | **blocking** | **CLOSED** — BLK-002 | D-2 reply per source |
 | 5 | Stage approval | GATE-1 | lift lock for named batch | D-2 done | written approval: stage, sources, maintainer, license basis | owner | **blocking** | **CLOSED** — no approval exists | approval text + date + decider |
