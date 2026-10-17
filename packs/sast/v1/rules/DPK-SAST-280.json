@@ -2,7 +2,7 @@
   "schemaVersion": "drobon.pack.sast/v1",
   "id": "DPK-SAST-280",
   "title": "SQL built by concatenation (go) — review required",
-  "description": "A go query call assembles SQL from parts: .Queryw*s*([^)]*+. If any part is untrusted input, the query structure itself is attacker-controlled. This lexical rule flags the assembly; the reviewer confirms every part is trusted or parameterizes it.",
+  "description": "A go query call assembles SQL from parts: .Queryw*s*((?:[^()]|([^()]*))*(?:+|fmt.Sprintfs*(). If any part is untrusted input, the query structure itself is attacker-controlled. This lexical rule flags the assembly; the reviewer confirms every part is trusted or parameterizes it.",
   "severity": "HIGH",
   "cwe": "CWE-89",
   "category": "sql-injection",
@@ -13,7 +13,7 @@
   ],
   "patterns": [
     {
-      "source": "\\.Query\\w*\\s*\\([^)]*\\+"
+      "source": "\\.Query\\w*\\s*\\((?:[^()]|\\([^()]*\\))*(?:\\+|fmt\\.Sprintf\\s*\\()"
     }
   ],
   "tests": [
@@ -31,6 +31,18 @@
     },
     {
       "line": "# verified: db.Query(FIXED)",
+      "match": false
+    },
+    {
+      "line": "rows, err := db.Query(buildQuery(name) + \" LIMIT 10\")",
+      "match": true
+    },
+    {
+      "line": "rows, err := db.Query(fmt.Sprintf(\"SELECT * FROM users WHERE name = '%s'\", name))",
+      "match": true
+    },
+    {
+      "line": "rows, err := db.QueryContext(ctx, \"SELECT * FROM users WHERE name = $1\", name)",
       "match": false
     }
   ],

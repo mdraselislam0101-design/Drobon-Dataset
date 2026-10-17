@@ -61,7 +61,7 @@ export function validateCase(value, idHint = '<case>') {
   const allowed = [
     'schemaVersion', 'id', 'variant', 'synthetic', 'testOnly', 'purpose',
     'language', 'framework', 'mode', 'groundTruth', 'fixture', 'expected',
-    'limitations', 'testCommand', 'provenance',
+    'limitations', 'testCommand', 'provenance', 'cohort',
   ];
   for (const key of Object.keys(value)) {
     if (!allowed.includes(key)) fail(errors, id, `unknown property "${key}"`);
@@ -74,6 +74,9 @@ export function validateCase(value, idHint = '<case>') {
   }
   if (!VARIANTS.includes(value.variant)) {
     fail(errors, id, `variant: must be one of ${VARIANTS.join('|')}`);
+  }
+  if (value.cohort !== undefined && (typeof value.cohort !== 'string' || !/^[a-z0-9][a-z0-9-]{1,31}$/.test(value.cohort))) {
+    fail(errors, id, 'cohort: must match ^[a-z0-9][a-z0-9-]{1,31}$ (population label; default "core")');
   }
   if (value.synthetic !== true) fail(errors, id, 'synthetic: must be true (cases are test-only, never real intelligence)');
   if (value.testOnly !== true) fail(errors, id, 'testOnly: must be true (cases are test-only, never real intelligence)');
@@ -161,6 +164,13 @@ export function validateCase(value, idHint = '<case>') {
   }
   if (gt?.state === 'ASSESSED' && gt.class === 'no-issue' && Array.isArray(detections) && detections.length > 0) {
     fail(errors, id, 'expected.detections: ASSESSED no-issue cases must declare zero expected detections');
+  }
+  // A trap that names no detector never exercises one (vacuous FP check).
+  if (gt?.state === 'ASSESSED') {
+    const named = (Array.isArray(detections) ? detections.length : 0) + (expected.forbiddenDetections?.length ?? 0);
+    if (named === 0) {
+      fail(errors, id, 'expected: ASSESSED cases must name >=1 detector (detections or forbiddenDetections)');
+    }
   }
   const prov = value.provenance;
   if (typeof prov !== 'object' || prov === null || Array.isArray(prov)) {
@@ -275,8 +285,10 @@ export function evaluateCase(root, testCase) {
   const gt = testCase.groundTruth;
   const result = {
     id: testCase.id,
+    cohort: typeof testCase.cohort === 'string' ? testCase.cohort : 'core',
     variant: testCase.variant,
     mode: testCase.mode,
+    language: testCase.language,
     groundTruthState: gt.state,
     groundTruthClass: gt.class,
     outcome: 'UNASSESSED',
@@ -389,10 +401,56 @@ export function buildReport(root, cases) {
   const fp = assessed.reduce((n, r) => n + r.falsePositives, 0);
   const recall = tp + fn > 0 ? Number((tp / (tp + fn)).toFixed(4)) : null;
   const precision = tp + fp > 0 ? Number((tp / (tp + fp)).toFixed(4)) : null;
+  // Population separation: each cohort is its own scored population. Mixing
+  // cohorts into one score is misleading (Work D); per-cohort metrics are the
+  // primary comparison unit across phases.
+  const metricsByCohort = {};
+  for (const cohortName of [...new Set(results.map((r) => r.cohort))].sort()) {
+    const cohortResults = results.filter((r) => r.cohort === cohortName);
+    const cohortAssessed = cohortResults.filter((r) => r.groundTruthState === 'ASSESSED');
+    const ctp = cohortAssessed.reduce((n, r) => n + r.truePositives, 0);
+    const cfn = cohortAssessed.reduce((n, r) => n + r.falseNegatives, 0);
+    const cfp = cohortAssessed.reduce((n, r) => n + r.falsePositives, 0);
+    metricsByCohort[cohortName] = {
+      casesTotal: cohortResults.length,
+      assessedCases: cohortAssessed.length,
+      unassessedCases: cohortResults.length - cohortAssessed.length,
+      counts: { truePositives: ctp, falseNegatives: cfn, falsePositives: cfp },
+      metrics: {
+        scope: `${cohortAssessed.length} assessed synthetic cases in cohort "${cohortName}" (UNASSESSED excluded)`,
+        recall: ctp + cfn > 0 ? Number((ctp / (ctp + cfn)).toFixed(4)) : null,
+        precision: ctp + cfp > 0 ? Number((ctp / (ctp + cfp)).toFixed(4)) : null,
+        exactEvidenceMatchRate: ctp + cfn > 0 ? `${ctp}/${ctp + cfn}` : null,
+      },
+    };
+  }
+  const byRule = {};
+  const byLanguage = {};
+  for (const r of results.filter((x) => x.groundTruthState === 'ASSESSED')) {
+    for (const exp of r.expected) {
+      const bucket = byRule[exp.ruleId] ??= { truePositives: 0, falseNegatives: 0, falsePositives: 0 };
+      if (r.truePositives > 0 && r.falseNegatives === 0) bucket.truePositives += 1;
+      else bucket.falseNegatives += 1;
+    }
+    for (let i = 0; i < r.falsePositives; i += 1) {
+      // attribute FPs to the rule that produced them (notes carry rule ids)
+      const noteRule = (r.notes.find((n) => n.startsWith('false positive: ')) ?? '').split(' ')[2] ?? 'unknown';
+      const bucket = byRule[noteRule] ??= { truePositives: 0, falseNegatives: 0, falsePositives: 0 };
+      bucket.falsePositives += 1;
+    }
+    const langBucket = byLanguage[r.language ?? 'unknown'] ??= { casesAssessed: 0, truePositives: 0, falseNegatives: 0, falsePositives: 0 };
+    langBucket.casesAssessed += 1;
+    langBucket.truePositives += r.truePositives;
+    langBucket.falseNegatives += r.falseNegatives;
+    langBucket.falsePositives += r.falsePositives;
+  }
   return {
     schemaVersion: EVAL_REPORT_SCHEMA,
     population: 'synthetic evaluation cases in data/eval-cases (test-only fixtures; NOT real vulnerability intelligence)',
-    disclaimer: 'Metrics describe this synthetic case population only. They are not real-world effectiveness estimates and must never be extrapolated.',
+    disclaimer: 'Metrics describe this synthetic case population only. They are not real-world effectiveness estimates and must never be extrapolated. Compare populations per cohort, never across mixed sets.',
+    metricsByCohort,
+    byRule,
+    byLanguage,
     casesTotal: results.length,
     assessedCases: assessed.length,
     unassessedCases: unassessed.length,

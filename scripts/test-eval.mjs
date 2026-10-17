@@ -48,7 +48,7 @@ function assert(condition, name, detail = '') {
 // --- 1. committed corpus loads clean and the runner never rewrites it --------
 const before = loadCases(ROOT);
 assert(before.errors.length === 0, 'corpus: all committed cases load clean', before.errors.join(' | '));
-  assert(before.cases.length >= 22, `corpus: at least 22 cases present (got ${before.cases.length})`);
+  assert(before.cases.length >= 51, `corpus: at least 51 cases present (got ${before.cases.length})`);
 const runOnce = execFileSync(process.execPath, [join(ROOT, 'scripts', 'run-eval.mjs')], { cwd: ROOT, encoding: 'utf8' });
 const after = loadCases(ROOT);
 assert(
@@ -79,8 +79,8 @@ assert(
   'metrics: computed over assessed synthetic population only',
 );
 assert(
-    report.counts.truePositives === 12 && report.counts.falseNegatives === 0 && report.counts.falsePositives === 1,
-    'metrics: population counts pinned (12 TP / 0 FN / 1 documented FP — Phase 7 population)',
+    report.counts.truePositives === 28 && report.counts.falseNegatives === 0 && report.counts.falsePositives === 1,
+    'metrics: population counts pinned (28 TP / 0 FN / 1 documented FP — Phase 8 totals)',
   JSON.stringify(report.counts),
 );
 
@@ -234,6 +234,51 @@ expectError((c) => { c.id = 'EVAL-1'; }, 'id: must match', 'regression: malforme
     } finally {
       rmSync(scratch, { recursive: true, force: true });
     }
+  }
+}
+
+// --- 7. Phase 8 Work C/D: population separation + per-rule breakdown ----------
+{
+  const report = JSON.parse(runOnce);
+  assert(report.metricsByCohort !== undefined && typeof report.metricsByCohort === 'object',
+    'populations: report separates metrics by cohort (never one mixed score)');
+  assert(report.metricsByCohort?.core !== undefined && report.metricsByCohort?.core?.assessedCases === 18,
+    'populations: cohort "core" is the Phase 6/7 population (18 assessed) — never mixed',
+    JSON.stringify(report.metricsByCohort));
+  assert(
+    report.metricsByCohort?.['sql-concat-xlang']?.counts.truePositives === 16
+    && report.metricsByCohort?.['sql-concat-xlang']?.counts.falsePositives === 0,
+    'populations: sql-concat-xlang cohort scored separately (16 TP / 0 FP)',
+    JSON.stringify(report.metricsByCohort?.['sql-concat-xlang']));
+  assert(report.byRule !== undefined && report.byLanguage !== undefined,
+    'breakdown: per-rule and per-language results present');
+  // Cohort labels: invalid cohort names rejected at load time.
+  const badCohort = JSON.parse(JSON.stringify(VALID));
+  badCohort.cohort = 'Bad Cohort!';
+  assert(validateCase(badCohort).some((e) => e.includes('cohort')),
+    'regression: malformed cohort label rejected', validateCase(badCohort).join(' | '));
+  // DEFECT: no-issue cases with zero declared detectors never exercise the
+  // detector — the FP trap is vacuous. ASSESSED cases must name >=1 detector.
+  const vacuous = JSON.parse(JSON.stringify(VALID));
+  vacuous.groundTruth = { state: 'ASSESSED', class: 'no-issue', rationale: 'Parameterized binding keeps SQL structure separate from data.' };
+  vacuous.expected = { detections: [] };
+  assert(
+    validateCase(vacuous).some((e) => e.includes('detector')),
+    'defect D4 regression: ASSESSED case without any named detector is rejected (vacuous FP trap)',
+    validateCase(vacuous).join(' | ') || '(no error raised)',
+  );
+  // And committed no-issue cases must actually run their detector via
+  // forbiddenDetections (or equivalent) — not pass by running nothing.
+  {
+    const committed = loadCases(ROOT).cases.filter(
+      (c) => c.groundTruth.state === 'ASSESSED' && c.groundTruth.class === 'no-issue',
+    );
+    const vacuousLive = committed.filter((c) => (c.expected.detections.length + (c.expected.forbiddenDetections?.length ?? 0)) === 0);
+    assert(
+      vacuousLive.length === 0,
+      'defect D4 regression: every committed no-issue case names its detector',
+      vacuousLive.map((c) => c.id).join(', ') || '',
+    );
   }
 }
 

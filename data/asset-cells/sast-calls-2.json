@@ -461,70 +461,196 @@
         ]
       ],
       "php": [
-        "mysqli_query\\s*\\([^)]*(?:\"[^\"\\n]*\\$|\\.\\s*\\$)",
+        "mysqli_query\\s*\\((?:[^()]|\\([^()]*\\))*(?:\\\"[^\\\"\\n]*\\$|\\.\\s*\\$)",
         "mysqli_query($c, \"SELECT $q\")",
         "mysqli_query($c, $stmt)",
-        "prepared statements with bind_param"
+        "prepared statements with bind_param",
+        [
+          {
+            "line": "mysqli_query($c, build_sql($name) . $tail);",
+            "match": true
+          },
+          {
+            "line": "mysqli_query($c, $stmt);",
+            "match": false
+          }
+        ]
       ],
       "java": [
-        "executeQuery\\s*\\([^)]*\\+",
+        "executeQuery\\s*\\((?:[^()]|\\([^()]*\\))*\\+",
         "stmt.executeQuery(\"SELECT \" + id)",
         "stmt.executeQuery(FIXED)",
-        "PreparedStatement with ? placeholders"
+        "PreparedStatement with ? placeholders",
+        [
+          {
+            "line": "stmt.executeQuery(buildSql(name) + \" -- x\");",
+            "match": true
+          },
+          {
+            "line": "stmt.executeQuery(FIXED);",
+            "match": false
+          }
+        ]
       ],
       "go": [
-        "\\.Query\\w*\\s*\\([^)]*\\+",
+        "\\.Query\\w*\\s*\\((?:[^()]|\\([^()]*\\))*(?:\\+|fmt\\.Sprintf\\s*\\()",
         "db.Query(\"SELECT \" + id)",
         "db.Query(FIXED)",
-        "$1 placeholders"
+        "$1 placeholders",
+        [
+          {
+            "line": "rows, err := db.Query(buildQuery(name) + \" LIMIT 10\")",
+            "match": true
+          },
+          {
+            "line": "rows, err := db.Query(fmt.Sprintf(\"SELECT * FROM users WHERE name = '%s'\", name))",
+            "match": true
+          },
+          {
+            "line": "rows, err := db.QueryContext(ctx, \"SELECT * FROM users WHERE name = $1\", name)",
+            "match": false
+          }
+        ]
       ],
       "ruby": [
-        "\\.execute\\s*\\([^)]*(?:\\+|#\\{)",
+        "\\.execute\\s*\\((?:[^()]|\\([^()]*\\))*(?:\\+|#\\{)",
         "db.execute(\"SELECT #{id}\")",
         "db.execute(FIXED)",
-        "bound parameters"
+        "bound parameters",
+        [
+          {
+            "line": "db.execute(build_sql(name) + \" -- x\")",
+            "match": true
+          },
+          {
+            "line": "db.execute(FIXED)",
+            "match": false
+          }
+        ]
       ],
       "csharp": [
-        "ExecuteReader\\s*\\([^)]*\\+|\\$\"SELECT[^\"]*\\{",
+        "ExecuteReader\\s*\\((?:[^()]|\\([^()]*\\))*\\+|\\$\\\"(?:SELECT|INSERT|UPDATE|DELETE|MERGE|EXEC|WITH)[^\\\"]*\\{",
         "cmd.ExecuteReader(\"SELECT \" + id)",
         "cmd.ExecuteReader(FIXED)",
-        "SqlParameter bindings"
+        "SqlParameter bindings",
+        [
+          {
+            "line": "cmd.ExecuteReader(BuildSql(name) + \" -- tail\");",
+            "match": true
+          },
+          {
+            "line": "cmd.ExecuteReader($\"INSERT INTO logs VALUES ('{user}')\");",
+            "match": true
+          },
+          {
+            "line": "cmd.ExecuteReader(FIXED_QUERY);",
+            "match": false
+          }
+        ]
       ],
       "perl": [
-        "->do\\s*\\([^)]*(?:\"[^\"\\n]*\\$|\\.\\s*\\$)",
+        "->do\\s*\\((?:[^()]|\\([^()]*\\))*(?:\\\"[^\\\"\\n]*\\$|\\.\\s*\\$)",
         "$dbh->do(\"SELECT $q\")",
         "$dbh->do($fixed)",
-        "placeholders with bind values"
+        "placeholders with bind values",
+        [
+          {
+            "line": "$dbh->do(build_sql($name) . $tail);",
+            "match": true
+          },
+          {
+            "line": "$dbh->do($fixed);",
+            "match": false
+          }
+        ]
       ],
       "scala": [
-        "SQL\\s*\\([^)]*\\+",
+        "SQL\\s*\\((?:[^()]|\\([^()]*\\))*(?:\\+|\\$\\{)",
         "SQL(\"SELECT \" + id)",
         "SQL(FIXED)",
-        "SQL with .on() bindings"
+        "SQL with .on() bindings",
+        [
+          {
+            "line": "SQL(buildSql(name) + \" -- x\")",
+            "match": true
+          },
+          {
+            "line": "SQL(s\"SELECT * FROM users WHERE name = '${name}'\")",
+            "match": true
+          },
+          {
+            "line": "SQL(FIXED)",
+            "match": false
+          }
+        ]
       ],
       "groovy": [
-        "\\.execute\\s*\\([^)]*\\+",
+        "\\.execute\\s*\\((?:[^()]|\\([^()]*\\))*(?:\\+|\\$\\{)",
         "sql.execute(\"SELECT \" + id)",
         "sql.execute(FIXED)",
-        "GString with parameters"
+        "GString with parameters",
+        [
+          {
+            "line": "sql.execute(buildStmt(name) + \" -- x\")",
+            "match": true
+          },
+          {
+            "line": "sql.execute(\"SELECT * FROM users WHERE name = '${name}'\")",
+            "match": true
+          },
+          {
+            "line": "sql.execute(\"SELECT COUNT(*) FROM users\")",
+            "match": false
+          }
+        ]
       ],
       "apex": [
-        "Database\\.query\\s*\\([^)]*\\+",
+        "Database\\.query\\s*\\((?:[^()]|\\([^()]*\\))*\\+",
         "Database.query('SELECT Id FROM Account WHERE Name = ' + name)",
         "Database.queryWithBinds(QUERY, bindMap, AccessLevel.USER_MODE)",
-        "Database.queryWithBinds in user mode"
+        "Database.queryWithBinds in user mode",
+        [
+          {
+            "line": "String soql = Database.query(buildSoql(name) + ' LIMIT 10');",
+            "match": true
+          },
+          {
+            "line": "List<Account> a = Database.query('SELECT Id FROM Account WHERE Name = :name');",
+            "match": false
+          }
+        ]
       ],
       "elixir": [
-        "(?:Ecto\\.Adapters\\.SQL|Repo)\\.query!?\\s*\\([^)]*<>",
+        "(?:Ecto\\.Adapters\\.SQL|Repo)\\.query!?\\s*\\((?:[^()]|\\([^()]*\\))*<>",
         "Repo.query!(\"SELECT * FROM users WHERE name = '\" <> name <> \"'\")",
         "Repo.query!(\"SELECT * FROM users WHERE name = $1\", [name])",
-        "parameter placeholders ($1) with a bound list"
+        "parameter placeholders ($1) with a bound list",
+        [
+          {
+            "line": "Repo.query!(build_sql(name) <> \" LIMIT 10\")",
+            "match": true
+          },
+          {
+            "line": "Repo.query!(\"SELECT * FROM users WHERE name = $1\", [name])",
+            "match": false
+          }
+        ]
       ],
       "vbnet": [
-        "\\bSqlCommand\\s*\\([^)]*&",
+        "\\bSqlCommand\\s*\\((?:[^()]|\\([^()]*\\))*&",
         "Dim cmd As New SqlCommand(\"SELECT * FROM users WHERE name = '\" & name & \"'\", conn)",
         "Dim cmd As New SqlCommand(\"SELECT * FROM users WHERE name = @name\", conn)",
-        "a SqlParameter bound to @name"
+        "a SqlParameter bound to @name",
+        [
+          {
+            "line": "Dim cmd As New SqlCommand(BuildSql(name) & \" -- x\", conn)",
+            "match": true
+          },
+          {
+            "line": "Dim cmd As New SqlCommand(\"SELECT * FROM users WHERE name = @name\", conn)",
+            "match": false
+          }
+        ]
       ]
     }
   },

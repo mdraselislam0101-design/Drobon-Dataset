@@ -137,6 +137,16 @@ confirm without exact source evidence. **No semantic analysis engine was
 implemented** — these are boundary-state tests of the existing contracts;
 the capability inventory in §1 is unchanged.
 
+## 3.2 Phase 8 note
+
+The Phase 8 cross-language `sql-concat` closure (11 variant frags) is
+**lexical** work in the same line-regex family — it does not change any
+capability in §1: parser/CFG/taint/call-graph/framework semantics remain
+NOT IMPLEMENTED. Interpolation alternatives (f-string, template, GString,
+s-interp, `fmt.Sprintf`) are string-shape detectors, not data-flow analysis;
+cases whose truth depends on callee or cross-line semantics stay UNASSESSED
+(EVAL-SQL-027/028).
+
 ## 4. Honest statement of what Phase 6 did and did not do
 
 - **Did:** evidence source-mapping implementation + tests; verification

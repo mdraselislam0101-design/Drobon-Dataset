@@ -147,17 +147,19 @@ checks ≠ absence of flaws.
 `command-injection` 47, `code-injection` 76, `cross-site-scripting` 26,
 `ldap-injection` 3, `xpath-injection` 2, `template-injection` 2,
 `http-response-splitting` 2, `html-injection` 1; CWE-89/78/79/95 mapped. 5.
-**Tests:** pos+neg executed; Phase 7 eval corpus (18 assessed synthetic cases
-= 12 detection opportunities + 6 clean traps; recall 1.0, precision 0.9231 on
-THAT population only) incl. nested-paren/f-string/template defect closure on
-DPK-SAST-283/008 (`data/asset-cells/sast-calls-2.json` sinks.python + legacy
-rule file; patterns auto-mirrored). 6. **Gap:** context/flow-blind; string-concat
-heuristics FP on constant concatenation; same nested-paren class remains in
-other language variants of `sql-concat` (fix proven on python/js only);
-comment/docstring matches are inherent line-lexical FPs (EVAL-SAST-008
-pins one honestly). 7. **Approach:** remaining concat variants get the
-same cell-frag fix when evaluation evidence covers them; taint later
-(CGM-B2). 8. **Alternatives:** —.
+**Tests:** pos+neg executed; Phase 7 eval corpus (18 assessed) + Phase 8
+`sql-concat-xlang` cohort (26 assessed: 16 detection opportunities + 10
+traps; **before** 1 TP / 15 FN / 0 FP → **after** 16 TP / 0 FN / 0 FP,
+recall 1.0, precision 1.0, exact-evidence 16/16 on THAT population only).
+All 12 family variants now carry the Phase-7-proven nested-paren scan
+(11 fixed Phase 8 via `data/asset-cells/sast-calls-2.json` sinks —
+source-of-truth, regenerated); interpolation alts added where the language
+has one (go `fmt.Sprintf`, groovy GString `${`, scala s-interp `${`,
+csharp SQL-verb-set interpolation scope). 6. **Gap:** context/flow-blind;
+string-concat heuristics FP on constant concatenation; comment/docstring
+matches are inherent line-lexical FPs (EVAL-SAST-008 pins one honestly);
+semantic assembly through unknown callees stays UNASSESSED (not claimed). 7.
+**Approach:** taint later (CGM-B2). 8. **Alternatives:** —.
 9. **Security:** injection rules must never suggest auto-fixes (H1). 10.
 **Acceptance:** unchanged. 11. **Deps:** —. 12. **Perf:** linear. 13. **Limits:**
 documented per rule (`fpNotes` in patterns).
@@ -295,15 +297,23 @@ and DPK-SEC-107 (URL userinfo passwords containing symbols) authored via
 `data/asset-cells/secrets-5.json`. 5. **Tests:** `test-packs` denylist-veto
 mutants; `test-assets` linkage 953/953; edge tests for DPK-SEC-105 (11);
 DPK-SEC-106 carries 16 executed tests and DPK-SEC-107 carries 14 (pos/neg/
-boundary/malformed with exact outcomes). 6. **Gap:** no entropy/liveness/
-context-window analysis; GAP-013 probe gaps CLOSED 2026-10-17 — documented
-residual recall boundary: pure-alphanumeric userinfo passwords shorter than
-12 characters match neither DPK-SEC-063 nor DPK-SEC-107. 7. **Approach:**
+boundary/malformed with exact outcomes). 6. **Gap:** Phase 8 added a Dataset-side evidence-gated CANDIDATE evaluator
+(`scripts/secret-candidates.mjs`, `drobon.secret.candidate/v1` — Shannon
+entropy + charset/length signals + placeholder/hash/UUID/template vetoes +
+mandatory assignment-like context evidence; strongest state is CANDIDATE,
+never CONFIRMED; outputs redacted to prefix+length fingerprints; synthetic
+population 14 cases: 4 TP / 0 FP / 0 FN / 8 TN, 2 UNASSESSED). Liveness
+remains forbidden; no confirmed-secret engine exists. GAP-013 probe gaps
+CLOSED 2026-10-17 — documented residual recall boundary: pure-alphanumeric
+userinfo passwords shorter than 12 characters match neither DPK-SEC-063 nor
+DPK-SEC-107. 7. **Approach:**
 probe-gap rules authored evidence-gated via `data/asset-cells/secrets-5.json`
 (BLK-008 resolved Phase 4: no owner gate on technical authoring). 8. **Alternatives:** liveness probing (forbidden
 policy). 9. **Security:** shape ≠ live credential (mandatory limitation text).
 10. **Acceptance:** each new rule ≥1 pos + ≥2 neg + leak-scan safety. 11.
-**Deps:** —. 12. **Perf:** linear. 13. **Limits:** documented per rule.
+**Deps:** —. 12. **Perf:** linear. 13. **Limits:** documented per rule;
+candidate signals are triage leads — entropy alone is never a credential
+claim (tested).
 
 ### CGM-D2 · Safe credential handling & redaction (findings + evidence)
 1. **ID:** CGM-D2 (grouped: safe handling, redaction, evidence minimization).
@@ -771,3 +781,23 @@ shipped Phase 6), CGM-C1/C3 app-side verification, CGM-D1 context analysis
   the synthetic population; EVAL-SAST-008's documented FP preserved, not
   suppressed). Coverage ledger REPRODUCED — no requirement row moved;
   coverage stays **74.8% (38.90/52)**. `requireGates()` fail-closed (4/4).
+
+- **Phase 8 (2026-10-17):** `npm test` exit 0 — test 600/600, pack-tests
+  3,978/3,978, audience-tests 2,903/2,903, asset-tests 7,514/7,514,
+  consistency 216/216, rehearsal 78/78, importers 49/49, agent-policy 91/91,
+  agent-workflows 57/57, finding-evidence 31/31, **secret-candidates 20/20
+  (new)**, eval-tests 37/37, doc-drift 119/119, determinism 5/5 —
+  **15,698 assertions total** (runner sums recomputed; +27 vs Phase 7
+  15,671 = secret-candidates +20 and eval-tests 30→37; no assertion removed
+  or weakened — prior pins preserved or deliberately strengthened; D4
+  vacuous-trap defect closed with tests-first discipline). Eval populations scored
+  SEPARATELY per cohort (core: 12 TP / 0 FN / 1 documented FP; sql-concat-
+  xlang: 16 TP / 0 FN / 0 FP; secret-candidate synthetic set: 4 TP / 0 FP /
+  0 FN / 8 TN + 2 UNASSESSED) — never mixed into one score. Corpus counts
+  UNCHANGED (953 = 792+96+65 rules; patterns 953; records 913; remediation
+  953; cwe 61) — 51 eval cases + candidate fixtures are test-only, outside
+  every counted directory. SoT audit: 0 orphan refs, 0 signal-mirror
+  mismatches, 0 unused patterns, 0 rules missing remediation (40-rule legacy
+  record exception retained as documented). Coverage ledger REPRODUCED — no
+  requirement row moved; coverage stays **74.8% (38.90/52)**.
+  `requireGates()` fail-closed (4/4).
