@@ -2,7 +2,7 @@
   "schemaVersion": "drobon.pack.sast/v1",
   "id": "DPK-SAST-279",
   "title": "SQL built by concatenation (csharp) — review required",
-  "description": "A csharp query call assembles SQL from parts: ExecuteReaders*([^)]*+|$\"SELECT[^\"]*{. If any part is untrusted input, the query structure itself is attacker-controlled. This lexical rule flags the assembly; the reviewer confirms every part is trusted or parameterizes it.",
+  "description": "A csharp query call assembles SQL from parts: ExecuteReaders*((?:[^()]|([^()]*))*+|$\"(?:SELECT|INSERT|UPDA. If any part is untrusted input, the query structure itself is attacker-controlled. This lexical rule flags the assembly; the reviewer confirms every part is trusted or parameterizes it.",
   "severity": "HIGH",
   "cwe": "CWE-89",
   "category": "sql-injection",
@@ -13,7 +13,7 @@
   ],
   "patterns": [
     {
-      "source": "ExecuteReader\\s*\\([^)]*\\+|\\$\"SELECT[^\"]*\\{"
+      "source": "ExecuteReader\\s*\\((?:[^()]|\\([^()]*\\))*\\+|\\$\\\"(?:SELECT|INSERT|UPDATE|DELETE|MERGE|EXEC|WITH)[^\\\"]*\\{"
     }
   ],
   "tests": [
@@ -31,6 +31,18 @@
     },
     {
       "line": "# verified: cmd.ExecuteReader(FIXED)",
+      "match": false
+    },
+    {
+      "line": "cmd.ExecuteReader(BuildSql(name) + \" -- tail\");",
+      "match": true
+    },
+    {
+      "line": "cmd.ExecuteReader($\"INSERT INTO logs VALUES ('{user}')\");",
+      "match": true
+    },
+    {
+      "line": "cmd.ExecuteReader(FIXED_QUERY);",
       "match": false
     }
   ],

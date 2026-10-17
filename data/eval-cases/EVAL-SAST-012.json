@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "drobon.eval.case/v1",
+  "id": "EVAL-SAST-012",
+  "variant": "boundary",
+  "synthetic": true,
+  "testOnly": true,
+  "purpose": "Sanitization attempted after the sensitive operation — too late to prevent the issue.",
+  "language": "python",
+  "framework": null,
+  "mode": "line-regex",
+  "groundTruth": {
+    "state": "ASSESSED",
+    "class": "issue-present",
+    "rationale": "execute() runs with the raw concatenation first; a later sanitize call cannot retroactively protect the executed query."
+  },
+  "fixture": {
+    "name": "synthetic_eval_sast_012.txt",
+    "lines": [
+      "def get_user(cursor, user_input):",
+      "    cursor.execute(\"SELECT * FROM users WHERE name = '\" + user_input + \"'\")",
+      "    audit.sanitize(user_input)"
+    ]
+  },
+  "expected": {
+    "detections": [
+      {
+        "ruleId": "DPK-SAST-283",
+        "lineNo": 2,
+        "mustContain": ".execute("
+      }
+    ],
+    "expectedCwe": "CWE-89"
+  },
+  "limitations": [
+    "Order-of-operations ground truth; detection is line-level."
+  ],
+  "testCommand": "node scripts/run-eval.mjs --case EVAL-SAST-012",
+  "provenance": {
+    "origin": "original-authored",
+    "writtenFor": "Phase 7 Work B detection-quality closure",
+    "kind": "synthetic test fixture - NOT vulnerability intelligence",
+    "expectationAuthoredBeforeFirstRun": true
+  }
+}

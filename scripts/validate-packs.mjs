@@ -301,6 +301,11 @@ function checkDenylist(errors, record) {
 
 function normalizeHeaders(headers) {
   const normalized = {};
+  // Malformed observations never throw: a missing/null/non-object header map
+  // behaves as "no headers observed" and every header check evaluates false.
+  if (typeof headers !== 'object' || headers === null || Array.isArray(headers)) {
+    return normalized;
+  }
   for (const [name, value] of Object.entries(headers)) {
     normalized[name.toLowerCase()] = Array.isArray(value) ? value : [value];
   }
@@ -333,8 +338,16 @@ function cookieHasFlag(cookie, flag) {
 export function evalDastCheck(check, observation) {
   const headers = normalizeHeaders(observation.headers);
   switch (check.type) {
-    case 'http-url':
-      return new URL(observation.url).protocol === 'http:';
+    case 'http-url': {
+      // Malformed/unparseable URL never throws: the check evaluates false.
+      let protocol = null;
+      try {
+        protocol = new URL(observation.url).protocol;
+      } catch {
+        protocol = null;
+      }
+      return protocol === 'http:';
+    }
     case 'missing-response-header':
       return headers[check.header.toLowerCase()] === undefined;
     case 'response-header-missing-directive': {
@@ -360,7 +373,13 @@ export function evalDastCheck(check, observation) {
     case 'response-body-matches': {
       if (check.requireScheme !== undefined) {
         // Scope check: only observations fetched over the required scheme are judged.
-        if (new URL(observation.url).protocol !== `${check.requireScheme}:`) {
+        let scheme = null;
+        try {
+          scheme = new URL(observation.url).protocol;
+        } catch {
+          return false; // unparseable URL: out of scope, never throws on the observation
+        }
+        if (scheme !== `${check.requireScheme}:`) {
           return false;
         }
       }
@@ -375,6 +394,12 @@ export function evalDastCheck(check, observation) {
       if (values === undefined || observation.status < 300 || observation.status > 399) {
         return false; // not a redirect carrying this header
       }
+      let baseHost;
+      try {
+        baseHost = new URL(observation.url).hostname;
+      } catch {
+        return false; // unparseable observation URL: unknown, never throws
+      }
       let target;
       try {
         target = new URL(values[0], observation.url);
@@ -384,7 +409,7 @@ export function evalDastCheck(check, observation) {
       if (target.protocol !== 'http:' && target.protocol !== 'https:') {
         return false; // non-web schemes are out of this check's scope
       }
-      return target.hostname !== new URL(observation.url).hostname;
+      return target.hostname !== baseHost;
     }
     default:
       throw new Error(`unknown check type "${check.type}"`);
@@ -587,7 +612,7 @@ function validateSastRule(record) {
     } else {
       record['languages'].forEach((entry, index) => {
         if (typeof entry !== 'string' || !LANGUAGE_PATTERN.test(entry)) {
-          errors.push(`languages[${index}]: must match ^[a-z][a-z0-9]{0,31}$ and exist in the app language catalog`);
+          errors.push(`languages[${index}]: must match ^[a-z][a-z0-9]{0,31}$ (app-catalog reachability is tracked separately in docs/PACKS.md)`);
         }
       });
     }
@@ -609,6 +634,12 @@ function validateSecretsRule(record) {
   }
   if (record['matchOnlyEvidence'] !== undefined && typeof record['matchOnlyEvidence'] !== 'boolean') {
     errors.push('matchOnlyEvidence: must be a boolean');
+  }
+  // Semantic contract (docs/PACKS.md): a credential-value rule must ship a
+  // placeholder veto. Only evidence-only rules (matchOnlyEvidence: true —
+  // headers/carriers without material) may omit the denylist.
+  if (record['denylist'] === undefined && record['matchOnlyEvidence'] !== true) {
+    errors.push('denylist: required unless matchOnlyEvidence is true (credential-value rules must veto documentation placeholders)');
   }
   const compiled = checkPatterns(errors, record);
   const denylist = checkDenylist(errors, record);

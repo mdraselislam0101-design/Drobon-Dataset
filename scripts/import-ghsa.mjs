@@ -10,12 +10,28 @@
  *
  * Usage:
  *   GITHUB_TOKEN=... node scripts/import-ghsa.mjs [--ecosystem npm|pip|both]
- *     [--limit N] [--out vuln-intel] [--force] [--max-pages N]
+ *     [--limit N] [--out vuln-intel] [--force] [--max-pages N] [--dry-run]
  *
  * The token is optional but recommended (higher API rate limit).
  * Existing files are skipped; --force re-checks content (identical files
  * skip as duplicates, differing files quarantine as conflicts - never
- * overwritten). Retrieval follows API Link pagination (default 10 pages).
+ * overwritten). Retrieval follows API Link pagination (default 10 pages,
+ * cap 50) with bounded retries (scripts/retry.mjs) and tmp checkpoints
+ * (scripts/checkpoint.mjs).
+ *
+ * Safety contract (this pump):
+ *  - Fail-closed batching: all pages of all ecosystems are fetched and
+ *    validated BEFORE any file is written. A failed run writes nothing.
+ *  - Repeated-cursor guard: a next-URL already visited stops traversal
+ *    (no infinite loops, no double-counted pages).
+ *  - Safe traversal: next-URLs must stay on https://api.github.com/ - a
+ *    crafted Link header can never redirect the fetch.
+ *  - --dry-run: discover + validate + report, writes NOTHING (not even
+ *    quarantine); the only mode that may run without the ingestion gates.
+ *  - Structured summary separates discovered (validated candidates) from
+ *    production-approved (always 0 here: promotion needs owner gates).
+ *  - Production runs call requireGates() first: any BLOCKED gate aborts
+ *    before args, network, or writes (fail-closed).
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -36,9 +52,10 @@ const SEVERITY_MAP = {
   critical: 'CRITICAL',
 };
 const ECOSYSTEM_MAP = { npm: 'npm', pip: 'pypi' };
+export const SAFE_NEXT_PREFIX = 'https://api.github.com/';
 
 export function parseArgs(argv) {
-  const args = { ecosystem: 'both', limit: 15, out: 'vuln-intel', force: false, maxPages: 10 };
+  const args = { ecosystem: 'both', limit: 15, out: 'vuln-intel', force: false, maxPages: 10, dryRun: false };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === '--ecosystem') {
@@ -55,6 +72,8 @@ export function parseArgs(argv) {
     } else if (arg === '--max-pages') {
       args.maxPages = Number.parseInt(argv[i + 1] ?? '', 10);
       i += 1;
+    } else if (arg === '--dry-run') {
+      args.dryRun = true;
     } else {
       throw new Error(`unknown argument "${arg}"`);
     }
@@ -87,6 +106,11 @@ export function parseLinkNext(linkHeader) {
   return null;
 }
 
+/** Next-URLs must stay on the advisory API host (crafted Link headers cannot redirect us). */
+export function isSafeNextUrl(url) {
+  return typeof url === 'string' && url.startsWith(SAFE_NEXT_PREFIX);
+}
+
 export async function fetchAdvisoriesPage(fetchImpl, url, headers, retryOptions = {}) {
   return withRetries(async () => {
     const response = await fetchImpl(url, { headers });
@@ -104,6 +128,10 @@ export async function fetchAdvisories(ecosystem, token, options = {}) {
   const maxPages = options.maxPages ?? 10;
   const checkpointFile = options.checkpointFile ?? null;
   const retryOptions = options.retry ?? {};
+  const onNote = options.onNote ?? null;
+  const note = (text) => {
+    if (onNote !== null) onNote(text);
+  };
   if (!Number.isInteger(maxPages) || maxPages < 1 || maxPages > 50) {
     throw new Error('fetchAdvisories: maxPages must be an integer 1..50');
   }
@@ -124,9 +152,15 @@ export async function fetchAdvisories(ecosystem, token, options = {}) {
     skipPages = cursor === null ? 0 : Number.parseInt(cursor.value, 10) || 0;
   }
   const collected = [];
+  const seenUrls = new Set();
   let url = startUrl;
   let pageIndex = 0;
   while (url !== null && pageIndex < maxPages) {
+    if (seenUrls.has(url)) {
+      note(`repeated cursor guard: next-URL already visited, stopping (${url.slice(0, 80)})`);
+      break;
+    }
+    seenUrls.add(url);
     pageIndex += 1;
     const page = await fetchAdvisoriesPage(fetchImpl, url, headers, retryOptions);
     if (pageIndex > skipPages) {
@@ -139,6 +173,10 @@ export async function fetchAdvisories(ecosystem, token, options = {}) {
         value: String(pageIndex),
         at: new Date().toISOString(),
       });
+    }
+    if (page.nextUrl !== null && !isSafeNextUrl(page.nextUrl)) {
+      note(`unsafe next-URL rejected (must start with ${SAFE_NEXT_PREFIX}): ${page.nextUrl.slice(0, 80)}`);
+      break;
     }
     url = page.nextUrl;
   }
@@ -202,7 +240,7 @@ function toRecords(advisory, retrievedAt, skips) {
     };
     const errors = validateRecord(record);
     if (errors.length > 0) {
-      skips.push(`${ghsaId} (${name}): validation failed (${errors[0]})`);
+      skips.push(`${ghsaId} (${name}): rejected: validation failed (${errors[0]})`);
       continue;
     }
     records.push(record);
@@ -213,67 +251,178 @@ function toRecords(advisory, retrievedAt, skips) {
   return records;
 }
 
-async function main() {
-  requireGates();
-  const args = parseArgs(process.argv.slice(2));
-  const token = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN ?? '';
-  const ecosystems = args.ecosystem === 'both' ? ['npm', 'pip'] : [args.ecosystem];
-  const outRoot = resolve(process.cwd(), args.out);
-  const retrievedAt = new Date().toISOString();
-  const runDay = retrievedAt.slice(0, 10);
-  const batchId = `ghsa-${runDay}`;
-  let written = 0;
-  const skips = [];
-  for (const ecosystem of ecosystems) {
-    const advisories = await fetchAdvisories(ecosystem, token, {
-      maxPages: args.maxPages,
-      checkpointFile: join(tmpdir(), `drobon-import-ghsa-${ecosystem}-${runDay}.json`),
-    });
-    const perAdvisoryCount = new Map();
-    let kept = 0;
+/**
+ * Run one import batch. Writes nothing on fetch failure (fail-closed
+ * staging). Returns a structured summary; productionApproved is always 0
+ * here because promotion needs the owner gates plus a license grant.
+ */
+export async function runImport(options = {}) {
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const token = options.token ?? '';
+  const ecosystems = options.ecosystems ?? ['npm', 'pip'];
+  const outRoot = options.outRoot ?? resolve(process.cwd(), 'vuln-intel');
+  const quarantineRoot = options.quarantineRoot ?? process.cwd();
+  const force = options.force ?? false;
+  const limit = options.limit ?? 15;
+  const maxPages = options.maxPages ?? 10;
+  const dryRun = options.dryRun ?? false;
+  const checkpointFileFor = options.checkpointFileFor ?? (() => null);
+  const retryOptions = options.retry ?? {};
+  const retrievedAt = options.retrievedAt ?? new Date().toISOString();
+  const batchId = options.batchId ?? `ghsa-${retrievedAt.slice(0, 10)}`;
+
+  const summary = {
+    mode: dryRun ? 'dry-run' : 'import',
+    fetched: 0,
+    discovered: 0,
+    accepted: 0,
+    rejected: 0,
+    duplicate: 0,
+    skipped: 0,
+    failed: 0,
+    productionApproved: 0,
+    notes: [],
+    skips: [],
+    error: null,
+  };
+  const skips = summary.skips;
+
+  // ---- STAGE 1: fetch everything (any failure aborts with zero writes) ----
+  let advisoriesByEcosystem;
+  try {
+    advisoriesByEcosystem = [];
+    for (const ecosystem of ecosystems) {
+      const advisories = await fetchAdvisories(ecosystem, token, {
+        fetchImpl,
+        maxPages,
+        retry: retryOptions,
+        checkpointFile: checkpointFileFor(ecosystem),
+        onNote: (text) => summary.notes.push(text),
+      });
+      summary.fetched += advisories.length;
+      advisoriesByEcosystem.push({ ecosystem, advisories });
+    }
+  } catch (err) {
+    summary.failed += 1;
+    summary.error = String(err?.message ?? err);
+    summary.skips = skips;
+    return summary;
+  }
+
+  // ---- STAGE 2: transform + validate (still no writes) ----
+  const staged = [];
+  const stagedFingerprints = new Set();
+  for (const { advisories } of advisoriesByEcosystem) {
     for (const advisory of advisories) {
-      if (kept >= args.limit) {
-        break;
-      }
+      const before = skips.length;
       const records = toRecords(advisory, retrievedAt, skips);
+      const newSkips = skips.slice(before);
+      summary.skipped += newSkips.filter((s) => !s.includes('rejected:')).length;
+      summary.rejected += newSkips.filter((s) => s.includes('rejected:')).length;
       for (const record of records) {
-        if (kept >= args.limit) {
-          break;
-        }
-        const seen = (perAdvisoryCount.get(record.id) ?? 0) + 1;
-        perAdvisoryCount.set(record.id, seen);
-        const fileName = seen === 1 ? `${record.id}.json` : `${record.id}--${seen}.json`;
-        const dir = join(outRoot, record.ecosystem);
-        const file = join(dir, fileName);
-        const newBytes = `${JSON.stringify(record, null, 2)}\n`;
-        if (existsSync(file)) {
-          if (!args.force) {
-            skips.push(`${record.id} (${record.package}): file exists`);
-            continue;
-          }
-          if (readFileSync(file, 'utf8') === newBytes) {
-            skips.push(`${record.id} (${record.package}): duplicate, unchanged`);
-            continue;
-          }
-          quarantineRecord(process.cwd(), batchId, 'GHSA', record.id, record, `file conflict: ${file} differs; --force refuses to overwrite`);
-          skips.push(`${record.id} (${record.package}): conflict quarantined`);
+        // Duplicate-page / repeated-item protection: identical staged records
+        // (same identity + same affected range) are storage dupes, never new shards.
+        const fingerprint = JSON.stringify([record.id, record.ecosystem, record.package, record.affected]);
+        if (stagedFingerprints.has(fingerprint)) {
+          summary.duplicate += 1;
+          skips.push(`${record.id} (${record.package}): duplicate: identical record already staged`);
           continue;
         }
-        mkdirSync(dir, { recursive: true });
-        writeFileSync(file, newBytes);
-        process.stdout.write(`wrote ${file}\n`);
-        kept += 1;
-        written += 1;
+        stagedFingerprints.add(fingerprint);
+        summary.discovered += 1;
+        staged.push(record);
       }
     }
   }
-  process.stdout.write(`import-ghsa: wrote ${written} records, ${skips.length} skips\n`);
-  for (const skip of skips.slice(0, 30)) {
+
+  // ---- STAGE 3: commit (skipped entirely in dry-run) ----
+  if (dryRun) {
+    summary.skipped += staged.length; // would-write, not written
+    summary.notes.push(`dry-run: ${staged.length} validated record(s) NOT written`);
+    return summary;
+  }
+  const perAdvisoryCount = new Map();
+  let kept = 0;
+  for (const record of staged) {
+    if (kept >= limit) {
+      summary.skipped += 1;
+      skips.push(`${record.id} (${record.package}): skipped: limit ${limit} reached`);
+      continue;
+    }
+    const seen = (perAdvisoryCount.get(record.id) ?? 0) + 1;
+    perAdvisoryCount.set(record.id, seen);
+    const fileName = seen === 1 ? `${record.id}.json` : `${record.id}--${seen}.json`;
+    const dir = join(outRoot, record.ecosystem);
+    const file = join(dir, fileName);
+    const newBytes = `${JSON.stringify(record, null, 2)}\n`;
+    if (existsSync(file)) {
+      if (!force) {
+        summary.duplicate += 1;
+        skips.push(`${record.id} (${record.package}): duplicate: file exists`);
+        continue;
+      }
+      if (readFileSync(file, 'utf8') === newBytes) {
+        summary.duplicate += 1;
+        skips.push(`${record.id} (${record.package}): duplicate, unchanged`);
+        continue;
+      }
+      quarantineRecord(quarantineRoot, batchId, 'GHSA', record.id, record, `file conflict: ${file} differs; --force refuses to overwrite`);
+      summary.skipped += 1;
+      skips.push(`${record.id} (${record.package}): conflict quarantined`);
+      continue;
+    }
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(file, newBytes);
+    kept += 1;
+    summary.accepted += 1;
+  }
+  return summary;
+}
+
+async function main() {
+  const rawArgs = process.argv.slice(2);
+  // Fail-closed first: production runs need every ingestion gate before any
+  // arg parsing, network call, or write. --dry-run is the only exception
+  // (writes nothing at all).
+  const dryRun = rawArgs.includes('--dry-run');
+  if (!dryRun) {
+    requireGates();
+  } else {
+    process.stdout.write('import-ghsa: dry-run (no gates required; writes nothing)\n');
+  }
+  const args = parseArgs(rawArgs);
+  const token = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN ?? '';
+  const runDay = new Date().toISOString().slice(0, 10);
+  const summary = await runImport({
+    fetchImpl: fetch,
+    token,
+    ecosystems: args.ecosystem === 'both' ? ['npm', 'pip'] : [args.ecosystem],
+    outRoot: resolve(process.cwd(), args.out),
+    quarantineRoot: process.cwd(),
+    force: args.force,
+    limit: args.limit,
+    maxPages: args.maxPages,
+    dryRun: args.dryRun,
+    batchId: `ghsa-${runDay}`,
+    checkpointFileFor: (ecosystem) => join(tmpdir(), `drobon-import-ghsa-${ecosystem}-${runDay}.json`),
+  });
+  process.stdout.write(`${JSON.stringify(summary, null, 2)}\n`);
+  for (const skip of summary.skips.slice(0, 30)) {
     process.stdout.write(`  skip: ${skip}\n`);
   }
-  if (skips.length > 30) {
-    process.stdout.write(`  ... and ${skips.length - 30} more skips\n`);
+  if (summary.skips.length > 30) {
+    process.stdout.write(`  ... and ${summary.skips.length - 30} more skips\n`);
   }
+  if (summary.failed > 0) {
+    process.stderr.write(`import-ghsa: FAIL (${summary.error}) — nothing written\n`);
+    process.exitCode = 1;
+    return;
+  }
+  process.stdout.write(
+    `import-ghsa: accepted ${summary.accepted}, discovered ${summary.discovered}, `
+    + `rejected ${summary.rejected}, duplicate ${summary.duplicate}, skipped ${summary.skipped}; `
+    + `production-approved 0 (owner gates required)\n`,
+  );
 }
 
 const invokedAsScript =

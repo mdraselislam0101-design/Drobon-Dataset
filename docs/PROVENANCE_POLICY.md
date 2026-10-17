@@ -53,3 +53,26 @@ statuses UNKNOWN, UNVERIFIED, or BLOCKED — never a guess.
 RECORDED (git evidence present), PENDING (uncommitted), UNKNOWN (no
 evidence found), UNVERIFIED (claimed, unchecked), BLOCKED (must not
 proceed). Unknown information is labeled, never filled in.
+
+## 6. License-field semantics (2026-10-16 clarification)
+
+Four distinct concepts must never be conflated (this section resolves the
+wording tension between `vuln-intel/sources.json`, `docs/LICENSE_REVIEW.md`,
+and `docs/LICENSE_DECISION_RECORD.md`):
+
+1. **Per-record `provenance.license`** — a *pointer* to upstream terms text
+   ("Verify terms: …"). It is evidence of where to look, never a grant.
+2. **`sources.json` `licenseReview.status`** — the outcome of a *terms-text
+   review* (`VERIFIED_ALLOWED` = the license text permits the use under
+   stated conditions; `RESTRICTED`; `NOT_APPLICABLE`). Review is evidence,
+   not authorization.
+3. **`sources.json` `redistribution`** — whether redistribution for our use
+   has been *authorized* (owner decision). Stays `UNVERIFIED` until the
+   owner signs, regardless of any review outcome.
+4. **Repository LICENSE grant** — absent today; original content is
+   all-rights-reserved by default.
+
+Invariant (test-enforced): no record or category may carry a
+production-verified status while any of (2)+(3)+(4) remain unresolved for
+its source. `VERIFIED_ALLOWED` review + `UNVERIFIED` redistribution is the
+normal state before an owner decision and is not a contradiction.

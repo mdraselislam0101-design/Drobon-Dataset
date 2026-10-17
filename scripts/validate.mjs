@@ -174,12 +174,20 @@ export function validateRecord(value) {
           `affected: must have 1..${MAX_AFFECTED} entries (got ${record['affected'].length})`,
         );
       }
+      const seenAffected = new Set();
       record['affected'].forEach((entry, index) => {
         const path = `affected[${index}]`;
         if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) {
           errors.push(`${path}: must be an object`);
           return;
         }
+        // COUNTING_POLICY.md §3: exact-duplicate affected entries are rejected
+        // (same range + same fixed), never silently kept as padding.
+        const dupKey = `${entry['range'] ?? ''}\u0000${entry['fixed'] ?? ''}`;
+        if (seenAffected.has(dupKey)) {
+          errors.push(`${path}: exact-duplicate affected entry (same range+fixed as an earlier entry)`);
+        }
+        seenAffected.add(dupKey);
         checkClosed(errors, path, entry, AFFECTED_ALLOWED, ['range']);
         if (entry['range'] !== undefined) {
           checkBoundedText(errors, `${path}.range`, entry['range'], MAX_VERSION);

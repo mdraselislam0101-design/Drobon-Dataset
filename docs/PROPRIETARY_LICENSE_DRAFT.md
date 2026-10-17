@@ -1,10 +1,21 @@
-# PROPRIETARY_LICENSE_DRAFT.md — status: DRAFT (not a grant)
+# PROPRIETARY_LICENSE_DRAFT.md — **DRAFT — NOT APPROVED** (not a grant)
 
-Date: 2026-10-14. This is a review draft for the owner. It grants nothing,
+Date: 2026-10-14 (status re-affirmed 2026-10-17). **DRAFT — NOT APPROVED.**
+This is a review draft for the owner (one option of D-ORIG; the alternatives —
+a named data/content license such as CC-BY-4.0, explicit all-rights-reserved,
+or per-class dual licensing — are compared in
+`docs/OWNER_DECISION_CHECKLIST.md` D-ORIG and packet D-1). It grants nothing,
 reserves nothing beyond what the law already reserves, and takes effect only
 if the owner approves it AND it is installed as the repository `LICENSE` file
 together with the matrix/license-record updates the validators require.
 Bracketed fields are UNKNOWN — never fill them with guesses.
+
+**Status note (2026-10-17):** the owner selected proprietary treatment
+(D-ORIG, statement recorded in `docs/LICENSE_DECISION_RECORD.md` §7). That
+selection does **not** activate this draft: it remains **DRAFT — NOT
+APPROVED**, bracketed fields remain UNKNOWN, ownership/assignment evidence is
+unresolved, and no counsel review exists. Only the approved workflow (reviewed
+grant text + matrix/license-record updates + suite green) can install it.
 
 ## 1. Proposed license text (draft)
 
@@ -38,7 +49,7 @@ This draft is not legal advice. [GOVERNING JURISDICTION: UNKNOWN]
 Packs, remediation guidance, lessons, templates, engagement aids, interop
 vectors, CWE own-words summaries, planning/process docs, and dataset-side
 tooling authored in this repository. Evidence of authorship: git history
-per file (`npm run provenance` — currently 73/73 recorded pre-batch).
+per file (`npm run provenance` — 1969/1969 recorded as of 2026-10-17).
 
 ## 3. Explicitly excluded from the proprietary grant
 

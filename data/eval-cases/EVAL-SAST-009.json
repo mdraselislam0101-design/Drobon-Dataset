@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "drobon.eval.case/v1",
+  "id": "EVAL-SAST-009",
+  "variant": "positive",
+  "synthetic": true,
+  "testOnly": true,
+  "purpose": "Python SQL concat where a concatenated argument contains a function call (nested parens) — historically missed by [^)]* scan truncation.",
+  "language": "python",
+  "framework": null,
+  "mode": "line-regex",
+  "groundTruth": {
+    "state": "ASSESSED",
+    "class": "issue-present",
+    "rationale": "The SQL text is assembled with + around a function-call argument; regardless of what build_query returns, the string concatenation into execute() is an injection shape and the fixture contains no binding."
+  },
+  "fixture": {
+    "name": "synthetic_eval_sast_009.txt",
+    "lines": [
+      "def get_items(cursor, user):",
+      "    cursor.execute(build_query(user) + \" LIMIT 10\")",
+      "    return cursor.fetchall()"
+    ]
+  },
+  "expected": {
+    "detections": [
+      {
+        "ruleId": "DPK-SAST-283",
+        "lineNo": 2,
+        "mustContain": ".execute("
+      }
+    ],
+    "expectedCwe": "CWE-89"
+  },
+  "limitations": [
+    "Ground truth is the injection shape at the sink line; the inner function's own semantics are unknown (call itself is not the ground truth)."
+  ],
+  "testCommand": "node scripts/run-eval.mjs --case EVAL-SAST-009",
+  "provenance": {
+    "origin": "original-authored",
+    "writtenFor": "Phase 7 Work B detection-quality closure",
+    "kind": "synthetic test fixture - NOT vulnerability intelligence",
+    "expectationAuthoredBeforeFirstRun": true
+  }
+}

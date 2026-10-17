@@ -70,6 +70,16 @@ CWE summaries, and planning docs.
   stays project-internal; distribution stays blocked.
 - C: Different licenses per asset class: ___ (list them).
 
+**ANSWER RECORDED 2026-10-17** (owner statement in conversation, verbatim in
+`docs/LICENSE_DECISION_RECORD.md` §7): **PROPRIETARY** — "DROBON original
+content remains under DROBON control; no redistribution except explicitly
+authorized use. Third-party source rights remain separate and must be
+verified." This is the proprietary/all-rights-reserved direction (B-style
+treatment with explicitly-authorized-use carve-out). **Not yet in effect as a
+grant:** grant text unreviewed (PROPRIETARY_LICENSE_DRAFT stays DRAFT — NOT
+APPROVED), no LICENSE file installed, ownership evidence outstanding. Third
+parties (D-GHSA/D-OSV/D-NVD/D-CWE) are unaffected and stay undecided.
+
 ## D-STAGE — production-data stage approval (GATE-1)
 
 - A: I approve stage: ___ naming source(s): ___ , maintainer: ___ ,

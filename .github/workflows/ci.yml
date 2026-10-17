@@ -5,6 +5,10 @@ on:
     branches: ['**']
   pull_request:
 
+# Least privilege: CI only reads the repository. No write tokens, no releases.
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -18,7 +22,11 @@ jobs:
       - run: npm run validate:sources
       - run: npm run validate:corpus
       - run: npm run validate:packs
+      - run: npm run validate:assets
       - run: npm run validate:audiences
       - run: npm run validate:cwe
       - run: npm run validate:matrix
       - run: npm run test:vectors
+      # Read-only integrity manifest: compute to a tmp file, then verify (G11).
+      # Nothing is written inside the repository.
+      - run: node scripts/manifest.mjs --scope all --write "$RUNNER_TEMP/integrity.json" && node scripts/manifest.mjs --scope all --check "$RUNNER_TEMP/integrity.json"

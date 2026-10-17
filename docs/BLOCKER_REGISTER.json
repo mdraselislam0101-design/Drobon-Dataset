@@ -1,0 +1,222 @@
+{
+  "schemaVersion": "drobon.blocker-register/v1",
+  "verifiedAt": "2026-10-17",
+  "note": "Every blocker below was re-read from its in-repo source before listing. Status vocabulary: BLOCKED_OWNER_DECISION (needs a written owner decision), BLOCKED_PRODUCTION_LOCK (needs production authorization), BLOCKED_SOURCE_EVIDENCE (needs verified source evidence before authoring). Doc wording changes never resolve a blocker. Owner-maintained files (OWNER_DECISIONS.json, OWNER_ACTION_REQUIRED.md, LICENSE_DECISION_RECORD.md) were NOT modified by this register. 2026-10-17 blocker-resolution pump: entries extended with requirementOrGate, acceptanceCriteria, verifyCommand, controlDomain, requiresIndependentAudit, affectsPublicationEligibility, and preparedArtifacts (decision packages prepared; no status flipped - no owner decision was received).",
+  "blockers": [
+    {
+      "id": "BLK-001",
+      "title": "License grant for original dataset content",
+      "affected": "repository root (no LICENSE/COPYING file); docs/REQUIREMENTS_MATRIX.json licenseStatus (0 VERIFIED); README License TODO",
+      "status": "BLOCKED_OWNER_DECISION",
+      "why": "No license grant exists; absence means all-rights-reserved by default (docs/LICENSE_DECISION_RECORD.md \u00a71). The requirements-matrix validator tripwire fails if a license file appears without the grant commit updating this record",
+      "technicalImpact": "none on tests/validators; blocks any reuse or redistribution claim",
+      "licenseImpact": "highest: nothing (original or third-party) carries redistribution terms until decided",
+      "evidenceRequired": "written owner choice of license(s) + grant file(s) commit",
+      "ownerRole": "repository owner (legal/business decision)",
+      "safeOptions": [
+        "choose a data license (e.g. CC-BY-4.0) for original content and commit the grant file(s)",
+        "keep all-rights-reserved explicitly and document it"
+      ],
+      "unblockAction": "commit grant file(s) + update LICENSE_DECISION_RECORD.md \u00a74 + flip matrix licenseStatus with evidence + update the validator tripwire",
+      "independentTechnicalWorkCanContinue": true,
+      "requirementOrGate": "GATE-2 (license decision recorded); RELEASE_READINESS_MATRIX G6/G16/G17; D-1 (OWNER_DECISION_PACKET section B)",
+      "acceptanceCriteria": "A real LICENSE/COPYING grant file is committed for original content (or an explicit all-rights-reserved statement is committed); LICENSE_DECISION_RECORD.md section 4 completed with decider + date; REQUIREMENTS_MATRIX licenseStatus flipped consistently with evidence; license tripwires updated in the same change; full suite green.",
+      "verifyCommand": "test -z \"$(find . -maxdepth 1 -iname 'LICENSE*' -o -iname 'COPYING*' | grep -v node_modules)\" && echo 'no grant yet (blocked)' ; npm run validate:matrix ; npm test",
+      "controlDomain": "owner (rights holder; legal choice, not agent-decidable)",
+      "requiresIndependentAudit": true,
+      "affectsPublicationEligibility": true,
+      "preparedArtifacts": [
+        "docs/PROPRIETARY_LICENSE_DRAFT.md (DRAFT \u2014 NOT APPROVED)",
+        "docs/LICENSE_DECISION_RECORD.md section 6",
+        "docs/OWNER_DECISION_CHECKLIST.md D-ORIG",
+        "docs/OWNER_DECISION_PACKET.md section D"
+      ],
+      "progress": "2026-10-17: D-ORIG owner decision received and recorded (PROPRIETARY; OWNER_DECISIONS ORIGINAL_CONTENT = APPROVED). Remaining before unblock: reviewed grant text (PROPRIETARY_LICENSE_DRAFT stays DRAFT - NOT APPROVED), owner legal name/jurisdiction, ownership/assignment evidence, then the unblockAction companion updates. Status unchanged - no grant file exists."
+    },
+    {
+      "id": "BLK-002",
+      "title": "Per-source redistribution authorization (GHSA / OSV / NVD / CWE / original)",
+      "affected": "docs/OWNER_DECISIONS.json (5 decisions, all OWNER_DECISION_REQUIRED, decidedAt/decider null); vuln-intel/sources.json redistribution: UNVERIFIED; docs/REQUIREMENTS_MATRIX.json",
+      "status": "BLOCKED_OWNER_DECISION",
+      "why": "Source URL / API access / SPDX id is not a grant (docs/LICENSE_DECISION_RECORD.md \u00a72). sources.json licenseReview VERIFIED_ALLOWED is a terms-text review, not authorization (docs/PROVENANCE_POLICY.md \u00a76)",
+      "technicalImpact": "blocks production counting and release gates G6/G17",
+      "licenseImpact": "third-party records remain BLOCKED_LICENSE_REVIEW; redistribution of GHSA/OSV/NVD content unauthorized",
+      "evidenceRequired": "owner signature per source: which sources are redistributable and under what attribution; per-batch license-field resolution",
+      "ownerRole": "repository owner (with counsel if desired)",
+      "safeOptions": [
+        "authorize per source with attribution conditions (GHSA CC-BY-4.0 BY path is lay-reviewed)",
+        "authorize a subset and exclude the rest fail-closed",
+        "authorize none; keep the frozen seed internal"
+      ],
+      "unblockAction": "fill decidedAt/decider/status in docs/OWNER_DECISIONS.json per source + update sources.json redistribution + LICENSE_DECISION_RECORD.md",
+      "independentTechnicalWorkCanContinue": true,
+      "requirementOrGate": "GATE-2 (per-source rights); RELEASE_READINESS_MATRIX G6/G17; D-2 (OWNER_DECISION_PACKET section B/C; SOURCE_RELEASE_GATE.md S1-S6)",
+      "acceptanceCriteria": "Per-source verdict recorded in docs/OWNER_DECISIONS.json with decider + date (status flips off OWNER_DECISION_REQUIRED); vuln-intel/sources.json redistribution fields updated per source; attribution obligations recorded; counsel note stored where obtained; validate-corpus set validation green.",
+      "verifyCommand": "node scripts/validate-corpus.mjs && grep -c '\"status\": \"OWNER_DECISION_REQUIRED\"' docs/OWNER_DECISIONS.json",
+      "controlDomain": "owner (+ qualified legal review for GHSA/OSV/NVD terms interpretation)",
+      "requiresIndependentAudit": true,
+      "affectsPublicationEligibility": true,
+      "preparedArtifacts": [
+        "docs/SOURCE_RELEASE_GATE.md S1-S6 (per-source rights/redistribution checklist)",
+        "docs/LICENSE_REVIEW.md (lay review, evidence only)",
+        "docs/OWNER_DECISION_CHECKLIST.md D-GHSA/D-OSV/D-NVD/D-CWE",
+        "docs/NOTICE"
+      ]
+    },
+    {
+      "id": "BLK-003",
+      "title": "Production ingestion authorization (GATE-1 stage approval, GATE-3 reviewer capacity, GATE-4 provider design)",
+      "affected": "docs/OWNER_ACTION_REQUIRED.md \u00a72-\u00a73; scripts/import-ghsa.mjs / import-osv.mjs (production mode exits 1 without gates); docs/RELEASE_READINESS_MATRIX.json G8",
+      "status": "BLOCKED_PRODUCTION_LOCK",
+      "why": "Production Intelligence Lock: no real catalog ingestion, no auto promotion; GATE-1 requires written stage approval naming stage/source/maintainer/license basis per source; GATE-3 requires named reviewers (no bulk unreviewed ingest); GATE-4 is app-workstream provider design",
+      "technicalImpact": "importers stay dry-run/mocked; corpus stays at the frozen 100-record seed",
+      "productionImpact": "0/100,000 verified-production remains the honest state",
+      "evidenceRequired": "written stage approval + reviewer capacity statement + provider design acceptance",
+      "ownerRole": "dataset owner + app-workstream owner (GATE-4)",
+      "safeOptions": [
+        "grant stage approval for a named batch after BLK-002",
+        "keep the lock and continue synthetic rehearsals only"
+      ],
+      "unblockAction": "record GATE-1/3(/4) evidence; then run the staged fail-closed importer (dry-run first) with per-batch license resolution",
+      "independentTechnicalWorkCanContinue": true,
+      "requirementOrGate": "GATE-1 (written stage approval) + GATE-3 (reviewer capacity) + GATE-4 (App provider design acceptance); RELEASE_READINESS_MATRIX G8; D-3",
+      "acceptanceCriteria": "GATE-1: written stage approval naming stage, source(s), maintainer, license basis per source (see INGESTION_PROTOCOL.md section 12 template). GATE-3: named reviewer + capacity statement + HONESTY.md checklist acknowledgment (see REVIEW_PACKAGE.md). GATE-4: app-side provider design accepted by app maintainers (requirements in DATASET_APP_CONTRACT.md section 10). requireGates() must then pass and importers may proceed dry-run first.",
+      "verifyCommand": "node scripts/ingestion-gates.mjs   # exits 1 while any of GATE-1..4 is BLOCKED; exits 0 only with all four evidenced",
+      "controlDomain": "owner (GATE-1) + independent reviewer (GATE-3) + App design authority (GATE-4)",
+      "requiresIndependentAudit": true,
+      "affectsPublicationEligibility": true,
+      "preparedArtifacts": [
+        "docs/INGESTION_PROTOCOL.md section 12 (GATE-1 evidence template)",
+        "docs/REVIEW_PACKAGE.md (GATE-3 reviewer package)",
+        "docs/DATASET_APP_CONTRACT.md section 10 (GATE-4 acceptance requirements)"
+      ]
+    },
+    {
+      "id": "BLK-004",
+      "title": "Approval expiry / re-review cadence + corpus refresh cadence",
+      "affected": "docs/OWNER_ACTION_REQUIRED.md \u00a72 policy gap",
+      "status": "BLOCKED_OWNER_DECISION",
+      "why": "No semantics exist yet for approval expiry or refresh cadence; until set, any approval is single-batch and non-extending",
+      "technicalImpact": "none today; required before any multi-batch production run",
+      "productionImpact": "without it, production approvals cannot compound",
+      "evidenceRequired": "owner policy statement (expiry interval + refresh interval)",
+      "ownerRole": "dataset owner",
+      "safeOptions": [
+        "set explicit cadences (e.g. re-review every N months)",
+        "declare single-batch-only approvals indefinitely"
+      ],
+      "unblockAction": "add cadence semantics to the ingestion protocol and gate checklist",
+      "independentTechnicalWorkCanContinue": true,
+      "requirementOrGate": "D-4 approval expiry / re-review + corpus refresh cadence (OWNER_DECISION_PACKET section B; OWNER_DECISION_CHECKLIST.md D-CADENCE)",
+      "acceptanceCriteria": "Owner policy statement recorded with decider + date: approval expiry interval, re-review interval, corpus refresh cadence (or explicit single-batch-only confirmation). Recorded in the cadence table of INGESTION_PROTOCOL.md section 13 and cited in the gate checklist. Until recorded, every approval stays single-batch and non-extending.",
+      "verifyCommand": "grep -n 'Cadence policy (recorded' docs/INGESTION_PROTOCOL.md   # placeholder rows show UNDECIDED until the owner decision is recorded",
+      "controlDomain": "owner",
+      "requiresIndependentAudit": true,
+      "affectsPublicationEligibility": true,
+      "preparedArtifacts": [
+        "docs/INGESTION_PROTOCOL.md section 13 (cadence record semantics + source-liveness design)",
+        "docs/OWNER_DECISION_CHECKLIST.md D-CADENCE"
+      ]
+    }
+  ],
+  "resolvedForRecord": [
+    {
+      "id": "BLK-R01",
+      "was": "docs/OWNER_ACTION_REQUIRED.md \u00a76.1 (PEP 440 exclusive-bound defects D1-D3)",
+      "resolved": "Pump 6/7 fixed D1-D5 in-engine with pinned KNOWN DEFECT rows; recorded in the owner doc itself"
+    },
+    {
+      "id": "BLK-R02",
+      "was": "docs/OWNER_ACTION_REQUIRED.md \u00a76.4 (secrets veto test design)",
+      "resolved": "Pump 7: rule-level regression in scripts/test-packs.mjs (in-memory fixtures); mutants detected; options (a)/(b) no longer needed"
+    },
+    {
+      "id": "BLK-R03",
+      "was": "BLK-020 Shopify shpat_ provider evidence (BLOCKED_SOURCE_EVIDENCE)",
+      "resolved": "2026-10-16: official Shopify developer docs confirm the shpat_ prefix (shopify.dev guide-custom-apps, retrieved 2026-10-16). Rule DPK-SEC-105 authored via data/asset-cells/secrets-4.json with body-format limitation documented; category stays service-token (the proposed provider-token category change proved unnecessary). shpss_/shpca_ excluded as different token types."
+    },
+    {
+      "id": "BLK-R05",
+      "was": "BLK-005 (npm prerelease policy for range matching)",
+      "resolved": "2026-10-17 Phase 4 engineering decision (ratifiable, not owner approval): current documented npm-semver-subset prerelease semantics adopted as the provider contract (pinned by 16 interop vectors); any behavior change requires paired engine+vectors+app-contract work (GATE-4)."
+    },
+    {
+      "id": "BLK-R06",
+      "was": "BLK-006 (PyPI pre-release default)",
+      "resolved": "2026-10-17 Phase 4 engineering decision (ratifiable): current documented PEP 440-subset pre-release semantics adopted as the provider contract (vectors pinned); change requires paired engine+vectors+app-contract work (GATE-4)."
+    },
+    {
+      "id": "BLK-R07",
+      "was": "BLK-007 (DPK-SEC-007 denylist tuning)",
+      "resolved": "2026-10-17 Phase 4 engineering decision (ratifiable): keep the DPK-SEC-007 denylist as-is (packet lean adopted) - vetoing ${ or < could hide real values; veto-mutant regressions pin the behavior."
+    },
+    {
+      "id": "BLK-R08",
+      "was": "BLK-008 (Secrets probe-gap rules (new files))",
+      "resolved": "2026-10-17 Phase 4 engineering decision (ratifiable): technical secrets-rule authoring carries no owner gate. Remaining sub-gaps (ADO Password=, unquoted DB_PASSWORD=/export, YAML password:, URI symbol passwords) are evidence-gated engineering backlog (GAP-013); JDBC password= already closed (DPK-SEC-103)."
+    },
+    {
+      "id": "BLK-R09",
+      "was": "BLK-009 (Hyphenated language ids (github-actions, android-manifest, shell-posix, aliases gha/k8s/compose))",
+      "resolved": "2026-10-17 Phase 4 engineering decision (ratifiable): keep the language-id regex fail-closed; widening is a contract change needing app-catalog co-design (GATE-4); alias mapping rejected as over-broad. The 5 gha rules stay honestly unreachable (PACKS.md)."
+    },
+    {
+      "id": "BLK-R10",
+      "was": "BLK-010 (DPK-SAST-018 `python` tag)",
+      "resolved": "Implemented 2026-10-17: unsupported python tag removed from DPK-SAST-018 (HCL-shaped patterns, zero Python test evidence); rule languages now [terraform]; DPK-PAT-0028 targets followed automatically via the legacy-pattern mirror."
+    },
+    {
+      "id": "BLK-R11",
+      "was": "BLK-011 (Confirm the generator `bash` tag on 25 `shell` rules)",
+      "resolved": "Confirmed 2026-10-17: the generator shell->[shell,bash] dual-tag stands (documented in generate-assets.mjs, byte-identical regeneration, tests green)."
+    },
+    {
+      "id": "BLK-R12",
+      "was": "BLK-012 (CROSS_CWE 13-group review)",
+      "resolved": "2026-10-17 Phase 4 engineering decision (ratifiable): CROSS_CWE 13 groups accepted as original mapping aids with documented limits (no MITRE endorsement claimed; CWE-470 ungrouped by design; relation labels are DROBON analysis, not MITRE data)."
+    },
+    {
+      "id": "BLK-R13",
+      "was": "BLK-013 (Records for the 40 legacy patterns)",
+      "resolved": "2026-10-17 Phase 4 engineering decision (ratifiable): keep the documented 40-pattern legacy retention exception - creating records purely to align counts would be padding (honesty policy). Counts stay patterns 953 vs records 913 (Phase 5 recount)."
+    },
+    {
+      "id": "BLK-R14",
+      "was": "BLK-014 (`universal` language id on 10 SAST rules)",
+      "resolved": "Implemented 2026-10-17: the 10 universal-tagged rules now omit languages (DPK-SAST-004 any-file convention per the app contract); generator updated so future universal cells emit the same form; reachability recounted (noLanguages=11, unreachable=207, ids=111)."
+    },
+    {
+      "id": "BLK-R15",
+      "was": "BLK-015 (`shell-posix` reach for the 25 shell rules)",
+      "resolved": "2026-10-17 Phase 4 engineering decision (ratifiable): accept PARTIAL reach for the 25 shell/bash rules (follows BLK-R09); .sh reach remains class-E app catalog work."
+    },
+    {
+      "id": "BLK-R16",
+      "was": "BLK-016 (CWE version pinning)",
+      "resolved": "2026-10-17 Phase 4 engineering decision (ratifiable): pin MITRE CWE 4.20 (recorded in DATASET_APP_CONTRACT.md); per-entry version metadata + validator assert remain follow-up (R-CWE-03 OPEN_DATASET_WORK)."
+    },
+    {
+      "id": "BLK-R17",
+      "was": "BLK-017 (D5 local labels with `-` or `_`)",
+      "resolved": "2026-10-17 Phase 4 engineering decision (ratifiable): keep the fail-closed local-label rejection (safe default); widening the PEP 440 local grammar is paired parser+tests backlog, not a silent change."
+    },
+    {
+      "id": "BLK-R18",
+      "was": "BLK-018 (Confirm generator denylist case-insensitivity change)",
+      "resolved": "Confirmed 2026-10-17: the generator denylist case-insensitivity fix stands (documented contract, 0 changed files on regeneration, tests green)."
+    },
+    {
+      "id": "BLK-R19",
+      "was": "BLK-019 (SCA rule-pack schema authorization)",
+      "resolved": "2026-10-17 Phase 4 engineering decision (ratifiable): keep packs/sca at 0 - no consumer loader (GATE-4) and no authorized advisory-derived rights (D-2); activating a schema with no consumer would be filler. SCA_RULE_SCHEMA_PROPOSAL.md stays proposal-only."
+    }
+  ],
+  "counts": {
+    "open": 4,
+    "blockedOwnerDecision": 3,
+    "blockedProductionLock": 1,
+    "blockedSourceEvidence": 0,
+    "resolvedForRecord": 18,
+    "derivation": "4 open = BLK-001 (license), BLK-002 (per-source rights), BLK-003 (production authorization), BLK-004 (approval/refresh cadence) - all genuinely owner/rights-holder dependent. 15 technical decisions BLK-005..019 resolved 2026-10-17 by Phase 4 engineering authority (ratifiable by the owner; not owner approvals): 4 implemented (BLK-010 python tag removed, BLK-014 universal->omitted-languages, BLK-016 CWE 4.20 pin recorded, plus cascade recounts) and 11 decided with rationale (keep-as-is / accept / keep-out / evidence-gated backlog). Earlier resolutions BLK-R01..R03 unchanged. OWNER_DECISIONS.json remains 5/5 OWNER_DECISION_REQUIRED (untouched - those are rights decisions). 2026-10-17 pump: statuses unchanged (all evidence still absent); decision packages prepared for every open blocker (templates/checklists/designs only - a prepared decision is not an approved decision). 2026-10-17 D-ORIG: BLK-001 progress noted (decision recorded; grant/evidence still missing) - blocker stays open; BLK-002..004 untouched."
+  }
+}
