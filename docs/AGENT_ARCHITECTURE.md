@@ -267,3 +267,64 @@ agent runtime, a model, `net.fetch`, or any external service exists or was
 exercised — no runtime is configured. Full suite after all Phase 5 changes:
 15,553 assertions across 10 runners, exit 0; all validators exit 0;
 ingestion gates stay fail-closed.
+
+## 10. Validation addendum (Phase 6 run, 2026-10-17)
+
+**Runtime status (explicit):** no AI-agent runtime and no model connection
+exist in this repository. Phase 6 implements the deterministic *foundation*
+the W1/W2/W3 workflows call through; it does not claim agent execution.
+
+**Work A — synthetic evaluation foundation (W3).** `data/eval-cases/`
+(`drobon.eval.case/v1`, 11 synthetic test-only cases) + `scripts/
+eval-foundation.mjs` + `scripts/run-eval.mjs` (`drobon.eval.report/v1`).
+Ground truth is authored in each case before any detector runs; the runner
+never rewrites expectations (sha256-pinned); UNASSESSED cases are never
+scored; a detection requires exact rule + line + matched-text evidence
+(keyword hits do not count). Current synthetic population (9 assessed
+cases): 6 TP / 0 FN / 1 documented FP (lexical docstring match in
+EVAL-SAST-008 — reported honestly, not hidden); recall 1.0, precision 0.857
+**for that synthetic population only** (disclaimer in every report). 2 cases
+are UNASSESSED (data-flow ambiguity, dead-code ambiguity). `test-eval`
+25/25 covers malformed manifests, duplicate ids, missing outcomes,
+unsupported schemas, incomplete evidence, no-rewrite, determinism.
+
+**Work B — W1/W2/W3 execution contracts.** `scripts/agent-workflows.mjs`:
+frozen machine-verifiable contracts (inputs/outputs/permitted+denied
+tools/budgets/failure/trust/acceptance per workflow) + pure functions
+`planFromMetadata`/`validatePlan` (W1), `proposeCandidate`/`verifyCandidate`
+(W2, CONFIRMED/REJECTED/UNRESOLVED), W3 delegating to the eval foundation.
+Security boundary tests (`test-agent-workflows` 40/40): permission
+escalation via plan mutation, prompt injection in metadata/candidates
+(flagged, never grant), missing scope, inherited properties (own-property
+identity), malformed tool arguments, resource exhaustion (bounded tasks/
+refs/text), untrusted output (explanation is never proof), error handling
+(never throws), evidence insufficiency (fabricated excerpts rejected).
+
+**Work C — semantic-analysis assessment.** `docs/SEMANTIC_ANALYSIS_ASSESSMENT.md`
+documents per-capability reality: parser/CFG/taint/call-graph/framework
+semantics are NOT IMPLEMENTED (inventory-verified); the one small milestone
+shipped is evidence source-mapping (below); Main App dependency spec
+SEM-A1..D1 recorded with acceptance criteria. No parser framework was added
+and no lexical output is labelled semantic analysis.
+
+**Work D — finding evidence + verification contract.** `scripts/
+finding-evidence.mjs` + `docs/FINDING_EVIDENCE_CONTRACT.md`:
+`drobon.finding.evidence/v1` (locations computed from actual text — never
+invented; severity/CWE only from declared rules; CVSS absent by design;
+data-flow/call-chain evidence explicitly NOT_ASSESSED) and
+`classifyTransition` with the five remediation-tracking statuses —
+disappearance alone is never remediation (NOT_OBSERVED_UNVERIFIED is the
+default absence state). `test-finding-evidence` 24/24.
+
+**Work E — capability matrix.** Only rows with real implementation moved:
+CGM-F1 and CGM-G4 to `PARTIAL` (contract+code+tests); F2/F3/F4/F6/G1/G2/I2/A2
+gain evidence; everything runtime/semantic stays NOT_IMPLEMENTED/PARTIAL.
+Coverage ledger reproduced on the canonical methodology: **no requirement
+row changed, coverage stays 74.8% (38.90/52)** — documentation is not
+counted as working code.
+
+Full suite after all Phase 6 changes: **15,642 assertions across 13 runners,
+exit 0** (test 600, pack-tests 3,978, audience-tests 2,903, asset-tests
+7,514, consistency 216, rehearsal 78, importers 49, agent-policy 91,
+agent-workflows 40, finding-evidence 24, eval-tests 25, doc-drift 119,
+determinism 5); all validators exit 0; ingestion gates stay fail-closed.

@@ -51,6 +51,8 @@ E, GAP-014). 12. **Perf/maintenance:** O(1) per rule. 13. **Owner note:** BLK-00
 resolved Phase 4 (keep schema; see BLOCKER_REGISTER).
 
 ### CGM-A2 · Parser / AST / symbol-scope / control- & data-flow / call-graph
+(Phase 6 assessment: `docs/SEMANTIC_ANALYSIS_ASSESSMENT.md` — NOT IMPLEMENTED
+verified by inventory; Main App dependency spec SEM-A1..D1 recorded.)
 1. **ID:** CGM-A2 (grouped: parser/AST, symbols & scope, CFG/DFG,
 interprocedural). 2. **Outcome:** semantic program understanding. 3. **Status:**
 `NOT_IMPLEMENTED`. 4. **Evidence:** detection signals are regex line matches
@@ -397,17 +399,22 @@ this phase (`scripts/agent-policy.mjs`, `scripts/test-agent-policy.mjs`).
 
 ### CGM-F1 · Task planning, bounded delegation & tool selection
 1. **ID:** CGM-F1. 2. **Outcome:** decompose analysis tasks, pick tools. 3.
-**Status:** `NOT_IMPLEMENTED` (runtime absent). 4. **Evidence:**
-`docs/AGENT_ARCHITECTURE.md` §3 W1 spec (responsibility/inputs/outputs/
-permissions defined); app AssistantProvider seam is a model boundary with
-production default `NONE` (SCOPE.md row 2). 5. **Tests:** n/a (no runtime). 6.
-**Gap:** planner implementation. 7. **Approach:** implement against the W1
-spec when a model runtime is approved; deterministic tools stay invocable
-without it. 8. **Alternatives:** fully deterministic pipelines (current
-reality). 9. **Security:** delegation must inherit least privilege
-(CGM-F6). 10. **Acceptance:** W1 acceptance criteria in AGENT_ARCHITECTURE §3.
-11. **Deps:** approved model runtime (none configured). 12. **Perf:** —. 13.
-**Limits:** not fabricated.
+**Status:** `PARTIAL` (deterministic planner + machine-checked W1 contract
+implemented and tested; agent runtime still absent). 4. **Evidence:**
+`scripts/agent-workflows.mjs` (`planFromMetadata` deterministic planning,
+`validatePlan` permission/budget machine-check, frozen W1 contract with
+denied tools); `docs/AGENT_ARCHITECTURE.md` §3 W1 spec. 5. **Tests:**
+`test-agent-workflows` 40/40 (planning: permitted-tools only, unknown
+languages => NOT_ASSESSED, injection in metadata grants zero expansions,
+bounded task list, deterministic). 6. **Gap:** model-backed planning and
+delegation (needs runtime); planning is metadata-driven only. 7. **Approach:**
+runtime-approved model calls the same contract; deterministic tools stay
+invocable without it. 8. **Alternatives:** fully deterministic pipelines
+(current reality). 9. **Security:** delegation must inherit least privilege
+(CGM-F5). 10. **Acceptance:** W1 acceptance criteria in AGENT_ARCHITECTURE §3
+(met for the deterministic planner: 100% of planned calls pass checks). 11.
+**Deps:** approved model runtime (none configured). 12. **Perf:** —. 13.
+**Limits:** no agent runtime exists or is claimed.
 
 ### CGM-F2 · Evidence collection & traceability
 1. **ID:** CGM-F2. 2. **Outcome:** every claim carries evidence refs. 3.
@@ -480,8 +487,11 @@ asserted. 11. **Deps:** runtime for live enforcement. 12. **Perf:** negligible.
 1. **ID:** CGM-F6. 2. **Outcome:** same inputs → same trace/artifacts. 3.
 **Status:** `PARTIAL` (deterministic layer verified; agent traces absent). 4.
 **Evidence:** determinism suite (generation + whole-tree sha256 reproducible,
-5/5); `rehearse.mjs` pure PRNG corpora; manifest digests. 5. **Tests:**
-`test-determinism.mjs` 5/5. 6. **Gap:** agent-run traces (needs runtime). 7.
+5/5); `rehearse.mjs` pure PRNG corpora; manifest digests; W3 evaluation
+foundation (`scripts/eval-foundation.mjs`, `drobon.eval.report/v1`)
+byte-identical across runs with case-manifest hashes unchanged (Phase 6). 5.
+**Tests:** `test-determinism.mjs` 5/5; `test-eval` 25/25 (determinism +
+ground-truth-hash invariants). 6. **Gap:** agent-run traces (needs runtime). 7.
 **Approach:** trace schema in AGENT_ARCHITECTURE §5. 8. **Alternatives:** —. 9.
 **Security:** reproducibility enables audit. 10. **Acceptance:** future runs
 pin model id + prompt hash + tool trace. 11. **Deps:** runtime. 12. **Perf:** —.
@@ -508,9 +518,12 @@ unverified). 4. **Evidence:** every rule has `description`, `remediation`,
 `limitation`; patterns carry `examples` (pos+neg), `fpNotes`, `scope`;
 remediation 953 entries keyed `ruleId`; CWE 61 own-words summaries with
 canonical links; severity is rule-fixed (contract §2). 5. **Tests:**
-`validate-audiences` 964 files; `test-consistency` CWE resolution. 6. **Gap:**
-no CVSS/OWASP mapping (GAP-010, lock + app decision); app finding fields
-(paths/lines/context) not dataset-controlled. 7. **Approach:** app workstream
+`validate-audiences` 964 files; `test-consistency` CWE resolution;
+`test-finding-evidence` 24/24 (evidence record: exact path/line-range/excerpt/
+context computed, remediation separate, CVSS never invented — Phase 6
+`docs/FINDING_EVIDENCE_CONTRACT.md`). 6. **Gap:**
+no CVSS/OWASP mapping (GAP-010, lock + app decision); app rendering of
+finding fields not verified here. 7. **Approach:** app workstream
 for rendering; dataset keeps evidence content. 8. **Alternatives:** —. 9.
 **Security:** severity without rationale is disallowed in content
 (`severity` + `limitation` pair). 10. **Acceptance:** content validators. 11.
@@ -528,15 +541,23 @@ overconfidence harms triage. 10. **Acceptance:** future calibration tests. 11.
 
 ### CGM-G4 · Stable finding identity, before/after comparison, fix verification
 1. **ID:** CGM-G4 (grouped G7–G8). 2. **Outcome:** track findings across scans;
-verify fixes. 3. **Status:** `NOT_IMPLEMENTED` (dataset) / `NOT_VERIFIED`
-(app-side claims unknown). 4. **Evidence:** no scan/finding store in this
-repo (SCOPE.md rows 9–11: runtime stores are app/DB workstreams);
-remediation content supports fix guidance only. 5. **Tests:** n/a. 6.
-**Gap:** identity scheme (content hash vs location), diff engine, retest
-flow. 7. **Approach:** app workstream; dataset contributes stable rule ids
-(never reused — 26 retired reservations pinned). 8. **Alternatives:** —. 9.
-**Security:** identity instability corrupts metrics. 10. **Acceptance:** app
-design. 11. **Deps:** app. 12. **Perf:** —. 13. **Limits:** out of dataset scope.
+verify fixes. 3. **Status:** `PARTIAL` (dataset-side identity + transition
+contract implemented + tested; app scan store/retest flow still missing). 4.
+**Evidence:** `scripts/finding-evidence.mjs` — `identityOf` stable finding
+identity (rule+path+normalized-span hash; line-shift tolerant) and
+`classifyTransition` implementing the five statuses (FIXED_VERIFIED /
+PARTIALLY_FIXED / STILL_PRESENT / CHANGED_REQUIRES_REVIEW /
+NOT_OBSERVED_UNVERIFIED) per `docs/FINDING_EVIDENCE_CONTRACT.md`; dataset
+contributes stable rule ids (never reused — 26 retired reservations pinned). 5.
+**Tests:** `test-finding-evidence` 24/24 (all five statuses, line-shift
+stability, disappearance is never remediation, change detection). 6.
+**Gap:** scan/finding store + retest execution flow (app/DB workstreams,
+SCOPE.md rows 9–11). 7. **Approach:** app workstream consumes the contract. 8.
+**Alternatives:** —. 9. **Security:** identity instability corrupts metrics;
+false FIXED claims corrupt remediation trust — both contract-tested. 10.
+**Acceptance:** contract + tests (met); app integration (pending). 11.
+**Deps:** app. 12. **Perf:** —. 13. **Limits:** no live scan has been tracked;
+synthetic transitions only.
 
 ### CGM-G5 · Tamper-evident history
 1. **ID:** CGM-G5. 2. **Outcome:** detect unauthorized record edits. 3.
@@ -597,10 +618,14 @@ asserts. 11. **Deps:** —. 12. **Perf:** digest ≈ seconds. 13. **Limits:** �
 fixture-level TP/FN (953 rules × executed tests); FP classes documented
 (`fpNotes`, limitations); **no** real-world precision/recall — no defensible
 real ground-truth set exists (explicitly not claimed anywhere). 5. **Tests:**
-`test-packs`/`test-assets` totals (§Validation). 6. **Gap:** real-world
+`test-packs`/`test-assets` totals (§Validation); Phase 6 W3 evaluation
+foundation scores 11 declared synthetic cases (9 assessed: 6 TP / 0 FN /
+1 documented FP — precision 0.857, recall 1.0 over THAT synthetic
+population only; 2 UNASSESSED excluded; `test-eval` 25/25). 6. **Gap:** real-world
 measurement (needs authorized corpora + methodology — future research
-pipeline). 7. **Approach:** synthetic-benchmark growth via research pipeline
-(AGENT_ARCHITECTURE §4) with expected results defined before runs. 8.
+pipeline). 7. **Approach:** synthetic-benchmark growth via the W3 research
+pipeline (`run-eval.mjs`, AGENT_ARCHITECTURE §3 W3) with expected results
+defined before runs. 8.
 **Alternatives:** paid benchmarks (forbidden without approval; vendor
 comparison stays documented-capability-only). 9. **Security:** fabricated
 metrics are disqualifying. 10. **Acceptance:** any future number names its
@@ -649,7 +674,7 @@ sandbox CI parity assumed.
 
 ---
 
-## Summary (Phase 4)
+## Summary (Phase 4 baseline; rows reassessed Phase 6, 2026-10-17)
 
 | Area | VERIFIED | PARTIAL | NOT_IMPLEMENTED | NOT_VERIFIED | N/A-with-reason | IDs |
 |---|---|---|---|---|---|---|
@@ -658,17 +683,19 @@ sandbox CI parity assumed.
 | C SCA/supply-chain | 2 | 1 | 1 | 2 | 0 | 6 |
 | D secrets | 2 | 2 | 0 | 0 | 0 | 4 |
 | E DAST/API | 1 | 2 | 0 | 0 | 1 | 4 |
-| F AI-agent | 0 | 5 | 1 | 0 | 0 | 6 |
-| G findings/reports | 0 | 4 | 1 | 0 | 0 | 5 |
+| F AI-agent | 0 | 6 | 0 | 0 | 0 | 6 |
+| G findings/reports | 0 | 5 | 0 | 0 | 0 | 5 |
 | H remediation workflow | 1 | 0 | 0 | 0 | 1 | 2 |
 | I quality/ops | 2 | 2 | 0 | 1 | 0 | 5 |
-| **Total (grouped IDs)** | **8** | **24** | **5** | **3** | **2** | **42** |
+| **Total (grouped IDs)** | **8** | **26** | **3** | **3** | **2** | **42** |
 
 Counted per grouped capability ID (CGM-A1..I5 = 43 ids). Top gaps by value:
-CGM-A2/B2 semantic analysis (architectural), CGM-F1..F6 agent runtime (seam
-ready, policy core tested), CGM-G4 fix verification (app), CGM-C1/C3
-app-side verification, CGM-D1 context analysis (entropy/liveness — probe
-gaps GAP-013 closed 2026-10-17 by DPK-SEC-106/107).
+CGM-A2/B2 semantic analysis (architectural; Phase 6 assessment + SEM-A1..D1
+dependency spec in `docs/SEMANTIC_ANALYSIS_ASSESSMENT.md`), agent runtime
+(F1/F2/F3 now have tested deterministic contracts; execution needs a model
+runtime — none configured), CGM-G4 app scan store (dataset contract + tests
+shipped Phase 6), CGM-C1/C3 app-side verification, CGM-D1 context analysis
+(entropy/liveness — probe gaps GAP-013 closed 2026-10-17 by DPK-SEC-106/107).
 
 ## Validation (Phase 4 run, 2026-10-17; Phase 5 run appended 2026-10-17)
 
@@ -702,3 +729,16 @@ gaps GAP-013 closed 2026-10-17 by DPK-SEC-106/107).
   BLOCKED_APP_IMPLEMENTATION 8 · NOT_APPLICABLE_WITH_REASON 8 ·
   BLOCKED_MISSING_REQUIREMENT 5 · OPEN_DATASET_WORK 1 ·
   IMPLEMENTED_NOT_VERIFIED 1 · BLOCKED_SOURCE_LICENSE 1.
+
+- **Phase 6 (2026-10-17):** `npm test` exit 0 — test 600/600, pack-tests
+  3,978/3,978, audience-tests 2,903/2,903, asset-tests 7,514/7,514,
+  consistency 216/216, rehearsal 78/78, importers 49/49, agent-policy 91/91,
+  **agent-workflows 40/40 (new)**, **finding-evidence 24/24 (new)**,
+  **eval-tests 25/25 (new)**, doc-drift 119/119, determinism 5/5 —
+  **15,642 assertions total** (runner sums recomputed). Validators each
+  exit 0 (packs 956, assets 1866, audiences 964, cwe 61, matrix recomputed
+  + no license file, sources, corpus, vectors 16/16). Fail-closed
+  `requireGates()` reproduced (4/4 gates block). Coverage ledger REPRODUCED
+  on the canonical methodology — **no requirement row moved in Phase 6;
+  coverage stays 74.8% (38.90/52)** (documentation/contracts are not counted
+  as working capability for ledger rows whose acceptance requires a runtime).
