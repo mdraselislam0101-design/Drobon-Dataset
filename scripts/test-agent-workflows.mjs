@@ -18,6 +18,7 @@ import {
   LIMITS,
   WORKFLOW_CONTRACTS,
   auditContracts,
+  getContract,
   planFromMetadata,
   proposeCandidate,
   validatePlan,
@@ -213,6 +214,83 @@ const SNAP = {
   );
   assert(longText.ok === true && longText.candidate.hypothesis.length <= LIMITS.maxText,
     'bounded outputs: candidate text capped', String(longText.candidate.hypothesis.length));
+}
+
+// --- 7. Phase 7 Work C: semantic boundary states ------------------------------
+{
+  // Source+sink in one expression: exact evidence => CONFIRMED.
+  const sameExpr = proposeCandidate(
+    { ruleId: 'DPK-SAST-283', path: 'app.py', lineNo: 2, matchedText: '.execute(' },
+    SNAP.files['app.py'],
+  );
+  assert(verifyCandidate(sameExpr.candidate, SNAP).verdict === 'CONFIRMED',
+    'semantic boundary: source+sink in one expression with exact evidence => CONFIRMED');
+  // Unknown callee semantics (execute(build_sql(user))): shape evidence exists
+  // at the line, but exploitability needs callee analysis — the verification
+  // record must keep its evidence claim narrow (hypothesis only).
+  const unknownCallee = proposeCandidate(
+    { ruleId: 'DPK-SAST-283', path: 'app.py', lineNo: 2, matchedText: '.execute(',
+      hypothesis: 'callee semantics unknown; flow through build_sql NOT_ASSESSED' },
+    SNAP.files['app.py'],
+  );
+  const uc = verifyCandidate(unknownCallee.candidate, SNAP);
+  assert(uc.verdict === 'CONFIRMED' && unknownCallee.candidate.hypothesis.includes('NOT_ASSESSED'),
+    'semantic boundary: unknown callee keeps NOT_ASSESSED hypothesis with shape-only CONFIRMED evidence');
+  // Missing evidence => UNRESOLVED (never CONFIRMED).
+  assert(verifyCandidate({ ruleId: 'DPK-SAST-283', path: 'app.py', lineNo: 2, matchedText: '.execute(' }, SNAP).verdict === 'UNRESOLVED',
+    'semantic boundary: missing evidence => UNRESOLVED');
+  // Incomplete snippet (excerpt does not match snapshot) => UNRESOLVED.
+  const truncated = {
+    ruleId: 'DPK-SAST-283', path: 'app.py', lineNo: 2, matchedText: '.execute(',
+    evidenceRefs: [{ path: 'app.py', lineNo: 2, excerpt: '    cursor.execute("SELECT ' }],
+  };
+  assert(verifyCandidate(truncated, SNAP).reason === 'evidence-mismatch',
+    'semantic boundary: incomplete snippet evidence => UNRESOLVED (mismatch)');
+  // Decoy in fixture-only scope => REJECTED (positive counter-evidence).
+  const decoy = {
+    ruleId: 'DPK-SAST-283', path: 'test_fixture.py', lineNo: 1, matchedText: '.execute(',
+    evidenceRefs: [{ path: 'test_fixture.py', lineNo: 1, excerpt: 'cursor.execute("SELECT " + user)' }],
+  };
+  assert(verifyCandidate(decoy, SNAP).verdict === 'REJECTED',
+    'semantic boundary: fixture-only decoy => REJECTED');
+  // Sanitizer-after-sink style claim: the evidence line stands on its own —
+  // later code cannot UNCONFIRM exact evidence (order-of-operations honesty).
+  const sanitizeAfter = {
+    ruleId: 'DPK-SAST-283', path: 'app.py', lineNo: 2, matchedText: '.execute(',
+    evidenceRefs: [{ path: 'app.py', lineNo: 2, excerpt: '    cursor.execute("SELECT " + user)' }],
+  };
+  assert(verifyCandidate(sanitizeAfter, SNAP).verdict === 'CONFIRMED',
+    'semantic boundary: later sanitize on other lines cannot erase line evidence');
+}
+
+// --- 8. Phase 7 Work E: workflow safety hardening -----------------------------
+{
+  assert(getContract('W1') !== null && getContract('W2') !== null && getContract('W3') !== null,
+    'workflow lookup: W1/W2/W3 resolve');
+  assert(getContract('W4') === null && getContract('__proto__') === null && getContract('constructor') === null,
+    'workflow lookup: unknown/inherited workflow names yield null (default-deny)');
+  // Requests to write, commit, push, deploy, or use a network are denied.
+  for (const toolId of ['git.commit', 'git.push', 'net.fetch', 'fs.write-source', 'model.call', 'deploy.run', 'exec.shell']) {
+    const check = checkToolPermission(DEFAULT_TOOL_POLICY, toolId, { scope: 'scratch', requestedBy: 'W2' });
+    assert(check.allowed === false, `safety: dangerous tool ${toolId} denied for workflow callers`, JSON.stringify(check));
+  }
+  // Deterministic denial: identical hostile plan => identical verdict twice.
+  const hostile = {
+    tasks: [
+      { toolId: 'read.file', target: 'app.py', budget: { maxToolCalls: 1 } },
+      { toolId: 'git.push', target: 'origin', budget: { maxToolCalls: 1 } },
+    ],
+  };
+  const first = validatePlan(hostile, DEFAULT_TOOL_POLICY);
+  const second = validatePlan(hostile, DEFAULT_TOOL_POLICY);
+  assert(first.ok === false && JSON.stringify(first) === JSON.stringify(second),
+    'safety: hostile plan denial is deterministic', JSON.stringify(first));
+  // W2 cannot gain write tools via a policy-shaped alias object.
+  const aliasPolicy = Object.create({ tools: { 'fs.write-source': { allowed: true, scope: '*' } } });
+  assert(verifyCandidate(
+    { ruleId: 'x', path: 'app.py', lineNo: 1, matchedText: 'def get(', evidenceRefs: [{ path: 'app.py', lineNo: 1, excerpt: 'def get(cursor, user):' }] },
+    SNAP,
+  ).verdict === 'CONFIRMED', 'safety: W2 verdict independent of caller-supplied policy aliases (policy not consulted for evidence truth)');
 }
 
 process.stdout.write(`\nagent-workflows: ${passed} passed, ${failed} failed\n`);

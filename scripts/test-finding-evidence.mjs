@@ -141,5 +141,51 @@ const FIX_EVIDENCE = { note: 'parameterized the query; regression case EVAL-SAST
   assert(malformed.status === 'NOT_OBSERVED_UNVERIFIED', 'transition: malformed input => unverified, no throw');
 }
 
+// --- 4. Phase 7 Work D extensions: version, verification, tracking edges -----
+{
+  const withVersion = extractEvidence(SOURCE, {
+    ruleId: 'DPK-SAST-283', path: 'app.py', matchedText: '.execute(',
+    snapshotId: 'snap-0007', method: 'line-regex', cwe: 'CWE-89', severity: 'HIGH',
+    ruleVersion: 2, verificationState: 'UNRESOLVED',
+  });
+  assert(withVersion.ok === true && withVersion.evidence.analysis.ruleVersion === 2,
+    'version: rule version carried when declared');
+  assert(withVersion.evidence.verification.state === 'UNRESOLVED',
+    'verification: status recorded, never invented');
+  const noVersion = extractEvidence(SOURCE, {
+    ruleId: 'DPK-SAST-283', path: 'app.py', matchedText: '.execute(',
+    snapshotId: 'snap-0007', method: 'line-regex',
+  });
+  assert(!('ruleVersion' in noVersion.evidence.analysis) && noVersion.evidence.verification.state === 'UNVERIFIED',
+    'verification: absent version omitted; default status is UNVERIFIED');
+  // File rename: identity binds path, so an unmapped rename is NOT fixed.
+  const renamed = classifyTransition(PREV, {
+    snapshotId: 'snap-0002',
+    files: { 'renamed_app.py': [PREV.evidenceSpans[0].excerpt] },
+  }, { fixEvidence: FIX_EVIDENCE });
+  assert(renamed.status === 'NOT_OBSERVED_UNVERIFIED',
+    'tracking: unmapped file rename is never FIXED_VERIFIED (identity binds path)', JSON.stringify(renamed));
+  // Changed surrounding code, identical span => STILL_PRESENT (identity on span).
+  const ctxShift = classifyTransition(PREV, {
+    snapshotId: 'snap-0002',
+    files: { 'app.py': ['def totally_new_helper():', '    return 1', PREV.evidenceSpans[0].excerpt] },
+  });
+  assert(ctxShift.status === 'STILL_PRESENT',
+    'tracking: identical span with changed surrounding code => STILL_PRESENT', JSON.stringify(ctxShift));
+  // Duplicate-looking findings: same excerpt, different rule ids stay distinct.
+  const a = identityOf('DPK-SAST-283', 'app.py', PREV.evidenceSpans[0].excerpt);
+  const b = identityOf('DPK-SAST-119', 'app.py', PREV.evidenceSpans[0].excerpt);
+  assert(a !== b && a.startsWith('FIND-') && b.startsWith('FIND-'),
+    'identity: duplicate-looking findings under different rules keep distinct identities');
+  // Missing prior evidence (malformed span list) => unverified, never fixed.
+  const missingPrior = classifyTransition(
+    { path: 'app.py', evidenceSpans: [null, { no: 'excerpt' }] },
+    { snapshotId: 'snap-0002', files: { 'app.py': ['anything'] } },
+    { fixEvidence: FIX_EVIDENCE },
+  );
+  assert(missingPrior.status === 'NOT_OBSERVED_UNVERIFIED',
+    'tracking: missing prior evidence never yields a confirmed fix', JSON.stringify(missingPrior));
+}
+
 process.stdout.write(`\nfinding-evidence: ${passed} passed, ${failed} failed\n`);
 process.exit(failed === 0 ? 0 : 1);

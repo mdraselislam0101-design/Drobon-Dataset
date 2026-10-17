@@ -147,9 +147,17 @@ checks ≠ absence of flaws.
 `command-injection` 47, `code-injection` 76, `cross-site-scripting` 26,
 `ldap-injection` 3, `xpath-injection` 2, `template-injection` 2,
 `http-response-splitting` 2, `html-injection` 1; CWE-89/78/79/95 mapped. 5.
-**Tests:** pos+neg executed. 6. **Gap:** context/flow-blind; string-concat
-heuristics FP on constant concatenation. 7. **Approach:** add negative
-edge-case tests per new pattern; taint later (CGM-B2). 8. **Alternatives:** —.
+**Tests:** pos+neg executed; Phase 7 eval corpus (18 assessed synthetic cases
+= 12 detection opportunities + 6 clean traps; recall 1.0, precision 0.9231 on
+THAT population only) incl. nested-paren/f-string/template defect closure on
+DPK-SAST-283/008 (`data/asset-cells/sast-calls-2.json` sinks.python + legacy
+rule file; patterns auto-mirrored). 6. **Gap:** context/flow-blind; string-concat
+heuristics FP on constant concatenation; same nested-paren class remains in
+other language variants of `sql-concat` (fix proven on python/js only);
+comment/docstring matches are inherent line-lexical FPs (EVAL-SAST-008
+pins one honestly). 7. **Approach:** remaining concat variants get the
+same cell-frag fix when evaluation evidence covers them; taint later
+(CGM-B2). 8. **Alternatives:** —.
 9. **Security:** injection rules must never suggest auto-fixes (H1). 10.
 **Acceptance:** unchanged. 11. **Deps:** —. 12. **Perf:** linear. 13. **Limits:**
 documented per rule (`fpNotes` in patterns).
@@ -317,8 +325,11 @@ small. 13. **Limits:** scanners see shapes, not liveness.
 **Status:** `PARTIAL`. 4. **Evidence:** `denylist` veto + `EXAMPLE`
 placeholder denylist generated per rule; DPK-SEC-007 `${`/`<` tuning decided
 keep-as-is (BLK-007 resolved Phase 4 — vetoing `${` would hide real values).
-5. **Tests:** veto-mutant regressions (3 original + generator mutants). 6.
-**Gap:** known FP class remains (documented); contextual allowlists primitive.
+5. **Tests:** veto-mutant regressions (3 original + generator mutants);
+Phase 7 FP-trap eval cases (static f-string, static template, parameterized
+binding, safe branch, call-guard) all clean — 0 FPs on the 6 trap cases. 6.
+**Gap:** known FP class remains (documented; EVAL-SAST-008 docstring FP
+intentionally still reported, not suppressed); contextual allowlists primitive.
 7. **Approach:** per-rule denylist growth only with evidence. 8.
 **Alternatives:** broader veto (rejected). 9. **Security:** over-veto hides
 real secrets — conservative direction chosen deliberately. 10.
@@ -619,9 +630,11 @@ fixture-level TP/FN (953 rules × executed tests); FP classes documented
 (`fpNotes`, limitations); **no** real-world precision/recall — no defensible
 real ground-truth set exists (explicitly not claimed anywhere). 5. **Tests:**
 `test-packs`/`test-assets` totals (§Validation); Phase 6 W3 evaluation
-foundation scores 11 declared synthetic cases (9 assessed: 6 TP / 0 FN /
-1 documented FP — precision 0.857, recall 1.0 over THAT synthetic
-population only; 2 UNASSESSED excluded; `test-eval` 25/25). 6. **Gap:** real-world
+foundation (11 cases) + Phase 7 growth to **23 cases** (18 assessed, 5
+UNASSESSED): before detection-quality fix 9 TP / 3 FN / 1 FP (recall 0.75,
+precision 0.9) → after **12 TP / 0 FN / 1 FP (recall 1.0, precision 0.9231)**
+over THAT synthetic population only; exact-evidence match rate 12/12 on
+declared detections; `test-eval` 30/30. 6. **Gap:** real-world
 measurement (needs authorized corpora + methodology — future research
 pipeline). 7. **Approach:** synthetic-benchmark growth via the W3 research
 pipeline (`run-eval.mjs`, AGENT_ARCHITECTURE §3 W3) with expected results
@@ -742,3 +755,19 @@ shipped Phase 6), CGM-C1/C3 app-side verification, CGM-D1 context analysis
   on the canonical methodology — **no requirement row moved in Phase 6;
   coverage stays 74.8% (38.90/52)** (documentation/contracts are not counted
   as working capability for ledger rows whose acceptance requires a runtime).
+
+- **Phase 7 (2026-10-17):** `npm test` exit 0 — test 600/600, pack-tests
+  3,978/3,978, audience-tests 2,903/2,903, asset-tests 7,514/7,514,
+  consistency 216/216, rehearsal 78/78, importers 49/49, agent-policy 91/91,
+  agent-workflows 57/57, finding-evidence 31/31, eval-tests 30/30,
+  doc-drift 119/119, determinism 5/5 — **15,671 assertions total** (runner
+  sums recomputed; +29 vs Phase 6 baseline 15,642 = new Work A regression
+  suite +5, Work C/E boundary+safety +17, Work D tracking-edge +7 — no
+  assertion removed or weakened). Corpus counts UNCHANGED (953 = 792+96+65
+  rules; patterns 953; records 913; remediation 953; cwe 61) — the 12 new
+  eval cases are test-only fixtures outside every counted directory
+  (inventory validators re-run, identical). Detection-quality closure
+  documented at CGM-B4/I2 (before 9 TP/3 FN/1 FP → after 12 TP/0 FN/1 FP on
+  the synthetic population; EVAL-SAST-008's documented FP preserved, not
+  suppressed). Coverage ledger REPRODUCED — no requirement row moved;
+  coverage stays **74.8% (38.90/52)**. `requireGates()` fail-closed (4/4).

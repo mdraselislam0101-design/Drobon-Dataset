@@ -48,7 +48,7 @@ function assert(condition, name, detail = '') {
 // --- 1. committed corpus loads clean and the runner never rewrites it --------
 const before = loadCases(ROOT);
 assert(before.errors.length === 0, 'corpus: all committed cases load clean', before.errors.join(' | '));
-assert(before.cases.length >= 10, `corpus: at least 10 cases present (got ${before.cases.length})`);
+  assert(before.cases.length >= 22, `corpus: at least 22 cases present (got ${before.cases.length})`);
 const runOnce = execFileSync(process.execPath, [join(ROOT, 'scripts', 'run-eval.mjs')], { cwd: ROOT, encoding: 'utf8' });
 const after = loadCases(ROOT);
 assert(
@@ -79,8 +79,8 @@ assert(
   'metrics: computed over assessed synthetic population only',
 );
 assert(
-  report.counts.truePositives === 6 && report.counts.falseNegatives === 0 && report.counts.falsePositives === 1,
-  'metrics: population counts pinned (6 TP / 0 FN / 1 documented FP)',
+    report.counts.truePositives === 12 && report.counts.falseNegatives === 0 && report.counts.falsePositives === 1,
+    'metrics: population counts pinned (12 TP / 0 FN / 1 documented FP — Phase 7 population)',
   JSON.stringify(report.counts),
 );
 
@@ -181,6 +181,60 @@ expectError((c) => { c.id = 'EVAL-1'; }, 'id: must match', 'regression: malforme
   assert(runOnce === runTwice, 'determinism: two runner executions are byte-identical');
   const inProcess = `${JSON.stringify(buildReport(ROOT, loadCases(ROOT).cases), null, 1)}\n`;
   assert(sha256(runOnce) === sha256(inProcess), 'determinism: in-process report matches runner output byte-identically');
+}
+
+// --- 6. Phase 7 Work A/G audit regressions (added BEFORE the fixes) -----------
+{
+  // D1: provenance must be REQUIRED and validated (origin/authoring fields).
+  const noProv = JSON.parse(JSON.stringify(VALID));
+  delete noProv.provenance;
+  assert(
+    validateCase(noProv).some((e) => e.includes('provenance')),
+    'defect D1 regression: case without provenance is rejected',
+    'provenance was optional in Phase 6 schema',
+  );
+  const badProv = JSON.parse(JSON.stringify(VALID));
+  badProv.provenance = { origin: 'copied-from-somewhere' };
+  assert(
+    validateCase(badProv).some((e) => e.includes('provenance')),
+    'defect D1 regression: incomplete provenance is rejected',
+    validateCase(badProv).join(' | '),
+  );
+  const lateProv = JSON.parse(JSON.stringify(VALID));
+  lateProv.provenance = { ...VALID.provenance, expectationAuthoredBeforeFirstRun: false };
+  assert(
+    validateCase(lateProv).some((e) => e.includes('expectationAuthoredBeforeFirstRun')),
+    'defect D1 regression: expectations must be authored before first run (flag true)',
+    validateCase(lateProv).join(' | '),
+  );
+  // D2: observation evidence must check the FULL mustContain (no 32-char truncation).
+  {
+    const obs = JSON.parse(JSON.stringify(loadCases(ROOT).cases.find((c) => c.id === 'EVAL-DAST-001')));
+    obs.expected.detections[0].mustContain = 'http://shop.internal.test/checkout-and-more-suffix';
+    // Full string is NOT in the observation; a truncated check would wrongly accept.
+    const res = evaluateCase(ROOT, obs);
+    assert(res.truePositives === 0, 'defect D2 regression: truncated evidence strings are not accepted',
+      JSON.stringify(res));
+  }
+  // D3: expectedCwe must match the linked rule's declared CWE.
+  {
+    const scratchCwe = JSON.parse(JSON.stringify(VALID));
+    scratchCwe.expected.expectedCwe = 'CWE-999';
+    const scratch = mkdtempSync(join(tmpdir(), 'drobon-eval-cwe-'));
+    try {
+      mkdirSync(join(scratch, 'data'), { recursive: true });
+      cpSync(join(ROOT, 'data', 'eval-cases'), join(scratch, 'data', 'eval-cases'), { recursive: true });
+      writeFileSync(join(scratch, 'data', 'eval-cases', 'zz-bad-cwe.json'), JSON.stringify(scratchCwe));
+      const res = loadCases(scratch, ROOT);
+      assert(
+        res.errors.some((e) => e.includes('CWE') && e.includes('DPK-SAST-283')),
+        'defect D3 regression: expectedCwe disagreeing with rule.cwe is rejected (naming rule)',
+        res.errors.join(' | ') || '(no error raised)',
+      );
+    } finally {
+      rmSync(scratch, { recursive: true, force: true });
+    }
+  }
 }
 
 process.stdout.write(`\neval-tests: ${passed} passed, ${failed} failed\n`);

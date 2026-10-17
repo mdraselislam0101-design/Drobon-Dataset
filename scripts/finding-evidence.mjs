@@ -133,6 +133,13 @@ export function extractEvidence(sourceText, spec) {
       language: langFromPath(path),
       framework: safeText(spec.framework, 128) ?? null,
       method,
+      ...(Number.isInteger(spec.ruleVersion) && spec.ruleVersion > 0 ? { ruleVersion: spec.ruleVersion } : {}),
+    },
+    // Evaluation/verification status: never upgraded without evidence.
+    verification: {
+      state: ['CONFIRMED', 'REJECTED', 'UNRESOLVED', 'UNASSESSED', 'UNVERIFIED'].includes(spec.verificationState)
+        ? spec.verificationState
+        : 'UNVERIFIED',
     },
     dataFlowEvidence: { state: 'NOT_ASSESSED', note: 'no taint/data-flow analysis exists in this workstream' },
     callChainEvidence: { state: 'NOT_ASSESSED', note: 'no call-graph analysis exists in this workstream' },

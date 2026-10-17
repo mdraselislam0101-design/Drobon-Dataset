@@ -316,6 +316,14 @@ export function verifyCandidate(candidate, bundle, opts = {}) {
 }
 
 /**
+ * Workflow lookup for callers: unknown workflow names yield null (callers
+ * must deny — never default to a workflow).
+ */
+export function getContract(workflowId) {
+  return Object.hasOwn(WORKFLOW_CONTRACTS, workflowId) ? WORKFLOW_CONTRACTS[workflowId] : null;
+}
+
+/**
  * Workflow conformance probe used by tests and by any future runtime at
  * startup: every contract's tool lists must stay inside deny-by-default
  * semantics (denied ∩ permitted = ∅, and the hard-denied tools stay denied).

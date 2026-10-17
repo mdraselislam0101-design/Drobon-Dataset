@@ -1,0 +1,46 @@
+{
+  "schemaVersion": "drobon.eval.case/v1",
+  "id": "EVAL-SAST-013",
+  "variant": "boundary",
+  "synthetic": true,
+  "testOnly": true,
+  "purpose": "Branch-dependent paths: one branch concatenates, the other binds (mixed ground truth on fixed lines).",
+  "language": "python",
+  "framework": null,
+  "mode": "line-regex",
+  "groundTruth": {
+    "state": "ASSESSED",
+    "class": "issue-present",
+    "rationale": "Line 3 builds SQL by concatenation (issue); line 5 binds parameters (clean). Ground truth is per-line: exactly one detection expected."
+  },
+  "fixture": {
+    "name": "synthetic_eval_sast_013.txt",
+    "lines": [
+      "def get_user(cursor, raw_filter, admin_mode):",
+      "    if admin_mode:",
+      "        cursor.execute(\"SELECT * FROM reports WHERE \" + raw_filter)",
+      "    else:",
+      "        cursor.execute(sql, (raw_filter,))"
+    ]
+  },
+  "expected": {
+    "detections": [
+      {
+        "ruleId": "DPK-SAST-283",
+        "lineNo": 3,
+        "mustContain": ".execute("
+      }
+    ],
+    "expectedCwe": "CWE-89"
+  },
+  "limitations": [
+    "The safe branch must not produce a detection; a match on line 5 would be a false positive."
+  ],
+  "testCommand": "node scripts/run-eval.mjs --case EVAL-SAST-013",
+  "provenance": {
+    "origin": "original-authored",
+    "writtenFor": "Phase 7 Work B detection-quality closure",
+    "kind": "synthetic test fixture - NOT vulnerability intelligence",
+    "expectationAuthoredBeforeFirstRun": true
+  }
+}

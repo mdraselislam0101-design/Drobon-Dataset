@@ -433,10 +433,32 @@
     "verifyT": "Rescan shows no concatenated query on untrusted input, and quote payloads stay inert data.",
     "sinks": {
       "python": [
-        "\\.execute\\s*\\([^)]*(?:\\+|%\\s|\\.format\\s*\\()",
+        "\\.execute\\s*\\((?:[^()]|\\([^()]*\\))*(?:\\+|%\\s|\\.format\\s*\\(|f[\"\\'][^)]*\\{)",
         "cursor.execute(\"SELECT \" + col)",
         "cursor.execute(\"SELECT * FROM t\")",
-        "parameter placeholders (?/%s)"
+        "parameter placeholders (?/%s)",
+        [
+          {
+            "line": "cursor.execute(build_query(user) + \" LIMIT 10\")",
+            "match": true
+          },
+          {
+            "line": "cursor.execute(f\"SELECT * FROM t WHERE n = '{user_input}'\")",
+            "match": true
+          },
+          {
+            "line": "cursor.execute(f\"SELECT COUNT(*) FROM t\")",
+            "match": false
+          },
+          {
+            "line": "cursor.execute(build_sql(user))",
+            "match": false
+          },
+          {
+            "line": "cursor.execute(sql, (user_input,))",
+            "match": false
+          }
+        ]
       ],
       "php": [
         "mysqli_query\\s*\\([^)]*(?:\"[^\"\\n]*\\$|\\.\\s*\\$)",

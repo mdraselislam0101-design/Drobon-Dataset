@@ -111,7 +111,7 @@ function composeCallCell(cls, lang, sink) {
 }
 
 function composeFlagCell(cls, lang, sink) {
-  const [frag, posLit, negLit, safeNote] = sink;
+  const [frag, posLit, negLit, safeNote, extraTests] = sink;
   const pos2 = cls.pos2ctx !== undefined ? fill(cls.pos2ctx, { v: posLit }) : `# audit: ${posLit} present`;
   const neg2 = cls.neg2ctx !== undefined ? fill(cls.neg2ctx, { v: negLit }) : `# verified: ${negLit}`;
   const tests = [
@@ -120,6 +120,15 @@ function composeFlagCell(cls, lang, sink) {
     { line: negLit, match: false },
     { line: neg2, match: false },
   ];
+  // Optional appended cases (data-declared, per-language). They follow the four
+  // fixed tests so existing testIndex pointers never move. Malformed entries
+  // fail loudly (same contract as secrets extraTests).
+  for (const [i, extra] of (extraTests ?? []).entries()) {
+    if (typeof extra?.line !== 'string' || typeof extra?.match !== 'boolean') {
+      throw new Error(`${cls.class}/${lang} flag extraTests[${i}] must have string line and boolean match`);
+    }
+    tests.push({ line: extra.line, match: extra.match });
+  }
   return { source: frag, flags: cls.flags, tests, literal: unescapeLiteral(frag).slice(0, 60), safe: safeNote };
 }
 

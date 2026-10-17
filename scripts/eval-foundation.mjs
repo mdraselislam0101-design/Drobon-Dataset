@@ -162,6 +162,27 @@ export function validateCase(value, idHint = '<case>') {
   if (gt?.state === 'ASSESSED' && gt.class === 'no-issue' && Array.isArray(detections) && detections.length > 0) {
     fail(errors, id, 'expected.detections: ASSESSED no-issue cases must declare zero expected detections');
   }
+  const prov = value.provenance;
+  if (typeof prov !== 'object' || prov === null || Array.isArray(prov)) {
+    fail(errors, id, 'provenance: required object (origin, writtenFor, kind, expectationAuthoredBeforeFirstRun)');
+  } else {
+    const allowedProv = ['origin', 'writtenFor', 'kind', 'expectationAuthoredBeforeFirstRun'];
+    for (const key of Object.keys(prov)) {
+      if (!allowedProv.includes(key)) fail(errors, id, `provenance: unknown property "${key}"`);
+    }
+    if (prov.origin !== 'original-authored') {
+      fail(errors, id, "provenance.origin: must be 'original-authored' (independently authored for DROBON)");
+    }
+    if (typeof prov.writtenFor !== 'string' || prov.writtenFor.length < 8) {
+      fail(errors, id, 'provenance.writtenFor: required string (>=8 chars)');
+    }
+    if (typeof prov.kind !== 'string' || prov.kind.length < 8) {
+      fail(errors, id, 'provenance.kind: required string declaring synthetic/implementation-metadata class');
+    }
+    if (prov.expectationAuthoredBeforeFirstRun !== true) {
+      fail(errors, id, 'provenance.expectationAuthoredBeforeFirstRun: must be true (ground truth authored before execution)');
+    }
+  }
   if (!Array.isArray(value.limitations) || value.limitations.some((l) => typeof l !== 'string')) {
     fail(errors, id, 'limitations: required array of strings (known limits + uncertainty notes)');
   }
@@ -177,7 +198,7 @@ export function validateCase(value, idHint = '<case>') {
  * Returns { cases, errors, hashes } — hashes map filename -> sha256 of the
  * raw bytes so tests can prove the runner never rewrote expectations.
  */
-export function loadCases(root) {
+export function loadCases(root, ruleRoot = root) {
   const dir = join(root, EVAL_CASE_DIR);
   const files = readdirSync(dir).filter((f) => f.endsWith('.json')).sort();
   const cases = [];
@@ -200,6 +221,21 @@ export function loadCases(root) {
     if (seen.has(value.id)) {
       errors.push(`${file}: duplicate case id ${value.id} (also in ${seen.get(value.id)})`);
       continue;
+    }
+    // Rule-to-CWE consistency: expectedCwe must agree with the linked rule.
+    const ruleIdsToCheck = [
+      ...value.expected.detections.map((d) => d.ruleId),
+      ...(value.expected.forbiddenDetections ?? []),
+    ];
+    for (const ruleId of [...new Set(ruleIdsToCheck)]) {
+      const rule = loadRule(ruleRoot, ruleId);
+      if (rule === null) {
+        errors.push(`${file}: ${value.id}: detector ${ruleId} does not resolve under packs/`);
+        continue;
+      }
+      if (value.expected.expectedCwe !== undefined && rule.cwe !== value.expected.expectedCwe) {
+        errors.push(`${file}: ${value.id}: expectedCwe ${value.expected.expectedCwe} disagrees with rule ${ruleId} cwe ${rule.cwe}`);
+      }
     }
     seen.set(value.id, file);
     cases.push(value);
@@ -269,7 +305,7 @@ export function evaluateCase(root, testCase) {
       for (const exp of testCase.expected.detections.filter((d) => d.ruleId === ruleId)) {
         const observation = testCase.fixture.observation ?? {};
         const matched = evalDastCheck(rule.check, observation) === true;
-        const evidenceOk = matched && JSON.stringify(observation).includes(exp.mustContain.slice(0, 32));
+        const evidenceOk = matched && JSON.stringify(observation).includes(exp.mustContain);
         if (evidenceOk || (matched && exp.mustContain === '*')) {
           result.actual.push({ ruleId, lineNo: exp.lineNo, matchedText: exp.mustContain });
         }

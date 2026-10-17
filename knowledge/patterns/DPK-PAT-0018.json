@@ -8,10 +8,10 @@
   ],
   "signal": {
     "kind": "regex",
-    "source": "\\b(query|execute)\\s*\\([^)]*\\+"
+    "source": "\\b(query|execute)\\s*\\((?:[^()]|\\([^()]*\\))*(?:\\+|\\$\\{)"
   },
   "scope": "Legacy signal mirrored from DPK-SAST-008.",
-  "limitations": "Lexical: any + inside a query(/execute( call matches, including arithmetic on trusted numbers. Calls without concatenation are out of scope for this rule.",
+  "limitations": "Lexical: any + or ${} interpolation inside a query(/execute( call matches, including arithmetic on trusted numbers. Template interpolation (Phase 7) and nested-paren arguments are in scope; static strings and plain identifiers are not.",
   "examples": [
     {
       "line": "db.query(\"SELECT * FROM t WHERE id = \" + id)",
@@ -27,10 +27,26 @@
     },
     {
       "line": "conn.execute(`SELECT ${col} FROM t`)",
+      "match": true
+    },
+    {
+      "line": "db.query(build() + x);",
+      "match": true
+    },
+    {
+      "line": "db.query(`SELECT * FROM t WHERE n = '${user}'`);",
+      "match": true
+    },
+    {
+      "line": "db.query(`SELECT COUNT(*) FROM t`);",
+      "match": false
+    },
+    {
+      "line": "db.query(makeSql(user));",
       "match": false
     }
   ],
-  "fpNotes": "Lexical: any + inside a query(/execute( call matches, including arithmetic on trusted numbers. Calls without concatenation are out of scope for this rule.",
+  "fpNotes": "Lexical: any + or ${} interpolation inside a query(/execute( call matches, including arithmetic on trusted numbers. Template interpolation (Phase 7) and nested-paren arguments are in scope; static strings and plain identifiers are not.",
   "linkedRules": [
     "DPK-SAST-008"
   ],

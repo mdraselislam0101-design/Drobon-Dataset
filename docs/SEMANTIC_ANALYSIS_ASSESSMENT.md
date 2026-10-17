@@ -120,6 +120,23 @@ no copied detection logic; no external datasets to inflate benchmarks; never
 label lexical output as semantic analysis; evidence records never invent
 locations/scores.
 
+## 3.1 Phase 7 semantic-boundary test coverage (2026-10-17)
+
+The mandatory boundary scenarios now have executed regression tests (eval
+corpus `data/eval-cases` + `test-agent-workflows` §7 + `test-finding-evidence`):
+source+sink same expression (CONFIRMED with exact evidence), intermediate
+assignments (EVAL-SAST-010), sanitization before sink (EVAL-SAST-011),
+sanitization after sink (EVAL-SAST-012), branch-dependent paths
+(EVAL-SAST-013), unknown function behavior (EVAL-SAST-014 → UNASSESSED,
+never scored), ambiguous framework semantics (EVAL-SAST-016 → UNASSESSED),
+incomplete snippets (EVAL-SAST-015 → UNASSESSED; verification contract
+returns UNRESOLVED on excerpt mismatch), unsupported constructs (eval
+case-level UNASSESSED policy). The suites distinguish CONFIRMED /
+REJECTED / UNRESOLVED / UNASSESSED / NOT_ASSESSED accurately and never
+confirm without exact source evidence. **No semantic analysis engine was
+implemented** — these are boundary-state tests of the existing contracts;
+the capability inventory in §1 is unchanged.
+
 ## 4. Honest statement of what Phase 6 did and did not do
 
 - **Did:** evidence source-mapping implementation + tests; verification

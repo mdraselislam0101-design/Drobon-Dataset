@@ -18,9 +18,10 @@ or test results). A span that cannot be located yields an explicit error.
 | Exact file path and line range | `location.path`, `location.lineFrom..lineTo` | computed from text offsets; multi-line spans supported |
 | Actual source excerpt + context | `source.excerpt`, `source.matchedText`, `source.context[]`, `contextFrom/To` | excerpt = the actual matched line; context = ±2 lines |
 | Language / framework context | `analysis.language`, `analysis.framework` | language from path extension; framework only when declared; unknown ⇒ `null` |
-| Detection/analysis method | `analysis.method` | e.g. `line-regex`, `observation`; always named |
+| Detection/analysis method | `analysis.method`, `analysis.ruleVersion` | e.g. `line-regex`, `observation`; always named; rule version carried only when the rule declares an integer version (Phase 7) |
 | Data-flow / call-chain evidence | `dataFlowEvidence`, `callChainEvidence` | `NOT_ASSESSED` with a note while no such analysis exists — absence is explicit, never faked |
 | Confidence and uncertainty | `confidence.level`, `confidence.uncertainty` | shape matches are `SHAPE_MATCH` with mandatory uncertainty text |
+| Evaluation/verification status | `verification.state` (Phase 7) | `UNVERIFIED` by default; only `CONFIRMED`/`REJECTED`/`UNRESOLVED`/`UNASSESSED` when the verification contract produced that state — never upgraded without evidence |
 | Severity / CWE / CVSS | `cwe`, `severity` (optional) | carried ONLY from a declared rule (validated format); **CVSS is never invented** — field absent by design under the production lock |
 | Why this is a security issue | `whyItMatters` | separate from source text |
 | Proposed remediation | `remediation` | always a separate field (filled from `knowledge/remediation/`), never merged into source |
@@ -33,6 +34,18 @@ participate: identity is **stable across line shifts** when the cited evidence
 content is unchanged (tested). When the span content changes at the same site,
 the finding is `CHANGED_REQUIRES_REVIEW` — identity mapping is only claimed
 where the evidence supports it. Who made a change and why are never inferred.
+
+### 2.1 Phase 7 tracking-edge semantics (tested)
+
+- **File renames:** identity binds path, so an unmapped rename yields
+  `NOT_OBSERVED_UNVERIFIED` — never `FIXED_VERIFIED` (rename mapping is an App
+  scan-store feature, not claimed here).
+- **Duplicate-looking findings:** identical excerpts under different rule ids
+  keep distinct identities (`identityOf` includes the rule id).
+- **Changed surrounding code:** an identical span at a new location with a
+  rewritten context stays `STILL_PRESENT` (identity is span-based).
+- **Missing prior evidence:** malformed span records yield
+  `NOT_OBSERVED_UNVERIFIED`, never a confirmed fix.
 
 ## 3. Remediation-tracking statuses
 
