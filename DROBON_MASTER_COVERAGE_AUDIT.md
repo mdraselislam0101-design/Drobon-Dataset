@@ -21,23 +21,23 @@ engine, usertype, report-outcome, paid-tool benchmark, remaining work.
 
 | Metric | Result | Numerator / Denominator | Evidence |
 |---|---|---|---|
-| **Main App-to-Dataset verified coverage** | **74.8%** | 38.90 pts / 52 dataset-dependent requirements | ledger §5.1 (recomputed 2026-10-17 Phase 5: DPK-SEC-106/107 + R-CWE-03 closed) |
+| **Main App-to-Dataset verified coverage** | **74.9%** | 38.97 pts / 52 dataset-dependent requirements | ledger §5.1 (recomputed 2026-10-17 Master Completion Pump: R-SEC-P-05 stale 43/46 → 46/46 VERIFIED_FULL; supersedes the Phase 5 recount note) |
 | — Dataset-required-only (runtime seam) | 68.5% | 15.76 / 23 | SCA-intel + CWE + remediation rows |
-| SAST (packs) | 69.0% | 6.21 / 9 | 792 rules; reachability 549/792 |
+| SAST (packs) | 69.0% | 6.21 / 9 | 792 rules; reachability 560/792 |
 | SCA / vuln-intel | 66.7% | 9.33 / 14 | 100-file seed; 0/100,000 breadth |
-| Secrets | 82.2% | 4.93 / 6 | 96 rules (DPK-SEC-105 Shopify; DPK-SEC-106/107 probe-gap closure 2026-10-17); 43/46 provider classes |
+| Secrets | 83.3% | 5.00 / 6 | 97 rules (DPK-SEC-105 Shopify; DPK-SEC-106/107 probe-gap closure; DPK-SEC-108 short-alnum userinfo Phase 9); 46/46 named subrequirements closed (42 classes + Shopify + 3 GAP-013 probe-gap items) |
 | DAST | 75.0% | 3.00 / 4 | 65 rules / 7 check types |
-| Other: Remediation | 50.0% | 1.00 / 2 | 953 files; loader missing |
+| Other: Remediation | 50.0% | 1.00 / 2 | 954 files; loader missing |
 | Other: Findings/CWE | 100.0% | 3.00 / 3 | 61 CWE entries; MITRE CWE 4.20 pinned + per-entry `cweVersion` (Phase 5) |
 | Other: Audience | 75.0% | 3.00 / 4 | 5+3+2 assets; loaders missing |
 | Other: Reports | 84.3% | 8.43 / 10 | 13 report outcomes, see §4 |
 | DEVELOPER workflow | 73.6% | 18.40 / 25 | tagged ledger rows |
 | STUDENT workflow | 72.5% | 12.33 / 17 | lessons+remediation+findings |
-| SECURITY_PROFESSIONAL | 78.3% | 28.20 / 36 | assessments+intel+packs |
-| PENTESTER | 72.7% | 15.27 / 21 | engagement aids+dast packs+intel |
+| SECURITY_PROFESSIONAL | 78.5% | 28.26 / 36 | assessments+intel+packs |
+| PENTESTER | 73.0% | 15.33 / 21 | engagement aids+dast packs+intel |
 | **Intended report-outcome coverage** | **72.5%** | 9.43 / 13 report types (A–G subreqs) | §4 |
-| **End-to-end verified capability** | **65.4%** | 34 / 52 fully verified | evidence-chain complete rows |
-| **Dataset quality/test verification** | **100%** | 953/953 rule packs with ≥1 executed positive+negative test; 100/100 advisory rows schema+provenance valid; 16/16 interop vectors | pack-tests 3,978; validate-packs 956 files; check-vectors |
+| **End-to-end verified capability** | **67.3%** | 35 / 52 fully verified | evidence-chain complete rows |
+| **Dataset quality/test verification** | **100%** | 954/954 rule packs with ≥1 executed positive+negative test; 100/100 advisory rows schema+provenance valid; 16/16 interop vectors | pack-tests 3,982; validate-packs 957 files; check-vectors (2026-10-17 Master Completion Pump recount) |
 | Comparable documented capability — vs GHAS | 52.6% | 10.0 / 19 documented dims | benchmark CSV |
 | — vs Snyk | 57.5% | 11.5 / 20 | benchmark CSV |
 | — vs Semgrep AppSec Platform | 53.3% | 8.0 / 15 | benchmark CSV |
@@ -53,23 +53,24 @@ product gating, not intelligence coverage (see §6).
 - Total unique requirements: **64** (semantic duplicates merged; nothing silently dropped).
 - Dataset-dependent (scored): **52** — of which REQUIRED 23, SUPPLEMENTAL 29.
 - Excluded with justification (`NOT_APPLICABLE_WITH_JUSTIFICATION`): **7** (app-code/platform/entitlement rows with no dataset seam).
-- Status breakdown (52): **VERIFIED_FULL 34 · VERIFIED_PARTIAL 7 · IMPLEMENTED_NOT_VERIFIED 1 · MISSING_ENGINE_OR_INTEGRATION 6 · NOT_IMPLEMENTED 1 · BLOCKED 3** (1 production-lock, 1 license, 1 owner-decision).
+- Status breakdown (52): **VERIFIED_FULL 35 · VERIFIED_PARTIAL 6 · IMPLEMENTED_NOT_VERIFIED 1 · MISSING_ENGINE_OR_INTEGRATION 6 · NOT_IMPLEMENTED 1 · BLOCKED 3** (1 production-lock, 1 license, 1 owner-decision). Recounted 2026-10-17 (R-SEC-P-05 → VERIFIED_FULL).
 - App-side rows tracked (not scored): 3 NOT_IMPLEMENTED (Git/CI integration, account lifecycle, exec-summary contract unverified) + 4 N/A.
 
 ## 3. Engine dashboard (dataset-dependent requirements only)
 
 | Engine | Full | Partial | Impl≠verified | Missing engine | Blocked | NotAssessed | Verified % | Top gap |
 |---|---|---|---|---|---|---|---|---|
-| SAST | 6 | 2 | 0 | 1 | 0 | 0 | 68.8% (6.19/9) | pack loader (GAP-005); reachability 549/792 |
-| SCA-intel | 9 | 2 | 1 | 0 | 2 | 0 | 66.7% (9.33/14) | breadth 0/100k (GAP-001); license (GAP-002) |
-| Secrets | 4 | 1 | 0 | 1 | 0 | 0 | 82.2% (4.93/6) | loader (GAP-006); probe-gap rules closed (DPK-SEC-106/107, GAP-013) |
+| SAST | 5 | 2 | 0 | 2 | 0 | 0 | 69.0% (6.21/9) | pack loader (GAP-005); reachability 560/792 |
+| SCA-intel | 8 | 2 | 1 | 0 | 3 | 0 | 66.7% (9.33/14) | breadth 0/100k (GAP-001); license (GAP-002) |
+| Secrets | 5 | 0 | 0 | 1 | 0 | 0 | 83.3% (5.00/6) | loader (GAP-006); probe-gap rules closed (DPK-SEC-106/107/108, GAP-013; R-SEC-P-05 46/46) |
 | DAST | 3 | 0 | 0 | 1 | 0 | 0 | 75.0% (3.00/4) | loader (GAP-007) |
 | Remediation | 1 | 0 | 0 | 1 | 0 | 0 | 50.0% (1.00/2) | merge-loader (GAP-008) |
 | Findings/CWE | 3 | 0 | 0 | 0 | 0 | 0 | 100.0% (3.00/3) | — (version metadata implemented Phase 5; all rows verified) |
 | Audience | 3 | 0 | 0 | 1 | 0 | 0 | 75.0% (3.00/4) | audience loaders (GAP-009) |
-| Reports | 5 | 2 | 0 | 0 | 0 | 1* | 84.3% (8.43/10) | CVSS/OWASP/prioritization (GAP-010) |
+| Reports | 7 | 2 | 0 | 1 | 0 | 0 | 84.3% (8.43/10) | CVSS/OWASP/prioritization (GAP-010) |
 
-\* report-row `NOT_ASSESSED` (executive summary contract) sits in the 13-row
+\* The executive-summary report row (`NOT_ASSESSED`, scopeClass NONE) is
+outside this dataset-dependent subset; it sits in the 13-row
 report-outcome set (§4). Dataset-side gaps (intelligence breadth) and app-side
 gaps (loaders, mappings) are kept distinct in `DROBON_ENGINE_COVERAGE.csv`.
 
@@ -245,7 +246,9 @@ blocked; 0/100,000 verified-production; release NO-GO), and (2) genuine
 technical gaps at product level — Main App loaders/integration (class E, 6
 rows), flow-rule expressibility (R-SAST-P-04), reachability (R-SAST-P-03),
 CVSS/OWASP/prioritization + exploitability outputs (R-REP-05/06). Verified
-Dataset-dependent coverage stands at 74.8% (38.90/52) post-closure (Phase 5
-recount 2026-10-17 after DPK-SEC-106/107 + R-CWE-03). This
+Dataset-dependent coverage stood at 74.8% (38.90/52) post-closure (Phase 5
+recount 2026-10-17 after DPK-SEC-106/107 + R-CWE-03); superseded by the
+Master Completion Pump recount the same day: **74.9% (38.97/52)** after
+R-SEC-P-05's stale 43/46 was corrected to 46/46. This
 verdict applies to the defined scope in this document; it is not a claim of
 vulnerability-detection completeness or parity with any commercial product.

@@ -6,7 +6,7 @@ each gap would be closed — evidence-first. Baseline: branch
 `arena/9fe99288-drobon-dataset` @ `7b683d9` (= remote tip at inspection).
 Companion canon (not duplicated here): `docs/CAPABILITY_COVERAGE.md` (app
 capability → dataset position), `DROBON_COVERAGE_EVIDENCE.json` (64-requirement
-ledger, 74.8% verified coverage), `DROBON_REMAINING_WORK.csv` (GAP-001..024),
+ledger, 74.9% verified coverage), `DROBON_REMAINING_WORK.csv` (GAP-001..026),
 `docs/COMPLETION_MATRIX.json` (CAP-* rows), `docs/AGENT_ARCHITECTURE.md`
 (AI-agent design; area F detail), `docs/DATASET_APP_CONTRACT.md`.
 
@@ -95,13 +95,14 @@ annotations must ship pos+neg tests per annotation. 11. **Deps:** CGM-A2. 12.
 ### CGM-B1 · Original lexical & structural detectors
 1. **ID:** CGM-B1. 2. **Outcome:** find insecure code/HTTP patterns. 3.
 **Status:** `PARTIAL` (lexical `VERIFIED`-grade; structural not present). 4.
-**Evidence:** 953 original rules (792 SAST + 96 Secrets + 65 DAST), 953
+**Evidence:** 954 original rules (792 SAST + 97 Secrets + 65 DAST), 954
 patterns, 954 remediations; provenance `origin: 'original-authored'` + cell
-lineage (953 = 913 cell-generated + 40 legacy); DAST rules are structured
+lineage (954 = 914 cell-generated + 40 legacy); DAST rules are structured
 header/cookie/body checks over parsed HTTP input (`docs/FORMAT.md` closed
-vocabulary). 5. **Tests:** `test-packs` 3978, `test-assets` 7514,
-`validate-packs` 954 files, `validate-assets` 1862 — all PASS this run. 6.
-**Gap:** no structural AST detectors (see CGM-A2); reachability <100% (549/792
+vocabulary). (Counts re-recomputed 2026-10-17 Master Completion Pump.) 5.
+**Tests:** `test-packs` 3982, `test-assets` 7522, `validate-packs` 957
+files, `validate-assets` 1868 — all PASS this run. 6.
+**Gap:** no structural AST detectors (see CGM-A2); reachability <100% (560/792
 fully reachable under app catalog; documented per-rule in `docs/PACKS.md`). 7.
 **Approach:** status quo is the correct baseline; extend via cell classes with
 evidence + tests (research pipeline §9). 8. **Alternatives:** DSL (proposal
@@ -323,7 +324,15 @@ rules missed every short mixed-alnum userinfo password) and closed for the
 disjoint from the 12+ and symbol rules; cohort `secret-userinfo` 5 TP / 0 FP /
 0 FN + 1 UNASSESSED version-token ambiguity). Residual: pure-lowercase words
 and pure numbers in the password slot remain unflagged BY DESIGN (documented
-FP classes); 6-7 char alphanumeric remains open.
+FP classes). 6-7 char alphanumeric userinfo values sit below the COMMITTED
+EVIDENCE FLOOR — EVAL-SEC-104 (ASSESSED, no-issue) pins that below 8
+characters the evidence is too weak and DPK-SEC-108 must not fire, and the
+Phase 9 verdict recorded the 6-7 window as a documented residual, not a
+defect. (Master Completion Pump 2026-10-17: earlier CGM prose said "remains
+open", contradicting the tested floor; the tested artifact governs and the
+wording is reconciled here. Ratify the floor or authorize an EVAL-SEC-104
+relabel plus weaker rule — decision item GAP-026; no rule is authored
+against committed ground truth.)
 
 ### CGM-D2 · Safe credential handling & redaction (findings + evidence)
 1. **ID:** CGM-D2 (grouped: safe handling, redaction, evidence minimization).
@@ -840,3 +849,34 @@ shipped Phase 6), CGM-C1/C3 app-side verification, CGM-D1 context analysis
   mirror mismatches, 0 unused patterns, 0 missing remediation. Coverage
   ledger REPRODUCED — no requirement row moved; coverage stays **74.8%
   (38.90/52)**. `requireGates()` fail-closed (4/4).
+
+- **Master Completion Pump (2026-10-17):** baseline re-restored at
+  `800445f` (clean tree, HEAD == remote tip) and FULLY REPRODUCED before
+  any edit: `npm test` exit 0 — tests 600/600, pack-tests 3982/3982,
+  audience-tests 2906/2906, asset-tests 7522/7522, consistency 216/216,
+  rehearsal 78/78, importers 49/49, agent-policy 91/91, agent-workflows
+  57/57, finding-evidence 31/31, secret-candidates 35/35, eval-tests
+  39/39, doc-drift 119/119, determinism 5/5 — **15,730 assertions total**
+  (same runner sums as Phase 9). Validators: packs 957, assets 1868,
+  audiences 965, cwe 61, matrix ("no license file"), sources 1, corpus 3 —
+  all PASS. Inventory re-recomputed UNCHANGED (954 = 792+97+65 rules, 954
+  patterns, 914 records, 954 remediation, 61 cwe, 89 test-only eval cases):
+  no new rules were authored. Probe battery (evidence-first, tests-first)
+  over the generated detectors: assignment space (env export/DB_PASSWORD=,
+  YAML password:, ADO Password=, PGPASSWORD=, quoted JDBC/Kafka) fully
+  covered by DPK-SEC-106/007; userinfo family covered by DPK-SEC-063/107/
+  108; the 6-7 alnum userinfo window is NOT authored because committed
+  ground truth (EVAL-SEC-104: no-issue below 8, DPK-SEC-108 forbidden to
+  fire) contradicts authoring — the evidence gate fails closed (GAP-026
+  records the ratification decision). Ledger reconciliation: R-SEC-P-05
+  stale accounting corrected 43/46 → **46/46 VERIFIED_FULL** (named
+  subrequirements from the original row: 42 classes + Shopify DPK-SEC-105
+  + 3 GAP-013 probe-gap rule items = DPK-SEC-106 ×2 + DPK-SEC-107 ×1, all
+  authored with committed evidence and tests in Phases 5–9; the row never
+  advanced after Phase 5). GAP-021 closed (cweVersion 4.20 on 61/61 since
+  Phase 5, validate-cwe enforced). COVERAGE_MAP BE-2 moved to
+  resolvedExpansions. Coverage recomputed on the unchanged formula and the
+  unchanged 52-row denominator: **74.9% (38.97/52)** (was 74.8% (38.90/52)
+  — only R-SEC-P-05's stale partial score advanced; no denominator or
+  weight changed). `requireGates()` fail-closed (4/4); publication NO-GO
+  unchanged (D-1/D-2, GATE-1..4, BLK-003/004 all still BLOCKED external).
