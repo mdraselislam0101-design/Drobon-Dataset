@@ -96,7 +96,7 @@ annotations must ship pos+neg tests per annotation. 11. **Deps:** CGM-A2. 12.
 1. **ID:** CGM-B1. 2. **Outcome:** find insecure code/HTTP patterns. 3.
 **Status:** `PARTIAL` (lexical `VERIFIED`-grade; structural not present). 4.
 **Evidence:** 953 original rules (792 SAST + 96 Secrets + 65 DAST), 953
-patterns, 953 remediations; provenance `origin: 'original-authored'` + cell
+patterns, 954 remediations; provenance `origin: 'original-authored'` + cell
 lineage (953 = 913 cell-generated + 40 legacy); DAST rules are structured
 header/cookie/body checks over parsed HTTP input (`docs/FORMAT.md` closed
 vocabulary). 5. **Tests:** `test-packs` 3978, `test-assets` 7514,
@@ -150,7 +150,11 @@ checks ≠ absence of flaws.
 **Tests:** pos+neg executed; Phase 7 eval corpus (18 assessed) + Phase 8
 `sql-concat-xlang` cohort (26 assessed: 16 detection opportunities + 10
 traps; **before** 1 TP / 15 FN / 0 FP → **after** 16 TP / 0 FN / 0 FP,
-recall 1.0, precision 1.0, exact-evidence 16/16 on THAT population only).
+recall 1.0, precision 1.0, exact-evidence 16/16 on THAT population only) +
+Phase 9 `cmd-injection` cohort (23 assessed: 13 opportunities + 10 traps;
+**before** 11 TP / 2 FN / 0 FP → **after** 13 TP / 0 FN / 0 FP — ruby
+backtick `#{}` and `curl|zsh` defects fixed in `shell-risk`/`curl-pipe-shell`
+cells; 3 UNASSESSED boundary cases).
 All 12 family variants now carry the Phase-7-proven nested-paren scan
 (11 fixed Phase 8 via `data/asset-cells/sast-calls-2.json` sinks —
 source-of-truth, regenerated); interpolation alts added where the language
@@ -313,7 +317,13 @@ policy). 9. **Security:** shape ≠ live credential (mandatory limitation text).
 10. **Acceptance:** each new rule ≥1 pos + ≥2 neg + leak-scan safety. 11.
 **Deps:** —. 12. **Perf:** linear. 13. **Limits:** documented per rule;
 candidate signals are triage leads — entropy alone is never a credential
-claim (tested).
+claim (tested). Phase 9: GAP-013 reassessed with a pre-authored probe (both existing
+rules missed every short mixed-alnum userinfo password) and closed for the
+8-11 mixed-class window by DPK-SEC-108 (LOW confidence, placeholder-vetoed,
+disjoint from the 12+ and symbol rules; cohort `secret-userinfo` 5 TP / 0 FP /
+0 FN + 1 UNASSESSED version-token ambiguity). Residual: pure-lowercase words
+and pure numbers in the password slot remain unflagged BY DESIGN (documented
+FP classes); 6-7 char alphanumeric remains open.
 
 ### CGM-D2 · Safe credential handling & redaction (findings + evidence)
 1. **ID:** CGM-D2 (grouped: safe handling, redaction, evidence minimization).
@@ -328,7 +338,12 @@ silent on safe lines (`test-consistency` PASS 208/208). 6. **Gap:** none
 in-repo; app finding-render must honor `redact` (contract). 7. **Approach:**
 status quo. 8. **Alternatives:** —. 9. **Security:** primary control. 10.
 **Acceptance:** leak-scan stays in CI. 11. **Deps:** —. 12. **Perf:** scan cost
-small. 13. **Limits:** scanners see shapes, not liveness.
+small. 13. **Limits:** scanners see shapes, not liveness. Phase 9 Workstream A: candidate→finding promotion contract
+(`promoteCandidate` + `drobon.secret.candidate/v1` mapping onto
+`drobon.finding.evidence/v1` — one vocabulary): entropy/charset/length/regex/
+model-assertion/test-label can NEVER yield VERIFIED; only independent rule
+family + exact redacted span evidence can; liveness verification NOT
+IMPLEMENTED (contract boundary tested, 35/35).
 
 ### CGM-D3 · False-positive rejection
 1. **ID:** CGM-D3. 2. **Outcome:** suppress placeholder/example matches. 3.
@@ -597,7 +612,7 @@ unsigned.
 
 ### CGM-H1 · Proposed fix guidance only (advisory snippets/diffs)
 1. **ID:** CGM-H1. 2. **Outcome:** suggest, never apply. 3. **Status:**
-`VERIFIED`. 4. **Evidence:** 953 remediation entries are guidance text
+`VERIFIED`. 4. **Evidence:** 954 remediation entries are guidance text
 (`knowledge/remediation/`, schema `drobon.knowledge.remediation/v1` content
 fields only; status stays app-computed); contract: fixes shown as advisory
 snippets/diffs only (DATASET_APP_CONTRACT); code-mutation ban is a standing
@@ -801,3 +816,27 @@ shipped Phase 6), CGM-C1/C3 app-side verification, CGM-D1 context analysis
   record exception retained as documented). Coverage ledger REPRODUCED — no
   requirement row moved; coverage stays **74.8% (38.90/52)**.
   `requireGates()` fail-closed (4/4).
+
+- **Phase 9 (2026-10-17):** `npm test` exit 0 — test 600/600, pack-tests
+  3,982/3,982, audience-tests 2,906/2,906, asset-tests 7,522/7,522,
+  consistency 216/216, rehearsal 78/78, importers 49/49, agent-policy 91/91,
+  agent-workflows 57/57, finding-evidence 31/31, secret-candidates 35/35,
+  eval-tests 39/39, doc-drift 119/119, determinism 5/5 — **15,730 assertions
+  total** (runner sums recomputed; +32 vs Phase 8 15,698 = secret-candidates
+  +15 promotion-boundary, eval-tests +2 cohort pins, pack +4 (DPK-SEC-108),
+  audience +3, asset +8, consistency same count re-pinned). Corpus counts
+  CHANGED WITH CAUSE: rules **954 = 792+97+65**, patterns **954**, records
+  **914**, remediation **954**, cwe 61 — one evidence-gated rule
+  (DPK-SEC-108, GAP-013 8-11 mixed-class window) with 16 executed tests,
+  LOW confidence, placeholder-vetoed, disjoint from DPK-SEC-063/107; all
+  count documents reconciled (README, REQUIREMENTS_MATRIX, CORPUS_TARGETS
+  totals.validated 2080, COVERAGE_MAP, AUDIENCES.md, CORPUS_GAP_REPORT,
+  CAPABILITY_COVERAGE) — no padding, no duplicate patterns (dup-review
+  snapshot re-pinned 32 groups/87 rules: ruby backtick diverged from perl
+  on language-native #{} interpolation). Eval populations scored per cohort
+  (core 12/0/1 documented FP; sql-concat-xlang 16/0/0; cmd-injection
+  13/0/0; secret-userinfo 5/0/0; 46 TP / 0 FN / 1 FP totals; 11 UNASSSED
+  excluded; trap execution rate 32/32 = 100%). SoT audit: 0 orphans, 0
+  mirror mismatches, 0 unused patterns, 0 missing remediation. Coverage
+  ledger REPRODUCED — no requirement row moved; coverage stays **74.8%
+  (38.90/52)**. `requireGates()` fail-closed (4/4).

@@ -59,7 +59,7 @@ Shared base (all four types): packs 951 rules, patterns 951 (all referenced by a
 
 Tripwire line (format is load-bearing; read by `test-consistency`):
 
-matrix-counts: devLessons=2 studentLessons=6 securityTemplates=3 pentesterTemplates=2 remediation=953 patterns=953 records=913 cwe=61
+matrix-counts: devLessons=2 studentLessons=6 securityTemplates=3 pentesterTemplates=2 remediation=954 patterns=954 records=914 cwe=61
 
 **Gaps (not closed in Pump 3):**
 - DEVELOPER has 2 executable lessons; a broader developer curriculum needs new lesson files, which require explicit approval (new-file rule).

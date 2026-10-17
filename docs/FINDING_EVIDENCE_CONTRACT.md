@@ -47,6 +47,25 @@ where the evidence supports it. Who made a change and why are never inferred.
 - **Missing prior evidence:** malformed span records yield
   `NOT_OBSERVED_UNVERIFIED`, never a confirmed fix.
 
+### 2.2 Secret-candidate promotion states (Phase 9) — single vocabulary
+
+`scripts/secret-candidates.mjs` promotion states map onto this contract's
+`verification.state` — there is NO second status system:
+
+| Candidate promotion (`promoteCandidate`) | `verification.state` here | Meaning |
+| --- | --- | --- |
+| (evaluation state `CANDIDATE`) | `UNVERIFIED` | triage lead only — entropy/shape never confirms |
+| `UNRESOLVED` | `UNRESOLVED` | context/provenance missing, or verification not independent |
+| `VERIFIED` | `CONFIRMED` | contract-gated: independent rule family + exact span evidence |
+| `REJECTED` | `REJECTED` | documented structural/vocabulary rejection |
+
+Independent verification means a DIFFERENT detector family (pattern rule
+with rule id + version, exact `matchedText` inside a redacted evidence
+excerpt at a known path/line) — re-running the candidate heuristic, model
+assertions, test labels, or entropy alone are explicitly NOT verification
+(tested). Liveness/revocation/rotation verification is **NOT IMPLEMENTED**
+in Dataset scope; only the contract boundary exists.
+
 ## 3. Remediation-tracking statuses
 
 `classifyTransition(prevFinding, currScan, opts)` returns exactly one of:

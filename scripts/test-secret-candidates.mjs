@@ -20,6 +20,7 @@ import {
   SECRET_CANDIDATE_SCHEMA,
   evaluateSecretCandidate,
   fingerprint,
+  promoteCandidate,
   shannonEntropy,
   validateCandidate,
 } from './secret-candidates.mjs';
@@ -207,6 +208,68 @@ assert(results.find((r) => r.id === 'SYN-CAND-012').result.reason === 'low-entro
   assert(shannonEntropy('aaaaaaaa') === 0, 'entropy: constant string = 0');
   assert(validateCandidate({}).length > 0, 'schema: empty candidate rejected');
   assert(fingerprint('abcdef').startsWith('abcd…(len=6)'), 'redaction: fingerprint helper bounded');
+}
+
+// --- Phase 9: candidate -> finding promotion contract -------------------------
+// Ground truth: only method 'independent-rule-evidence' with rule identity and
+// exact span evidence may reach VERIFIED. Every other path is UNRESOLVED or
+// REJECTED. Expected outcomes declared here before execution.
+{
+  const good = CASES.find((c) => c.id === 'SYN-CAND-001');
+  const evaluation = evaluateSecretCandidate(good.make(good.value));
+  const base = good.make(good.value);
+  const R = (v) => promoteCandidate(base, evaluation, v);
+
+  // VERIFIED: independent rule family + exact span (matchedText inside excerpt).
+  const verified = R({
+    method: 'independent-rule-evidence', ruleId: 'DPK-SEC-106', ruleVersion: 1,
+    evidencePath: 'svc/config.py', evidenceLineNo: 3,
+    matchedText: 'DB_', evidenceExcerpt: assignmentEvidence('…redacted…'),
+  });
+  assert(verified.findingState === 'VERIFIED' && verified.verification.ruleId === 'DPK-SEC-106',
+    'promotion: independent rule evidence with exact span => VERIFIED', JSON.stringify(verified));
+  // Re-running the same heuristic is NOT independent verification.
+  for (const method of ['re-run-heuristic', 'entropy', 'model-assertion', 'test-label']) {
+    const un = R({ method });
+    assert(un.findingState === 'UNRESOLVED' && un.reason === 'not-independent-verification',
+      `promotion: ${method} is never independent verification`, JSON.stringify(un));
+  }
+  // Liveness is not implemented — contract boundary only.
+  const live = R({ method: 'liveness' });
+  assert(live.findingState === 'UNRESOLVED' && live.reason === 'verification-not-implemented',
+    'promotion: liveness verification NOT IMPLEMENTED (boundary only)', JSON.stringify(live));
+  // Incomplete independent evidence => UNRESOLVED (never invents).
+  assert(R(null).findingState === 'UNRESOLVED', 'promotion: absent verification => UNRESOLVED');
+  assert(R({ method: 'independent-rule-evidence', ruleId: 'DPK-SEC-106' }).reason === 'independent-evidence-incomplete',
+    'promotion: missing span/path/line => UNRESOLVED');
+  assert(R({ method: 'independent-rule-evidence', ruleId: 'DPK-SEC-106', evidencePath: 'a.py', evidenceLineNo: 1, matchedText: 'other', evidenceExcerpt: assignmentEvidence('…') }).reason === 'independent-evidence-incomplete',
+    'promotion: matchedText not inside excerpt => UNRESOLVED (exact-span required)');
+  // Unredacted evidence is refused.
+  assert(R({ method: 'independent-rule-evidence', ruleId: 'DPK-SEC-106', evidencePath: 'a.py', evidenceLineNo: 1, matchedText: 'DB_', evidenceExcerpt: assignmentEvidence(good.value) }).reason === 'evidence-not-redacted',
+    'promotion: raw value inside evidence excerpt => UNRESOLVED (redaction enforced)');
+  // REJECTED candidates stay rejected.
+  const bad = CASES.find((c) => c.id === 'SYN-CAND-005');
+  const badEval = evaluateSecretCandidate(bad.make(bad.value));
+  assert(promoteCandidate(bad.make(bad.value), badEval, { method: 'independent-rule-evidence', ruleId: 'DPK-SEC-1', evidencePath: 'a.py', evidenceLineNo: 1, matchedText: 'x', evidenceExcerpt: 'x' }).findingState === 'REJECTED',
+    'promotion: rejected candidate can never be promoted');
+  // Candidate state cannot be confused: unassessed evaluation never promotes.
+  const noCtx = CASES.find((c) => c.id === 'SYN-CAND-013');
+  const noCtxEval = evaluateSecretCandidate(noCtx.make(noCtx.value));
+  assert(promoteCandidate(noCtx.make(noCtx.value), noCtxEval, { method: 'independent-rule-evidence', ruleId: 'DPK-SEC-106', evidencePath: 'a.py', evidenceLineNo: 1, matchedText: 'DB_', evidenceExcerpt: assignmentEvidence('…') }).findingState === 'UNRESOLVED',
+    'promotion: UNASSSED evaluation (no context) never reaches VERIFIED');
+  // Determinism + leakage on failure paths and serialization.
+  const a1 = JSON.stringify(R({ method: 'model-assertion' }));
+  const a2 = JSON.stringify(R({ method: 'model-assertion' }));
+  assert(a1 === a2, 'promotion: deterministic across identical inputs');
+  const leakScan = [
+    JSON.stringify(verified), JSON.stringify(R(null)), JSON.stringify(live),
+    JSON.stringify(R({ method: 'independent-rule-evidence', ruleId: 'bad!', evidencePath: 'a.py', evidenceLineNo: 1, matchedText: 'x', evidenceExcerpt: 'x' })),
+  ].join('');
+  assert(!leakScan.includes(good.value) && !leakScan.includes('hG5nM2kP8rQ1wE7zX4cV6bN3mL9'),
+    'promotion: failure paths and outputs never contain raw values', '');
+  // Unknown/absent evaluation objects fail closed.
+  assert(promoteCandidate(base, null, { method: 'liveness' }).reason === 'invalid-evaluation',
+    'promotion: invalid evaluation fails closed');
 }
 
 process.stdout.write(`\nsecret-candidates: ${passed} passed, ${failed} failed\n`);

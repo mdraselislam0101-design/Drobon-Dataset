@@ -48,7 +48,7 @@ function assert(condition, name, detail = '') {
 // --- 1. committed corpus loads clean and the runner never rewrites it --------
 const before = loadCases(ROOT);
 assert(before.errors.length === 0, 'corpus: all committed cases load clean', before.errors.join(' | '));
-  assert(before.cases.length >= 51, `corpus: at least 51 cases present (got ${before.cases.length})`);
+  assert(before.cases.length >= 89, `corpus: at least 89 cases present (got ${before.cases.length})`);
 const runOnce = execFileSync(process.execPath, [join(ROOT, 'scripts', 'run-eval.mjs')], { cwd: ROOT, encoding: 'utf8' });
 const after = loadCases(ROOT);
 assert(
@@ -79,8 +79,8 @@ assert(
   'metrics: computed over assessed synthetic population only',
 );
 assert(
-    report.counts.truePositives === 28 && report.counts.falseNegatives === 0 && report.counts.falsePositives === 1,
-    'metrics: population counts pinned (28 TP / 0 FN / 1 documented FP — Phase 8 totals)',
+    report.counts.truePositives === 46 && report.counts.falseNegatives === 0 && report.counts.falsePositives === 1,
+    'metrics: population counts pinned (46 TP / 0 FN / 1 documented FP — Phase 9 totals)',
   JSON.stringify(report.counts),
 );
 
@@ -250,6 +250,16 @@ expectError((c) => { c.id = 'EVAL-1'; }, 'id: must match', 'regression: malforme
     && report.metricsByCohort?.['sql-concat-xlang']?.counts.falsePositives === 0,
     'populations: sql-concat-xlang cohort scored separately (16 TP / 0 FP)',
     JSON.stringify(report.metricsByCohort?.['sql-concat-xlang']));
+  assert(
+    report.metricsByCohort?.['cmd-injection']?.counts.truePositives === 13
+    && report.metricsByCohort?.['cmd-injection']?.counts.falsePositives === 0,
+    'populations: cmd-injection cohort scored separately (13 TP / 0 FP)',
+    JSON.stringify(report.metricsByCohort?.['cmd-injection']));
+  assert(
+    report.metricsByCohort?.['secret-userinfo']?.counts.truePositives === 5
+    && report.metricsByCohort?.['secret-userinfo']?.counts.falsePositives === 0,
+    'populations: secret-userinfo cohort scored separately (5 TP / 0 FP)',
+    JSON.stringify(report.metricsByCohort?.['secret-userinfo']));
   assert(report.byRule !== undefined && report.byLanguage !== undefined,
     'breakdown: per-rule and per-language results present');
   // Cohort labels: invalid cohort names rejected at load time.

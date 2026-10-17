@@ -171,3 +171,102 @@ export function evaluateSecretCandidate(candidate) {
     fingerprint: fingerprintValue,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Candidate -> evidence-gated FINDING promotion contract (Phase 9).
+//
+// State mapping to `drobon.finding.evidence/v1` verification.state (documented
+// in docs/FINDING_EVIDENCE_CONTRACT.md — one vocabulary, no duplicate system):
+//   CANDIDATE (here)  -> 'UNVERIFIED' (triage lead)
+//   UNRESOLVED        -> 'UNRESOLVED'
+//   VERIFIED (below)  -> 'CONFIRMED'
+//   REJECTED          -> 'REJECTED'
+//
+// A candidate NEVER becomes VERIFIED because of entropy, charset, length, a
+// regex hit, a synthetic test label, or an agent/model assertion. The only
+// implemented path to VERIFIED requires `verification.method =
+// 'independent-rule-evidence'`: a DIFFERENT detector family (pattern rule)
+// than the entropy/shape heuristic, with exact source-span evidence
+// (matchedText must appear in the evidence excerpt). Re-running the
+// candidate heuristic is explicitly NOT independent verification.
+//
+// Liveness/revocation/rotation verification is NOT IMPLEMENTED in Dataset
+// scope — the contract boundary is implemented and tested; actual live
+// credential verification remains an external engine capability.
+// ---------------------------------------------------------------------------
+export const PROMOTION_METHODS = Object.freeze([
+  'independent-rule-evidence', 're-run-heuristic', 'entropy', 'model-assertion',
+  'test-label', 'liveness',
+]);
+
+/**
+ * Promote a candidate evaluation using separately supplied verification
+ * evidence. Pure; never throws; never echoes raw values.
+ *
+ * Returns { findingState, reason, verification, notes, fingerprint }.
+ * findingState is one of VERIFIED | UNRESOLVED | REJECTED.
+ */
+export function promoteCandidate(candidate, evaluation, verification) {
+  const fingerprintValue = typeof candidate?.text === 'string' ? fingerprint(candidate.text) : null;
+  const notes = [];
+  if (evaluation === null || typeof evaluation !== 'object' || !CANDIDATE_STATES.includes(evaluation.state)) {
+    return { findingState: 'UNRESOLVED', reason: 'invalid-evaluation', verification: null, notes, fingerprint: fingerprintValue };
+  }
+  if (evaluation.state === 'REJECTED') {
+    return { findingState: 'REJECTED', reason: evaluation.reason ?? 'rejected-by-evaluation', verification: null, notes, fingerprint: fingerprintValue };
+  }
+  if (evaluation.state === 'UNASSESSED') {
+    notes.push('candidate was never assessed (context/provenance missing) — verification cannot bootstrap an assessment');
+    return { findingState: 'UNRESOLVED', reason: 'evaluation-unassessed', verification: null, notes, fingerprint: fingerprintValue };
+  }
+  if (verification === null || typeof verification !== 'object' || Array.isArray(verification)) {
+    return { findingState: 'UNRESOLVED', reason: 'verification-absent', verification: null, notes, fingerprint: fingerprintValue };
+  }
+  const method = verification.method;
+  if (method === 'liveness') {
+    notes.push('liveness/revocation verification is NOT IMPLEMENTED in Dataset scope');
+    return { findingState: 'UNRESOLVED', reason: 'verification-not-implemented', verification: { method }, notes, fingerprint: fingerprintValue };
+  }
+  if (['re-run-heuristic', 'entropy', 'model-assertion', 'test-label'].includes(method)) {
+    notes.push(`${method} is not independent verification of a secret finding`);
+    return { findingState: 'UNRESOLVED', reason: 'not-independent-verification', verification: { method }, notes, fingerprint: fingerprintValue };
+  }
+  if (method !== 'independent-rule-evidence') {
+    return { findingState: 'UNRESOLVED', reason: 'unknown-verification-method', verification: { method: safeText(method, 64) }, notes, fingerprint: fingerprintValue };
+  }
+  // Independent rule-evidence path: require rule identity + exact span.
+  const ruleId = verification.ruleId;
+  const pathOk = typeof verification.evidencePath === 'string' && verification.evidencePath.length > 0;
+  const lineOk = Number.isInteger(verification.evidenceLineNo) && verification.evidenceLineNo > 0;
+  const excerpt = typeof verification.evidenceExcerpt === 'string' ? verification.evidenceExcerpt : null;
+  const matchedText = typeof verification.matchedText === 'string' ? verification.matchedText : null;
+  const spanOk = excerpt !== null && matchedText !== null && excerpt.includes(matchedText);
+  if (typeof ruleId !== 'string' || !/^DPK-[A-Z]+-[0-9]+$/.test(ruleId) || !pathOk || !lineOk || !spanOk) {
+    notes.push('independent verification requires ruleId + evidencePath + evidenceLineNo + matchedText inside evidenceExcerpt');
+    return {
+      findingState: 'UNRESOLVED',
+      reason: 'independent-evidence-incomplete',
+      verification: { method, ruleId: safeText(ruleId, 32) ?? null },
+      notes,
+      fingerprint: fingerprintValue,
+    };
+  }
+  if (typeof candidate?.text === 'string' && excerpt.includes(candidate.text)) {
+    notes.push('evidence excerpt must stay redacted; raw candidate value found in excerpt');
+    return { findingState: 'UNRESOLVED', reason: 'evidence-not-redacted', verification: { method, ruleId }, notes, fingerprint: fingerprintValue };
+  }
+  notes.push('VERIFIED = contract-gated synthetic evidence check (independent rule + exact span); live-credential verification NOT IMPLEMENTED');
+  return {
+    findingState: 'VERIFIED',
+    reason: 'independent-rule-evidence-exact-span',
+    verification: {
+      method,
+      ruleId,
+      ruleVersion: Number.isInteger(verification.ruleVersion) && verification.ruleVersion > 0 ? verification.ruleVersion : null,
+      evidencePath: safeText(verification.evidencePath, 256),
+      evidenceLineNo: verification.evidenceLineNo,
+    },
+    notes,
+    fingerprint: fingerprintValue,
+  };
+}

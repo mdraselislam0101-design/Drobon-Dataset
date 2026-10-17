@@ -147,6 +147,14 @@ s-interp, `fmt.Sprintf`) are string-shape detectors, not data-flow analysis;
 cases whose truth depends on callee or cross-line semantics stay UNASSESSED
 (EVAL-SQL-027/028).
 
+## 3.3 Phase 9 note
+
+The candidate→finding promotion contract (`promoteCandidate`) implements an
+evidence-gated **verification boundary**, not semantic analysis: VERIFIED
+requires a different detector family with exact redacted span evidence;
+liveness/revocation verification remains **NOT IMPLEMENTED** (contract-only,
+tested). No capability in §1 changed.
+
 ## 4. Honest statement of what Phase 6 did and did not do
 
 - **Did:** evidence source-mapping implementation + tests; verification
