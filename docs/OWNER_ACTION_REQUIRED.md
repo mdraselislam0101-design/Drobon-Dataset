@@ -36,6 +36,12 @@ the reply must name the decider and date so the registers can record it.
 
 ### Original Drobon content
 - Fact: NO license grant exists (no LICENSE file; all rights reserved).
+- **DECIDED 2026-10-17: PROPRIETARY** — statement recorded verbatim in
+  `docs/LICENSE_DECISION_RECORD.md` §7 and in `docs/OWNER_DECISIONS.json`
+  (ORIGINAL_CONTENT `APPROVED`). Remaining: grant-text review
+  (PROPRIETARY_LICENSE_DRAFT stays DRAFT — NOT APPROVED), owner legal
+  name/jurisdiction, ownership/assignment evidence, per-class scope
+  confirmation. GATE-2 stays blocked meanwhile.
 - Decide: choose license(s) + scope per asset class (packs, remediation,
   lessons, templates, engagements, vectors, CWE summaries, planning docs),
   then add the grant file(s) and update the decision register + matrix.

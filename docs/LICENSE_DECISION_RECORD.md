@@ -23,8 +23,8 @@ In `docs/REQUIREMENTS_MATRIX.json`, `licenseStatus` is `VERIFIED` for **zero** a
 
 ## 4. Decision required (owner)
 
-1. Choose explicit license(s) for original dataset content and add the grant file(s).
-2. Confirm the upstream-terms handling for third-party records (per-source verification at the production stage; which sources are redistributable and under what attribution).
+1. Choose explicit license(s) for original dataset content and add the grant file(s). **[DECIDED 2026-10-17: PROPRIETARY — see section 7; grant text review and install still outstanding, so this record still shows no grant.]**
+2. Confirm the upstream-terms handling for third-party records (per-source verification at the production stage; which sources are redistributable and under what attribution). **[STILL REQUIRED — D-ORIG grants third-party nothing; see section 7.]**
 3. Only then: update this record, flip the matrix `licenseStatus` values with evidence, and re-run the suite.
 
 ## 5. Work allowed meanwhile
@@ -61,8 +61,7 @@ records what is ready for the owner so §4 can be answered with full evidence.
 
 ### 6.3 Unresolved rights, restrictions, uncertainties (all still open)
 
-1. No license chosen for original content (BLK-001); employer/contractor
-   assignment statement not on record.
+1. Original-content treatment chosen 2026-10-17 (proprietary, section 7); still missing: grant file text reviewed and installed, owner legal name/jurisdiction, employer/contractor assignment evidence (BLK-001 stays open until these land).
 2. GHSA redistribution `UNVERIFIED` in `vuln-intel/sources.json` — lay review
    ≠ counsel; counsel question quoted in packet D-2 field 12.
 3. OSV per-home terms unresolved; blanket inference is prohibited.
@@ -72,3 +71,37 @@ records what is ready for the owner so §4 can be answered with full evidence.
    replaced) recorded in packet addendum P1 — owner must answer with D-1/D-2.
 7. `verifiedProductionCount` remains 0 in all categories; the machine tripwire
    (`validate-corpus`/matrix license checks) stays armed.
+
+## 7. D-ORIG decision record — received and recorded 2026-10-17 (evidence pending)
+
+**Owner statement (verbatim, scope preserved):**
+> DROBON AEGIS Dataset D-ORIG owner decision: Proprietary — DROBON original
+> content remains under DROBON control; no redistribution except explicitly
+> authorized use. Third-party source rights remain separate and must be
+> verified.
+
+Source of the statement: the repository owner, in the working conversation
+(channel evidence; no signed instrument supplied). Recorded in
+`docs/OWNER_DECISIONS.json` (`ORIGINAL_CONTENT` → `APPROVED`, `decidedAt:
+2026-10-17`) — the schema-allowed values only. The `decider` field records the
+statement source ("repository owner"), **not** a verified personal/legal name.
+
+The five states, kept separate:
+
+| State | Status |
+|---|---|
+| 1. Owner decision received | **YES** — proprietary, 2026-10-17, verbatim above |
+| 2. Decision recorded in repository | **YES** — `OWNER_DECISIONS.json` + this record + checklist/packet annotated |
+| 3. Required supporting evidence | **PARTIAL** — present: owner statement. **Missing:** owner legal name/entity, jurisdiction, ownership/assignment (employer/contractor) evidence, reviewed grant text (PROPRIETARY_LICENSE_DRAFT stays `DRAFT — NOT APPROVED`), per-asset-class scope confirmation |
+| 4. Legal review | **OUTSTANDING** — no counsel review of the proprietary text; lay drafting only; not legal advice |
+| 5. Release gate status | **UNCHANGED / BLOCKED** — GATE-2 stays BLOCKED (no grant file, third-party rights open); G6/G16/G17 unchanged; no `LICENSE` file added; verifiedProduction stays 0 |
+
+Scope limits of this decision (absolute):
+
+- It grants **nothing to third parties**. GHSA/OSV/NVD/CWE rights remain
+  `UNVERIFIED` / `OWNER_DECISION_REQUIRED` (4/5) exactly as before.
+- Selecting proprietary treatment is **not** a license grant: absent a
+  reviewed grant file, the legal default remains all-rights-reserved.
+- Ownership is **not** legally proven by this record; assignment evidence is
+  marked unresolved (section 6.3).
+- No signature, legal name, or approval document is invented anywhere.

@@ -94,6 +94,22 @@ attribution/redistribution questions already listed in sections B–C —
 | ORIGINAL_CONTENT | If a grant is later replaced, what happens to copies distributed under the old grant (irrevocable vs prospective)? Owner should state this in the grant. |
 | All | Which re-review interval makes rights decisions go stale? (D-CADENCE; default while undecided: single-batch, non-extending) |
 
+## P2 — 2026-10-17 (later same day): D-ORIG RECORDED — evidence/review pending
+
+The owner supplied the D-ORIG decision in conversation (verbatim in
+`docs/LICENSE_DECISION_RECORD.md` §7): **PROPRIETARY** — DROBON original
+content stays under DROBON control; no redistribution except explicitly
+authorized use; third-party rights separate and must be verified.
+
+Recorded: `docs/OWNER_DECISIONS.json` `ORIGINAL_CONTENT` → `APPROVED`
+(`decidedAt: 2026-10-17`; `decider` = statement source, not a verified legal
+name). D-1 above moves from "waiting for a choice" to "waiting for evidence".
+
+Still open (unchanged): grant text review (draft stays **DRAFT — NOT
+APPROVED**), ownership/assignment evidence, legal review, D-2 third-party
+rights (4/5 `OWNER_DECISION_REQUIRED`), GATE-1/2/3/4 all BLOCKED, BLK-001..004
+open, verifiedProduction 0. D-ORIG grants third parties nothing.
+
 ## A. Executive decision summary
 
 **Current release verdict (unchanged, re-verified):** `BLOCKED — OWNER/PRODUCTION
@@ -188,10 +204,20 @@ Statuses use: `VERIFIED` · `RECOMMENDATION_ONLY` · `BLOCKED_OWNER_DECISION` ·
    with decider + date; matrix/NOTICE/LICENSE_DECISION_RECORD updated
    consistently; full suite re-run green.
 10. **Who decides:** repository owner (rights holder). Not agent-decidable.
-11. **Status:** `BLOCKED_OWNER_DECISION`.
-12. **Next action:** owner replies with option + decider + date.
-    Owner decision: ______________________  Decider: ____  Date: ____
-    Evidence ref: ______________________
+11. **Status:** `DECIDED 2026-10-17 — PROPRIETARY (evidence/review pending)`
+    (was `BLOCKED_OWNER_DECISION`; recorded in `docs/OWNER_DECISIONS.json`
+    `ORIGINAL_CONTENT: APPROVED`).
+12. **Next action:** remaining evidence, not more choosing: reviewed grant
+    text (PROPRIETARY_LICENSE_DRAFT stays `DRAFT — NOT APPROVED`), owner legal
+    name/jurisdiction, ownership/assignment evidence; then the §9 companion
+    updates (matrix flips + tripwire + suite). GATE-2 stays BLOCKED meanwhile.
+    Owner decision: **PROPRIETARY** — "DROBON original content remains under
+    DROBON control; no redistribution except explicitly authorized use.
+    Third-party source rights remain separate and must be verified."
+    (statement supplied in conversation, 2026-10-17)
+    Decider: repository owner (statement source; legal name not on record)
+    Date: 2026-10-17
+    Evidence ref: `docs/LICENSE_DECISION_RECORD.md` §7
 
 ### D-2 · Per-source redistribution rights (BLK-002) — GATE-2/G6/G17
 

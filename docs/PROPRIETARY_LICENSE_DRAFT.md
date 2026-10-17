@@ -10,6 +10,13 @@ if the owner approves it AND it is installed as the repository `LICENSE` file
 together with the matrix/license-record updates the validators require.
 Bracketed fields are UNKNOWN — never fill them with guesses.
 
+**Status note (2026-10-17):** the owner selected proprietary treatment
+(D-ORIG, statement recorded in `docs/LICENSE_DECISION_RECORD.md` §7). That
+selection does **not** activate this draft: it remains **DRAFT — NOT
+APPROVED**, bracketed fields remain UNKNOWN, ownership/assignment evidence is
+unresolved, and no counsel review exists. Only the approved workflow (reviewed
+grant text + matrix/license-record updates + suite green) can install it.
+
 ## 1. Proposed license text (draft)
 
 ```
