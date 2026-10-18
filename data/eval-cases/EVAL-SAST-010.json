@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "drobon.eval.case/v1",
+  "id": "EVAL-SAST-010",
+  "variant": "boundary",
+  "synthetic": true,
+  "testOnly": true,
+  "purpose": "Source and sink separated by an intermediate assignment (tainted = user_input).",
+  "language": "python",
+  "framework": null,
+  "mode": "line-regex",
+  "groundTruth": {
+    "state": "ASSESSED",
+    "class": "issue-present",
+    "rationale": "tainted receives request input unchanged; concatenating it into SQL is injectable. The flow is visible within one snippet (no interprocedural analysis required)."
+  },
+  "fixture": {
+    "name": "synthetic_eval_sast_010.txt",
+    "lines": [
+      "def get_user(cursor, user_input):",
+      "    tainted = user_input",
+      "    cursor.execute(\"SELECT * FROM users WHERE name = '\" + tainted + \"'\")",
+      "    return cursor.fetchall()"
+    ]
+  },
+  "expected": {
+    "detections": [
+      {
+        "ruleId": "DPK-SAST-283",
+        "lineNo": 3,
+        "mustContain": ".execute("
+      }
+    ],
+    "expectedCwe": "CWE-89"
+  },
+  "limitations": [
+    "Lexical shape detection; the in-snippet assignment flow is ground truth for this fixture only."
+  ],
+  "testCommand": "node scripts/run-eval.mjs --case EVAL-SAST-010",
+  "provenance": {
+    "origin": "original-authored",
+    "writtenFor": "Phase 7 Work B detection-quality closure",
+    "kind": "synthetic test fixture - NOT vulnerability intelligence",
+    "expectationAuthoredBeforeFirstRun": true
+  }
+}

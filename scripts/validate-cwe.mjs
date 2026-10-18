@@ -15,13 +15,20 @@ import { pathToFileURL } from 'node:url';
 import { checkBoundedText, readJsonFile } from './validate.mjs';
 
 export const CWE_SCHEMA = 'drobon.knowledge.cwe/v1';
+// Repo-pinned CWE catalog version (mirrors the doc pin in
+// docs/DATASET_APP_CONTRACT.md; test-consistency asserts the two agree).
+// This is the version the entries' ids/names/summaries were authored against.
+// Validation compares against THIS in-repo value only — no external catalog
+// is fetched and nothing here is "externally verified".
+export const CANONICAL_CWE_VERSION = '4.20';
 // Mirrors FINDING_CWE_PATTERN (Drobon app, packages/shared/src/scans.ts):
 // no leading zeros, so dataset ids always match app finding references.
 const CWE_ID_PATTERN = /^CWE-([1-9][0-9]{0,5})$/;
+const CWE_VERSION_PATTERN = /^[0-9]+\.[0-9]+$/;
 const MAX_NAME = 120;
 const MAX_SUMMARY = 500;
 
-const ALLOWED = ['schemaVersion', 'id', 'name', 'summary', 'url'];
+const ALLOWED = ['schemaVersion', 'id', 'name', 'summary', 'url', 'cweVersion'];
 
 export function validateCwe(value) {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
@@ -60,6 +67,13 @@ export function validateCwe(value) {
     const expected = number === null ? null : `https://cwe.mitre.org/data/definitions/${number}.html`;
     if (value['url'] !== expected) {
       errors.push(`url: must be the canonical MITRE page for this id (${expected ?? 'unknown'})`);
+    }
+  }
+  if (value['cweVersion'] !== undefined) {
+    if (typeof value['cweVersion'] !== 'string' || !CWE_VERSION_PATTERN.test(value['cweVersion'])) {
+      errors.push('cweVersion: must match ^[0-9]+\\.[0-9]+$ (e.g. "4.20")');
+    } else if (value['cweVersion'] !== CANONICAL_CWE_VERSION) {
+      errors.push(`cweVersion: must equal the repo-pinned catalog version "${CANONICAL_CWE_VERSION}" (got "${value['cweVersion']}")`);
     }
   }
   return errors;

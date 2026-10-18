@@ -14,7 +14,10 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 const REASONS_HEADER = '| id | source | reason | quarantinedAt |\n|---|---|---|---|\n';
 
 function safeFileStem(text) {
-  return String(text).replace(/[^A-Za-z0-9_.-]+/g, '_').slice(0, 120) || 'item';
+  const stem = String(text).replace(/[^A-Za-z0-9_.-]+/g, '_').slice(0, 120) || 'item';
+  // '.' and '..' survive the charset allowlist and would escape the quarantine
+  // directory when joined — never emit them as a path component.
+  return stem === '.' || stem === '..' ? 'item' : stem;
 }
 
 function escapeReason(reason) {

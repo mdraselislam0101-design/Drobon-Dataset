@@ -2,7 +2,7 @@
   "schemaVersion": "drobon.pack.sast/v1",
   "id": "DPK-SAST-283",
   "title": "SQL built by concatenation (python) — review required",
-  "description": "A python query call assembles SQL from parts: .executes*([^)]*(?:+|%s|.formats*(). If any part is untrusted input, the query structure itself is attacker-controlled. This lexical rule flags the assembly; the reviewer confirms every part is trusted or parameterizes it.",
+  "description": "A python query call assembles SQL from parts: .executes*((?:[^()]|([^()]*))*(?:+|%s|.formats*(|f[\"'][^)]*{. If any part is untrusted input, the query structure itself is attacker-controlled. This lexical rule flags the assembly; the reviewer confirms every part is trusted or parameterizes it.",
   "severity": "HIGH",
   "cwe": "CWE-89",
   "category": "sql-injection",
@@ -13,7 +13,7 @@
   ],
   "patterns": [
     {
-      "source": "\\.execute\\s*\\([^)]*(?:\\+|%\\s|\\.format\\s*\\()"
+      "source": "\\.execute\\s*\\((?:[^()]|\\([^()]*\\))*(?:\\+|%\\s|\\.format\\s*\\(|f[\"\\'][^)]*\\{)"
     }
   ],
   "tests": [
@@ -31,6 +31,26 @@
     },
     {
       "line": "# verified: cursor.execute(\"SELECT * FROM t\")",
+      "match": false
+    },
+    {
+      "line": "cursor.execute(build_query(user) + \" LIMIT 10\")",
+      "match": true
+    },
+    {
+      "line": "cursor.execute(f\"SELECT * FROM t WHERE n = '{user_input}'\")",
+      "match": true
+    },
+    {
+      "line": "cursor.execute(f\"SELECT COUNT(*) FROM t\")",
+      "match": false
+    },
+    {
+      "line": "cursor.execute(build_sql(user))",
+      "match": false
+    },
+    {
+      "line": "cursor.execute(sql, (user_input,))",
       "match": false
     }
   ],

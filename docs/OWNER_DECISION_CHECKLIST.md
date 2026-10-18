@@ -13,6 +13,11 @@ stays `OWNER_DECISION_REQUIRED` / `BLOCKED`. States: `BLOCKED` (no path),
 `READY_FOR_OWNER_REVIEW` (evidence ready, awaiting your answer below),
 authorized (your recorded answer + green suite — nothing is there yet).
 
+Working briefs for every open item (rights matrices, alternatives, the
+review-ready D-STAGE form, cadence options): `docs/OWNER_DECISION_PACKET.md`
+section G (prepared 2026-10-17). Each brief marks what evidence exists vs
+what is missing; none of them is a decision.
+
 ## D-GHSA — GitHub reviewed advisories (npm + PyPI)
 
 Facts: upstream repo says CC-BY-4.0 (credit + license link + change notes).
@@ -69,6 +74,16 @@ CWE summaries, and planning docs.
 - B: Keep all rights reserved (no reuse by others). Consequence: content
   stays project-internal; distribution stays blocked.
 - C: Different licenses per asset class: ___ (list them).
+
+**ANSWER RECORDED 2026-10-17** (owner statement in conversation, verbatim in
+`docs/LICENSE_DECISION_RECORD.md` §7): **PROPRIETARY** — "DROBON original
+content remains under DROBON control; no redistribution except explicitly
+authorized use. Third-party source rights remain separate and must be
+verified." This is the proprietary/all-rights-reserved direction (B-style
+treatment with explicitly-authorized-use carve-out). **Not yet in effect as a
+grant:** grant text unreviewed (PROPRIETARY_LICENSE_DRAFT stays DRAFT — NOT
+APPROVED), no LICENSE file installed, ownership evidence outstanding. Third
+parties (D-GHSA/D-OSV/D-NVD/D-CWE) are unaffected and stay undecided.
 
 ## D-STAGE — production-data stage approval (GATE-1)
 

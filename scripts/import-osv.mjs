@@ -281,9 +281,19 @@ export async function fetchOsvForPackage(name, ecosystem, options = {}) {
   }
   const vulns = [];
   let pageToken = null;
+  const seenTokens = new Set();
   for (let page = 0; page < maxPages; page += 1) {
     const body = { package: { name, ecosystem }, page_size: 100 };
     if (pageToken !== null) {
+      if (seenTokens.has(pageToken)) {
+        // Repeated-cursor guard: a looping page_token would re-fetch the same
+        // page and shard-duplicate its records. Stop fail-closed.
+        if (typeof options.onNote === 'function') {
+          options.onNote(`repeated page_token guard: stopping after token repeat for ${name}`);
+        }
+        break;
+      }
+      seenTokens.add(pageToken);
       body.page_token = pageToken;
     }
     const parsed = await withRetries(async () => {
@@ -305,6 +315,15 @@ export async function fetchOsvForPackage(name, ecosystem, options = {}) {
     }
     pageToken = parsed.next_page_token ?? null;
     if (pageToken === null) {
+      break;
+    }
+    // No-progress guard: a next_token equal to the one we just spent means the
+    // cursor is looping; stop instead of re-fetching the same page.
+    const spentToken = body.page_token ?? null;
+    if (spentToken !== null && pageToken === spentToken) {
+      if (typeof options.onNote === 'function') {
+        options.onNote(`repeated page_token guard: next_page_token equals sent token, stopping for ${name}`);
+      }
       break;
     }
   }

@@ -36,6 +36,12 @@ the reply must name the decider and date so the registers can record it.
 
 ### Original Drobon content
 - Fact: NO license grant exists (no LICENSE file; all rights reserved).
+- **DECIDED 2026-10-17: PROPRIETARY** — statement recorded verbatim in
+  `docs/LICENSE_DECISION_RECORD.md` §7 and in `docs/OWNER_DECISIONS.json`
+  (ORIGINAL_CONTENT `APPROVED`). Remaining: grant-text review
+  (PROPRIETARY_LICENSE_DRAFT stays DRAFT — NOT APPROVED), owner legal
+  name/jurisdiction, ownership/assignment evidence, per-class scope
+  confirmation. GATE-2 stays blocked meanwhile.
 - Decide: choose license(s) + scope per asset class (packs, remediation,
   lessons, templates, engagements, vectors, CWE summaries, planning docs),
   then add the grant file(s) and update the decision register + matrix.
@@ -57,6 +63,26 @@ the reply must name the decider and date so the registers can record it.
 All production ingestion (importers exit 1), all per-category volume
 promises (volumes stay null / NOT_MEASURED), and any release (NO-GO).
 Synthetic rehearsals continue; they never count toward production.
+
+## 4. Prepared decision packages (2026-10-17 blocker-resolution pump)
+
+The evidence each decision above needs is now prepared — nothing is decided
+by preparing it:
+
+- GATE-1 approval template (fill every field): `docs/INGESTION_PROTOCOL.md` §12
+- GATE-3 reviewer checklist + package + sign-off format: `docs/REVIEW_PACKAGE.md`
+- GATE-4 provider acceptance requirements (P1–P9):
+  `docs/DATASET_APP_CONTRACT.md` §9
+- Per-source rights checklist: `docs/SOURCE_RELEASE_GATE.md` S1–S6;
+  draft grant (**DRAFT — NOT APPROVED**): `docs/PROPRIETARY_LICENSE_DRAFT.md`
+- Source-liveness/staleness design + cadence record (D-CADENCE fills
+  `docs/INGESTION_PROTOCOL.md` §13.3): §13
+- Per-subject open questions incl. retention: `docs/OWNER_DECISION_PACKET.md`
+  addendum P1; blocker details + verification commands:
+  `docs/BLOCKER_REGISTER.json`
+
+Reply format reminder: decision ID + choice + decider + date (see
+`docs/OWNER_DECISION_CHECKLIST.md` header).
 
 ## 6. Pump 5 owner decisions (2026-10-15)
 

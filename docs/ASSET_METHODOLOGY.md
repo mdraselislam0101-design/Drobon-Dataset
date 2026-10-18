@@ -1,4 +1,4 @@
-# ASSET_METHODOLOGY.md — how the generated intelligence set is authored (950 pack rules, 950 patterns, 910 generated records)
+# ASSET_METHODOLOGY.md — how the generated intelligence set is authored (953 pack rules, 953 patterns, 913 generated records)
 
 Date: 2026-10-15. This document states the authoring method so an auditor
 can tell systematic original work from padding. The generator
@@ -7,7 +7,7 @@ writes comes from hand-designed cell data (`data/asset-cells/*.json`) plus
 fixed composition templates. Nothing is fetched, copied, or inferred from
 third-party rule sets.
 
-## 1. One cell = one detection purpose = three assets
+## 1. One cell = one detection purpose = four assets
 
 A cell is a (vulnerability class, language/tool) pair, e.g.
 `sast:weak-hash-md5:java`. Each passing cell produces exactly:

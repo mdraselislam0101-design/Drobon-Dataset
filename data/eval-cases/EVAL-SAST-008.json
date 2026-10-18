@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "drobon.eval.case/v1",
+  "id": "EVAL-SAST-008",
+  "variant": "mutation",
+  "synthetic": true,
+  "testOnly": true,
+  "purpose": "Keyword trap: dangerous pattern quoted inside a docstring on one line, real issue on the next (evidence-line precision).",
+  "language": "python",
+  "framework": null,
+  "mode": "line-regex",
+  "groundTruth": {
+    "state": "ASSESSED",
+    "class": "issue-present",
+    "rationale": "Only line 3 executes string-built SQL; line 2 merely quotes the pattern in documentation. Ground truth: one issue at line 3; a match at line 2 is a false positive even though the keywords are present there."
+  },
+  "fixture": {
+    "name": "synthetic_eval_sast_008.txt",
+    "lines": [
+      "def get_item(cursor, user_input):",
+      "    \"\"\"Never do cursor.execute(\"SELECT \" + user_input) in production code.\"\"\"",
+      "    cursor.execute(\"SELECT * FROM items WHERE sku = '\" + user_input + \"'\")",
+      "    return cursor.fetchone()"
+    ]
+  },
+  "expected": {
+    "detections": [
+      {
+        "ruleId": "DPK-SAST-283",
+        "lineNo": 3,
+        "mustContain": ".execute("
+      }
+    ],
+    "expectedCwe": "CWE-89"
+  },
+  "limitations": [
+    "This case exists to prove the runner scores exact line evidence, not keyword presence. Lexical detectors are expected to produce the documented docstring false positive — the report must say so honestly."
+  ],
+  "testCommand": "node scripts/run-eval.mjs --case EVAL-SAST-008",
+  "provenance": {
+    "origin": "original-authored",
+    "writtenFor": "Phase 6 Work A synthetic evaluation foundation",
+    "kind": "synthetic test fixture - NOT vulnerability intelligence",
+    "expectationAuthoredBeforeFirstRun": true
+  }
+}

@@ -21,12 +21,12 @@ What lives where (by design — proven in `docs/SCOPE.md` by inventorying every 
 ## Data
 
 - **Production-data lock in force**: catalog expansion (GHSA/OSV/CVE/KEV/EPSS/…) is blocked until the authorized production stage — see `docs/INGESTION_PLAN.md`. The seed below is preserved as-is and assessed read-only.
-- **100 reviewed GHSA seed records** (50 npm + 50 pypi), imported 2026-10-14 via `scripts/import-ghsa.mjs` — reviewed advisories only, withdrawn excluded, every record with source URL + retrieval time.
+- **100 reviewed GHSA seed records** (50 npm + 50 pypi), imported 2026-10-14 via `scripts/import-ghsa.mjs` — reviewed advisories only, withdrawn excluded, every record with source URL + retrieval time. Counting vocabulary (enforced by `docs/COUNTING_POLICY.md`): these 100 **files** collapse to **78 unique GHSA advisory ids** and **84 unique advisory-package items** (identity = `(source, id, ecosystem, package)`); split `--N` shards share one identity and are never counted as separate items.
 - **3 synthetic fixtures** (`*/samples/`, `DROBON-SAMPLE-###`) proving format/validator behavior; they assert nothing about the real world.
-- **950 pack rules** (792 SAST + 93 secrets + 65 DAST), all original Drobon content with executable example tests — no proprietary rule was copied from any commercial tool, ever.
-- **950 remediation entries** — one per pack rule, enforced by consistency tests (no finding without guidance).
+- **954 pack rules** (792 SAST + 97 secrets + 65 DAST), all original Drobon content with executable example tests — no proprietary rule was copied from any commercial tool, ever.
+- **954 remediation entries** — one per pack rule, enforced by consistency tests (no finding without guidance).
 - **61 CWE knowledge entries** in our own words (60 earlier entries, plus CWE-117 added as a pack CWE in the log-forging batch; the app-referenced split was not re-derived), each linking its canonical MITRE page; every CWE reference in packs/remediation resolves here (enforced; see REQ-CWE-01 in `docs/REQUIREMENTS_MATRIX.json`).
-- **10 audience starters**: 5 executable lessons (Student contract; 2 are developer-focused `lsn_dev_*`), 3 assessment templates (Security Professional), 2 passive-only engagement templates (Pentester).
+- **11 audience starters**: 6 executable lessons (Student contract; 2 are developer-focused `lsn_dev_*`), 3 assessment templates (Security Professional), 2 passive-only engagement templates (Pentester).
 - **OSV importer** (`scripts/import-osv.mjs`) for open aggregated data (mapping covered by fixture tests; live import needs network to api.osv.dev).
 - Coverage is a **growing seed, never a completeness claim**: an empty result means "not in this dataset", never "not vulnerable" (HONESTY.md rule 5).
 
@@ -56,6 +56,8 @@ Drobon-Dataset/
 │   ├── sast/v1/ + secrets/v1/ + dast/v1/  # pack.json + rules/*.json (one rule per file)
 ├── knowledge/
 │   ├── remediation/           # Remediation entries, one file per rule id
+│   ├── patterns/              # Generated detection patterns (DPK-PAT-*); examples are executed
+│   ├── records/               # Generated concept records (DPK-REC-*)
 │   └── cwe/                   # CWE reference entries, one file per CWE id
 ├── learning/lessons/          # Student lessons, one file per lsn_* id
 ├── assessments/templates/     # Assessment templates, one file per tmpl_* id
@@ -63,6 +65,7 @@ Drobon-Dataset/
 ├── interop/
 │   └── provider-vectors.json  # Pinned coordinate → advisory-id expectations
 ├── data/
+│   ├── asset-cells/           # Hand-designed generator cell data + .manifest.json (stable ID ledger)
 │   └── osv-seed-packages.json # Curated package list for the OSV importer
 ├── scripts/
 │   ├── validate.mjs           # Zero-dependency advisory validator (executable spec)
@@ -71,13 +74,17 @@ Drobon-Dataset/
 │   ├── validate-cwe.mjs       # Zero-dependency CWE validator (checks MITRE links)
 │   ├── validate-matrix.mjs    # Zero-dependency requirements-matrix validator (recomputes counts)
 │   ├── range.mjs              # semver / PEP 440 range syntax + evaluation
-│   ├── import-ghsa.mjs        # Reviewed-GHSA importer (validates before writing)
+│   ├── import-ghsa.mjs        # Reviewed-GHSA importer (paginated, retrying, validates before writing)
 │   ├── import-osv.mjs         # OSV importer (fixture-tested mapping)
+│   ├── generate-assets.mjs    # Deterministic cell compiler (cells → rules/patterns/records/remediation)
 │   ├── check-vectors.mjs      # Provider interop checker
 │   ├── test.mjs               # Test runner part 1 (advisories + ranges + layout + vectors)
 │   ├── test-packs.mjs         # Test runner part 2 (packs + negatives + OSV mapping)
 │   ├── test-audiences.mjs     # Test runner part 3 (audiences + negatives)
-│   └── test-consistency.mjs   # Test runner part 4 (cross-dataset integrity + coverage)
+│   ├── test-consistency.mjs   # Test runner part 4 (cross-dataset integrity + coverage)
+│   ├── test-assets.mjs        # Test runner part 5 (pattern/record executability + linkage)
+│   ├── test-rehearsal.mjs     # Test runner part 6 (1K/10K synthetic ingestion rehearsal, tmp only)
+│   └── test-doc-drift.mjs     # Documentation-count drift gate (docs vs recomputed files)
 ├── test/
 │   ├── invalid/               # Advisory fixtures the validator MUST reject
 │   ├── invalid-packs/         # Pack fixtures the pack validator MUST reject
@@ -88,6 +95,8 @@ Drobon-Dataset/
 │   └── fixtures/              # OSV mapping fixtures (synthetic API-shaped input)
 └── .github/workflows/ci.yml   # CI: npm test + all validators + vectors
 ```
+
+Counts stated in this README and in `docs/CORPUS_GAP_REPORT.md`, `docs/CAPABILITY_COVERAGE.md`, `docs/REQUIREMENTS_MATRIX.json`, and `docs/CORPUS_TARGETS.json` are recomputed from files and enforced by `npm run test:drift` (`scripts/test-doc-drift.mjs`) — a stale count fails CI.
 
 ## Honesty rules (short version)
 
