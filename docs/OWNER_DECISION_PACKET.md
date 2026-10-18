@@ -689,3 +689,176 @@ Intelligence Lock and workstream separation remain active throughout.
 or publication (G17 + separate release authorization).
 **What D-1 + D-2 + GATE-1 + GATE-3 unlock:** a single authorized production
 batch (dry-run first), whose evidence can then feed a G17 re-run.
+
+---
+
+## G. Decision working briefs (prepared 2026-10-17 pump) — NONE decided here
+
+Working papers for the owner (+ counsel where noted). Every brief separates
+**available evidence** from **missing evidence** and stops at the decision
+boundary. No brief below is an approval; statuses in `docs/OWNER_DECISIONS.json`
+stay exactly as they are (4/5 `OWNER_DECISION_REQUIRED`) until the owner
+supplies a decision in the approved record format.
+
+### G1 · D-GHSA — rights separation and counsel brief (BLK-002, row C1)
+
+Rights matrix — each right is separate; none is inferred from another:
+
+| Right | Current evidence status | Basis |
+|---|---|---|
+| Access / retrieve | Available: public API (`gh api /advisories`, reviewed-only); importer staged, mocked-tested | GitHub API access is open; ToU applies to API use |
+| Transform (normalize/schema) | Available: documented normalization (`INGESTION_PROTOCOL` §3); no upstream text modified beyond field mapping | lay reading of CC-BY-4.0 modification terms — **not counsel-confirmed** |
+| Store (internal retention) | **UNVERIFIED** for production use; frozen 100-file seed exists as structurally validated corpus only | `sources.json` `redistribution: UNVERIFIED` |
+| Redistribute / publish | **BLOCKED** — unresolved interpretation for commercial SCA embedding | lay review ≠ counsel; GATE-2 open |
+| Commercial use | **UNVERIFIED** — lay reading says permitted with BY conditions; counsel confirmation missing | `LICENSE_REVIEW.md` §1 (evidence only) |
+
+Provenance requirements the design already imposes (record-level): `source`,
+`sourceUrl` (exact advisory), `retrievedAt`, resolved `license` — validator-
+enforced. Batch-level (if ever authorized): CC-BY-4.0 credit = source link +
+license link + change notes (`INGESTION_PROTOCOL` §4). Withdrawn advisories
+excluded always; per-batch license-field resolution mandatory.
+
+Verified facts: upstream repo publishes CC-BY-4.0 (LICENSE.md of
+github/advisory-database, read 2026-10-14). Unverified/missing: counsel
+opinion on the exact use; GitHub API ToU acceptance posture for batch
+retrieval at scale; owner acceptance of BY obligations in the product's
+notice surface.
+
+**Counsel question (verbatim, unchanged):** "does CC-BY-4.0 as published in
+github/advisory-database permit redistribution of reviewed-only advisory
+records in a commercial SCA product with per-record attribution + license
+link + change notes?"
+
+Options: (A) authorize GHSA batches with full BY obligations — consequence:
+unlocks GHSA pilot after D-STAGE/D-REVIEW; (B) counsel review first —
+consequence: waits; (C) no GHSA — consequence: excluded fail-closed.
+**Status: `OWNER INPUT REQUIRED` + counsel review recommended. Redistribution
+stays blocked meanwhile.**
+
+### G2 · D-OSV — home-terms policy brief (BLK-002, row C2)
+
+Verified facts: OSV has **no single license**; each record inherits its home
+database's terms (GHSA/PYSEC → CC-BY-4.0; CVE-from-NVD → public domain, per
+lay review). Importer staged, fixture-tested, startup fail-closed. 0 records
+imported. Missing: an owner policy for which home terms are acceptable and
+who resolves unmapped homes.
+
+Minimum policy decision needed to allow any source: (1) the acceptable
+home-terms set, (2) the resolver for unmapped homes, (3) confirmation that
+unmapped/unresolved homes are excluded fail-closed (already implemented).
+
+Alternatives:
+
+| Option | Policy | Consequence |
+|---|---|---|
+| A | Allow-list of home terms (e.g. CC-BY-4.0 + public-domain homes only) | OSV pilot possible for listed homes; everything else excluded automatically |
+| B | Per-batch approval of the home-terms list | slower, batch-by-batch; owner sees every mix |
+| C | No OSV | excluded entirely; GHSA path unaffected |
+
+**Status: `OWNER INPUT REQUIRED`. Fail-closed exclusion of unresolved homes is
+implemented and stays. No approved-homes list exists or is invented.**
+
+### G3 · D-NVD — terms, notices, intended use (BLK-002, row C3)
+
+Three separate layers, never conflated:
+
+| Layer | Fact | State |
+|---|---|---|
+| Data status | U.S. public domain (17 USC) | verified (lay reading) |
+| API terms | ToU applies to keyed API use; rate limits 5/50 per 30s | **not accepted by anyone** — accepting is an owner act |
+| Product notice | "This product uses data from the NVD API but is not endorsed or certified by the NVD." required with any use | placement decision **outstanding** |
+
+Also outstanding: a verified consumer need (none documented today; the SCA
+seam is fed by GHSA/OSV-class records). No key exists; no importer run; no
+records.
+
+Minimal decision: (A) declare no need — NVD stays blocked, zero cost; or
+(B) declare need `___`, authorize API-key acquisition under the ToU, approve
+notice placement — opens the pilot path (still needs D-STAGE/D-REVIEW).
+**Status: `OWNER INPUT REQUIRED`. Terms are NOT accepted on the owner's
+behalf; no NVD data imported.**
+
+### G4 · D-CWE — scope and version review (BLK-002, row C4)
+
+What is what in `knowledge/cwe/` (61 entries):
+
+| Content | Origin |
+|---|---|
+| Ids, names, category labels | MITRE identifiers used nominatively (facts) |
+| Definition summaries | **original DROBON wording** (no MITRE prose copied) |
+| Canonical URLs | links to MITRE pages (no copies) |
+| `cweVersion: "4.20"` | pin of the relationship data we read (D-16); repo-local consistency only |
+
+Open questions: (1) acknowledgment that the own-words-plus-links scope needs
+no further clearance (checklist D-CWE A/B); (2) whether each CWE version bump
+(4.20 → future) requires re-review of the relationships we derive — proposed
+default: yes, re-review at bump, owner confirms; (3) verbatim copying is
+out of scope and would need fresh review. MITRE ToU requires reproducing the
+notice on copies — we copy no text today, and `docs/NOTICE` records the
+position. **Status: `OWNER INPUT REQUIRED` (acknowledgment). Rights questions
+are NOT deemed resolved by paraphrase+links.**
+
+### G5 · D-STAGE — review-ready GATE-1 approval form (prepared; unfilled = not approved)
+
+Pre-filled from current evidence (protocol §12 template; blanks are the
+decision itself):
+
+| Field | Value |
+|---|---|
+| Approval scope | PROPOSED: production ingestion of ONE named batch only (dry-run first). Redistribution NO (until D-2). Publication NO. |
+| Stage | `production-batch-<id>` — batch id assigned at approval (window named in the approval) |
+| Sources in scope | PROPOSED: GHSA reviewed-only (npm+PyPI), withdrawn-excluded — **effective only if D-2 GHSA authorized** |
+| Asset classes | `advisory-record` only |
+| Excluded sources | NVD, KEV, EPSS, commercial feeds, OSV (unless D-2 authorizes listed homes) |
+| Maintainer | `________` (owner names the operator) |
+| License basis per source | `________` (cites D-2 outcome + counsel note ref) |
+| Conditions | dry-run first; ≤ 500 candidates (protocol §10 default); every sourceUrl opened (GATE-3); quarantine handling per §9 |
+| Rollback criteria | any gate failure, manifest mismatch, or quarantined conflict ⇒ batch discarded fail-closed; corpus pinned to last good state (protocol §5) |
+| Production-lock conditions | `requireGates()` must pass (all 4 gates evidenced); verifiedProduction counts only post-gate per COUNTING_POLICY; publication separately authorized |
+| Expiry / re-review | `________` (default while D-4 undecided: single-batch, non-extending) |
+| Prohibited actions | no Main App changes, no production DB, no VPS upload, no bundling, no release/tag |
+| Approver / date | `________` / `________` — **blank = not approved** |
+
+**Status: `OWNER INPUT REQUIRED` (signature fields). A prepared form is not
+an approval; GATE-1 stays BLOCKED.**
+
+### G6 · D-REVIEW — independent review scope and independence brief (GATE-3)
+
+Review scope (what the independent reviewer does): (1) per-record provenance
+verification of every batch record against its sourceUrl (HONESTY.md
+checklist); (2) rights/provenance evidence review for D-2 rows touched by the
+batch; (3) known-FP and UNASSESSED honesty check (EVAL-SAST-008; 11 cases);
+(4) production-lock and counting-policy conformance; (5) findings recorded in
+the REVIEW_PACKAGE.md §4 format.
+
+Independence requirements (conflicts of interest): the reviewer must not be —
+the author of the reviewed material; the executing agent of this workstream
+(AI self-check is explicitly not independent review); a party with financial
+interest in the publication outcome beyond ordinary employment by the owner
+(declare any relationship). Reviewer qualification: able to read upstream
+advisories and license terms in their source language; no legal credential
+required for provenance review, but rights findings should be flagged for
+counsel, not decided by the reviewer.
+
+Required evidence: identity + capacity commitment + HONESTY.md acknowledgment
++ the completed review record (REVIEW_PACKAGE.md §4). Missing today: all of
+it — no reviewer exists. **Status: `INDEPENDENT REVIEW REQUIRED` — owner must
+name the reviewer and obtain the commitment; GATE-3 stays BLOCKED.**
+
+### G7 · D-CADENCE / retention / staleness — policy brief (BLK-004)
+
+All values below are **unset — `OWNER INPUT REQUIRED`**; none is invented:
+
+| Dimension | Options (consequences) | Value |
+|---|---|---|
+| Update cadence | manual-per-batch (owner-gated, slow) / scheduled (needs automation + owner-set interval) / event-driven (upstream change triggers review) | `UNDECIDED` |
+| Source-liveness & revocation | design exists (protocol §13.1 response table); **implementation absent** (NOT_IMPLEMENTED) — behavior on change: quarantine until re-cleared | policy confirmation needed |
+| Max acceptable staleness of rights reviews | e.g. re-review every N months; stale ⇒ treat as UNVERIFIED again (design §13.2) | `UNDECIDED` |
+| Behavior when freshness cannot be verified | proposed default: fail-closed (treat as stale/blocked) — owner confirms | `UNDECIDED` |
+| Retention/deletion of records & audit evidence | default posture in-repo: retain for the life of the corpus version (protocol §11); deletion only on quarantine disposition with a note | `UNDECIDED` |
+| Upstream terms change / source withdrawn | response table prepared (§13.1); owner confirms the revoke-response is acceptable | `UNDECIDED` |
+| Auditability / reproducibility | existing: manifests, batch records, gate transcripts, determinism digests — retained per §11; confirm duration | `UNDECIDED` |
+
+Source-liveness/revocation is **NOT implemented** (no checker, no tests) —
+prepared design only (protocol §13, acceptance criteria §13.4). **Status:
+`OWNER INPUT REQUIRED` for every value; BLK-004 stays open.**
