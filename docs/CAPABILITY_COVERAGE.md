@@ -25,11 +25,11 @@ name the script that re-verifies the claim on every run.
 | Assistant knowledge | NOT_REQUIRED | deterministic over persisted state | - |
 | Report content | NOT_REQUIRED | pure renderers | - |
 | Zero-match semantics | APP_DECISION | `ScaDatasetStatus` has no "clean" value | - (app-repo design) |
-| Pack/audience/provider loaders | APP_DECISION | contracts documented, no loaders exist | docs (PACKS/AUDIENCES/PROVIDER_MAPPING) |
+| Pack/audience/provider loaders | APP_DECISION | **landed in the app 2026-10-20** (filesystem provider + pack/lesson providers); conformance gaps GAP-040…GAP-048 | docs (PACKS/AUDIENCES/PROVIDER_MAPPING), docs/APP_CONNECTION_VERIFICATION_2026-10-21.md |
 
 No schema or compatibility changes are required on the dataset side: record
 bounds, enums, and the record-to-advisory projection mirror the app contracts
-(verified 2026-10-14 at `c32c797`; NOT re-verified in Pump 4). Dataset counts re-derived again 2026-10-20 after the DAST capability-aligned expansion (SAST 950; secrets 97; DAST 263; lessons 6; pack total 1310) and pin-checked by `scripts/test-current-state.mjs`; app-side engine facts re-read at `c32c797` on 2026-10-14/16 and unchanged at 2026-10-18 (counts above corrected where stale). Re-verify this table at each app re-check.
+(verified 2026-10-21 at `9360dd1`). Dataset counts re-derived again 2026-10-20 after the DAST capability-aligned expansion (SAST 950; secrets 97; DAST 263; lessons 6; pack total 1310) and pin-checked by `scripts/test-current-state.mjs`; app-side engine facts re-read at `9360dd1` on 2026-10-21 by the connection audit (docs/APP_CONNECTION_VERIFICATION_2026-10-21.md). Re-verify this table at each app re-check.
 
 ## Canonical row-level matrix (2026-10-18)
 
@@ -37,7 +37,8 @@ This table states per-capability verdicts. The row-level matrix with stable
 `DCC-*` ids, asset references, relationships, evaluation evidence, rights and
 integration status is `docs/CAPABILITY_COVERAGE_MATRIX.json` (rendered to
 `docs/CAPABILITY_COVERAGE_MATRIX.md`) and is gated by
-`scripts/validate-capability-coverage.mjs`. Summary at 2026-10-18: 33 rows —
-2 COVERED_VERIFIED, 7 APP_INTEGRATION_BLOCKED, 1 RIGHTS_BLOCKED,
-23 NOT_APPLICABLE. A capability is never marked covered from rule counts alone,
+`scripts/validate-capability-coverage.mjs`. Summary at 2026-10-21 (App `9360dd1`):
+33 rows — 2 COVERED_VERIFIED, 7 PARTIAL (integration verified, measured gaps open),
+1 RIGHTS_BLOCKED (SCA production intelligence), 1 OWNER_DECISION_BLOCKED (the App's new
+active-DAST surface), 22 NOT_APPLICABLE. A capability is never marked covered from rule counts alone,
 and an App implementation gap is not recorded as a Dataset defect.

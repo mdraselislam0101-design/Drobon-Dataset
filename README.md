@@ -2,13 +2,13 @@
 
 Standalone **vulnerability-intelligence dataset + rule packs + user-type datasets** for [Drobon Aegis](https://github.com/mdraselislam0101-design/Drobon) (the `Drobon` app) — the project's datacenter: every external data need of the main app, versioned, validated, and cross-checked here.
 
-This repository exists because the app enforces an **absolute dataset lock**: no CVE / NVD / GHSA / OSV / KEV / EPSS data may ever enter the app repository — not vendored, not embedded, not synthesized. The app's SCA engine stays fully usable without any dataset (inventory + SBOM) and honestly reports `NOT_ASSESSED` until a real provider matches records from **loaded data**. This repo is where that loaded data lives, versioned and reviewable on its own — alongside versioned, tested **rule packs** (SAST, secrets, DAST patterns-as-data) and **audience datasets** (remediation knowledge, CWE reference, student lessons, assessment and engagement templates) for future app-side loaders.
+This repository exists because the app enforces an **absolute dataset lock** (data lives here, never in the app repo): no CVE / NVD / GHSA / OSV / KEV / EPSS data may ever enter the app repository — not vendored, not embedded, not synthesized. The app's SCA engine stays fully usable without any dataset (inventory + SBOM) and honestly reports `NOT_ASSESSED` until a real provider matches records from **loaded data**. This repo is where that loaded data lives, versioned and reviewable on its own — alongside versioned, tested **rule packs** (SAST, secrets, DAST patterns-as-data) and **audience datasets** (remediation knowledge, CWE reference, student lessons, assessment and engagement templates) for future app-side loaders.
 
 ## Sibling repositories
 
 | Repository | Holds | This repo's relation to it |
 |---|---|---|
-| [`Drobon`](https://github.com/mdraselislam0101-design/Drobon) | The main app (API, Web, Worker, scanners, rule *logic*) | Future consumer (no integration today — the app ships the Null provider): would read vuln-intel only through the SCA provider seam (`assess(coordinates)`), server-side. See `docs/PROVIDER_MAPPING.md`. Pack/audience loaders are future app work — see `docs/PACKS.md` + `docs/AUDIENCES.md`. |
+| [`Drobon`](https://github.com/mdraselislam0101-design/Drobon) | The main app (API, Web, Worker, scanners, rule *logic*) | **Consumer — connection verified 2026-10-21 at App `9360dd1`:** reads `vuln-intel/` through the SCA provider seam (`assess(coordinates)`, filesystem provider) and loads `packs/`, `knowledge/`, `learning/`, `assessments/`, `engagements/` from `DATASET_PATH` at runtime. Nothing is vendored: the App's default is still `VULN_INTEL_PROVIDER=none`, and `scripts/check-boundaries.mjs` keeps dataset bytes out of the App repo. Loader-conformance gaps: `GAP-040`…`GAP-048`, evidence in `docs/APP_CONNECTION_VERIFICATION_2026-10-21.md`. |
 | [`Drobon-Database`](https://github.com/mdraselislam0101-design/Drobon-Database) | Future database schemas/migrations | No coupling today. If the dataset is ever served from a database, the schema lives there; the record *format* stays defined here. |
 
 What lives where (by design — proven in `docs/SCOPE.md` by inventorying every app seam):
@@ -28,6 +28,7 @@ What lives where (by design — proven in `docs/SCOPE.md` by inventorying every 
 - **68 CWE knowledge entries** in our own words (60 earlier entries, plus CWE-117 added as a pack CWE in the log-forging batch, plus CWE-338 and CWE-843 added with their pack rules on 2026-10-19, plus CWE-116 for the UTF-7 charset rule on 2026-10-20; the App-referenced split is re-derived: 16 distinct `DG-*` ids, 16/16 resolve — `docs/CAPABILITY_COVERAGE_MATRIX.json`), each linking its canonical MITRE page; every CWE reference in packs/remediation resolves here (enforced; see REQ-CWE-01 in `docs/REQUIREMENTS_MATRIX.json`).
 - **11 audience starters**: 6 executable lessons (Student contract; 2 are developer-focused `lsn_dev_*`), 3 assessment templates (Security Professional), 2 passive-only engagement templates (Pentester).
 - **OSV importer** (`scripts/import-osv.mjs`) for open aggregated data (mapping covered by fixture tests; live import needs network to api.osv.dev).
+- **Verified App connection (2026-10-21):** at App `9360dd1` all nine dataset categories load from `DATASET_PATH` (100 files / 950 / 97 / 263 / 1310 / 68 / 6 / 3 / 2 — every count reproduced from this tree) and SCA matching returns real advisories (`fast-jwt@6.2.4` → 6). The same audit found nine defects, including 160 of 950 SAST rules unreachable through the App language catalog, 15 of 1,292 DAST declared tests disagreeing with the App evaluator, and 1310 remediation entries loaded but never surfaced. See `docs/APP_CONNECTION_VERIFICATION_2026-10-21.md`.
 - Coverage is a **growing seed, never a completeness claim**: an empty result means "not in this dataset", never "not vulnerable" (HONESTY.md rule 5).
 
 ## Layout
@@ -42,6 +43,8 @@ Drobon-Dataset/
 │   ├── PACKS.md               # Rule-pack formats, engine contract, loader checklist
 │   ├── AUDIENCES.md           # Audience datasets (remediation/lessons/templates/engagements)
 │   ├── SCOPE.md               # Seam inventory: what lives here, and why
+│   ├── APP_CONNECTION_VERIFICATION_2026-10-21.md # Verified App↔Dataset connection (probes + defects)
+│   ├── APP_LANGUAGE_ID_MAPPING.md # Generated: pack language ids vs the App catalog
 │   ├── REQUIREMENTS_MATRIX.json # Machine-readable capability → asset traceability (validated)
 │   ├── LICENSE_DECISION_RECORD.md # License status: no grant; owner decision pending
 │   └── INGESTION_PLAN.md      # Blocked-until-authorized production ingestion plan
@@ -65,6 +68,7 @@ Drobon-Dataset/
 ├── interop/
 │   └── provider-vectors.json  # Pinned coordinate → advisory-id expectations
 ├── data/
+│   ├── app-language-catalog.json # Pinned App SAST language catalog (reachability gate)
 │   ├── asset-cells/           # Hand-designed generator cell data + .manifest.json (stable ID ledger)
 │   └── osv-seed-packages.json # Curated package list for the OSV importer
 ├── scripts/
@@ -73,6 +77,7 @@ Drobon-Dataset/
 │   ├── validate-audiences.mjs # Zero-dependency audience validator (executes lessons)
 │   ├── validate-cwe.mjs       # Zero-dependency CWE validator (checks MITRE links)
 │   ├── validate-matrix.mjs    # Zero-dependency requirements-matrix validator (recomputes counts)
+│   ├── validate-app-language-ids.mjs # Pack language ids vs the App catalog (reachability gate)
 │   ├── range.mjs              # semver / PEP 440 range syntax + evaluation
 │   ├── import-ghsa.mjs        # Reviewed-GHSA importer (paginated, retrying, validates before writing)
 │   ├── import-osv.mjs         # OSV importer (fixture-tested mapping)

@@ -120,6 +120,25 @@ When the app loader runs a pack rule, fields map 1:1 onto the app finding model:
 5. Redact secrets evidence per `redact`/`matchOnlyEvidence` before findings persist.
 6. Surface pack id + version in scan metadata so findings trace to data versions.
 
+### Loader conformance status (verified 2026-10-21, App `9360dd1`)
+
+The App now ships a runtime loader (`apps/api/src/external/{service,packProvider,packIntegration}.ts`).
+Measured against the six steps above, from a read-only clone plus executable probes
+(`docs/APP_CONNECTION_VERIFICATION_2026-10-21.md`):
+
+| Step | Status | Evidence / consequence |
+|---|---|---|
+| 1 validate + fail closed | **partial** | `service.ts` accepts any file with a string `schemaVersion` + string `id`; unknown fields are unchecked and an unknown DAST check type silently returns `false` |
+| 2 language gating | **done** | `sast/engine.ts:324`; but 160 of 950 rules are unreachable because 66 pack ids have no App family — `docs/APP_LANGUAGE_ID_MAPPING.md`, gate `scripts/validate-app-language-ids.mjs` |
+| 3 ReDoS regression | **missing** | no bounded-time probe runs over the 1,047 pack patterns |
+| 4 execute declared tests at load | **missing** | the direct cause of the 15/1,292 DAST mismatches (9 rules) recorded in the audit |
+| 5 secrets redaction | **done** | positional redaction + fail-closed fallback in `secrets/engine.ts` |
+| 6 pack id + version on findings | **missing** | `pack.json` is never read, so a finding cannot be traced to a data version |
+
+Until steps 1, 3, 4 and 6 land, a pack that is invalid, slow or semantically divergent can
+load silently. These are App-repo items (`GAP-042`); this repository keeps the checklist and
+the failure fixtures they need.
+
 ## Contributing rules
 
 1. **Original content only.** Write every pattern, title, description, and test yourself from public knowledge (language semantics, vendor-documented credential formats, HTTP standards, CWE definitions). Never copy, adapt, or paraphrase proprietary rules (Semgrep Pro, Checkmarx, GitGuardian, Snyk, …). Coverage overlap with commercial tools is expected and fine; expression must be yours.

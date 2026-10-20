@@ -1,6 +1,6 @@
-# PROVIDER_MAPPING.md — how a future app provider would consume this dataset
+# PROVIDER_MAPPING.md — how the app provider consumes this dataset
 
-The `Drobon` app never reads this repository directly. A future, separately-deployed **provider** loads this data server-side and plugs into the app's single seam (`apps/api/src/scans/sca/provider.ts`):
+The `Drobon` app never vendors this repository, but it **does** read it at runtime through a server-side provider. Since App `9360dd1` (2026-10-20) the deployed implementation is `apps/api/src/scans/sca/filesystemProvider.ts`, mounted at `DATASET_PATH` (default provider stays `none` → Null provider). Both plug into the app's single seam (`apps/api/src/scans/sca/provider.ts`):
 
 ```
 assess(coordinates) → { providerId, datasetStatus, advisories[] }
@@ -39,10 +39,10 @@ Every advisory the provider returns must satisfy the app's `isScaAdvisory` guard
 | `url` | optional | 1–400 chars | record `url` (verbatim, when present) |
 | `version` | optional | 1–200 chars | from the matched coordinate `version` (when known) |
 
-Rules for the future provider (app-side, recorded here so both sides agree):
+Rules for the provider (app-side; implemented at `9360dd1` except where noted, verified 2026-10-21):
 
 1. **Match, then re-validate.** The engine fail-closes every provider advisory through `sanitizeAdvisory` at write time, and the store enforces the closed `isScaAdvisory`/`isScaResult` guards on read/boot — a provider cannot smuggle shapes. Records that pass this repo's validator are guaranteed to survive those guards on the dataset-sourced fields.
-2. **Only verified matches.** `assess` returns records it actually matched against loaded data. No match → no advisory; the scan completes `NOT_ASSESSED` (scan-level state — a zero-match assessment is still `NOT_ASSESSED` today, since `ScaDatasetStatus` has no "checked, clean" value).
+2. **Only verified matches.** `assess` returns records it actually matched against loaded data. No match → no advisory; the scan completes `NOT_ASSESSED` (scan-level state — a zero-match assessment is still `NOT_ASSESSED` today, since `ScaDatasetStatus` has no "checked, clean" value). The full layer-by-layer mapping table is `docs/DATASET_APP_CONTRACT.md` §9; the provider's `datasetStatus` and the scan state are different fields and must not be asserted to move together. These vectors are **not** consumed by the app yet — it duplicates the range logic in `apps/api/src/scans/sca/range.ts` (GAP-044).
 3. **Dataset status is honest.** A configured provider whose data is missing/unreachable reports `DATASET_UNAVAILABLE` — the scan still succeeds with inventory + SBOM. The shipped Null provider reports `NO_DATA_LOADED`.
 4. **Server-side composition only.** Nothing client-facing selects, registers, or influences a provider (`VULN_INTEL_PROVIDER` is server config; today it must be `none` and any other value fails app startup — changing that is an app-repo decision, not this repo's).
 

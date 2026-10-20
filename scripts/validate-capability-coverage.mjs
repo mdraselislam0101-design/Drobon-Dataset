@@ -31,7 +31,7 @@ const FILE = 'docs/CAPABILITY_COVERAGE_MATRIX.json';
 const STATUSES = ['COVERED_VERIFIED', 'PARTIAL', 'MISSING', 'APP_INTEGRATION_BLOCKED', 'RIGHTS_BLOCKED', 'OWNER_DECISION_BLOCKED', 'NOT_ASSESSED', 'NOT_APPLICABLE'];
 const REQUIREMENTS = ['REQUIRED', 'SUPPLEMENTAL', 'NONE'];
 const INTEGRATION = ['INTEGRATED', 'CONTRACT_READY_NOT_INTEGRATED', 'BLOCKED_PROVIDER_LOCKED', 'NOT_APPLICABLE'];
-const BASES = ['DATASET_SIDE_EXECUTABLE', 'ASSET_VALIDATED_NO_CONSUMER', 'ASSET_VALIDATED_PRODUCTION_BLOCKED', 'NONE'];
+const BASES = ['DATASET_SIDE_EXECUTABLE', 'APP_CONSUMER_VERIFIED_WITH_GAPS', 'ASSET_VALIDATED_NO_CONSUMER', 'ASSET_VALIDATED_PRODUCTION_BLOCKED', 'NONE'];
 const PROFILES = ['DEVELOPER', 'STUDENT', 'SECURITY_PROFESSIONAL', 'PENTESTER'];
 const ALLOWED_ASSET_ROOTS = ['packs/', 'knowledge/', 'learning/', 'assessments/', 'engagements', 'interop/', 'vuln-intel/'];
 
@@ -89,6 +89,15 @@ for (const c of caps) {
     assert(typeof c.remainingWork === 'string' && c.remainingWork.length > 10, `${c.id}: blocked/partial row states exact remaining work`);
   }
   assert(c.productionEligibility !== 'ELIGIBLE', `${c.id}: no row claims production eligibility under the lock`);
+  if (c.appIntegration === 'INTEGRATED') {
+    assert((c.evaluationEvidence ?? []).some((e) => /App-side verified/.test(e)),
+      `${c.id}: INTEGRATED rows carry App-side executed evidence`);
+  }
+  if (c.verificationBasis === 'APP_CONSUMER_VERIFIED_WITH_GAPS') {
+    assert(c.coverageStatus === 'PARTIAL', `${c.id}: WITH_GAPS basis is only used on PARTIAL rows`);
+    assert(typeof c.remainingWork === 'string' && c.remainingWork.length > 60,
+      `${c.id}: WITH_GAPS basis names the measured gaps`);
+  }
 
   for (const ref of c.assetRefs ?? []) {
     assert(ALLOWED_ASSET_ROOTS.some((p) => String(ref.path).startsWith(p)), `${c.id}: asset path stays inside the Dataset tree`, String(ref.path));
@@ -168,8 +177,12 @@ for (const c of caps) {
 const computed = {
   capabilities: caps.length,
   coveredVerified: caps.filter((c) => c.coverageStatus === 'COVERED_VERIFIED').length,
+  partial: caps.filter((c) => c.coverageStatus === 'PARTIAL').length,
+  missing: caps.filter((c) => c.coverageStatus === 'MISSING').length,
   appIntegrationBlocked: caps.filter((c) => c.coverageStatus === 'APP_INTEGRATION_BLOCKED').length,
   rightsBlocked: caps.filter((c) => c.coverageStatus === 'RIGHTS_BLOCKED').length,
+  ownerDecisionBlocked: caps.filter((c) => c.coverageStatus === 'OWNER_DECISION_BLOCKED').length,
+  notAssessed: caps.filter((c) => c.coverageStatus === 'NOT_ASSESSED').length,
   notApplicable: caps.filter((c) => c.coverageStatus === 'NOT_APPLICABLE').length,
   required: caps.filter((c) => c.datasetRequirement === 'REQUIRED').length,
   supplemental: caps.filter((c) => c.datasetRequirement === 'SUPPLEMENTAL').length,
@@ -179,7 +192,10 @@ const computed = {
 for (const [k, v] of Object.entries(computed)) {
   assert(m.counts?.[k] === v, `counts.${k} reproduces`, `declared ${m.counts?.[k]}, actual ${v}`);
 }
-assert(computed.coveredVerified + computed.appIntegrationBlocked + computed.rightsBlocked + computed.notApplicable === computed.capabilities, 'every row is classified exactly once');
+const statusSum = ['coveredVerified', 'partial', 'missing', 'appIntegrationBlocked', 'rightsBlocked',
+  'ownerDecisionBlocked', 'notAssessed', 'notApplicable'].reduce((n, k) => n + computed[k], 0);
+assert(statusSum === computed.capabilities, 'every row is classified exactly once',
+  `status buckets sum to ${statusSum} of ${computed.capabilities}`);
 
 // Closed app-inventory mapping.
 const map = m.appInventoryCoverage ?? [];

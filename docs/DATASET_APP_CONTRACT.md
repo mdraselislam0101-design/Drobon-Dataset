@@ -66,9 +66,9 @@ The only App seam is `assess(coordinates) → { providerId, datasetStatus, advis
 | Determinism | `scripts/test-determinism.mjs` | regeneration byte-identical; tree digest |
 | Integrity | `scripts/manifest.mjs --check` | SHA manifest of 3,995+ files |
 
-## 5. Compatibility status (three levels, honestly)
+## 5. Compatibility status (three levels, honestly) — re-verified at App `9360dd1` (2026-10-21)
 
-1. **Established from source/contracts (read-only verified at `c32c797`):**
+1. **Established from source/contracts (read-only verified at `9360dd1`):**
    `ScaAdvisory`/`DependencyCoordinate` shapes, provider seam, dataset lock
    (`VULN_INTEL_PROVIDER` = `none`), SAST `languages` gating + universal
    convention, report contract sections (`SecurityReport`
@@ -77,12 +77,17 @@ The only App seam is `assess(coordinates) → { providerId, datasetStatus, advis
 2. **Verified by executable tests:** record→advisory projection (16 vectors),
    range semantics, identity/dedup, fixture isolation, determinism, every
    rule/pattern/remediation link. These are Dataset-side tests over the
-   mirrored contract — not App runtime tests.
-3. **Not verifiable (no App loader / no integration test exists):** actual
-   runtime loading of `packs/`, `knowledge/`, `learning/`, `assessments/`,
-   `engagements/`; performance at corpus scale; App-side report rendering over
-   dataset advisories. Class E — the App workstream must build the loaders and
-   their tests (backlog GAP-005..009).
+   mirrored contract.
+3. **Verified by executable probes against the App (2026-10-21, App `9360dd1`):**
+   runtime loading of all nine categories from `DATASET_PATH`; SCA matching
+   (`fast-jwt@6.2.4` → 6 advisories, `msgpack5@6.0.0` → 7, 13-file shard package
+   deduplicated, `lodash@4.17.21` → 0); SAST/Secrets/DAST converter parity over
+   every declared pack test (3,843 / 441 / 1,292 executed — 0 / 0 / 15
+   mismatches). Commands and results: `docs/APP_CONNECTION_VERIFICATION_2026-10-21.md`.
+4. **Still not verified:** App performance at corpus scale, browser/E2E runs, and
+   App report rendering over dataset advisories. The App's own suites do not mount
+   `DATASET_PATH`, and at `9360dd1` they do not pass (api 785/801, shared
+   182/183) — `GAP-047`.
 
 ## 6. Backward / forward compatibility & deprecation policy
 
@@ -99,7 +104,11 @@ The only App seam is `assess(coordinates) → { providerId, datasetStatus, advis
 ## 7. Minimum supported App contract
 
 `apps/api/src/scans/sca/provider.ts` + `packages/shared/src/sca.ts` +
-`apps/api/src/scans/sast/rules.ts` (rule/languages semantics) at `c32c797`.
+`apps/api/src/scans/sast/rules.ts` (rule/languages semantics) +
+`apps/api/src/external/*` (loader) + `apps/api/src/scans/sca/filesystemProvider.ts`
+at `9360dd1abdf940cc1bffd942aab0702703aaaaef` (2026-10-20).
+The pinned App language catalog for reachability is `data/app-language-catalog.json`
+(re-verify with `node scripts/validate-app-language-ids.mjs`).
 The App side is authoritative for shapes; this repo mirrors them and pins the
 mirror with tests. Any App contract change requires re-running the seam
 inventory (`docs/SCOPE.md` method line) and updating this document.
@@ -152,3 +161,30 @@ remains `BLOCKED` ("No provider design exists; Null provider still locked").
 - **1.0 (2026-10-16):** first versioned contract; compiled from the
   finalization pump's source re-verification (`c32c797`), the 16-vector
   interop pins, and the full integrity/determinism gates.
+
+## 9. Runtime mapping the App and this repo must agree on (2026-10-21)
+
+Two fields look alike and are not: the provider's `datasetStatus`
+(`NO_DATA_LOADED | DATASET_UNAVAILABLE | DATASET_AVAILABLE`) and the scan-level
+`state` (`ASSESSED | NOT_ASSESSED`). They are produced by different layers, so an
+integration test must not assume they move together.
+
+| Case | Provider `datasetStatus` | Advisories | App scan state | Honest sentence |
+|---|---|---|---|---|
+| provider `none` | `NO_DATA_LOADED` | 0 | `NOT_ASSESSED` | no data was consulted |
+| path wrong / unreadable | `DATASET_UNAVAILABLE` | 0 | `NOT_ASSESSED` | data was not reachable at scan time |
+| data loaded, coordinate absent from corpus | `DATASET_AVAILABLE` | 0 | `NOT_ASSESSED` | not in this corpus — **not** "clean" |
+| data loaded, package present, version outside every range | `DATASET_AVAILABLE` | 0 | `NOT_ASSESSED` | no known advisory applies **to this dataset version** |
+| data loaded, range matches | `DATASET_AVAILABLE` | ≥1 | `ASSESSED` | verified match, with per-record provenance |
+
+The dataset-side simulator (`scripts/sca-engine.mjs`) reports `ASSESSED` for the
+third and fourth rows (it answered against loaded data); the App deliberately
+collapses both to `NOT_ASSESSED` because an 84-item seed cannot support a "clean"
+statement. **This is a documented mapping choice, not a divergence in matching:**
+the advisory sets are identical (16/16 vectors). Keeping the mapping table here is
+what prevents the two contracts from drifting (`GAP-043`).
+
+Counting on the status surface is a separate, open item: the App reports the raw
+advisory **file** count (100) where this repo counts **84 identity items / 78 ids**
+(`docs/COUNTING_POLICY.md`). Counts shown to customers must use the canonical
+numbers.

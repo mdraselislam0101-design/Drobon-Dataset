@@ -16,9 +16,9 @@
 from `DATASET_PATH` through a filesystem provider, and SCA matching produces
 verified advisories. It is **not finished**: the App ships **zero** embedded
 rules now, 16 App tests fail at `9360dd1`, 9 of the App's DAST checks disagree
-with this repository's own executable semantics, 167 SAST rules are unreachable
-through the App's language catalog, and 1,310 remediation entries are loaded but
-never surfaced.
+with this repository's own executable semantics, 160 SAST rules can never fire
+because 66 pack language ids have no App family, and 1,310 remediation entries are
+loaded but never surfaced.
 
 ---
 
@@ -152,7 +152,7 @@ repository's `scripts/lib/set-cookie.mjs` model (browser-accurate discard rules)
 was not carried over. Because the App never executes pack-declared tests at load
 (D5), these divergences stay invisible in the App's own suite.
 
-### D4 — 167 of 950 SAST rules are unreachable through the App's language catalog
+### D4 — 160 of 950 SAST rules can never fire (66 pack ids have no App family)
 
 The App gates every rule by `rule.languages.includes(file.family)`
 (`sast/engine.ts:324`). Measured against the App's 53-id catalog:
@@ -162,7 +162,15 @@ The App gates every rule by `rule.languages.includes(file.family)`
 | universal (no `languages`) — always run | 11 |
 | every declared language id exists in the App catalog | 743 |
 | partially unknown ids (run only on the known ones) | 29 |
-| **no known id at all — never run** | **167** |
+| **no known id at all — never run** | **160** |
+
+Counting note: the first measurement said 167 because it compared ids literally.
+Two of the 68 unknown ids map onto existing App families (`shell` → `shell-posix`,
+`gha` → `github-actions`), which resolves the 7 `gha`-only rules; the 29 `shell`
+rules were already reachable because each also declares `bash`. The authoritative,
+machine-checked numbers are in `docs/APP_LANGUAGE_ID_MAPPING.md` (gate:
+`scripts/validate-app-language-ids.mjs`): 115 ids used, 47 direct, 2 aliased,
+66 needing a new App family, 160 rules unreachable.
 
 Unknown ids used by this repository’s packs (top): `shell` (29 rules), `sshd`
 (14), `k8s` (13), `nginx` (10), `tcl` (9), `vba` (7), `gha` (7), `properties`
@@ -265,7 +273,7 @@ These were **not** rewritten here: the change requires a new seam inventory at
    header rule → clears all 15 DAST mismatches.
 4. **Both (P1):** map the 68 missing language ids (start with `shell`→`shell-posix`,
    `gha`→`github-actions`, `k8s`/`dockerfile`/`nginx`/`ini`/`properties`) →
-   restores 167 SAST rules.
+   restores 160 SAST rules.
 5. **App (P1):** wire `getRemediationMap`/`getCweMap` into
    `remediationGuidanceForFinding` (and reports/assistant) so 1,310 entries and 68
    CWE references actually reach users.
@@ -299,6 +307,31 @@ Probe scripts used for §2/§3 are reproducible from the App source:
 `createDatasetService` + `getMerged*Rules` + `createFilesystemIntelligenceProvider`
 + `convertSastPackToRule`/`convertSecretsPackToRule`/`convertDastPackToRule` +
 `evaluatePackDastCheck`, driven over `packs/*/v1/rules/*.json` `tests` arrays.
+
+---
+
+## 8. What this audit changed in this repository (2026-10-21, same day)
+
+The audit's findings were turned into dataset-side corrections and machine gates in
+the same working session. Nothing was rewritten to look better; where the fact was
+only observable in the App, the row now says so and points at the App ticket.
+
+| Artefact | Change |
+|---|---|
+| `docs/CAPABILITY_COVERAGE_MATRIX.json` + `.md` (generated) | App pin `c32c797` → **`9360dd1`**; 7 rows moved off `APP_INTEGRATION_BLOCKED`; SAST/Secrets/DAST/Lessons/Templates/Engagements/Interop are now `PARTIAL` with `APP_CONSUMER_VERIFIED_WITH_GAPS`, SCA is `RIGHTS_BLOCKED` + **`INTEGRATED`**, remediation/CWE stay `COVERED_VERIFIED` with the unused-loader gap recorded, and `DCC-EXPLOIT-RESERVED` moved from `NOT_APPLICABLE` to **`OWNER_DECISION_BLOCKED`** because the App now ships active DAST |
+| `scripts/validate-capability-coverage.mjs` | partition now sums all eight statuses; new basis `APP_CONSUMER_VERIFIED_WITH_GAPS`; `INTEGRATED` rows must carry App-side executed evidence; the gaps basis may only appear on `PARTIAL` rows (710 assertions) |
+| `docs/SCOPE.md` | re-inventory section at `9360dd1`; rows 3–7 and 12–19 re-classified; the new active-DAST seam recorded |
+| `docs/DATASET_APP_CONTRACT.md` | §5 re-verified at `9360dd1`, §7 minimum contract updated, **new §9** mapping table (`datasetStatus` vs scan state) + the 100-vs-84 counting note |
+| `docs/PACKS.md` | loader conformance status: 2 of 6 checklist steps done, 4 open (with the consequence of each) |
+| `README.md` | sibling table no longer says "future consumer"; connection status + defect summary added |
+| `docs/RELEASE_READINESS_MATRIX.json` | G6 evidence widened (the missing grant now blocks **any** deployment, since the App reads the corpus at runtime); G3 notes the App-side conformance gap. Statuses unchanged |
+| `DROBON_REMAINING_WORK.csv` | GAP-005/006/007 closed (`RESOLVED`) with the verification evidence; GAP-008/009 rescoped; **7 new rows** GAP-040…GAP-047 for language reachability, DAST parity, loader conformance, counting/zero-match, duplicated range semantics, the active-DAST boundary decision, App doc drift and the failing App suites |
+| **new gate** `scripts/validate-app-language-ids.mjs` + `data/app-language-catalog.json` + generated `docs/APP_LANGUAGE_ID_MAPPING.md` | 147 assertions: every pack language id must resolve to the App catalog, a declared alias, or an explicit "needs a new App family" entry; stale entries fail; wired into `npm test` |
+| `docs/CURRENT_INVENTORY.json` | regenerated (remaining-work register is now 43 rows) |
+
+Deliberately **not** changed: any rule, pattern, record, remediation entry, eval case,
+advisory record, owner decision, licence status or release gate status. The dataset
+suite stays green.
 
 ---
 

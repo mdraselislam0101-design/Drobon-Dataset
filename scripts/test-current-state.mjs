@@ -111,7 +111,7 @@ const c = inv.counts;
   const trace = readCsv('DROBON_REQUIREMENT_TRACEABILITY.csv');
   const traceIds = new Set(trace.map((r) => r.reqId));
   const ids = rows.map((r) => r.gapId);
-  assert(rows.length === 35, `remaining-work: 35 rows (got ${rows.length})`);
+  assert(rows.length === 43, `remaining-work: 43 rows (got ${rows.length})`);
   assert(new Set(ids).size === ids.length, 'remaining-work: every gapId is unique');
   assert(ids.every((id) => /^GAP-[0-9]{3}$/.test(id)), 'remaining-work: gapId grammar GAP-NNN');
   assert(rows.every((r) => traceIds.has(r.reqId)),
@@ -254,9 +254,16 @@ const c = inv.counts;
     'release gates: every gate states a verificationCommand');
   assert(gates.every((g) => Array.isArray(g.evidence) && g.evidence.length > 0),
     'release gates: every gate carries evidence');
-  assert(gates.every((g) => g.lastVerified === '2026-10-18'),
-    'release gates: every gate re-verified 2026-10-18',
+  // Baseline verification is 2026-10-18. The 2026-10-21 App-connection audit
+  // re-verified the gates whose scope it widened (G3 conformance, G6 licensing),
+  // so those two carry the newer date; nothing may be older than the baseline.
+  const VERIFIED_DATES = ['2026-10-18', '2026-10-21'];
+  assert(gates.every((g) => VERIFIED_DATES.includes(g.lastVerified)),
+    'release gates: every gate carries a documented verification date',
     [...new Set(gates.map((g) => g.lastVerified))].join(','));
+  const rescoped = gates.filter((g) => g.lastVerified === '2026-10-21').map((g) => g.id).sort();
+  assert(JSON.stringify(rescoped) === JSON.stringify(['G3', 'G6']),
+    'release gates: exactly the re-scoped gates carry the 2026-10-21 date', rescoped.join(','));
   assert(rel.asOf === '2026-10-18', 'release matrix asOf = 2026-10-18');
   const byId = Object.fromEntries(gates.map((g) => [g.id, g]));
   assert(byId.G6.status === 'BLOCKED_OWNER_DECISION', 'release gate G6 stays BLOCKED_OWNER_DECISION');
@@ -363,14 +370,17 @@ const c = inv.counts;
     'CAPABILITY_COVERAGE states the current DAST and pack totals',
     `expected DAST ${c.dastRules} / pack total ${c.packRules}`);
   const remaining = read('DROBON_REMAINING_WORK.csv');
-  assert(remaining.includes(`${plain(c.sastRules)} dataset rules unreachable`),
-    `remaining-work states ${c.sastRules} SAST rules`, `expected ${c.sastRules}`);
-  assert(remaining.includes(`${plain(c.secretsRules)} dataset rules unreachable`),
-    `remaining-work states ${c.secretsRules} secrets rules`, `expected ${c.secretsRules}`);
-  assert(remaining.includes(`${plain(c.dastRules)} dataset rules unreachable`),
-    `remaining-work states ${c.dastRules} DAST rules`, `expected ${c.dastRules}`);
-  assert(remaining.includes(`${plain(c.remediation)} remediation entries unused`),
-    `remaining-work states ${c.remediation} remediation entries`, `expected ${c.remediation}`);
+  // Since 2026-10-21 the App actually loads these packs (connection verified), so the
+  // register must state integration, not "unreachable". The counts stay drift-pinned.
+  assert(remaining.includes(`${plain(c.sastRules)} dataset SAST rules integrated`),
+    `remaining-work states ${c.sastRules} SAST rules as integrated`, `expected ${c.sastRules}`);
+  assert(remaining.includes(`${plain(c.secretsRules)} dataset secrets rules integrated`),
+    `remaining-work states ${c.secretsRules} secrets rules as integrated`, `expected ${c.secretsRules}`);
+  assert(remaining.includes(`${plain(c.dastRules)} dataset DAST checks integrated`),
+    `remaining-work states ${c.dastRules} DAST checks as integrated`, `expected ${c.dastRules}`);
+  assert(remaining.includes(`${plain(c.remediation)} remediation entries loaded`),
+    `remaining-work states ${c.remediation} remediation entries as loaded`, `expected ${c.remediation}`);
+  assert(!remaining.includes('dataset rules unreachable'), 'remaining-work carries no stale "unreachable" claim');
   assert(!remaining.includes('94 dataset rules'), 'remaining-work carries no stale 94-secret claim');
   const trace = read('DROBON_REQUIREMENT_TRACEABILITY.csv');
   assert(trace.includes(`${plain(c.secretsRules)} rules;`),
