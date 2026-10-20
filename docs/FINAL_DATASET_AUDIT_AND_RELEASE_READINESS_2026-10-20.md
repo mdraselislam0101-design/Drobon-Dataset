@@ -176,8 +176,8 @@ staging and again on the staged set.
 
 | Pattern class | Hits | Nature |
 |---|---|---|
-| PEM private key | 1 | `-----BEGIN RSA PRIVATE KEY----- EXAMPLE` — a labelled `synthetic: true, testOnly: true` eval fixture for `DPK-SEC-004` |
-| AWS access key id | 1 | `AKIA1234567890ABCDEF` — synthetic placeholder for `DPK-SEC-001` |
+| PEM private-key header | 1 | a PEM header immediately followed by the literal `EXAMPLE` — a labelled `synthetic: true, testOnly: true` eval fixture for `DPK-SEC-004` |
+| AWS access-key-id prefix | 1 | an `AKIA`-prefixed placeholder with sequential digits — synthetic fixture for `DPK-SEC-001` |
 | GitHub tokens | 9 | `ghp_/gho_/ghs_/ghu_/github_pat_` + `AAAA…` placeholders |
 | Slack / Google / Twilio / Stripe / JWT | 14 | placeholder bodies (`AAAA…`, `EXAMPLE`, sequential hex) in `EVAL-SEC-*` fixtures |
 | Real-looking high-entropy credential | **0** | — |
