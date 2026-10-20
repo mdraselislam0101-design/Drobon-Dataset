@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-295",
+  "title": "PostgreSQL connection or authentication error text disclosed in a response",
+  "description": "The response carries a PostgreSQL connection failure: a failed query handle, a libpq class name, a socket connection error, or the server reporting a failed authentication for a named role. The string identifies the role and the database, which is exactly the information a credential-guessing attempt needs.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-209",
+  "category": "information-disclosure",
+  "remediation": "Return a generic error to the caller and log the libpq message server-side. Remove the PostgreSQL host, database and role from any user-visible error page.",
+  "limitation": "One response body. The check reads the message text; it does not attempt a connection and cannot tell whether the named role still exists.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?:pg_query\\(\\): Query failed|PG::ConnectionBad|FATAL:\\s+password authentication failed for user|psql: error: connection to server)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/report",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "FATAL:  password authentication failed for user \"reporting\""
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/report",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "Warning: pg_query(): Query failed: server closed the connection unexpectedly"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/report",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body>Report unavailable. Try again.</body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/report",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "ERROR:  syntax error at or near \"SELEC\""
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1364"
+  ]
+}

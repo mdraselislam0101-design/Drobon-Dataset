@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1361",
+  "title": "Signal: Framework data-layer query exception disclosed in a response",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-body-matches",
+      "valuePattern": "(?:Illuminate\\\\Database\\\\QueryException|ActiveRecord::StatementInvalid|django\\.db\\.utils\\.ProgrammingError|Doctrine\\\\DBAL\\\\Exception)"
+    }
+  },
+  "scope": "One response body containing a Laravel, Rails, Django or Doctrine data-layer exception class name.",
+  "limitations": "One response body. The check recognises the exception class name; it does not decide whether the query was user-influenced.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/invoices",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "Illuminate\\Database\\QueryException: SQLSTATE[42S22]: Column not found (SQL: select * from invoices)"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/invoices",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "django.db.utils.ProgrammingError: column \"total\" does not exist"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/invoices",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body>We could not load your invoices.</body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/docs/errors",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<h2>Database errors</h2><p>Wrap queries in a transaction handler.</p>"
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A bug-tracker page that quotes the class name is reported; a framework 404 page that names no data-layer class is not.",
+  "linkedRules": [
+    "DPK-DAST-292"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:dast-body-orm-query-exception-framework:orm-framework-exception",
+  "validationStatus": "VALIDATED"
+}

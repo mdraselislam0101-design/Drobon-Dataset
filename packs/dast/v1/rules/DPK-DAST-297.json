@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-297",
+  "title": "SQLite driver error text disclosed in a response",
+  "description": "The response carries a SQLite driver failure: a failed statement handle, an operational or database error class, or a JDBC driver name. These messages name the database file path, which on a single-host deployment is enough to locate the application data directory.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-209",
+  "category": "information-disclosure",
+  "remediation": "Catch SQLite exceptions and return a generic error. Never render the database file path in a response.",
+  "limitation": "One response body. The check reads the message text; it does not read the database file and cannot tell whether the file is still on disk.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?:SQLite3::query\\(\\): Unable to prepare statement|sqlite3\\.(?:OperationalError|DatabaseError)|SQLite/JDBCDriver|SQLiteException)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/notes",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "Fatal error: Uncaught SQLite3::query(): Unable to prepare statement: 1, no such table: notes"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/notes",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "sqlite3.OperationalError: unable to open database file"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/notes",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body>Notes are temporarily unavailable.</body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/about",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<p>Our desktop build stores data locally with SQLite for offline use.</p>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1366"
+  ]
+}

@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-296",
+  "title": "Rails detailed exception page disclosed in a response",
+  "description": "The response carries the marker of a Rails detailed-exception page: a Rails exception class name or the \"Extracted source\" block. The page prints the request parameters, the session identifiers and the source lines around the failure, so serving it to a client discloses both code and request data.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-209",
+  "category": "debug-exposure",
+  "remediation": "Set config.consider_all_requests_local = false in production and render a static error page. Never deploy with the detailed exception renderer enabled.",
+  "limitation": "One response body. The check recognises the page markers; it does not enumerate which parameters the page printed.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?:ActionView::Template::Error|ActionController::RoutingError|Extracted source \\(around line)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/orders/12",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<h1>ActionView::Template::Error</h1><p>undefined method `total&#39; for nil</p>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/orders/12",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<h2>Extracted source (around line #14):</h2><pre>@order.total</pre>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/orders/12",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body><h1>Internal Server Error</h1></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/docs/errors",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<p>Configure a custom error page for production deployments.</p>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1365"
+  ]
+}

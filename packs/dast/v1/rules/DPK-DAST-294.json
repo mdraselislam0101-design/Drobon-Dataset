@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-294",
+  "title": "Unix password database content served in a response",
+  "description": "The response body contains the root entry of /etc/passwd in its standard form: the `x` password placeholder, uid and gid zero, the home directory and a login shell. This is the canonical evidence that a path-traversal or a static-file mapping reached outside the web root.",
+  "severity": "HIGH",
+  "cwe": "CWE-22",
+  "category": "information-disclosure",
+  "remediation": "Fix the traversal or the static mapping that served the file; do not only block the string. Move the web root so it cannot contain parent traversal into /etc, and audit the access log for the request that produced this response.",
+  "limitation": "One response body. The check proves the file content was returned; it does not identify which parameter or configuration allowed it, and it does not read the file itself.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "root:x:0:0:root:/root:/bin/(?:bash|sh)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/download?file=../../../../etc/passwd",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "root:x:0:0:root:/root:/bin/bash\ndaemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/static/..%2f..%2fetc/passwd",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/octet-stream"
+        },
+        "body": "root:x:0:0:root:/root:/bin/sh\n"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/download?file=../../../../etc/passwd",
+        "status": 400,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"error\":\"invalid path\"}"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/blog/unix-files",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<p>Each line of /etc/passwd has seven colon-separated fields.</p>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1363"
+  ]
+}

@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1364",
+  "title": "Signal: PostgreSQL connection or authentication error text disclosed in a response",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-body-matches",
+      "valuePattern": "(?:pg_query\\(\\): Query failed|PG::ConnectionBad|FATAL:\\s+password authentication failed for user|psql: error: connection to server)"
+    }
+  },
+  "scope": "One response body containing a PostgreSQL connection or authentication error string.",
+  "limitations": "One response body. The check reads the message text; it does not attempt a connection and cannot tell whether the named role still exists.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/report",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "FATAL:  password authentication failed for user \"reporting\""
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/report",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "Warning: pg_query(): Query failed: server closed the connection unexpectedly"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/report",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body>Report unavailable. Try again.</body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/report",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "ERROR:  syntax error at or near \"SELEC\""
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A documentation page that quotes the message is reported; a readiness probe returning only a status word is not.",
+  "linkedRules": [
+    "DPK-DAST-295"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:dast-body-postgres-connection-error:postgres-auth-error",
+  "validationStatus": "VALIDATED"
+}

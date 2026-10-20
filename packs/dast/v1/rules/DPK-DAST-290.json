@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-290",
+  "title": "SQL Server client exception text disclosed in a response",
+  "description": "The response renders a .NET SqlClient or OLE DB SQL Server exception. The message names the server, the database and sometimes the instance, and the stack frame that follows names the application assembly and its build path.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-209",
+  "category": "information-disclosure",
+  "remediation": "Enable custom errors in ASP.NET and return a generic page with a correlation id. Log the SqlException server-side.",
+  "limitation": "One response body. The check reads the message text; it does not evaluate whether the connection string is reachable from the scanning host.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?:System\\.Data\\.SqlClient\\.SqlException|Microsoft OLE DB Provider for SQL Server|SqlException: (?:Incorrect syntax|Invalid object name|Incorrect column name))"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/orders",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "System.Data.SqlClient.SqlException: A network-related or instance-specific error occurred"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/orders",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "Microsoft OLE DB Provider for SQL Server error '80040e14'"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/orders",
+        "status": 500,
+        "headers": {
+          "Content-Type": "application/problem+json"
+        },
+        "body": "{\"type\":\"about:blank\",\"title\":\"Internal Server Error\",\"traceId\":\"00-8f2a\"}"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/orders",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body><h1>Runtime Error</h1></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1359"
+  ]
+}

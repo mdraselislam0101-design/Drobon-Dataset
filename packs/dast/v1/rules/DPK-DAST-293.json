@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-293",
+  "title": "JavaScript ORM query exception disclosed in a response",
+  "description": "The response renders an error class from a JavaScript data mapper: Sequelize, Prisma, TypeORM or Knex. These classes are developer-visible by design and their messages carry the SQL text, the parameters and the model name, so a public response that includes them leaks both the schema and the data being queried.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-209",
+  "category": "debug-exposure",
+  "remediation": "Catch ORM errors in the request pipeline and return a generic error with a correlation id. Map known error codes to user-facing messages instead of rendering the exception.",
+  "limitation": "One response body. The check recognises the class name; it does not prove the query succeeded or that the leaked parameters are still sensitive.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?:SequelizeDatabaseError|PrismaClientKnownRequestError|TypeORMError|KnexTimeoutError)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/api/users/9",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "PrismaClientKnownRequestError: Invalid `prisma.user.findUnique()` invocation"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/api/users",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "SequelizeDatabaseError: column \"email_address\" does not exist"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/api/users",
+        "status": 422,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"errors\":[{\"field\":\"email\",\"message\":\"must be a valid email\"}]}"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/api/users",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body>Request failed.</body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1362"
+  ]
+}

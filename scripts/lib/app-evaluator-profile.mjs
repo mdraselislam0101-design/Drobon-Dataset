@@ -31,6 +31,42 @@ export const APP_PROFILE = Object.freeze({
   ]),
 });
 
+/**
+ * App DAST response surface — the only fields a pack rule may ever see.
+ *
+ * Transcribed from the App at the pinned commit, 2026-10-21:
+ *   apps/api/src/scans/dast/engine.ts        `INSPECTED_RESPONSE_HEADERS` +
+ *                                            `boundedResponseHeaders()` (passive mode)
+ *   apps/api/src/scans/dast/activeEngine.ts  `INSPECTED_HEADERS` + `boundedHeaders()`
+ *                                            (active mode — the same 11 names)
+ *   apps/api/src/scans/dast/engine.ts        `DAST_MAX_RESPONSE_BYTES = 32_768`
+ *
+ * Both engines hand `evaluatePackDastCheck()` a response whose headers were
+ * filtered down to this set (each value clipped to 2 048 characters, at most 5
+ * array entries). A dataset rule that reads any other header can never match in
+ * the App — not because the rule is wrong, but because the value never arrives.
+ * `scripts/validate-app-dast-reachability.mjs` machine-checks that consequence.
+ */
+export const APP_DAST_SURFACE = Object.freeze({
+  inspectedResponseHeaders: Object.freeze([
+    'content-type',
+    'strict-transport-security',
+    'x-content-type-options',
+    'x-frame-options',
+    'content-security-policy',
+    'access-control-allow-origin',
+    'access-control-allow-credentials',
+    'server',
+    'x-powered-by',
+    'set-cookie',
+    'location',
+  ]),
+  headerValueChars: 2048,
+  maxHeaderArrayEntries: 5,
+  bodyInspectionBytes: 32768,
+  bodyTruncatedIsReported: true,
+});
+
 /** App `header()` helper: lowercased lookup, arrays joined with ", ", value trimmed. */
 function header(obs, name) {
   const v = obs.headers[name.toLowerCase()];

@@ -1,0 +1,65 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-301",
+  "title": "Set-Cookie header carries an encoded line break",
+  "description": "A Set-Cookie value contains a percent-encoded CRLF pair. Cookie values are frequently copied from request data, and an encoded line break in this header is the same unsanitised-input symptom as in Location: one decode step away from injecting an extra header.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-113",
+  "category": "content-injection",
+  "remediation": "Strip CR and LF from cookie values and encode them with a strict cookie encoder. Never build a Set-Cookie header from raw request data.",
+  "limitation": "One Set-Cookie header value. The check proves the encoded break reached the header; it does not attempt to make a client decode it.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Set-Cookie",
+    "valuePattern": "%0[dD]%0[aA]"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/prefs?theme=dark%0d%0aX-Injected:%201",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "theme=dark%0d%0aX-Injected:%201; Path=/; Secure; HttpOnly"
+        },
+        "body": "<html><body>Saved</body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/prefs",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "prefs=\"a=1%0d%0a\"; Path=/; Secure"
+        },
+        "body": "<html><body>Saved</body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/prefs",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "__Host-sid=abc123; Path=/; Secure; HttpOnly; SameSite=Strict"
+        },
+        "body": "<html><body>Saved</body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/prefs",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "theme=dark%20mode; Path=/; Secure"
+        },
+        "body": "<html><body>Saved</body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1370"
+  ]
+}

@@ -358,3 +358,24 @@ suite stays green.
 - The dataset was mounted read-only; nothing in the App repository was modified.
 - No claim is made here about real-world detection quality; every number above is
   a count derived from files or from executing declared tests.
+
+---
+
+## Addendum — 2026-10-21 (after the DAST app-surface measurement)
+
+This audit measured what the App loads. It did **not** measure what the App's DAST
+engines let a pack rule see, and that gap is larger than any other item in it:
+
+- Both DAST engines forward only 11 response headers to `evaluatePackDastCheck()`
+  (`apps/api/src/scans/dast/engine.ts` → `INSPECTED_RESPONSE_HEADERS`;
+  `activeEngine.ts` → `INSPECTED_HEADERS`) and clip the body at 32 768 bytes.
+- Consequence, now machine-checked: **73 of 292 dataset DAST rules can never fire in the
+  App**, because the header they read is dropped before evaluation. The per-header list
+  and the count each header would unlock live in `interop/app-dast-reachability.json`;
+  `scripts/validate-app-dast-reachability.mjs` keeps it honest inside `npm test`.
+- The active engine injects only the first payload per point
+  (`payloadsForBudget(1)` + `payloads.slice(0, 1)`), so the SQLi, open-redirect,
+  traversal and CRLF detectors in `payloads.ts` never run; only the XSS marker does.
+
+Nothing in the App was modified. Method and rule table:
+`docs/DAST_APP_ALIGNED_BATCH_2026-10-21.md`.

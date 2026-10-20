@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1363",
+  "title": "Signal: Unix password database content served in a response",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-body-matches",
+      "valuePattern": "root:x:0:0:root:/root:/bin/(?:bash|sh)"
+    }
+  },
+  "scope": "One response body containing the root line of a Unix password database.",
+  "limitations": "One response body. The check proves the file content was returned; it does not identify which parameter or configuration allowed it, and it does not read the file itself.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/download?file=../../../../etc/passwd",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "root:x:0:0:root:/root:/bin/bash\ndaemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/static/..%2f..%2fetc/passwd",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/octet-stream"
+        },
+        "body": "root:x:0:0:root:/root:/bin/sh\n"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/download?file=../../../../etc/passwd",
+        "status": 400,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"error\":\"invalid path\"}"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/blog/unix-files",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<p>Each line of /etc/passwd has seven colon-separated fields.</p>"
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A tutorial that includes a sample /etc/passwd line is reported; a page that only mentions the filename is not. The pattern requires the full root entry, not the bare filename.",
+  "linkedRules": [
+    "DPK-DAST-294"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:dast-body-passwd-file-served:passwd-root-line",
+  "validationStatus": "VALIDATED"
+}

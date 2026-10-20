@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-298",
+  "title": "Symfony exception trace disclosed in a response",
+  "description": "The response renders a Symfony kernel or debug exception class name. Those pages list the exception chain with file paths and arguments, which discloses the application layout and, for arguments, the values the failing call received.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-209",
+  "category": "debug-exposure",
+  "remediation": "Run the application in production mode so the Twig error template is used, and return a generic page with a correlation id.",
+  "limitation": "One response body. The check recognises the exception class; it does not decide whether the arguments printed were sensitive.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?:Symfony\\\\Component\\\\HttpKernel\\\\Exception|Symfony\\\\Component\\\\Debug\\\\Exception)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/cart",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "Symfony\\Component\\HttpKernel\\Exception\\NotFoundHttpException: No route found"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/cart",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "Symfony\\Component\\Debug\\Exception\\FatalErrorException in CartController.php line 88"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/cart",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body><h1>Oops! An Error Occurred</h1><p>Something is broken.</p></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/about",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<p>This application is built with Symfony components.</p>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1367"
+  ]
+}

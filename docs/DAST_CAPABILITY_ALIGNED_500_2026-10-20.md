@@ -301,3 +301,34 @@ What did **not** change, deliberately: the check vocabulary, the passive-observa
 contract, the overlap policy (349 checks, 130 subset pairs, 0 unreviewed), the licence
 position (still no `LICENSE`, BLK-001), and the 15 App-evaluator divergences recorded in
 GAP-041. A larger pack is not a more integrated one.
+
+---
+
+## Appendix 2 — 2026-10-21 (app-surface batch, DAST 280 → 292)
+
+Appended again; the figures above and in Appendix 1 remain correct for their own tree
+state.
+
+| Item | Appendix 1 (defensive batch) | Now (app-surface batch) |
+|---|---|---|
+| DAST rules | 280 | **292** |
+| Patterns / records / remediation | 1 327 each | **1 339 each** |
+| Declared DAST tests | 1 371 | **1 419** (+48) |
+| DAST evaluation cases | 528 | **542** (+14) |
+| `run-eval` true positives | 1 353 | **1 365** |
+| Distance to the 500 target | 220 | **208** |
+| Rules evaluable inside the App | not measured before this batch | **219 of 292 (75 %)** |
+
+The second number is the one that matters. Reading the App's DAST engines
+(`apps/api/src/scans/dast/engine.ts`, `activeEngine.ts` at `9360dd1`) showed that the pack
+evaluator receives only 11 response headers and the body, clipped at 32 768 bytes. The
+batch therefore added only body- and allowlisted-header rules, and it produced a new
+gate that records which existing rules can never fire in the product:
+`interop/app-dast-reachability.json` (73 rules across 47 headers), checked by
+`scripts/validate-app-dast-reachability.mjs` inside `npm test`.
+
+That gate changes the shape of the remaining work honestly: adding another
+`Permissions-Policy` or CORP rule would raise the rule count without raising App
+coverage. Until the App forwards those headers, the reachable ceiling is 219 plus
+whatever new body/`Set-Cookie`/`Location` evidence can be defended. Full method and
+rule table: `docs/DAST_APP_ALIGNED_BATCH_2026-10-21.md`.

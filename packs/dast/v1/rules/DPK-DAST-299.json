@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-299",
+  "title": "Windows ini file content served in a response",
+  "description": "The response body contains the marker line of the Windows win.ini file. win.ini sits in the system directory and has no application purpose, so its presence is evidence of a traversal or a directory-mapping error on a Windows host, the same class as the Unix password database on Linux.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-22",
+  "category": "information-disclosure",
+  "remediation": "Fix the traversal or mapping that served the file and review the access log. Restrict the account running the service so it cannot read the system directory.",
+  "limitation": "One response body. The check proves one file was read; it does not enumerate what else the same parameter can reach.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "for 16-bit app support"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/get?p=..%5c..%5cwindows%5cwin.ini",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "; for 16-bit app support\n[fonts]\n[extensions]\n"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/files/../../win.ini",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "[windows]\nfor 16-bit app support\n"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/get?p=..%5c..%5cwindows%5cwin.ini",
+        "status": 404,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body>Not found</body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/blog/legacy",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<p>We still provide support for 16-bit applications on legacy hardware.</p>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1368"
+  ]
+}

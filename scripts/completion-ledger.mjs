@@ -30,6 +30,7 @@ const read = (rel) => readFileSync(join(ROOT, rel), 'utf8');
 const readJson = (rel) => JSON.parse(read(rel));
 const inventory = readJson('docs/CURRENT_INVENTORY.json');
 const conformance = readJson('interop/app-conformance.json');
+const dastSurface = readJson('interop/app-dast-reachability.json');
 const targets = readJson('docs/CORPUS_TARGETS.json');
 const pkg = readJson('package.json');
 
@@ -281,6 +282,17 @@ const dimensions = [
     nextAction: 'App adds the config-format families or accepts the dataset ids; this repository keeps docs/APP_LANGUAGE_ID_MAPPING.md + the gate green.',
     verification: 'node scripts/validate-app-language-ids.mjs',
   }),
+  dim('app.dast-reachability', 'DAST rules evaluable through the App response surface', {
+    measured: dastSurface.totals.reachable,
+    denominator: dastSurface.totals.dastRules,
+    unit: 'rules',
+    pct: dastSurface.totals.reachablePct,
+    status: 'BLOCKED_APP',
+    blocker: 'APP_RESPONSE_SURFACE',
+    detail: `Both App DAST engines hand the evaluator only ${dastSurface.surface.inspectedResponseHeaders.length} response headers (apps/api/src/scans/dast/engine.ts, activeEngine.ts) and clip the body to ${dastSurface.surface.bodyInspectionBytes} bytes, so ${dastSurface.totals.unreachable} rules can never fire in the product even though they are correct: ${dastSurface.headerActions.slice(0, 4).map((h) => `${h.header} (${h.rulesThatBecomeReachable})`).join(', ')} and ${Math.max(0, dastSurface.headerActions.length - 4)} more headers. Body rules are reachable but bounded by the clip.`,
+    nextAction: `App forwards the header names in interop/app-dast-reachability.json (headerActions) or the dataset stops counting those rules as product coverage; the register is machine-checked by scripts/validate-app-dast-reachability.mjs.`,
+    verification: 'node scripts/validate-app-dast-reachability.mjs --check',
+  }),
   dim('app.loader-conformance', 'App loader checklist steps implemented', {
     measured: conformance.loaderChecklist.filter((s) => s.status === 'DONE').length,
     denominator: conformance.loaderChecklist.length,
@@ -373,6 +385,7 @@ const BLOCKER_VOCAB = [
   'APP_CATALOG',
   'APP_LOADER',
   'APP_EVALUATOR',
+  'APP_RESPONSE_SURFACE',
   'ARTEFACT_STALE',
 ];
 
