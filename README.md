@@ -29,6 +29,7 @@ What lives where (by design — proven in `docs/SCOPE.md` by inventorying every 
 - **11 audience starters**: 6 executable lessons (Student contract; 2 are developer-focused `lsn_dev_*`), 3 assessment templates (Security Professional), 2 passive-only engagement templates (Pentester).
 - **OSV importer** (`scripts/import-osv.mjs`) for open aggregated data (mapping covered by fixture tests; live import needs network to api.osv.dev).
 - **Verified App connection (2026-10-21):** at App `9360dd1` all nine dataset categories load from `DATASET_PATH` (100 files / 950 / 97 / 263 / 1310 / 68 / 6 / 3 / 2 — every count reproduced from this tree) and SCA matching returns real advisories (`fast-jwt@6.2.4` → 6). The same audit found nine defects, including 160 of 950 SAST rules unreachable through the App language catalog, 15 of 1,292 DAST declared tests disagreeing with the App evaluator, and 1310 remediation entries loaded but never surfaced. See `docs/APP_CONNECTION_VERIFICATION_2026-10-21.md`.
+- **Computed completion ledger (2026-10-21):** `docs/DATASET_COMPLETION_LEDGER.md` answers "is it done?" without a composite percentage — 20 dimensions, each either COMPLETE with a verification command that exists, or PARTIAL/BLOCKED with a named owner and an executable next action. 8 complete · 4 partial · 1 policy-bound · 3 owner-blocked · 4 App-blocked. Regenerate: `npm run completion`; `npm test` fails when it stops reproducing.
 - Coverage is a **growing seed, never a completeness claim**: an empty result means "not in this dataset", never "not vulnerable" (HONESTY.md rule 5).
 
 ## Layout
@@ -45,6 +46,7 @@ Drobon-Dataset/
 │   ├── SCOPE.md               # Seam inventory: what lives here, and why
 │   ├── APP_CONNECTION_VERIFICATION_2026-10-21.md # Verified App↔Dataset connection (probes + defects)
 │   ├── APP_LANGUAGE_ID_MAPPING.md # Generated: pack language ids vs the App catalog
+│   ├── DATASET_COMPLETION_LEDGER.md # Generated: 20-dimension completion ledger (no composite %)
 │   ├── REQUIREMENTS_MATRIX.json # Machine-readable capability → asset traceability (validated)
 │   ├── LICENSE_DECISION_RECORD.md # License status: no grant; owner decision pending
 │   └── INGESTION_PLAN.md      # Blocked-until-authorized production ingestion plan
@@ -66,7 +68,9 @@ Drobon-Dataset/
 ├── assessments/templates/     # Assessment templates, one file per tmpl_* id
 ├── engagements/               # Engagement templates, one file per eng_* id (passive-only)
 ├── interop/
-│   └── provider-vectors.json  # Pinned coordinate → advisory-id expectations
+│   ├── provider-vectors.json  # Pinned coordinate → advisory-id expectations
+│   ├── APP_CONFORMANCE.md     # Generated: declared-test parity vs the App, divergence register
+│   └── app-conformance.json   # Generated: the same, machine-readable (the App's defect list)
 ├── data/
 │   ├── app-language-catalog.json # Pinned App SAST language catalog (reachability gate)
 │   ├── asset-cells/           # Hand-designed generator cell data + .manifest.json (stable ID ledger)
@@ -78,6 +82,8 @@ Drobon-Dataset/
 │   ├── validate-cwe.mjs       # Zero-dependency CWE validator (checks MITRE links)
 │   ├── validate-matrix.mjs    # Zero-dependency requirements-matrix validator (recomputes counts)
 │   ├── validate-app-language-ids.mjs # Pack language ids vs the App catalog (reachability gate)
+│   ├── gen-app-conformance.mjs # Declared-test parity vs the App evaluator (conformance gate)
+│   ├── completion-ledger.mjs  # Computes docs/DATASET_COMPLETION_LEDGER.* from the tree
 │   ├── range.mjs              # semver / PEP 440 range syntax + evaluation
 │   ├── import-ghsa.mjs        # Reviewed-GHSA importer (paginated, retrying, validates before writing)
 │   ├── import-osv.mjs         # OSV importer (fixture-tested mapping)

@@ -329,6 +329,20 @@ only observable in the App, the row now says so and points at the App ticket.
 | **new gate** `scripts/validate-app-language-ids.mjs` + `data/app-language-catalog.json` + generated `docs/APP_LANGUAGE_ID_MAPPING.md` | 147 assertions: every pack language id must resolve to the App catalog, a declared alias, or an explicit "needs a new App family" entry; stale entries fail; wired into `npm test` |
 | `docs/CURRENT_INVENTORY.json` | regenerated (remaining-work register is now 43 rows) |
 
+### 8.1 Completion pass later the same day (dataset-side closure)
+
+| Artefact | Change |
+|---|---|
+| **new gate** `scripts/gen-app-conformance.mjs` + `scripts/lib/app-evaluator-profile.mjs` + `interop/app-conformance.json` + **generated** `interop/APP_CONFORMANCE.md` | Declared-test parity re-measured as an executable artefact instead of a paragraph: SAST 0/3,843 · Secrets 0/441 · **DAST 15/1,292 on 9 rules**, with the failing test index, the input observation and the cause (`COOKIE_MODEL_ABSENT`, `BLANK_VALUE_ARRAY`, `ARRAY_JOIN_CROSS_VALUE`) for each. Also carries the reachability table and the loader checklist with the App file each status was observed in. `--check` runs inside `npm test` |
+| **new artefact** `scripts/completion-ledger.mjs` + **generated** `docs/DATASET_COMPLETION_LEDGER.{json,md}` | 20 dimensions, each COMPLETE (with a verification command that must exist in `package.json`) or PARTIAL/POLICY_BOUND/BLOCKED with an owner class and an executable next action. Deliberately **no composite percentage** |
+| new gate `scripts/render-capability-coverage.mjs --check`, `scripts/inventory.mjs --check`, `scripts/gen-app-conformance.mjs --check`, `scripts/completion-ledger.mjs --check` | All four now run inside `npm test`, so a stale generated artefact fails locally and not only in CI |
+| `docs/CURRENT_INVENTORY.json` | was **stale** (1,610 cases / 1,599 assessed and 35 gap rows, against 1,619 / 1,608 and 43 at the first regeneration; 1,625 / 1,614 after the ordinary-code batch below); regenerated and now gated |
+| `docs/CAPABILITY_COVERAGE_MATRIX.json` + `.md` | `DCC-SAST.evaluationCoverage` recounted after 15 new cases: 812 cases / 807 assessed / **499** rules with a negative control (was 204); dataset-wide 1,625 cases, **879** rules with a negative control (was 607) |
+| `data/eval-cases/EVAL-SAST-256…270.json` | 15 independent negative controls in two batches, each runnable standalone via `run-eval.mjs --case`: (a) cohort `sast-universal-controls` — 9 cases so **all 11 universal rules** now have both a positive and a negative case; (b) cohort `sast-ordinary-code` — one realistic, idiomatic benign file per language (python, javascript, java, php, ruby, csharp) naming **every** language-gated detector (84/71/66/56/53/46 = 376 rule assertions). All six produced **0 detections**, i.e. no false positive on ordinary code; nothing was removed from any list after the run |
+| `DROBON_REMAINING_WORK.csv` | GAP-040 corrected 167→**160** unreachable / 68→**66** ids with the measured split; GAP-041 now names every diverging test index and points at the generated register |
+| `docs/PACKS.md`, `README.md` | cross-reference the generated conformance register and the completion ledger |
+| `.github/workflows/ci.yml` | new explicit steps for the conformance/ledger/render gates |
+
 Deliberately **not** changed: any rule, pattern, record, remediation entry, eval case,
 advisory record, owner decision, licence status or release gate status. The dataset
 suite stays green.
