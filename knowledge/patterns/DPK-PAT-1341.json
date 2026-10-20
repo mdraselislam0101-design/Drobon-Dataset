@@ -1,0 +1,62 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1341",
+  "title": "Signal: Envoy administration interface disclosed",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-body-matches",
+      "valuePattern": "(?=[\\s\\S]*[\"\\']state[\"\\']\\s*:\\s*[\"\\'](?:LIVE|PRE_INITIALIZING|DRAINING)[\"\\'])(?=[\\s\\S]*command_line_options)"
+    }
+  },
+  "scope": "One response body containing Envoy admin server_info fields.",
+  "limitations": "One response body. The marker identifies an Envoy admin payload; it does not confirm that state-changing admin endpoints (quitquitquit, runtime_modify) are reachable from the same address.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://edge.example/server_info",
+        "status": 200,
+        "headers": {},
+        "body": "{\"version\":\"1.29.1\",\"state\":\"LIVE\",\"command_line_options\":{\"base_id\":\"node-7\",\"config_path\":\"/etc/envoy/envoy.yaml\"}}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://edge.example/stats?format=json",
+        "status": 200,
+        "headers": {},
+        "body": "{\"state\": \"DRAINING\", \"command_line_options\": {\"restart_epoch\": \"3\"}}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://edge.example/",
+        "status": 200,
+        "headers": {},
+        "body": "<html><body>Welcome</body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://edge.example/api/health",
+        "status": 200,
+        "headers": {},
+        "body": "{\"state\":\"LIVE\",\"checks\":[{\"name\":\"db\",\"ready\":true}]}"
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A documentation page that pastes server_info output is reported; the finding is the content, and the owner should confirm the endpoint is unreachable rather than assume the page is harmless.",
+  "linkedRules": [
+    "DPK-DAST-272"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:dast-body-envoy-admin:envoy-admin",
+  "validationStatus": "VALIDATED"
+}

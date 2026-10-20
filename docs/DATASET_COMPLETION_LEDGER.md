@@ -22,24 +22,24 @@ waiting on a legal decision rather than on engineering.
 | Dimension | Measured | Denominator | % | Status | Blocker |
 |---|---|---|---|---|---|
 | SAST rule pack against its planning target | 950 | 1000 | 95% | **PARTIAL** | EVIDENCE_GATED |
-| DAST check pack against its 500 target | 263 | 500 | 52.6% | **PARTIAL** | EVIDENCE_GATED |
+| DAST check pack against its 500 target | 280 | 500 | 56% | **PARTIAL** | EVIDENCE_GATED |
 | Secrets rule pack | 97 | — | — | **COMPLETE** | — |
-| Rule ↔ pattern ↔ record ↔ remediation graph | 1310/1310/1310 for 1310 rules | 1310 | 100% | **COMPLETE** | — |
+| Rule ↔ pattern ↔ record ↔ remediation graph | 1327 | 1327 | 100% | **COMPLETE** | — |
 | CWE reference coverage | 68 | 68 | 100% | **COMPLETE** | — |
-| Declared pack tests executed | 1310/1310 rules with >=1 positive and >=1 negative | 1310 | 100% | **COMPLETE** | — |
-| Independent evaluation: rules with a positive case | 1302 | 1310 | 99.4% | **PARTIAL** | OWNER_DECISION_REQUIRED |
-| Independent evaluation: rules with a negative control | 879 | 1310 | 67.1% | **PARTIAL** | EVIDENCE_GATED |
-| Universal rules with both a positive case and a negative control | 11/11 | 11 | 100% | **COMPLETE** | — |
+| Declared pack tests executed | 1327 | 1327 | 100% | **COMPLETE** | — |
+| Independent evaluation: rules with a positive case | 1319 | 1327 | 99.4% | **PARTIAL** | OWNER_DECISION_REQUIRED |
+| Independent evaluation: rules with a negative control | 896 | 1327 | 67.5% | **PARTIAL** | EVIDENCE_GATED |
+| Universal rules with both a positive case and a negative control | 11 | 11 | 100% | **COMPLETE** | — |
 | Evaluation outcome quality on assessed cases | — | — | — | **POLICY_BOUND** | POLICY_DECISION |
 | Production vulnerability intelligence | 84 | 100000 | 0.08% | **BLOCKED_OWNER** | LICENSE_AND_PRODUCTION_AUTH |
 | Licence grant | 0 | 1 | 0% | **BLOCKED_OWNER** | OWNER_DECISION_REQUIRED |
 | SAST rules reachable through the App language gate | 790 | 950 | 83.2% | **BLOCKED_APP** | APP_CATALOG |
 | App loader checklist steps implemented | 2 | 6 | 33.3% | **BLOCKED_APP** | APP_LOADER |
-| DAST declared-test parity in the App evaluator | 1277 | 1292 | 98.8% | **BLOCKED_APP** | APP_EVALUATOR |
-| Remediation entries surfaced to users | 0 | 1310 | 0% | **BLOCKED_APP** | APP_LOADER |
+| DAST declared-test parity in the App evaluator | 1356 | 1371 | 98.9% | **BLOCKED_APP** | APP_EVALUATOR |
+| Remediation entries surfaced to users | 0 | 1327 | 0% | **BLOCKED_APP** | APP_LOADER |
 | Deterministic generation and whole-tree digest | pass | — | — | **COMPLETE** | — |
 | Dataset test suite | pass | — | — | **COMPLETE** | — |
-| Committed generated artefacts reproduce from the tree | 5/5 | 5 | 100% | **COMPLETE** | — |
+| Committed generated artefacts reproduce from the tree | 5 | 5 | 100% | **COMPLETE** | — |
 | Repository publication readiness | 0 | 1 | 0% | **BLOCKED_OWNER** | LICENSE_AND_PRODUCTION_AUTH |
 
 ## Detail and next action, per dimension
@@ -55,8 +55,8 @@ waiting on a legal decision rather than on engineering.
 ### packs.dast — DAST check pack against its 500 target
 
 - Status: **PARTIAL** (blocker: `EVIDENCE_GATED`)
-- Measured: 263 of 500 checks (52.6%)
-- Why: The check vocabulary is closed at seven types; every new check must be semantically distinct, tested against observations and independently evaluated. 237 remain.
+- Measured: 280 of 500 checks (56%)
+- Why: The check vocabulary is closed at seven types; every new check must be semantically distinct, tested against observations and independently evaluated. 220 remain.
 - Next action: Author the next capability-aligned batch inside the closed check vocabulary (docs/DAST_CAPABILITY_ALIGNED_500_2026-10-20.md pattern), never as variants of one question.
 - Verify: `npm run validate:packs`
 
@@ -71,8 +71,8 @@ waiting on a legal decision rather than on engineering.
 ### knowledge.graph — Rule ↔ pattern ↔ record ↔ remediation graph
 
 - Status: **COMPLETE**
-- Measured: 1310/1310/1310 for 1310 rules of 1310 entries each (weakest tree) (100%)
-- Why: Strict 1:1:1:1 in both directions, 0 orphans, enforced by the consistency suite.
+- Measured: 1327 of 1327 entries (weakest of the three trees) (100%)
+- Why: patterns 1327 / records 1327 / remediation 1327 against 1327 rules: strict 1:1:1:1 in both directions, 0 orphans, enforced by the consistency suite.
 - Next action: None.
 - Verify: `node scripts/test-consistency.mjs`
 
@@ -87,15 +87,15 @@ waiting on a legal decision rather than on engineering.
 ### tests.pack-level — Declared pack tests executed
 
 - Status: **COMPLETE**
-- Measured: 1310/1310 rules with >=1 positive and >=1 negative of 1310 rules (100%)
-- Why: 5576 declared tests execute in the validator; ReDoS lint and CWE checks run with them.
+- Measured: 1327 of 1327 rules (100%)
+- Why: 1327 of 1327 rules declare at least one positive and one negative test; 5655 declared tests execute in the validator, with ReDoS lint and CWE checks.
 - Next action: None.
 - Verify: `npm run validate:packs`
 
 ### eval.positive — Independent evaluation: rules with a positive case
 
 - Status: **PARTIAL** (blocker: `OWNER_DECISION_REQUIRED`)
-- Measured: 1302 of 1310 rules (99.4%)
+- Measured: 1319 of 1327 rules (99.4%)
 - Why: 8 SAST rules match 2–3 characters while the evidence contract requires mustContain >= 4, so no authored positive case can satisfy the validator (BLK-EVAL-01). Every other rule has one.
 - Next action: Owner picks: (a) allow the full match as evidence when it is shorter than 4 characters, (b) extend those 8 detectors with context, or (c) accept the gap in writing as a permanent limitation.
 - Verify: `npm run test:eval`
@@ -103,7 +103,7 @@ waiting on a legal decision rather than on engineering.
 ### eval.negative — Independent evaluation: rules with a negative control
 
 - Status: **PARTIAL** (blocker: `EVIDENCE_GATED`)
-- Measured: 879 of 1310 rules (67.1%)
+- Measured: 896 of 1327 rules (67.5%)
 - Why: A negative control has to be an authored fixture that the rule must not fire on; deriving them mechanically from each rule's own negative test would be circular and is explicitly not counted (counting rule in scripts/eval-coverage-report.mjs). Closed on 2026-10-21: all 11 universal rules (EVAL-SAST-256…264) and one ordinary-code control per language (EVAL-SAST-265…270: python, javascript, java, php, ruby, csharp), where every language-gated detector is named and must stay silent on benign, idiomatic code.
 - Next action: Continue in batches, highest false-positive risk first: high-severity lexical rules with short literals, then one control per category.
 - Verify: `npm run test:eval`
@@ -111,7 +111,7 @@ waiting on a legal decision rather than on engineering.
 ### eval.universal — Universal rules with both a positive case and a negative control
 
 - Status: **COMPLETE**
-- Measured: 11/11 of 11 rules (100%)
+- Measured: 11 of 11 rules (100%)
 - Why: Universal rules run on every analysed file, so they carry the highest false-positive cost. All 11 now have an independent positive case and an independent negative control.
 - Next action: Keep the invariant: a new universal rule ships with both.
 - Verify: `npm run test:eval`
@@ -120,7 +120,7 @@ waiting on a legal decision rather than on engineering.
 
 - Status: **POLICY_BOUND** (blocker: `POLICY_DECISION`)
 - Measured: see note cases
-- Why: 1625 cases (1614 assessed, 11 UNASSESSED). The UNASSESSED cases are excluded from scoring by policy and the one preserved false positive (EVAL-SAST-008) stays visible. Precision/recall are reported by the runner, not stored here, so they cannot go stale.
+- Why: 1644 cases (1633 assessed, 11 UNASSESSED). The UNASSESSED cases are excluded from scoring by policy and the one preserved false positive (EVAL-SAST-008) stays visible. Precision/recall are reported by the runner, not stored here, so they cannot go stale.
 - Next action: None until the scoring policy for the 11 UNASSESSED shapes is decided (GAP-038).
 - Verify: `node scripts/run-eval.mjs`
 
@@ -159,16 +159,16 @@ waiting on a legal decision rather than on engineering.
 ### app.dast-parity — DAST declared-test parity in the App evaluator
 
 - Status: **BLOCKED_APP** (blocker: `APP_EVALUATOR`)
-- Measured: 1277 of 1292 declared tests (98.8%)
-- Why: 15 divergences on 9 rules (cookie model, blank header values, cross-value array joins). The dataset keeps the browser-accurate semantics; the App must port them.
+- Measured: 1356 of 1371 declared tests (98.9%)
+- Why: 15 divergences on 9 rules (cookie model, blank header values, cross-value array joins), measured by replaying every declared test through scripts/lib/app-evaluator-profile.mjs (a port of the App evaluator at 9360dd1), not by driving a running App. The dataset keeps the browser-accurate semantics; the App must port them.
 - Next action: App ports scripts/lib/set-cookie.mjs semantics and fixes the blank-value branch; interop/app-conformance.json lists every affected test.
 - Verify: `node scripts/gen-app-conformance.mjs --check`
 
 ### app.remediation-surface — Remediation entries surfaced to users
 
 - Status: **BLOCKED_APP** (blocker: `APP_LOADER`)
-- Measured: 0 of 1310 entries (0%)
-- Why: All 1,310 entries load into the App dataset service, but getRemediationMap has no caller and remediationGuidanceForFinding still returns UNAVAILABLE.
+- Measured: 0 of 1327 entries (0%)
+- Why: All 1327 entries load into the App dataset service, but getRemediationMap has no caller and remediationGuidanceForFinding still returns UNAVAILABLE.
 - Next action: App wires the resolver into findings, reports and the assistant (GAP-008).
 - Verify: `node scripts/test-consistency.mjs`
 
@@ -191,7 +191,7 @@ waiting on a legal decision rather than on engineering.
 ### artefacts.freshness — Committed generated artefacts reproduce from the tree
 
 - Status: **COMPLETE**
-- Measured: 5/5 of 5 generated artefacts (100%)
+- Measured: 5 of 5 generated artefacts (100%)
 - Why: All 5 generated artefacts reproduce byte-for-byte: inventory, capability matrix, App language mapping, App conformance and coverage evidence. This check exists because a stale CURRENT_INVENTORY.json survived unnoticed until the ledger was written.
 - Next action: Keep regenerating through the documented --write commands; the check runs inside npm test.
 - Verify: `npm run completion:check`
@@ -200,7 +200,7 @@ waiting on a legal decision rather than on engineering.
 
 - Status: **BLOCKED_OWNER** (blocker: `LICENSE_AND_PRODUCTION_AUTH`)
 - Measured: 0 of 1 release (0%)
-- Why: Release readiness is NO-GO: 13 of 17 gates PASS, 4 blocked (G6 licence, G8 production lock, G16 owner decisions, G17 production eligibility). Passing tests are not a legal conclusion.
+- Why: Release readiness is BLOCKED — OWNER/PRODUCTION AUTHORIZATION REQUIRED: 13 of 17 gates PASS, 4 blocked (G6 licence, G8 production lock, G16 owner decisions, G17 production eligibility). Passing tests are not a legal conclusion.
 - Next action: Owner completes the four blocked gates (docs/OWNER_DECISION_PACKET.md).
 - Verify: `npm run validate:matrix`
 

@@ -11,9 +11,9 @@ name the script that re-verifies the claim on every run.
 | SCA matching (`sca/provider.ts assess`) | REQUIRED | 100-record validated seed; breadth blocked | `validate.mjs`, `check-vectors.mjs` |
 | SAST detection (app catalog-gated engine) | SUPPLEMENTAL | 950 Dataset rules (`DPK-SAST-*`); reachability recount in `docs/PACKS.md` (658 fully, 29 partial, 221 with no analyzed tag, 11 any-file / omitted `languages`) | `validate-packs.mjs`, `test-packs.mjs`, `test-consistency.mjs` (reachability) |
 | Secrets detection (shape-only) | SUPPLEMENTAL | 97 Dataset rules (`DPK-SEC-*`; recount 2026-10-17 Phase 9, DPK-SEC-108 added); no app secrets pack consumer | `validate-packs.mjs`, `test-packs.mjs` |
-| DAST observation (app: 8 hard-coded `DG-DAST-001..008` in `apps/api/src/scans/dast/rules.ts`, code not data) | SUPPLEMENTAL | 263 Dataset rules over 7 closed check types (recount 2026-10-20; loader-future; no app consumer of `packs/dast`) | `validate-packs.mjs`, `test-packs.mjs` (DAST evaluator rows) |
+| DAST observation (app: 8 hard-coded `DG-DAST-001..008` in `apps/api/src/scans/dast/rules.ts`, code not data) | SUPPLEMENTAL | 280 Dataset rules over 7 closed check types (recount 2026-10-21; loader-future; no app consumer of `packs/dast`) | `validate-packs.mjs`, `test-packs.mjs` (DAST evaluator rows) |
 | CWE classification (app-referenced ids) | REQUIRED | 63 entries in `knowledge/cwe/`; app-referenced subset recounted 2026-10-18: **16 distinct `DG-*` CWE ids, 16/16 resolve**, 47 entries not App-referenced | `validate-cwe.mjs`, `test-consistency.mjs`, `validate-capability-coverage.mjs` |
-| Remediation content (app computes status) | REQUIRED | 1310 remediation files, one per pack rule (recount 2026-10-20) | `validate-audiences.mjs`, `test-consistency.mjs` |
+| Remediation content (app computes status) | REQUIRED | 1327 remediation files, one per pack rule (recount 2026-10-21) | `validate-audiences.mjs`, `test-consistency.mjs` |
 | Lessons (internal catalog, loader-future) | SUPPLEMENTAL | 6 lessons (2 `lsn_dev_*`, 4 `lsn_pack_*`), practice validator-executed | `validate-audiences.mjs` |
 | Assessment templates (loader-future) | SUPPLEMENTAL | 3 templates, never pre-authorize (count re-derived Pump 4) | `validate-audiences.mjs` |
 | Engagement aids (no app consumer) | SUPPLEMENTAL | 2 standalone passive-only aids (count re-derived Pump 4) | `validate-audiences.mjs` |
@@ -29,7 +29,7 @@ name the script that re-verifies the claim on every run.
 
 No schema or compatibility changes are required on the dataset side: record
 bounds, enums, and the record-to-advisory projection mirror the app contracts
-(verified 2026-10-21 at `9360dd1`). Dataset counts re-derived again 2026-10-20 after the DAST capability-aligned expansion (SAST 950; secrets 97; DAST 263; lessons 6; pack total 1310) and pin-checked by `scripts/test-current-state.mjs`; app-side engine facts re-read at `9360dd1` on 2026-10-21 by the connection audit (docs/APP_CONNECTION_VERIFICATION_2026-10-21.md). Re-verify this table at each app re-check.
+(verified 2026-10-21 at `9360dd1`). Dataset counts re-derived again 2026-10-20 after the DAST capability-aligned expansion (SAST 950; secrets 97; DAST 280; lessons 6; pack total 1327) and pin-checked by `scripts/test-current-state.mjs`; app-side engine facts re-read at `9360dd1` on 2026-10-21 by the connection audit (docs/APP_CONNECTION_VERIFICATION_2026-10-21.md). Re-verify this table at each app re-check.
 
 ## Canonical row-level matrix (2026-10-18)
 

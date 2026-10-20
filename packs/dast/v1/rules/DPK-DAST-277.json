@@ -1,0 +1,56 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-277",
+  "title": "pgAdmin management interface disclosed",
+  "description": "The response is the pgAdmin 4 login page. pgAdmin holds database server definitions, saved credentials and a query tool that runs SQL as the connecting role, so a reachable login page is an administrative entry point on the public surface, and its version is readable before authentication.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "debug-exposure",
+  "remediation": "Remove pgAdmin from public routes and reach it through a bastion or VPN; if it must be exposed, put it behind SSO and restrict the source ranges.",
+  "limitation": "One response body. The marker identifies the pgAdmin login page; it does not test credentials, and it does not prove that saved server definitions exist.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "pgAdmin 4"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://db.example/pgadmin4/login",
+        "status": 200,
+        "headers": {},
+        "body": "<html><head><title>pgAdmin 4</title></head><body><form id=\"login\"></form></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://db.example/",
+        "status": 200,
+        "headers": {},
+        "body": "pgAdmin 4 v8.6"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://db.example/",
+        "status": 200,
+        "headers": {},
+        "body": "<title>Internal tools</title>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://db.example/help",
+        "status": 200,
+        "headers": {},
+        "body": "Use psql or any SQL client; the admin UI is on the bastion."
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1346"
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-287",
+  "title": "Server-Timing exposes backend timing to every client",
+  "description": "The response carries a Server-Timing header that names internal phases or services with their durations. The header is designed for browser devtools, so it also tells any unauthenticated caller how long each backend hop takes, which is the measurement an attacker uses to infer cache state, database load and whether a payload triggered slow work.",
+  "severity": "LOW",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Emit Server-Timing only on responses that need it, keep metric names generic, and strip the header at the edge for unauthenticated traffic instead of describing internal services.",
+  "limitation": "One header value. The check reports the presence of Server-Timing; it does not measure the accuracy of the timings or decide whether a named metric reveals a specific internal service.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Server-Timing",
+    "valuePattern": "^\\s*\\S"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/api/items",
+        "status": 200,
+        "headers": {
+          "Server-Timing": "db;dur=53.2, cache;desc=\"miss\""
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "server-timing": "edge;dur=12"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Server-Timing": ""
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Server-Timing": "   "
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1356"
+  ]
+}

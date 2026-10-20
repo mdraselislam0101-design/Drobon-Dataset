@@ -1,0 +1,1361 @@
+[
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-cookie-hostprefix-path",
+  "category": "cookie-flags",
+  "cwe": "CWE-16",
+  "severity": "LOW",
+  "title": "Set-Cookie __Host- prefix is not paired with Path=/",
+  "description": "A cookie whose name starts with `__Host-` promises three things: Secure, Path=/ and no Domain attribute. The observed header carries the prefix but sets Path to something other than `/` (or omits Path entirely), so a browser that enforces the prefix rejects the cookie and a browser that ignores the prefix stores it under a narrower path. Either way the cookie the application intended is not the cookie that exists.",
+  "remediation": "Emit `__Host-` cookies with `Path=/` and without `Domain`. If the cookie only belongs to a sub-path, drop the `__Host-` prefix and use `__Secure-` with an explicit Path instead.",
+  "limitation": "One Set-Cookie value. The check reads the Path attribute of a prefixed cookie; it does not test which user agents enforce the prefix rule, and it does not decide whether the narrower path is acceptable for that cookie.",
+  "scopeT": "One Set-Cookie value whose name starts with `__Host-` and whose Path attribute is absent or not `/`.",
+  "fp": "A `__Host-` cookie written by a framework that appends `Path=/` after the value is not reported; a cookie deliberately scoped to a sub-path under the prefix is reported, and the finding is correct because the prefix forbids it.",
+  "recordDesc": "The `__Host-` prefix is a browser-enforced assertion that a cookie is host-only and site-wide. Pairing the prefix with a narrower or absent Path breaks that assertion: enforcing browsers discard the header, permissive ones keep a cookie scoped differently from the intent.",
+  "applicability": "Responses that set cookies through the header, on any scheme.",
+  "risk": "The session or preference cookie silently fails to exist in enforcing browsers, or exists under a path the attacker can influence, so authentication state and CSRF tokens land outside the intended scope.",
+  "why": "A Set-Cookie name carries the __Host- prefix while its Path attribute is not /.",
+  "fix": [
+   "Emit __Host- cookies with Path=/ and no Domain attribute.",
+   "If the cookie is sub-path scoped, rename it with the __Secure- prefix instead."
+  ],
+  "verifyT": "Fetch the endpoint and confirm every __Host- cookie carries Path=/ and no Domain attribute.",
+  "cells": [
+   {
+    "suffix": "hostprefix-missing-path",
+    "lang": "http",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Set-Cookie",
+     "valuePattern": "^(?=\\s*__host-[^=;\\s]*=)(?![\\s\\S]*;\\s*path\\s*=\\s*/\\s*(?:;|$))"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Set-Cookie": "__Host-session=abc123; Secure; SameSite=Strict"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Set-Cookie": "__Host-session=abc123; Secure; Path=/app; HttpOnly"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Set-Cookie": "__Host-session=abc123; Secure; Path=/; SameSite=Strict"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Set-Cookie": "session=abc123; Secure; SameSite=Strict"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Set-Cookie": "__Secure-session=abc123; Secure; Path=/app"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Set-Cookie": [
+         "__Host-a=1; Secure; Path=/",
+         "__Host-b=2; Secure; Path=/"
+        ]
+       }
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-cookie-maxage-cap",
+  "category": "cookie-flags",
+  "cwe": "CWE-613",
+  "severity": "LOW",
+  "title": "Set-Cookie Max-Age exceeds the 400-day browser cap",
+  "description": "The cookie asks for a lifetime longer than the 400 days browsers have capped persistent cookies at since 2022. The value that ships and the value the browser stores differ, so a retention or expiry promise in the application design is not the behaviour users get, and a credential or preference long outlives the review that approved it.",
+  "remediation": "Set Max-Age to the lifetime the product actually needs, at most 400 days (34,560,000 seconds), and refresh the cookie on use instead of extending the declared lifetime.",
+  "limitation": "One Set-Cookie value. The check reports a declared lifetime above 35,000,000 seconds, which is the first value clearly beyond the 400-day cap; values between 34,560,000 and 35,000,000 are not reported, and no user-agent-specific cap is modelled.",
+  "scopeT": "One Set-Cookie value whose Max-Age attribute is longer than 35,000,000 seconds.",
+  "fp": "A cookie that is refreshed on every request does not need a long Max-Age and is reported anyway; the finding states the declared value, not the observed refresh behaviour.",
+  "recordDesc": "Browsers cap persistent cookie lifetimes at 400 days, so a Max-Age beyond that ceiling is silently shortened. The declared lifetime then overstates retention: a session or token outlives the review window it was approved for.",
+  "applicability": "Responses that set persistent cookies with Max-Age.",
+  "risk": "A session, refresh token or device-recognition cookie persists for years in the design while browsers keep it for 400 days, and any environment that does honour the long value keeps a credential far beyond its review.",
+  "why": "The Max-Age attribute declares a lifetime beyond the 400-day limit browsers apply.",
+  "fix": [
+   "Declare a Max-Age at or below 400 days for persistent cookies.",
+   "Refresh the cookie on activity instead of declaring a multi-year lifetime."
+  ],
+  "verifyT": "Fetch the endpoint and confirm every Max-Age attribute is at most 34,560,000.",
+  "cells": [
+   {
+    "suffix": "maxage-beyond-400-days",
+    "lang": "http",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Set-Cookie",
+     "valuePattern": ";\\s*max-age\\s*=\\s*(?:3[5-9][0-9]{6}|[4-9][0-9]{7}|[1-9][0-9]{8,})\\s*(?:;|$)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Set-Cookie": "device=abc; Max-Age=63072000; Secure; HttpOnly"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Set-Cookie": "device=abc; max-age=3153600000; Secure"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Set-Cookie": "device=abc; Max-Age=34560000; Secure; HttpOnly"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Set-Cookie": "session=abc; Max-Age=3600; Secure; HttpOnly"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Set-Cookie": "device=abc; Expires=Wed, 21 Oct 2026 07:28:00 GMT; Secure"
+       }
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-policy-payment-wildcard",
+  "category": "security-headers",
+  "cwe": "CWE-693",
+  "severity": "LOW",
+  "title": "Permissions-Policy grants the Payment Request API to every origin",
+  "description": "The Permissions-Policy value sets `payment=*`, which delegates the Payment Request API to every frame the page can embed, including third-party content. An embedded frame can then open the payment sheet against the top-level origin, and consent screens shown to the user are no longer attributable to the code the application itself ships.",
+  "remediation": "Restrict payment to the origins that need it (`payment=(self)`) and add an explicit allowlist only for first-party payment frames.",
+  "limitation": "One header value. The check reads the declared allowlist for payment; it does not observe whether a payment sheet is ever opened, and it cannot tell an embedded first-party frame from a third-party one.",
+  "scopeT": "One Permissions-Policy value whose payment feature carries the `*` allowlist token.",
+  "fp": "A storefront that intentionally delegates payment to a hosted checkout frame is reported; the finding is the delegation to every origin, not the existence of a payment frame.",
+  "recordDesc": "A wildcard allowlist for the Payment Request API hands the payment sheet to every embedded frame, so third-party content can prompt the user in the page origin. The trust boundary of the checkout UI moves from the operator to any frame the page loads.",
+  "applicability": "Responses that send Permissions-Policy and embed third-party frames.",
+  "risk": "Third-party frames can present payment prompts attributed to the site, which is a consent and brand-integrity failure even before a payment credential is involved.",
+  "why": "The payment feature in Permissions-Policy is set to the * allowlist.",
+  "fix": [
+   "Set payment=(self) and name payment frame origins explicitly.",
+   "Remove payment from the policy where the page never starts a payment request."
+  ],
+  "verifyT": "Fetch the endpoint and confirm the payment feature lists explicit origins or self.",
+  "cells": [
+   {
+    "suffix": "payment-wildcard",
+    "lang": "http",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Permissions-Policy",
+     "valuePattern": "(?:^|[,;])\\s*payment\\s*=\\s*\\(?\\s*\\*"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://shop.example/",
+       "status": 200,
+       "headers": {
+        "Permissions-Policy": "payment=*"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://shop.example/",
+       "status": 200,
+       "headers": {
+        "Permissions-Policy": "camera=(self), payment=*; geolocation=()"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://shop.example/",
+       "status": 200,
+       "headers": {
+        "Permissions-Policy": "payment=(self)"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://shop.example/",
+       "status": 200,
+       "headers": {
+        "Permissions-Policy": "payment=(self \"https://checkout.example\")"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://shop.example/",
+       "status": 200,
+       "headers": {
+        "Permissions-Policy": "camera=*"
+       }
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-policy-privacy-sandbox-wildcard",
+  "category": "security-headers",
+  "cwe": "CWE-693",
+  "severity": "LOW",
+  "title": "Permissions-Policy grants a Privacy Sandbox API to every origin",
+  "description": "The Permissions-Policy value opens an advertising or measurement API (browsing-topics, attribution-reporting, join-ad-interest-group, run-ad-auction, private-aggregation or shared-storage) to every origin with `*`. Embedded third-party frames can then enrol the top-level page in interest grouping or attribution reporting without the operator naming the party that does it.",
+  "remediation": "Leave Privacy Sandbox APIs disabled unless the product needs them, and where they are needed name the exact origins in the allowlist instead of `*`.",
+  "limitation": "One header value. The check reads the declared allowlist only; it does not observe interest groups or attribution reports, and browser support for each API differs, so a reported delegation may have no effect in some user agents.",
+  "scopeT": "One Permissions-Policy value that sets a Privacy Sandbox API to the `*` allowlist token.",
+  "fp": "A page that delegates one of these APIs to a first-party measurement frame is reported; the finding is the wildcard, not the presence of the API.",
+  "recordDesc": "Wildcard allowlists for advertising and attribution APIs let every embedded frame enrol the page in audience measurement. The operator loses the ability to name which third party observes the user, which is the control these APIs are supposed to give back.",
+  "applicability": "Responses that send Permissions-Policy on pages embedding third-party frames.",
+  "risk": "Third-party frames can register the page in interest groups or attribution flows, so user measurement happens through a party the operator never named.",
+  "why": "A Privacy Sandbox feature is set to the * allowlist in Permissions-Policy.",
+  "fix": [
+   "Remove Privacy Sandbox features from the policy unless the product uses them.",
+   "Name the exact measurement origins when the feature is required."
+  ],
+  "verifyT": "Fetch the endpoint and confirm no Privacy Sandbox feature carries a wildcard allowlist.",
+  "cells": [
+   {
+    "suffix": "privacy-sandbox-wildcard",
+    "lang": "http",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Permissions-Policy",
+     "valuePattern": "(?:^|[,;])\\s*(?:browsing-topics|attribution-reporting|join-ad-interest-group|run-ad-auction|private-aggregation|shared-storage|interest-cohort)\\s*=\\s*\\(?\\s*\\*"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://news.example/",
+       "status": 200,
+       "headers": {
+        "Permissions-Policy": "browsing-topics=*"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://news.example/",
+       "status": 200,
+       "headers": {
+        "Permissions-Policy": "camera=(), shared-storage=*"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://news.example/",
+       "status": 200,
+       "headers": {
+        "Permissions-Policy": "browsing-topics=()"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://news.example/",
+       "status": 200,
+       "headers": {
+        "Permissions-Policy": "attribution-reporting=(self)"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://news.example/",
+       "status": 200,
+       "headers": {
+        "Permissions-Policy": "geolocation=*"
+       }
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-body-meta-refresh-http",
+  "category": "mixed-content",
+  "cwe": "CWE-319",
+  "severity": "MEDIUM",
+  "title": "Meta refresh navigates an HTTPS page to a plaintext URL",
+  "description": "The page carries a `<meta http-equiv=\"refresh\">` element whose target URL uses the http scheme. On an HTTPS response the browser happily follows the refresh, so the user leaves a protected page and continues on a plaintext one, where every subsequent request and the session that follows are open to the network.",
+  "remediation": "Point the meta refresh at an HTTPS URL, or remove the element and navigate from application code where the target scheme can be checked.",
+  "limitation": "One response body. The check reports a meta refresh element whose URL starts with http on a page fetched over https; it does not follow redirect chains, so an https target that later redirects to http is not reported.",
+  "scopeT": "One HTTPS response body containing a meta refresh element whose target URL starts with http.",
+  "fp": "A template with a commented-out meta refresh is reported; the finding is the markup, and the owner should confirm the element is not rendered.",
+  "recordDesc": "A meta refresh to a plaintext URL walks the user off the protected page without any browser warning. Everything after the refresh — the session cookie if the domain matches, the credentials typed into the next form — travels unprotected.",
+  "applicability": "HTTPS responses whose HTML carries meta refresh navigation.",
+  "risk": "A network attacker reads or rewrites everything after the navigation, including credentials entered on the plaintext page, and the downgrade is invisible because the first page was secure.",
+  "why": "A meta refresh element on an HTTPS page targets an http URL.",
+  "fix": [
+   "Point the meta refresh at an HTTPS URL.",
+   "Remove the element and navigate from code that can enforce the scheme."
+  ],
+  "verifyT": "Fetch the page over HTTPS and confirm no meta refresh targets an http URL.",
+  "cells": [
+   {
+    "suffix": "meta-refresh-http",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "<meta\\b[^>]*http-equiv\\s*=\\s*[\"']?refresh[\"']?[^>]*url\\s*=\\s*[\"']?\\s*http://",
+     "requireScheme": "https"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {},
+       "body": "<meta http-equiv=\"refresh\" content=\"0; url=http://app.example/dashboard\">"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {},
+       "body": "<META HTTP-EQUIV=\"Refresh\" CONTENT=\"5;URL=http://legacy.example/portal\">"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {},
+       "body": "<meta http-equiv=\"refresh\" content=\"0; url=https://app.example/dashboard\">"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {},
+       "body": "<meta http-equiv=\"refresh\" content=\"30\">"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "http://app.example/",
+       "status": 200,
+       "headers": {},
+       "body": "<meta http-equiv=\"refresh\" content=\"0; url=http://app.example/dashboard\">"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-csp-frame-ancestors-http",
+  "category": "csp-weakness",
+  "cwe": "CWE-319",
+  "severity": "MEDIUM",
+  "title": "Content-Security-Policy frame-ancestors allows a plaintext HTTP parent",
+  "description": "The frame-ancestors directive names an `http:` origin, so a parent page fetched over plaintext HTTP may frame this page. The framed content inherits the transport of the parent for the user-visible context: a network attacker can rewrite the parent, position the frame, and drive authenticated actions inside it.",
+  "remediation": "Replace `http:` origins in frame-ancestors with their `https:` form, and remove parents that cannot serve TLS.",
+  "limitation": "One header value and one directive. The check reads scheme sources in frame-ancestors only; it cannot see whether the named parent is reachable over TLS, and it does not evaluate clickjacking beyond the framing permission.",
+  "scopeT": "One Content-Security-Policy value whose frame-ancestors directive contains an http: source.",
+  "fp": "A staging parent that only exists over HTTP is reported; the finding is the permitted plaintext parent, and the owner may record it as accepted for an isolated environment.",
+  "recordDesc": "Allowing an http: parent in frame-ancestors means the framing page can be modified in transit, so the composition the user sees is chosen by the network, not the site. HTTPS on the framed page does not repair a plaintext parent.",
+  "applicability": "Responses that send Content-Security-Policy with frame-ancestors on authenticated pages.",
+  "risk": "A network attacker rewrites the plaintext parent, places the authenticated frame where they choose, and captures clicks meant for other controls.",
+  "why": "The frame-ancestors directive names an http: origin.",
+  "fix": [
+   "Replace http: parents with their https: origins.",
+   "Drop parents that cannot serve TLS from frame-ancestors."
+  ],
+  "verifyT": "Fetch the endpoint and confirm frame-ancestors lists https: origins only.",
+  "cells": [
+   {
+    "suffix": "frame-ancestors-http",
+    "lang": "http",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Content-Security-Policy",
+     "valuePattern": "(?:^|;)\\s*frame-ancestors\\s[^;]*(?<=\\s)http:(?=[\\s;/]|$)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "default-src 'self'; frame-ancestors http://legacy.example"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "frame-ancestors http:"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "frame-ancestors https://partner.example"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "frame-ancestors 'self'"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "connect-src http://api.example"
+       }
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-server-timing-header",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "LOW",
+  "title": "Server-Timing exposes backend timing to every client",
+  "description": "The response carries a Server-Timing header that names internal phases or services with their durations. The header is designed for browser devtools, so it also tells any unauthenticated caller how long each backend hop takes, which is the measurement an attacker uses to infer cache state, database load and whether a payload triggered slow work.",
+  "remediation": "Emit Server-Timing only on responses that need it, keep metric names generic, and strip the header at the edge for unauthenticated traffic instead of describing internal services.",
+  "limitation": "One header value. The check reports the presence of Server-Timing; it does not measure the accuracy of the timings or decide whether a named metric reveals a specific internal service.",
+  "scopeT": "One Server-Timing response header carrying a non-empty value.",
+  "fp": "A response that intentionally publishes coarse performance marks for a public API is reported; the header is still a side channel and the owner may accept it explicitly.",
+  "recordDesc": "Server-Timing names internal phases and their durations, so anonymous callers learn the timing profile of each backend hop. Those measurements expose cache state and load without any error message being returned.",
+  "applicability": "Responses from application servers and edges that expose performance metrics.",
+  "risk": "An attacker measures response phases to confirm blind injection, infer cache partitioning or schedule load against the slowest hop, none of which requires an error or a stack trace.",
+  "why": "The response carries a non-empty Server-Timing header.",
+  "fix": [
+   "Strip Server-Timing at the edge for unauthenticated responses.",
+   "Publish coarse, generic metric names if the API needs to expose timings at all."
+  ],
+  "verifyT": "Fetch the endpoint anonymously and confirm Server-Timing is absent or carries only public metrics.",
+  "cells": [
+   {
+    "suffix": "server-timing-present",
+    "lang": "http",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Server-Timing",
+     "valuePattern": "^\\s*\\S"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/api/items",
+       "status": 200,
+       "headers": {
+        "Server-Timing": "db;dur=53.2, cache;desc=\"miss\""
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "server-timing": "edge;dur=12"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Server-Timing": ""
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Server-Timing": "   "
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       }
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-x-runtime-header",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "LOW",
+  "title": "X-Runtime exposes per-request processing time",
+  "description": "The response carries the Rails-style X-Runtime header, a per-request processing duration. It fingerprints the framework without authentication and gives a timing oracle for every endpoint, so an attacker can compare responses to find which inputs reach expensive code paths.",
+  "remediation": "Disable the X-Runtime header in production (`config.action_dispatch.return_only_request_media_type_on_content_type` era middleware, or an edge rule that strips it) and keep timing details in server-side metrics.",
+  "limitation": "One header value. The check reports a numeric X-Runtime value; it does not attribute the timing to any component and it cannot tell a framework default from a hand-written header.",
+  "scopeT": "One X-Runtime response header whose value is a decimal number of seconds.",
+  "fp": "A proxy that copies X-Runtime from a staging response is reported; the finding is the exposed timing value, whichever component produced it.",
+  "recordDesc": "X-Runtime publishes how long each request took to process, so the timing profile of the application becomes observable without authentication. Differences between responses then mark the inputs that reach heavy code.",
+  "applicability": "Responses produced by Ruby on Rails and by proxies that forward its headers.",
+  "risk": "An attacker uses timing differences to detect blind injection and to find endpoints that touch expensive queries, without needing any error message from the application.",
+  "why": "The response carries a decimal X-Runtime duration header.",
+  "fix": [
+   "Strip X-Runtime at the edge in production.",
+   "Keep per-request timings in server-side metrics instead of response headers."
+  ],
+  "verifyT": "Fetch the endpoint anonymously and confirm no X-Runtime header is returned.",
+  "cells": [
+   {
+    "suffix": "x-runtime-present",
+    "lang": "http",
+    "check": {
+     "type": "response-header-matches",
+     "header": "X-Runtime",
+     "valuePattern": "^\\s*[0-9]+\\s*$|^\\s*[0-9]+\\.[0-9]+\\s*$"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/orders",
+       "status": 200,
+       "headers": {
+        "X-Runtime": "0.034221"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "x-runtime": "1"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-Runtime": "fast"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-Request-Id": "0.034221"
+       }
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-x-b3-traceid-header",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "LOW",
+  "title": "X-B3-TraceId exposes internal tracing identifiers",
+  "description": "The response echoes a Zipkin B3 trace identifier. Trace ids are safe to correlate inside one platform and unsafe to publish: they reveal that requests pass through a particular tracing stack, let an attacker stitch responses from different tenants into one trace, and often appear again in internal dashboards whose URLs assume the id is private.",
+  "remediation": "Generate a request id for the client at the edge and keep B3 headers inside the service mesh; do not return X-B3-* headers on public responses.",
+  "limitation": "One header value. The check validates the hex shape of a B3 trace id; it does not prove that logs or dashboards are reachable, and a trace id alone is not an exploit.",
+  "scopeT": "One X-B3-TraceId response header carrying a 16- or 32-character lowercase hex value.",
+  "fp": "A service that intentionally exposes its trace id for support correlation is reported; the correlation benefit is real and the risk must be accepted in writing.",
+  "recordDesc": "Publishing a B3 trace id tells an anonymous caller which tracing stack sits behind the endpoint and gives a key that internal dashboards and log searches accept. The identifier outlives the request it names.",
+  "applicability": "Responses from services instrumented with Zipkin B3 propagation.",
+  "risk": "An attacker correlates responses across tenants and guesses dashboard or log-search URLs that key on the trace id, turning a debugging convenience into an entry point for internal tooling.",
+  "why": "The response carries a hex-shaped X-B3-TraceId header.",
+  "fix": [
+   "Keep X-B3-* headers inside the mesh and return an opaque request id instead.",
+   "Require authentication on trace-keyed dashboards and log searches."
+  ],
+  "verifyT": "Fetch the endpoint anonymously and confirm no X-B3-TraceId header is returned.",
+  "cells": [
+   {
+    "suffix": "x-b3-traceid-present",
+    "lang": "http",
+    "check": {
+     "type": "response-header-matches",
+     "header": "X-B3-TraceId",
+     "valuePattern": "^\\s*[0-9a-f]{16}(?:[0-9a-f]{16})?\\s*$"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://api.example/v1/items",
+       "status": 200,
+       "headers": {
+        "X-B3-TraceId": "a3ce929d0e0e4736"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://api.example/v1/items",
+       "status": 200,
+       "headers": {
+        "x-b3-traceid": "a3ce929d0e0e4736ffa1b2c3d4e5f607"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://api.example/",
+       "status": 200,
+       "headers": {
+        "X-B3-TraceId": "a3ce929d"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://api.example/",
+       "status": 200,
+       "headers": {
+        "X-Request-Id": "req-1234"
+       }
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-body-envoy-admin",
+  "category": "debug-exposure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "Envoy administration interface disclosed",
+  "description": "The response body is an Envoy admin endpoint: the JSON carries the server state and the command-line options the proxy was started with. The admin listener exposes configuration dumps, cluster health and runtime overrides, and its command-line block names the config path, the node identity and every bootstrap option.",
+  "remediation": "Bind the Envoy admin listener to localhost or a management network, and never route /server_info, /config_dump, /clusters or /stats through the public listener.",
+  "limitation": "One response body. The marker identifies an Envoy admin payload; it does not confirm that state-changing admin endpoints (quitquitquit, runtime_modify) are reachable from the same address.",
+  "scopeT": "One response body containing Envoy admin server_info fields.",
+  "fp": "A documentation page that pastes server_info output is reported; the finding is the content, and the owner should confirm the endpoint is unreachable rather than assume the page is harmless.",
+  "recordDesc": "An exposed Envoy admin listener publishes the proxy bootstrap configuration, node identity and cluster health. Admin endpoints on the same listener can also change runtime values or drain the process.",
+  "applicability": "Responses served by an Envoy proxy with an admin interface reachable from the scanned address.",
+  "risk": "An attacker reads the internal topology and the config file path, then uses admin endpoints reachable beside it to take the proxy out of service or override runtime flags.",
+  "why": "The response body carries Envoy admin server_info markers.",
+  "fix": [
+   "Bind the Envoy admin listener to 127.0.0.1 or a management interface.",
+   "Block /server_info, /config_dump and /stats on the public listener."
+  ],
+  "verifyT": "Request /server_info on the public address and confirm it does not return admin JSON.",
+  "cells": [
+   {
+    "suffix": "envoy-admin",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*[\"\\']state[\"\\']\\s*:\\s*[\"\\'](?:LIVE|PRE_INITIALIZING|DRAINING)[\"\\'])(?=[\\s\\S]*command_line_options)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://edge.example/server_info",
+       "status": 200,
+       "headers": {},
+       "body": "{\"version\":\"1.29.1\",\"state\":\"LIVE\",\"command_line_options\":{\"base_id\":\"node-7\",\"config_path\":\"/etc/envoy/envoy.yaml\"}}"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://edge.example/stats?format=json",
+       "status": 200,
+       "headers": {},
+       "body": "{\"state\": \"DRAINING\", \"command_line_options\": {\"restart_epoch\": \"3\"}}"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://edge.example/",
+       "status": 200,
+       "headers": {},
+       "body": "<html><body>Welcome</body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://edge.example/api/health",
+       "status": 200,
+       "headers": {},
+       "body": "{\"state\":\"LIVE\",\"checks\":[{\"name\":\"db\",\"ready\":true}]}"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-body-haproxy-stats",
+  "category": "debug-exposure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "HAProxy statistics report disclosed",
+  "description": "The response body is the HAProxy statistics page. It lists every backend, server address, session count and health state behind the load balancer, which is an inventory of the internal network plus a live map of which node is unhealthy at any moment.",
+  "remediation": "Require authentication on the HAProxy stats listener and bind it to a management interface; remove the stats enable directive from the public frontend.",
+  "limitation": "One response body. The marker identifies the statistics page; session counts and server names in the output depend on the deployment and are not interpreted by the check.",
+  "scopeT": "One response body containing the HAProxy statistics report heading.",
+  "fp": "An internal wiki page that reproduces the report is reported; confirm the page is not reachable rather than assuming the copy is inert.",
+  "recordDesc": "The HAProxy statistics page names every backend server and shows live session counts, so an anonymous reader learns the internal address plan and the current health of each node. That is reconnaissance that needs no guessing.",
+  "applicability": "Responses served by HAProxy with the stats page enabled on a reachable listener.",
+  "risk": "An attacker maps the internal services behind the proxy and times load against the healthy nodes, then uses the health column to see the effect of an attack in real time.",
+  "why": "The response body carries the HAProxy statistics report heading.",
+  "fix": [
+   "Require authentication on the HAProxy stats listener.",
+   "Bind the stats socket and page to a management network only."
+  ],
+  "verifyT": "Request the stats path on the public address and confirm it returns no statistics page.",
+  "cells": [
+   {
+    "suffix": "haproxy-stats",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "Statistics Report for HAProxy"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://lb.example/haproxy?stats",
+       "status": 200,
+       "headers": {},
+       "body": "<html><head><title>Statistics Report for HAProxy 2.9.6</title></head><body><table>…</table></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://lb.example/stats",
+       "status": 200,
+       "headers": {},
+       "body": "Statistics Report for HAProxy"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://lb.example/",
+       "status": 200,
+       "headers": {},
+       "body": "<html><title>Example store</title></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://lb.example/docs",
+       "status": 200,
+       "headers": {},
+       "body": "Load-balancer statistics are published on the management network only."
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-body-selenium-grid",
+  "category": "debug-exposure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "Selenium Grid status endpoint disclosed",
+  "description": "The response body is a Selenium Grid status document: a ready flag plus the list of registered nodes. A reachable Grid accepts sessions that run arbitrary browser automation, so an anonymous caller can drive a real browser from inside the network the nodes sit on.",
+  "remediation": "Do not expose the Grid hub or router beyond CI networks; enable Grid authentication and restrict /status and /session to the orchestrator.",
+  "limitation": "One response body. The marker identifies a Grid status document; the check does not attempt to create a session, so it proves disclosure and not command execution.",
+  "scopeT": "One response body containing Selenium Grid status JSON with a node list.",
+  "fp": "A mocked Grid status fixture served by a test double is reported; the fixture is still a reachable endpoint and should be treated as one.",
+  "recordDesc": "A reachable Selenium Grid status document advertises a ready automation hub with registered browser nodes. Sessions started there run inside the network that hosts the nodes, with the browser keeping whatever credentials the node profile carries.",
+  "applicability": "Responses served by a Selenium Grid hub, router or standalone container.",
+  "risk": "An attacker opens a browser session on a Grid node, reaches internal services and any saved credentials in the node profile, and can keep a foothold that looks like ordinary test traffic.",
+  "why": "The response body carries Selenium Grid status JSON with a node list.",
+  "fix": [
+   "Restrict Grid endpoints to CI networks and enable Grid authentication.",
+   "Publish only a health probe that returns no node inventory."
+  ],
+  "verifyT": "Request /status and /wd/hub/status on the public address and confirm they are not reachable.",
+  "cells": [
+   {
+    "suffix": "selenium-grid",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*[\"\\']ready[\"\\']\\s*:\\s*(?:true|false))(?=[\\s\\S]*[\"\\']nodes[\"\\'])"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://ci.example/wd/hub/status",
+       "status": 200,
+       "headers": {},
+       "body": "{\"value\":{\"ready\":true,\"message\":\"Selenium Grid ready.\",\"nodes\":[{\"id\":\"node-1\",\"uri\":\"http://10.0.0.5:5555\"}]}}"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://ci.example/status",
+       "status": 200,
+       "headers": {},
+       "body": "{\"value\": {\"ready\": false, \"nodes\": []}}"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://ci.example/",
+       "status": 200,
+       "headers": {},
+       "body": "{\"status\":\"ok\"}"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://ci.example/api/workers",
+       "status": 200,
+       "headers": {},
+       "body": "{\"workers\":1,\"state\":\"ok\"}"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-body-vite-dev-server",
+  "category": "information-disclosure",
+  "cwe": "CWE-540",
+  "severity": "MEDIUM",
+  "title": "Vite development server serving the application",
+  "description": "The page loads `/@vite/client`, which only a Vite development server injects. A dev server ships unminified source, source maps and the HMR websocket, and it resolves module paths on demand, so the deployment exposes the application source and the filesystem paths it was built from.",
+  "remediation": "Serve a production build instead of the dev server. If the dev server must run on a shared host, bind it to localhost and never route it through the public listener.",
+  "limitation": "One response body. The marker proves the dev client script is referenced; it does not enumerate which source modules are readable, and a production build that copies the marker would be a false positive.",
+  "scopeT": "One response body that references the Vite development client script.",
+  "fp": "A documentation page showing a Vite snippet is reported; confirm the path is not served rather than assuming the page is harmless.",
+  "recordDesc": "A Vite development server behind a public address serves the application source, its source maps and an HMR websocket. The build system and the filesystem layout become readable without authentication.",
+  "applicability": "Responses served by a Vite development server or a proxy that forwards to one.",
+  "risk": "An attacker reads the source to find unshipped endpoints, feature flags and comments, and in some configurations uses the HMR socket or the file-serving path to read files outside the project.",
+  "why": "The response body references the Vite development client script.",
+  "fix": [
+   "Deploy the production build and remove the dev server from the public listener.",
+   "Bind any development server to localhost."
+  ],
+  "verifyT": "Request the page and confirm no /@vite/client script reference is served.",
+  "cells": [
+   {
+    "suffix": "vite-dev-server",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "/@vite/client"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {},
+       "body": "<script type=\"module\" src=\"/@vite/client\"></script><div id=\"root\"></div>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {},
+       "body": "<script type=\"module\" src=\"/@vite/client\"></script>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {},
+       "body": "<script type=\"module\" src=\"/assets/index-8f3a1c.js\"></script>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/docs",
+       "status": 200,
+       "headers": {},
+       "body": "Run npm run dev, then open the URL printed by @vite/client."
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-body-pgadmin-login",
+  "category": "debug-exposure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "pgAdmin management interface disclosed",
+  "description": "The response is the pgAdmin 4 login page. pgAdmin holds database server definitions, saved credentials and a query tool that runs SQL as the connecting role, so a reachable login page is an administrative entry point on the public surface, and its version is readable before authentication.",
+  "remediation": "Remove pgAdmin from public routes and reach it through a bastion or VPN; if it must be exposed, put it behind SSO and restrict the source ranges.",
+  "limitation": "One response body. The marker identifies the pgAdmin login page; it does not test credentials, and it does not prove that saved server definitions exist.",
+  "scopeT": "One response body containing the pgAdmin 4 interface marker.",
+  "fp": "A screenshot of pgAdmin in documentation is reported; confirm the endpoint is unreachable rather than assuming the copy is inert.",
+  "recordDesc": "A reachable pgAdmin login page advertises an administrative console that stores database credentials and runs arbitrary SQL. The database estate is then one password away from a public-facing endpoint.",
+  "applicability": "Responses served by pgAdmin 4 on a reachable listener.",
+  "risk": "An attacker targets the console with credential stuffing or a version-specific flaw and, once inside, uses the saved server definitions to reach every database the console knows.",
+  "why": "The response body carries the pgAdmin 4 interface marker.",
+  "fix": [
+   "Remove pgAdmin from public routes; reach it through a bastion or VPN.",
+   "Put the console behind SSO with source-range restrictions."
+  ],
+  "verifyT": "Request the console path on the public address and confirm it is not reachable.",
+  "cells": [
+   {
+    "suffix": "pgadmin-login",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "pgAdmin 4"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://db.example/pgadmin4/login",
+       "status": 200,
+       "headers": {},
+       "body": "<html><head><title>pgAdmin 4</title></head><body><form id=\"login\"></form></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://db.example/",
+       "status": 200,
+       "headers": {},
+       "body": "pgAdmin 4 v8.6"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://db.example/",
+       "status": 200,
+       "headers": {},
+       "body": "<title>Internal tools</title>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://db.example/help",
+       "status": 200,
+       "headers": {},
+       "body": "Use psql or any SQL client; the admin UI is on the bastion."
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-body-object-http-on-https",
+  "category": "mixed-content",
+  "cwe": "CWE-319",
+  "severity": "MEDIUM",
+  "title": "Plugin object or embed loads over plaintext HTTP on an HTTPS page",
+  "description": "A page served over HTTPS embeds an `object` or `embed` element whose data URL is plaintext HTTP. Browsers block or warn on mixed active content, and where the element still loads, the embedded document is attacker-modifiable in transit while the surrounding page looks secure.",
+  "remediation": "Load the embedded document over HTTPS, or remove the element. Where a legacy origin cannot serve TLS, terminate TLS in front of it and reference the HTTPS name.",
+  "limitation": "One response body. The check reports an object or embed element whose URL scheme is http on a page fetched over https; it does not resolve redirects, so an https URL that redirects to http is not reported.",
+  "scopeT": "One HTTPS response body containing an object or embed element whose data or src URL starts with http.",
+  "fp": "A template that ships a commented-out element is reported; the finding is the markup, and the owner should confirm the element is not rendered.",
+  "recordDesc": "A plaintext plugin object on an HTTPS page means the embedded document arrives over an unprotected channel while the page around it is authenticated. Anything the embedded document can do runs in the origin the user trusts.",
+  "applicability": "HTTPS responses whose HTML embeds plugin content.",
+  "risk": "A network attacker rewrites the embedded document and uses it to phish inside the trusted page or to interact with the page origin under the user’s session.",
+  "why": "An object or embed element on an HTTPS page points at a plaintext http URL.",
+  "fix": [
+   "Serve the embedded document over HTTPS.",
+   "Remove the object or embed element when the plugin is no longer needed."
+  ],
+  "verifyT": "Fetch the page over HTTPS and confirm no object or embed data/src URL uses the http scheme.",
+  "cells": [
+   {
+    "suffix": "object-http-on-https",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "<(?:object|embed)\\b[^>]*\\s(?:data|src)\\s*=\\s*[\"\\']?\\s*http://",
+     "requireScheme": "https"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {},
+       "body": "<object data=\"http://media.example/report.pdf\" type=\"application/pdf\"></object>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {},
+       "body": "<embed src='http://media.example/player.swf'>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {},
+       "body": "<object data=\"https://media.example/report.pdf\"></object>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {},
+       "body": "<img src=\"http://cdn.example/a.png\">"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "http://app.example/",
+       "status": 200,
+       "headers": {},
+       "body": "<object data=\"http://media.example/report.pdf\"></object>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-body-base-href-http",
+  "category": "mixed-content",
+  "cwe": "CWE-319",
+  "severity": "MEDIUM",
+  "title": "Base element points relative URLs at a plaintext origin",
+  "description": "The page declares a `<base href>` with a plaintext HTTP URL on a response served over HTTPS. Every relative script, style, form action and link in the document resolves against that base, so the document’s own relative references are fetched over an unprotected channel and can be rewritten in transit.",
+  "remediation": "Point the base element at an HTTPS URL on the same origin, and avoid a base element entirely when relative URLs already resolve correctly.",
+  "limitation": "One response body. The check reports a base href whose scheme is http on an HTTPS response; it does not follow the resolved URLs and it does not compare hosts.",
+  "scopeT": "One HTTPS response body whose base element href starts with http.",
+  "fp": "A base element that is present but overridden later in the document is reported; the finding is the declared scheme, not the effective base.",
+  "recordDesc": "A plaintext base element re-points every relative URL in the document, so scripts, styles and form targets are fetched over a channel an attacker can rewrite. HTTPS on the page does not protect the subresources the base decides.",
+  "applicability": "HTTPS responses whose HTML declares a base element.",
+  "risk": "A network attacker replaces a script or a form target that the document references relatively, and the replacement runs in the origin the user trusts.",
+  "why": "The base element href on an HTTPS page uses the http scheme.",
+  "fix": [
+   "Point the base element at an HTTPS URL on the same origin.",
+   "Remove the base element where relative URLs already resolve."
+  ],
+  "verifyT": "Fetch the page over HTTPS and confirm the base href uses https or is absent.",
+  "cells": [
+   {
+    "suffix": "base-href-http",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "<base\\b[^>]*\\shref\\s*=\\s*[\"\\']?\\s*http://",
+     "requireScheme": "https"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {},
+       "body": "<base href=\"http://app.example/\">"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {},
+       "body": "<base href='http://static.example/assets/'>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {},
+       "body": "<base href=\"https://app.example/\">"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {},
+       "body": "<base href=\"/assets/\">"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "http://app.example/",
+       "status": 200,
+       "headers": {},
+       "body": "<base href=\"http://app.example/\">"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-body-javascript-link",
+  "category": "content-injection",
+  "cwe": "CWE-79",
+  "severity": "LOW",
+  "title": "Anchor element uses the javascript: scheme",
+  "description": "The document contains an anchor whose href is a `javascript:` URL. The click runs script in the page origin, so the sink bypasses navigation controls and needs `script-src` to allow inline script; where the URL ever carries a value from a request, the same sink is a cross-site scripting primitive.",
+  "remediation": "Replace javascript: URLs with a button and an event handler in a bundled script, and keep the policy free of `unsafe-inline` for script-src.",
+  "limitation": "One response body. The check reports an anchor whose href begins with javascript:; it cannot see whether the URL carries attacker input, so a benign `javascript:void(0)` placeholder is reported too.",
+  "scopeT": "One response body containing an anchor element whose href uses the javascript: scheme.",
+  "fp": "Framework placeholders such as javascript:void(0) are reported; the finding is the inline-script sink, not proof that it is reachable with untrusted input.",
+  "recordDesc": "An anchor with a javascript: href runs its code in the page origin when clicked and only works while inline script is permitted. The sink is a direct cross-site scripting primitive as soon as a template interpolates a value into it.",
+  "applicability": "HTML responses that render anchors.",
+  "risk": "If a template ever interpolates a request value into the URL, one click executes attacker script in the authenticated origin; the sink also forces script-src to keep allowing inline script.",
+  "why": "An anchor element href begins with the javascript: scheme.",
+  "fix": [
+   "Replace javascript: URLs with a button and a bundled event handler.",
+   "Keep script-src free of unsafe-inline so the sink stops working."
+  ],
+  "verifyT": "Search the rendered HTML for href=\"javascript: and confirm no anchor uses it.",
+  "cells": [
+   {
+    "suffix": "javascript-scheme-link",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "<a\\b[^>]*\\shref\\s*=\\s*[\"\\']?\\s*javascript:"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {},
+       "body": "<a href=\"javascript:void(0)\" class=\"menu-toggle\">Menu</a>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {},
+       "body": "<a class='btn' href='javascript:submitForm()'>Send</a>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {},
+       "body": "<a href=\"/menu\">Menu</a>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {},
+       "body": "<a href=\"https://docs.example/js\">Docs</a>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {},
+       "body": "<button type=\"button\" data-action=\"menu\">Menu</button>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ }
+]

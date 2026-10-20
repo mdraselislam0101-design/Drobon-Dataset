@@ -1,0 +1,90 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1349",
+  "title": "Signal: Set-Cookie __Host- prefix is not paired with Path=/",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-header-matches",
+      "header": "Set-Cookie",
+      "valuePattern": "^(?=\\s*__host-[^=;\\s]*=)(?![\\s\\S]*;\\s*path\\s*=\\s*/\\s*(?:;|$))"
+    }
+  },
+  "scope": "One Set-Cookie value whose name starts with `__Host-` and whose Path attribute is absent or not `/`.",
+  "limitations": "One Set-Cookie value. The check reads the Path attribute of a prefixed cookie; it does not test which user agents enforce the prefix rule, and it does not decide whether the narrower path is acceptable for that cookie.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "__Host-session=abc123; Secure; SameSite=Strict"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "__Host-session=abc123; Secure; Path=/app; HttpOnly"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "__Host-session=abc123; Secure; Path=/; SameSite=Strict"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "session=abc123; Secure; SameSite=Strict"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "__Secure-session=abc123; Secure; Path=/app"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": [
+            "__Host-a=1; Secure; Path=/",
+            "__Host-b=2; Secure; Path=/"
+          ]
+        }
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A `__Host-` cookie written by a framework that appends `Path=/` after the value is not reported; a cookie deliberately scoped to a sub-path under the prefix is reported, and the finding is correct because the prefix forbids it.",
+  "linkedRules": [
+    "DPK-DAST-280"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:dast-cookie-hostprefix-path:hostprefix-missing-path",
+  "validationStatus": "VALIDATED"
+}

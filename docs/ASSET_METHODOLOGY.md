@@ -1,6 +1,6 @@
-# ASSET_METHODOLOGY.md — how the generated intelligence set is authored (1310 pack rules, 1310 patterns, 1310 generated records)
+# ASSET_METHODOLOGY.md — how the generated intelligence set is authored (1327 pack rules, 1327 patterns, 1327 generated records)
 
-Date: 2026-10-15; counts refreshed 2026-10-20 from `docs/CURRENT_INVENTORY.json` (1,310 packs / 1,310 patterns / 1,310 records / 1,310 remediation / 68 CWE). The earlier 954/954/914 header was the 2026-10-18 state and is kept here only as history.
+Date: 2026-10-15; counts refreshed 2026-10-20 from `docs/CURRENT_INVENTORY.json` (1,327 packs / 1,327 patterns / 1,327 records / 1,327 remediation / 68 CWE). The earlier 954/954/914 header was the 2026-10-18 state and is kept here only as history.
 This document states the authoring method so an auditor
 can tell systematic original work from padding. The generator
 (`scripts/generate-assets.mjs`) is a deterministic compiler: every byte it
@@ -97,12 +97,21 @@ re-running the generator on unchanged data produces byte-identical files.
 generated file independently (schema, execution, linkage, leak scan,
 inventory), so generator output is evidence, never self-certification.
 
-Retired reservations (29): the manifest keeps the IDs of cells whose source
+Retired reservations (31): the manifest keeps the IDs of cells whose source
 was removed from `data/asset-cells/` and whose rule files are not on disk.
 Those IDs stay reserved, because `docs/PACKS.md` says rule IDs are never
 reused. The consistency suite pins this list: any other manifest cell
-without a rule file fails the test.
+without a rule file fails the test. Two entries were withdrawn in the
+2026-10-21 defensive batch before publication: the first asked exactly the
+question an existing rule already asks, and the second reported evidence that
+already contains an existing rule's evidence (a strict subset pair the overlap
+gate would have required a ledger entry for). Both were deleted from
+`data/asset-cells/dast-22.json` before any rule file was committed. A third
+candidate — an unknown Permissions-Policy feature token — was rejected before
+ID allocation because its evidence pattern needed 784 characters against the
+500-character schema limit.
 Retired: DPK-DAST-015, DPK-DAST-018, DPK-DAST-019, DPK-DAST-020, DPK-DAST-048, DPK-DAST-151, DPK-DAST-154,
+DPK-DAST-283, DPK-DAST-284,
 DPK-SAST-048, DPK-SAST-508,
 DPK-SAST-518, DPK-SAST-535, DPK-SAST-538, DPK-SAST-539, DPK-SAST-551,
 DPK-SAST-595, DPK-SAST-631, DPK-SAST-634, DPK-SAST-960, DPK-SEC-009, DPK-SEC-012,

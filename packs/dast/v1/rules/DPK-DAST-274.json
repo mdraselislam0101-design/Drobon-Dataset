@@ -1,0 +1,65 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-274",
+  "title": "Anchor element uses the javascript: scheme",
+  "description": "The document contains an anchor whose href is a `javascript:` URL. The click runs script in the page origin, so the sink bypasses navigation controls and needs `script-src` to allow inline script; where the URL ever carries a value from a request, the same sink is a cross-site scripting primitive.",
+  "severity": "LOW",
+  "cwe": "CWE-79",
+  "category": "content-injection",
+  "remediation": "Replace javascript: URLs with a button and an event handler in a bundled script, and keep the policy free of `unsafe-inline` for script-src.",
+  "limitation": "One response body. The check reports an anchor whose href begins with javascript:; it cannot see whether the URL carries attacker input, so a benign `javascript:void(0)` placeholder is reported too.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "<a\\b[^>]*\\shref\\s*=\\s*[\"\\']?\\s*javascript:"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {},
+        "body": "<a href=\"javascript:void(0)\" class=\"menu-toggle\">Menu</a>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {},
+        "body": "<a class='btn' href='javascript:submitForm()'>Send</a>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {},
+        "body": "<a href=\"/menu\">Menu</a>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {},
+        "body": "<a href=\"https://docs.example/js\">Docs</a>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {},
+        "body": "<button type=\"button\" data-action=\"menu\">Menu</button>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1343"
+  ]
+}

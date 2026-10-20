@@ -1,0 +1,56 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-279",
+  "title": "Vite development server serving the application",
+  "description": "The page loads `/@vite/client`, which only a Vite development server injects. A dev server ships unminified source, source maps and the HMR websocket, and it resolves module paths on demand, so the deployment exposes the application source and the filesystem paths it was built from.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-540",
+  "category": "information-disclosure",
+  "remediation": "Serve a production build instead of the dev server. If the dev server must run on a shared host, bind it to localhost and never route it through the public listener.",
+  "limitation": "One response body. The marker proves the dev client script is referenced; it does not enumerate which source modules are readable, and a production build that copies the marker would be a false positive.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "/@vite/client"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {},
+        "body": "<script type=\"module\" src=\"/@vite/client\"></script><div id=\"root\"></div>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {},
+        "body": "<script type=\"module\" src=\"/@vite/client\"></script>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {},
+        "body": "<script type=\"module\" src=\"/assets/index-8f3a1c.js\"></script>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/docs",
+        "status": 200,
+        "headers": {},
+        "body": "Run npm run dev, then open the URL printed by @vite/client."
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1348"
+  ]
+}

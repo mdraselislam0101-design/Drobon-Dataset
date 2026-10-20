@@ -89,6 +89,11 @@ const cweCovered = [...cweIdsInPacks].filter((id) => cweEntriesOnDisk.has(id)).l
 
 // --- declared test totals (pack-level) ---
 const declaredTests = packRules.reduce((n, r) => n + (r.tests ?? []).length, 0);
+
+// Release readiness gates are read from the matrix, never restated by hand, so the
+// ledger cannot claim a verdict the matrix does not carry.
+const readiness = readJson('docs/RELEASE_READINESS_MATRIX.json');
+const readinessPass = readiness.gates.filter((g) => g.status === 'PASS').length;
 const rulesWithPosAndNegTest = packRules.filter((r) => {
   const tests = r.tests ?? [];
   return tests.some((t) => t.match === true) && tests.some((t) => t.match === false);
@@ -151,7 +156,7 @@ const dimensions = [
     pct: Math.round((counts.dastRules / 500) * 1000) / 10,
     status: 'PARTIAL',
     blocker: 'EVIDENCE_GATED',
-    detail: 'The check vocabulary is closed at seven types; every new check must be semantically distinct, tested against observations and independently evaluated. 237 remain.',
+    detail: `The check vocabulary is closed at seven types; every new check must be semantically distinct, tested against observations and independently evaluated. ${500 - counts.dastRules} remain.`,
     nextAction: 'Author the next capability-aligned batch inside the closed check vocabulary (docs/DAST_CAPABILITY_ALIGNED_500_2026-10-20.md pattern), never as variants of one question.',
     verification: 'npm run validate:packs',
   }),
@@ -167,13 +172,13 @@ const dimensions = [
     verification: 'npm run validate:packs',
   }),
   dim('knowledge.graph', 'Rule ↔ pattern ↔ record ↔ remediation graph', {
-    measured: `${counts.patterns}/${counts.records}/${counts.remediation} for ${counts.packRules} rules`,
+    measured: graphCoverage,
     denominator: counts.packRules,
-    unit: 'entries each (weakest tree)',
+    unit: 'entries (weakest of the three trees)',
     pct: pctOf(graphCoverage, counts.packRules),
     status: 'COMPLETE',
     blocker: null,
-    detail: 'Strict 1:1:1:1 in both directions, 0 orphans, enforced by the consistency suite.',
+    detail: `patterns ${counts.patterns} / records ${counts.records} / remediation ${counts.remediation} against ${counts.packRules} rules: strict 1:1:1:1 in both directions, 0 orphans, enforced by the consistency suite.`,
     nextAction: 'None.',
     verification: 'node scripts/test-consistency.mjs',
   }),
@@ -189,13 +194,13 @@ const dimensions = [
     verification: 'npm run validate:cwe',
   }),
   dim('tests.pack-level', 'Declared pack tests executed', {
-    measured: `${rulesWithPosAndNegTest}/${counts.packRules} rules with >=1 positive and >=1 negative`,
+    measured: rulesWithPosAndNegTest,
     denominator: counts.packRules,
     unit: 'rules',
     pct: pctOf(rulesWithPosAndNegTest, counts.packRules),
     status: 'COMPLETE',
     blocker: null,
-    detail: `${declaredTests} declared tests execute in the validator; ReDoS lint and CWE checks run with them.`,
+    detail: `${rulesWithPosAndNegTest} of ${counts.packRules} rules declare at least one positive and one negative test; ${declaredTests} declared tests execute in the validator, with ReDoS lint and CWE checks.`,
     nextAction: 'None.',
     verification: 'npm run validate:packs',
   }),
@@ -222,7 +227,7 @@ const dimensions = [
     verification: 'npm run test:eval',
   }),
   dim('eval.universal', 'Universal rules with both a positive case and a negative control', {
-    measured: `${universalBoth.length}/${universalRules.length}`,
+    measured: universalBoth.length,
     denominator: universalRules.length,
     unit: 'rules',
     pct: universalRules.length === 0 ? 100 : Math.round((universalBoth.length / universalRules.length) * 1000) / 10,
@@ -294,7 +299,7 @@ const dimensions = [
     pct: Math.round(((conformance.parity.dast.declaredTests - conformance.parity.dast.mismatches) / conformance.parity.dast.declaredTests) * 1000) / 10,
     status: 'BLOCKED_APP',
     blocker: 'APP_EVALUATOR',
-    detail: `${conformance.parity.dast.mismatches} divergences on ${conformance.parity.dast.mismatchedRules.length} rules (cookie model, blank header values, cross-value array joins). The dataset keeps the browser-accurate semantics; the App must port them.`,
+    detail: `${conformance.parity.dast.mismatches} divergences on ${conformance.parity.dast.mismatchedRules.length} rules (cookie model, blank header values, cross-value array joins), measured by replaying every declared test through scripts/lib/app-evaluator-profile.mjs (a port of the App evaluator at 9360dd1), not by driving a running App. The dataset keeps the browser-accurate semantics; the App must port them.`,
     nextAction: 'App ports scripts/lib/set-cookie.mjs semantics and fixes the blank-value branch; interop/app-conformance.json lists every affected test.',
     verification: 'node scripts/gen-app-conformance.mjs --check',
   }),
@@ -305,7 +310,7 @@ const dimensions = [
     pct: 0,
     status: 'BLOCKED_APP',
     blocker: 'APP_LOADER',
-    detail: 'All 1,310 entries load into the App dataset service, but getRemediationMap has no caller and remediationGuidanceForFinding still returns UNAVAILABLE.',
+    detail: `All ${counts.remediation} entries load into the App dataset service, but getRemediationMap has no caller and remediationGuidanceForFinding still returns UNAVAILABLE.`,
     nextAction: 'App wires the resolver into findings, reports and the assistant (GAP-008).',
     verification: 'node scripts/test-consistency.mjs',
   }),
@@ -332,7 +337,7 @@ const dimensions = [
     verification: 'npm test',
   }),
   dim('artefacts.freshness', 'Committed generated artefacts reproduce from the tree', {
-    measured: `${freshnessChecks.length - staleArtefacts.length}/${freshnessChecks.length}`,
+    measured: freshnessChecks.length - staleArtefacts.length,
     denominator: freshnessChecks.length,
     unit: 'generated artefacts',
     pct: pctOf(freshnessChecks.length - staleArtefacts.length, freshnessChecks.length),
@@ -353,7 +358,7 @@ const dimensions = [
     pct: 0,
     status: 'BLOCKED_OWNER',
     blocker: 'LICENSE_AND_PRODUCTION_AUTH',
-    detail: 'Release readiness is NO-GO: 13 of 17 gates PASS, 4 blocked (G6 licence, G8 production lock, G16 owner decisions, G17 production eligibility). Passing tests are not a legal conclusion.',
+    detail: `Release readiness is ${readiness.verdict}: ${readinessPass} of ${readiness.gates.length} gates PASS, ${readiness.gates.length - readinessPass} blocked (G6 licence, G8 production lock, G16 owner decisions, G17 production eligibility). Passing tests are not a legal conclusion.`,
     nextAction: 'Owner completes the four blocked gates (docs/OWNER_DECISION_PACKET.md).',
     verification: 'npm run validate:matrix',
   }),

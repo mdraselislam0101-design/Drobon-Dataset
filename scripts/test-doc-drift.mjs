@@ -355,10 +355,13 @@ if (existsSync(join(ROOT, 'DROBON_COVERAGE_EVIDENCE.json'))) {
   const claims = [
     ['sast rules', countFiles('packs/sast/v1/rules', /^DPK-.*\.json$/), 950],
     ['secrets rules', countFiles('packs/secrets/v1/rules', /^DPK-.*\.json$/), 97],
-    ['dast rules', countFiles('packs/dast/v1/rules', /^DPK-.*\.json$/), 263],
-    ['patterns', countFiles('knowledge/patterns', /^DPK-PAT-.*\.json$/), 1310],
-    ['records', countFiles('knowledge/records', /^DPK-REC-.*\.json$/), 1310],
-    ['remediation', countFiles('knowledge/remediation', /^DPK-.*\.json$/), 1310],
+    // Audit claims re-pinned 2026-10-21: DAST 263 -> 280, knowledge trees 1310 -> 1327
+    // after the defensive batch. The pin is the *claim being audited*, so it moves only
+    // when the tree moves and the ledger is updated in the same commit.
+    ['dast rules', countFiles('packs/dast/v1/rules', /^DPK-.*\.json$/), 280],
+    ['patterns', countFiles('knowledge/patterns', /^DPK-PAT-.*\.json$/), 1327],
+    ['records', countFiles('knowledge/records', /^DPK-REC-.*\.json$/), 1327],
+    ['remediation', countFiles('knowledge/remediation', /^DPK-.*\.json$/), 1327],
     ['cwe', countFiles('knowledge/cwe', /\.json$/), 68],
     ['lessons', countFiles('learning/lessons', /\.json$/), 6],
     ['templates', countFiles('assessments/templates', /\.json$/), 3],

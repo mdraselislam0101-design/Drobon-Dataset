@@ -1,0 +1,56 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-273",
+  "title": "HAProxy statistics report disclosed",
+  "description": "The response body is the HAProxy statistics page. It lists every backend, server address, session count and health state behind the load balancer, which is an inventory of the internal network plus a live map of which node is unhealthy at any moment.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "debug-exposure",
+  "remediation": "Require authentication on the HAProxy stats listener and bind it to a management interface; remove the stats enable directive from the public frontend.",
+  "limitation": "One response body. The marker identifies the statistics page; session counts and server names in the output depend on the deployment and are not interpreted by the check.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "Statistics Report for HAProxy"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://lb.example/haproxy?stats",
+        "status": 200,
+        "headers": {},
+        "body": "<html><head><title>Statistics Report for HAProxy 2.9.6</title></head><body><table>…</table></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://lb.example/stats",
+        "status": 200,
+        "headers": {},
+        "body": "Statistics Report for HAProxy"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://lb.example/",
+        "status": 200,
+        "headers": {},
+        "body": "<html><title>Example store</title></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://lb.example/docs",
+        "status": 200,
+        "headers": {},
+        "body": "Load-balancer statistics are published on the management network only."
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1342"
+  ]
+}

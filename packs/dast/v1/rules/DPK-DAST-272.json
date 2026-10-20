@@ -1,0 +1,56 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-272",
+  "title": "Envoy administration interface disclosed",
+  "description": "The response body is an Envoy admin endpoint: the JSON carries the server state and the command-line options the proxy was started with. The admin listener exposes configuration dumps, cluster health and runtime overrides, and its command-line block names the config path, the node identity and every bootstrap option.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "debug-exposure",
+  "remediation": "Bind the Envoy admin listener to localhost or a management network, and never route /server_info, /config_dump, /clusters or /stats through the public listener.",
+  "limitation": "One response body. The marker identifies an Envoy admin payload; it does not confirm that state-changing admin endpoints (quitquitquit, runtime_modify) are reachable from the same address.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*[\"\\']state[\"\\']\\s*:\\s*[\"\\'](?:LIVE|PRE_INITIALIZING|DRAINING)[\"\\'])(?=[\\s\\S]*command_line_options)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://edge.example/server_info",
+        "status": 200,
+        "headers": {},
+        "body": "{\"version\":\"1.29.1\",\"state\":\"LIVE\",\"command_line_options\":{\"base_id\":\"node-7\",\"config_path\":\"/etc/envoy/envoy.yaml\"}}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://edge.example/stats?format=json",
+        "status": 200,
+        "headers": {},
+        "body": "{\"state\": \"DRAINING\", \"command_line_options\": {\"restart_epoch\": \"3\"}}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://edge.example/",
+        "status": 200,
+        "headers": {},
+        "body": "<html><body>Welcome</body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://edge.example/api/health",
+        "status": 200,
+        "headers": {},
+        "body": "{\"state\":\"LIVE\",\"checks\":[{\"name\":\"db\",\"ready\":true}]}"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1341"
+  ]
+}

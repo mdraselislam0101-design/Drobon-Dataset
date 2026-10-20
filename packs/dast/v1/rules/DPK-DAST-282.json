@@ -1,0 +1,71 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-282",
+  "title": "Content-Security-Policy frame-ancestors allows a plaintext HTTP parent",
+  "description": "The frame-ancestors directive names an `http:` origin, so a parent page fetched over plaintext HTTP may frame this page. The framed content inherits the transport of the parent for the user-visible context: a network attacker can rewrite the parent, position the frame, and drive authenticated actions inside it.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-319",
+  "category": "csp-weakness",
+  "remediation": "Replace `http:` origins in frame-ancestors with their `https:` form, and remove parents that cannot serve TLS.",
+  "limitation": "One header value and one directive. The check reads scheme sources in frame-ancestors only; it cannot see whether the named parent is reachable over TLS, and it does not evaluate clickjacking beyond the framing permission.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Content-Security-Policy",
+    "valuePattern": "(?:^|;)\\s*frame-ancestors\\s[^;]*(?<=\\s)http:(?=[\\s;/]|$)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src 'self'; frame-ancestors http://legacy.example"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "frame-ancestors http:"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "frame-ancestors https://partner.example"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "frame-ancestors 'self'"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "connect-src http://api.example"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1351"
+  ]
+}

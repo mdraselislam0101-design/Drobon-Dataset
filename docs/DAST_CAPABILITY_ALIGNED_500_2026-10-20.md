@@ -272,3 +272,32 @@ Decisions needed, in order:
 6. **Engineering — next DAST tranche**: families C, F and H have thin coverage (COOP/COEP value
    sets, cache directives, `WWW-Authenticate` schemes). They are the honest place to continue;
    none of them reaches 500 on its own, and none should be stretched to.
+
+---
+
+## Appendix — 2026-10-21 update (defensive batch, DAST 263 → 280)
+
+This section is appended; nothing above it was rewritten, because the 2026-10-20
+figures were correct for the tree of that day.
+
+| Item | 2026-10-20 (as written above) | 2026-10-21 (this batch) |
+|---|---|---|
+| DAST rules | 263 | **280** |
+| Patterns / records / remediation | 1 310 each | **1 327 each** |
+| Declared DAST tests | 1 292 | **1 371** (+79) |
+| DAST evaluation cases | 509 | **528** (+19) |
+| Check types | 7 (closed) | 7 (unchanged) |
+| `run-eval` true positives | 1 336 | **1 353** |
+| Distance to the 500 target | 237 | **220** |
+
+The batch target was not "reach 500 faster" but "make the pack answer the question the
+App asks of every response: is it hardened, and does it leak". Seventeen rules were
+added across 7 families, two candidates were withdrawn with their IDs reserved, and one
+was rejected before ID allocation (a 784-character pattern against a 500-character schema
+limit). Full method, rule table, rejection reasons and measured outputs:
+`docs/DAST_DEFENSIVE_BATCH_2026-10-21.md`.
+
+What did **not** change, deliberately: the check vocabulary, the passive-observation
+contract, the overlap policy (349 checks, 130 subset pairs, 0 unreviewed), the licence
+position (still no `LICENSE`, BLK-001), and the 15 App-evaluator divergences recorded in
+GAP-041. A larger pack is not a more integrated one.

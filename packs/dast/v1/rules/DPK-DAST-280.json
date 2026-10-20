@@ -1,0 +1,84 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-280",
+  "title": "Set-Cookie __Host- prefix is not paired with Path=/",
+  "description": "A cookie whose name starts with `__Host-` promises three things: Secure, Path=/ and no Domain attribute. The observed header carries the prefix but sets Path to something other than `/` (or omits Path entirely), so a browser that enforces the prefix rejects the cookie and a browser that ignores the prefix stores it under a narrower path. Either way the cookie the application intended is not the cookie that exists.",
+  "severity": "LOW",
+  "cwe": "CWE-16",
+  "category": "cookie-flags",
+  "remediation": "Emit `__Host-` cookies with `Path=/` and without `Domain`. If the cookie only belongs to a sub-path, drop the `__Host-` prefix and use `__Secure-` with an explicit Path instead.",
+  "limitation": "One Set-Cookie value. The check reads the Path attribute of a prefixed cookie; it does not test which user agents enforce the prefix rule, and it does not decide whether the narrower path is acceptable for that cookie.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Set-Cookie",
+    "valuePattern": "^(?=\\s*__host-[^=;\\s]*=)(?![\\s\\S]*;\\s*path\\s*=\\s*/\\s*(?:;|$))"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "__Host-session=abc123; Secure; SameSite=Strict"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "__Host-session=abc123; Secure; Path=/app; HttpOnly"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "__Host-session=abc123; Secure; Path=/; SameSite=Strict"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "session=abc123; Secure; SameSite=Strict"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "__Secure-session=abc123; Secure; Path=/app"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": [
+            "__Host-a=1; Secure; Path=/",
+            "__Host-b=2; Secure; Path=/"
+          ]
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1349"
+  ]
+}
