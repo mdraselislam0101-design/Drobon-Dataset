@@ -19,7 +19,7 @@ Status vocabulary (closed): `COVERED_VERIFIED`, `PARTIAL`, `MISSING`, `APP_INTEG
 | `DCC-PLAN-ENTITLEMENT` | Plan, entitlement, quota and rate limits | NONE | **NOT_APPLICABLE** | NOT_APPLICABLE | none (Dataset scope) |
 | `DCC-PROJECTS` | Projects, uploaded source snapshots and lifecycle | NONE | **NOT_APPLICABLE** | NOT_APPLICABLE | none (Dataset scope) |
 | `DCC-SCAN-JOBS` | Scan orchestration, job lifecycle and worker processing | NONE | **NOT_APPLICABLE** | NOT_APPLICABLE | none (Dataset scope) |
-| `DCC-SAST` | SAST detection engine (50 App rules; Dataset pack extension) | SUPPLEMENTAL | **APP_INTEGRATION_BLOCKED** | CONTRACT_READY_NOT_INTEGRATED | Main App pack loader (GAP-005). Dataset-side eval coverage is incomplete: 60 SAST rules have no positive evaluation case and 746 have no negative one, so independent evaluation covers 890/950 rules positively. Closing that is a dedicated SAST evaluation task, not a DAST batch |
+| `DCC-SAST` | SAST detection engine (50 App rules; Dataset pack extension) | SUPPLEMENTAL | **APP_INTEGRATION_BLOCKED** | CONTRACT_READY_NOT_INTEGRATED | Main App pack loader (GAP-005). Dataset-side eval depth is incomplete: 60 SAST rules have no positive evaluation case and 746 have no negative control one, so independent evaluation covers 890/950 SAST rules positively. Closing that is a dedicated SAST evaluation task, not a DAST batch |
 | `DCC-SCA-INVENTORY` | SCA dependency inventory and CycloneDX SBOM | NONE | **NOT_APPLICABLE** | NOT_APPLICABLE | none (Dataset scope) |
 | `DCC-SCA-VULN` | Dependency vulnerability assessment (advisory matching) | REQUIRED | **RIGHTS_BLOCKED** | BLOCKED_PROVIDER_LOCKED | production breadth 0/100,000; per-source rights; GATE-1..4; App provider design |
 | `DCC-SECRETS` | Secrets detection engine (6 App rules; Dataset pack extension) | SUPPLEMENTAL | **APP_INTEGRATION_BLOCKED** | CONTRACT_READY_NOT_INTEGRATED | Main App secrets pack loader (GAP-006) |
@@ -56,8 +56,8 @@ Status vocabulary (closed): `COVERED_VERIFIED`, `PARTIAL`, `MISSING`, `APP_INTEG
 - Status: **APP_INTEGRATION_BLOCKED** (basis: `ASSET_VALIDATED_NO_CONSUMER`); requirement: SUPPLEMENTAL; integration: CONTRACT_READY_NOT_INTEGRATED.
 - Contract: drobon.pack.sast/v1 rule packs: lexical line rules with executable positive/negative examples, rule-fixed severity, CWE mapping, remediation 1:1, and an omitted-languages convention for any-file rules.
 - Assets: `packs/sast/v1/rules` — 950 (*.json rule files); `knowledge/patterns` — 1310 (*.json pattern files (all families)); `knowledge/remediation` — 1310 (*.json remediation files (all families)).
-- Relationships: rule.patternRefs <-> pattern.linkedRules: 1163/1163 both directions, 0 dangling; 1163/1163 rules have a remediation entry keyed by ruleId; every rule CWE resolves in knowledge/cwe.
-- Evaluation: pack-tests: all 950 SAST rules execute >=1 positive and >=1 negative example; independent evaluation recount (2026-10-20): 797 SAST cases (792 assessed, 5 UNASSESSED); 890 rules appear in a positive detection; 204 rules appear as a forbidden detection in a negative case. The machine-checked numbers live in evaluationCoverage; dataset-wide: 1,316 cases naming all 1,163 pack rules; 1,103 rules appear in a positive detection across the three engines; preserved failure: EVAL-SAST-008 (1 FP, docstring trap - a lexical rule cannot see Python string context); 11 UNASSESSED cases kept out of scoring.
+- Relationships: rule.patternRefs <-> pattern.linkedRules: 1310/1310 both directions, 0 dangling; 1310/1310 rules have a remediation entry keyed by ruleId; every rule CWE resolves in knowledge/cwe.
+- Evaluation: pack-tests: all 950 SAST rules execute >=1 positive and >=1 negative example; independent evaluation recount (2026-10-20): 797 SAST cases (792 assessed, 5 UNASSESSED); 890 rules appear in a positive detection; 204 rules appear as a forbidden detection in a negative case. Cases are counted by their EVAL-SAST-* namespace; a rule is counted positive only when it is named in expected.detections of such a case. The machine-checked numbers live in evaluationCoverage; dataset-wide: 1,610 cases naming all 1,310 pack rules; 1,302 rules appear in a positive detection across the three engines and 598 also appear as a forbidden detection in a negative control; preserved failure: EVAL-SAST-008 (1 FP, docstring trap - a lexical rule cannot see Python string context); 11 UNASSESSED cases kept out of scoring.
 - Production eligibility: `NOT_ELIGIBLE_NO_LICENSE`; rights: `NO_GRANT_ALL_RIGHTS_RESERVED`; owner decision: none for Dataset content; loader is an App-workstream change.
 - Verification: `npm run validate:packs`, `node scripts/test-assets.mjs`, `node scripts/test-consistency.mjs`, `npm run test:eval`, `npm run eval:coverage`.
 
@@ -96,8 +96,8 @@ Status vocabulary (closed): `COVERED_VERIFIED`, `PARTIAL`, `MISSING`, `APP_INTEG
 - Status: **COVERED_VERIFIED** (basis: `DATASET_SIDE_EXECUTABLE`); requirement: REQUIRED; integration: CONTRACT_READY_NOT_INTEGRATED.
 - Contract: drobon.knowledge.remediation/v1: exactly one entry per pack rule, keyed by ruleId, with whyItMatters/actions/verification and a resolvable standardId.
 - Assets: `knowledge/remediation` — 1310 (*.json remediation files).
-- Relationships: 1163/1163 pack rules have exactly one remediation entry; 0 orphans in either direction.
-- Evaluation: npm run validate:audiences (1025 files) executes audience content; consistency suite pins the 1:1 remediation relationship; validate-assets rejects remediation with unknown ruleId.
+- Relationships: 1310/1310 pack rules have exactly one remediation entry; 0 orphans in either direction.
+- Evaluation: npm run validate:audiences (1321 files) executes audience content; consistency suite pins the 1:1 remediation relationship; validate-assets rejects remediation with unknown ruleId.
 - Production eligibility: `NOT_ELIGIBLE_NO_LICENSE`; rights: `NO_GRANT_ALL_RIGHTS_RESERVED`; owner decision: none for Dataset content.
 - Verification: `npm run validate:audiences`, `node scripts/test-consistency.mjs`.
 
