@@ -1,0 +1,81 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-262",
+  "title": "Content-Type declares the UTF-7 charset",
+  "description": "The Content-Type names `utf-7` as its charset. UTF-7 encodes markup characters inside base64 runs, so a filter that removes `<script>` sees a benign string while a browser that honours the declared charset decodes it into an executable script. The charset is obsolete and exists only for legacy interoperability.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-116",
+  "category": "response-headers",
+  "remediation": "Serve `utf-8` (or another modern charset) and remove any code path that can select utf-7 from a request. Declare the charset explicitly on every text response.",
+  "limitation": "One header value. The rule reports the declared charset and cannot show that a filter would pass a payload it decodes.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Content-Type",
+    "valuePattern": "charset\\s*=\\s*[\"\\']?\\s*(?:utf|unicode)-?7\\b"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-7"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=\"UTF-7\""
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain; charset=utf7"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-7x"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1331"
+  ]
+}

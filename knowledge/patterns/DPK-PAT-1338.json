@@ -1,0 +1,87 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1338",
+  "title": "Signal: Content-Security-Policy nonce is too short to be unguessable",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-header-matches",
+      "header": "Content-Security-Policy",
+      "valuePattern": "'nonce-[A-Za-z0-9+/=_-]{1,15}'"
+    }
+  },
+  "scope": "One policy whose nonce value is shorter than 16 characters.",
+  "limitations": "One header value. The rule measures the length of the nonce as written and does not test its randomness, so a long but predictable nonce is not reported here.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'nonce-abc123'"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src 'self'; script-src 'nonce-0123456789abc'"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'nonce-r4nd0mB4se64V4lue'"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'self'"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'nonce-abcdefghijklmno'"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'nonce-abcdefghijklmnop'"
+        }
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "Length is not entropy: a long nonce built from a counter is not reported by this rule and needs a separate design review.",
+  "linkedRules": [
+    "DPK-DAST-269"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:csp-short-nonce:short-nonce",
+  "validationStatus": "VALIDATED"
+}

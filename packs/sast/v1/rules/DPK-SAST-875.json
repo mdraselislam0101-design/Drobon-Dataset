@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-875",
+  "title": "Legacy TLS protocol enabled in the server configuration in nginx — review required",
+  "description": "ssl_protocols still offers SSLv2, SSLv3, TLS 1.0 or TLS 1.1. These versions are deprecated and fail modern compliance baselines; SSLv3 is broken outright and TLS 1.0/1.1 lack the AEAD suites expected today. The rule flags the directive; whether the listener is public is a review decision.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-327",
+  "category": "weak-cryptography",
+  "remediation": "Set ssl_protocols TLSv1.2 TLSv1.3 and confirm that the certificate chain and client population support it.",
+  "limitation": "Lexical: reads one directive line; an included snippet that overrides it is out of scope.",
+  "languages": [
+    "nginx"
+  ],
+  "patterns": [
+    {
+      "source": "\\bssl_protocols\\b[^\\n;]*\\b(?:SSLv2|SSLv3|TLSv1(?!\\.\\d)|TLSv1\\.1)\\b"
+    }
+  ],
+  "tests": [
+    {
+      "line": "ssl_protocols TLSv1 TLSv1.1 TLSv1.2;",
+      "match": true
+    },
+    {
+      "line": "# audit: ssl_protocols TLSv1 TLSv1.1 TLSv1.2; present",
+      "match": true
+    },
+    {
+      "line": "ssl_protocols TLSv1.2 TLSv1.3;",
+      "match": false
+    },
+    {
+      "line": "# verified: ssl_protocols TLSv1.2 TLSv1.3;",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1058"
+  ]
+}

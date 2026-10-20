@@ -1,0 +1,87 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1334",
+  "title": "Signal: Set-Cookie uses SameSite=None without the Partitioned attribute",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-header-matches",
+      "header": "Set-Cookie",
+      "valuePattern": "^(?=[\\s\\S]*;\\s*secure(?=[\\s;=]|$))(?=[\\s\\S]*;\\s*samesite\\s*=\\s*none(?:\\s*;|\\s*$))(?![^\\n]*;\\s*partitioned(?:\\s*;|\\s*=|\\s*$))"
+    }
+  },
+  "scope": "One Set-Cookie header declaring SameSite=None without Partitioned.",
+  "limitations": "One header value and one cookie. The rule reports SameSite=None without Partitioned on a cookie the browser would store (Secure present); a cookie with no Secure attribute is discarded under SameSite=None and is reported by DPK-DAST-071 instead. The rule cannot tell whether the cookie is ever sent from an embedded context.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Path=/; Secure; HttpOnly; SameSite=None"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Path=/; Secure; SameSite=None; HttpOnly"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Path=/; Secure; HttpOnly; SameSite=None; Partitioned"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Path=/; Secure; HttpOnly; SameSite=Lax"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "ch=1; SameSite=None; Secure; Partitioned=1"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "ch=1; Secure; SameSite=None; Path=/"
+        }
+      },
+      "match": true
+    }
+  ],
+  "fpNotes": "A cookie that is never sent in an embedded context is still reported; the finding is the attribute combination.",
+  "linkedRules": [
+    "DPK-DAST-265"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:cookie-partitioned-missing:partitioned-missing",
+  "validationStatus": "VALIDATED"
+}

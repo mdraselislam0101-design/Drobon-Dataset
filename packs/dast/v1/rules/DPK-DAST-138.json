@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-138",
+  "title": "Swagger UI documentation exposed in a response",
+  "description": "The response renders Swagger UI: the page contains the swagger-ui element and the SwaggerUIBundle script that loads a specification. Published API documentation names every route, parameter and model, and in many deployments the specification file itself is readable next to it.",
+  "severity": "LOW",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Serve the documentation only on an internal or authenticated path, and remove it from the production image when it is generated at build time.",
+  "limitation": "Two body markers. A page that links to a documentation site is not matched; the UI assets must be rendered in the response.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*id=[\"']?swagger-ui)(?=[\\s\\S]*SwaggerUIBundle)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/docs",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<div id=\"swagger-ui\"></div><script src=\"/swagger-ui-bundle.js\"></script><script>window.ui = SwaggerUIBundle({url: \"/openapi.json\"});</script>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/api/docs",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<div id=swagger-ui></div><script>const ui = SwaggerUIBundle({spec: {}})</script>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/docs",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<p>Our API documentation is published at developer.example.</p>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body>Home</body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1207"
+  ]
+}

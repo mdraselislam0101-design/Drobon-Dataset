@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-919",
+  "title": "Reverse proxy target assembled from a request variable in nginx — review required",
+  "description": "proxy_pass with a variable builds the upstream from request data. A crafted path or query can steer the proxy to arbitrary hosts, including internal services and the metadata endpoint, because nginx resolves the value at request time. The rule flags the variable form; whether the value is constrained by a map is a review decision.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-918",
+  "category": "server-side-request-forgery",
+  "remediation": "Proxy to a fixed upstream or resolve the host through a map of allowed backends, and reject anything else with a 404.",
+  "limitation": "Lexical: matches proxy_pass values containing a $ variable; a map-driven allowlist is still reported for review.",
+  "languages": [
+    "nginx"
+  ],
+  "patterns": [
+    {
+      "source": "\\bproxy_pass\\s+[^;\\n]*\\$"
+    }
+  ],
+  "tests": [
+    {
+      "line": "proxy_pass http://$backend;",
+      "match": true
+    },
+    {
+      "line": "# audit: proxy_pass http://$backend; present",
+      "match": true
+    },
+    {
+      "line": "proxy_pass http://app_pool;",
+      "match": false
+    },
+    {
+      "line": "# verified: proxy_pass http://app_pool;",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1102"
+  ]
+}

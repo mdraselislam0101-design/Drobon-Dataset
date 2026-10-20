@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-925",
+  "title": "Database privileges granted without a scope limit in sql — review required",
+  "description": "GRANT ALL PRIVILEGES hands an account every right on the target, including DROP and GRANT OPTION when those are implied. A service that only reads one schema then holds the power to destroy it or to grant itself access elsewhere. The rule flags the statement; whether the account is application-facing is a review decision.",
+  "severity": "HIGH",
+  "cwe": "CWE-250",
+  "category": "access-control",
+  "remediation": "Grant only the statements the account uses, scoped to the schemas it owns, and revoke GRANT OPTION.",
+  "limitation": "Lexical: matches GRANT ALL in migration or setup SQL; runtime grants issued by an ORM are out of scope.",
+  "languages": [
+    "sql"
+  ],
+  "patterns": [
+    {
+      "source": "\\bGRANT\\s+ALL\\b"
+    }
+  ],
+  "tests": [
+    {
+      "line": "GRANT ALL PRIVILEGES ON app.* TO app_user;",
+      "match": true
+    },
+    {
+      "line": "# audit: GRANT ALL PRIVILEGES ON app.* TO app_user; present",
+      "match": true
+    },
+    {
+      "line": "GRANT SELECT, INSERT ON app.orders TO app_user;",
+      "match": false
+    },
+    {
+      "line": "# verified: GRANT SELECT, INSERT ON app.orders TO app_user;",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1108"
+  ]
+}

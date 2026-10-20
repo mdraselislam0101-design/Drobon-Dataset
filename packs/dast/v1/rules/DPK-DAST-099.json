@@ -1,0 +1,99 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-099",
+  "title": "Content-Security-Policy form-action allows every origin",
+  "description": "The policy allows a form to submit to any origin (form-action * or a scheme wildcard). An injected or edited form can therefore post the user's input, including credentials, to another host even when script execution is blocked. The directive is read from its first declaration only, because later duplicates are ignored by browsers.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-693",
+  "category": "csp-weakness",
+  "remediation": "Set form-action to the origins that actually receive submissions, for example form-action 'self' https://pay.example. Unlike fetch directives it does not inherit from default-src, so the value must be present on its own.",
+  "limitation": "One header value, first declaration of the directive only. It reports the wildcard permission, not whether a form on the page can be modified by an attacker.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Content-Security-Policy",
+    "valuePattern": "^(?:(?!form-action(?=[\\s;]|$))[^;]*;\\s*)*form-action(?=[\\s;]|$)[^;]*?(?<=\\s)(?:\\*|(?:https?|wss?)://\\*)(?=\\s|;|$)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "form-action *"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src 'self'; form-action 'self' *"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "form-action http://*"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "form-action 'self'"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "form-action 'none'"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src *"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "form-action 'self'; form-action *"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {}
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1168"
+  ]
+}

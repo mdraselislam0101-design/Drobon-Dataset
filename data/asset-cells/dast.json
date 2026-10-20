@@ -1,1039 +1,1368 @@
 [
-  {
-    "class": "header-missing",
-    "kind": "dast",
-    "category": "security-headers",
-    "cwe": "CWE-693",
-    "cweDef": {
-      "name": "Protection Mechanism Failure",
-      "summary": "Missing response headers remove a protection layer the browser would otherwise enforce."
+ {
+  "class": "header-missing",
+  "kind": "dast",
+  "category": "security-headers",
+  "cwe": "CWE-693",
+  "cweDef": {
+   "name": "Protection Mechanism Failure",
+   "summary": "Missing response headers remove a protection layer the browser would otherwise enforce."
+  },
+  "severity": "MEDIUM",
+  "framing": "custom",
+  "title": "Missing {name} response header",
+  "description": "The response carries no {name} header. Its absence forfeits the protection the header provides. This check evaluates a normal observation and confirms the header is absent.",
+  "remediation": "Emit {name} on every response ({safe}).",
+  "limitation": "Header-name check: it cannot judge whether the header value is correct.",
+  "scopeT": "Single response: confirm the header is absent.",
+  "fp": "Non-browser endpoints are the common accepted case.",
+  "recordDesc": "{name} is a response header with no equivalent protection when absent. Responses carrying no such header fail this check.",
+  "applicability": "HTTP responses serving browser clients.",
+  "risk": "Loss of the header's protection; MEDIUM severity.",
+  "why": "Responses carry no {name} header.",
+  "fix": [
+   "Emit {name} on every response.",
+   "Confirm at the edge and the origin."
+  ],
+  "verifyT": "Rescan observes the header.",
+  "cells": [
+   {
+    "suffix": "hsts",
+    "lang": "http",
+    "name": "Strict-Transport-Security",
+    "safe": "max-age=31536000; includeSubDomains",
+    "check": {
+     "type": "missing-response-header",
+     "header": "Strict-Transport-Security"
     },
-    "severity": "MEDIUM",
-    "framing": "custom",
-    "title": "Missing {name} response header",
-    "description": "The response carries no {name} header. Its absence forfeits the protection the header provides. This check evaluates a normal observation and confirms the header is absent.",
-    "remediation": "Emit {name} on every response ({safe}).",
-    "limitation": "Header-name check: it cannot judge whether the header value is correct.",
-    "scopeT": "Single response: confirm the header is absent.",
-    "fp": "Non-browser endpoints are the common accepted case.",
-    "recordDesc": "{name} is a response header with no equivalent protection when absent. Responses carrying no such header fail this check.",
-    "applicability": "HTTP responses serving browser clients.",
-    "risk": "Loss of the header's protection; MEDIUM severity.",
-    "why": "Responses carry no {name} header.",
-    "fix": [
-      "Emit {name} on every response.",
-      "Confirm at the edge and the origin."
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/login",
+       "status": 200,
+       "headers": {
+        "Server": "web"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Strict-Transport-Security": "max-age=31536000"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 500,
+       "headers": {
+        "Strict-Transport-Security": "max-age=1"
+       }
+      },
+      "match": false
+     }
     ],
-    "verifyT": "Rescan observes the header.",
-    "cells": [
-      {
-        "suffix": "hsts",
-        "lang": "http",
-        "name": "Strict-Transport-Security",
-        "safe": "max-age=31536000; includeSubDomains",
-        "check": {
-          "type": "missing-response-header",
-          "header": "Strict-Transport-Security"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Content-Type": "text/html"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/login",
-              "status": 200,
-              "headers": {
-                "Server": "web"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Strict-Transport-Security": "max-age=31536000"
-              }
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 500,
-              "headers": {
-                "Strict-Transport-Security": "max-age=1"
-              }
-            },
-            "match": false
-          }
-        ]
-      },
-      {
-        "suffix": "permissions",
-        "lang": "http",
-        "name": "Permissions-Policy",
-        "safe": "camera=(), microphone=()",
-        "check": {
-          "type": "missing-response-header",
-          "header": "Permissions-Policy"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Content-Type": "text/html"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/login",
-              "status": 200,
-              "headers": {
-                "Server": "web"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Permissions-Policy": "camera=()"
-              }
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 500,
-              "headers": {
-                "Permissions-Policy": "camera=()"
-              }
-            },
-            "match": false
-          }
-        ]
-      },
-      {
-        "suffix": "coep",
-        "lang": "http",
-        "name": "Cross-Origin-Embedder-Policy",
-        "safe": "require-corp",
-        "check": {
-          "type": "missing-response-header",
-          "header": "Cross-Origin-Embedder-Policy"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Content-Type": "text/html"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/login",
-              "status": 200,
-              "headers": {
-                "Server": "web"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Cross-Origin-Embedder-Policy": "require-corp"
-              }
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 500,
-              "headers": {
-                "Cross-Origin-Embedder-Policy": "require-corp"
-              }
-            },
-            "match": false
-          }
-        ]
-      },
-      {
-        "suffix": "coop",
-        "lang": "http",
-        "name": "Cross-Origin-Opener-Policy",
-        "safe": "same-origin",
-        "check": {
-          "type": "missing-response-header",
-          "header": "Cross-Origin-Opener-Policy"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Content-Type": "text/html"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/login",
-              "status": 200,
-              "headers": {
-                "Server": "web"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Cross-Origin-Opener-Policy": "same-origin"
-              }
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 500,
-              "headers": {
-                "Cross-Origin-Opener-Policy": "same-origin"
-              }
-            },
-            "match": false
-          }
-        ]
-      },
-      {
-        "suffix": "corp",
-        "lang": "http",
-        "name": "Cross-Origin-Resource-Policy",
-        "safe": "same-origin",
-        "check": {
-          "type": "missing-response-header",
-          "header": "Cross-Origin-Resource-Policy"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Content-Type": "text/html"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/login",
-              "status": 200,
-              "headers": {
-                "Server": "web"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Cross-Origin-Resource-Policy": "same-origin"
-              }
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 500,
-              "headers": {
-                "Cross-Origin-Resource-Policy": "same-origin"
-              }
-            },
-            "match": false
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "class": "header-weak",
-    "kind": "dast",
-    "category": "security-headers",
-    "cwe": "CWE-693",
-    "severity": "LOW",
-    "framing": "custom",
-    "title": "Weak {name} header value",
-    "description": "The response carries {name} with a weak or deprecated value. A weak value grants partial protection at best. This check matches the weak value directly.",
-    "remediation": "Strengthen the value ({safe}).",
-    "limitation": "Value check: it cannot confirm the deployment context.",
-    "scopeT": "Single response header value.",
-    "fp": "Transitional deployments are the common accepted case.",
-    "recordDesc": "{name} with a weak value leaves most of the attack class open. Weak values are worth flagging even where the header exists.",
-    "applicability": "HTTP responses carrying the header.",
-    "risk": "Partial protection only; LOW severity.",
-    "why": "{name} carries a weak value.",
-    "fix": [
-      "Strengthen to {safe}."
-    ],
-    "verifyT": "Rescan observes the strong value.",
-    "cells": [
-      {
-        "suffix": "hsts-short",
-        "lang": "http",
-        "name": "Strict-Transport-Security max-age",
-        "safe": "max-age=31536000",
-        "check": {
-          "type": "response-header-matches",
-          "header": "Strict-Transport-Security",
-          "valuePattern": "max-age\\s*=\\s*[0-9]{1,7}\\b"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Strict-Transport-Security": "max-age=86400"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Strict-Transport-Security": "max-age=1000; includeSubDomains"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Strict-Transport-Security": "max-age=31536000"
-              }
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {}
-            },
-            "match": false
-          }
-        ]
-      },
-      {
-        "suffix": "hsts-nopreload",
-        "lang": "http",
-        "name": "HSTS preload directive",
-        "safe": "preload with list submission",
-        "check": {
-          "type": "response-header-missing-directive",
-          "header": "Strict-Transport-Security",
-          "directive": "preload"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Strict-Transport-Security": "max-age=31536000"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Strict-Transport-Security": "max-age=63072000; includeSubDomains"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Strict-Transport-Security": "max-age=31536000; preload"
-              }
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "http://app.example/",
-              "status": 200,
-              "headers": {
-                "Strict-Transport-Security": "max-age=1; preload"
-              }
-            },
-            "match": false
-          }
-        ]
-      },
-      {
-        "suffix": "csp-unsafe",
-        "lang": "http",
-        "name": "Content-Security-Policy (unsafe-inline)",
-        "safe": "nonce-based scripts",
-        "check": {
-          "type": "response-header-matches",
-          "header": "Content-Security-Policy",
-          "valuePattern": "unsafe-inline"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Content-Security-Policy": "script-src 'unsafe-inline'"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Content-Security-Policy": "default-src 'self'; style-src 'unsafe-inline'"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Content-Security-Policy": "script-src 'nonce-a1b2'"
-              }
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {}
-            },
-            "match": false
-          }
-        ]
-      },
-      {
-        "suffix": "csp-wildcard",
-        "lang": "http",
-        "name": "Content-Security-Policy default-src wildcard",
-        "safe": "explicit source lists",
-        "check": {
-          "type": "response-header-matches",
-          "header": "Content-Security-Policy",
-          "valuePattern": "default-src(?=\\s)[^;*]*?(?<=\\s)\\*(?=\\s*(?:;|$))"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Content-Security-Policy": "default-src *"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Content-Security-Policy": "default-src *; script-src 'self'"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Content-Security-Policy": "default-src 'self'"
-              }
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {}
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Content-Security-Policy": "default-src 'self' *"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Content-Security-Policy": "default-src *.example.com"
-              }
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Content-Security-Policy": "default-src 'self'; script-src *"
-              }
-            },
-            "match": false
-          }
-        ]
-      },
-      {
-        "suffix": "xfo-allowfrom",
-        "lang": "http",
-        "name": "X-Frame-Options (ALLOW-FROM)",
-        "safe": "frame-ancestors in CSP",
-        "check": {
-          "type": "response-header-matches",
-          "header": "X-Frame-Options",
-          "valuePattern": "ALLOW-FROM"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "X-Frame-Options": "ALLOW-FROM https://a.example/"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "X-Frame-Options": "ALLOW-FROM https://b.example/"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "X-Frame-Options": "DENY"
-              }
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {}
-            },
-            "match": false
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "class": "server-version",
-    "kind": "dast",
-    "category": "information-disclosure",
-    "cwe": "CWE-200",
-    "severity": "LOW",
-    "framing": "custom",
-    "title": "Server version disclosed ({name})",
-    "description": "The response discloses a versioned {name} banner. Version banners let attackers aim known exploits. This check matches the banner directly.",
-    "remediation": "Suppress the version ({safe}).",
-    "limitation": "Banner check: version visibility alone is not exploitability.",
-    "scopeT": "Single response header value.",
-    "fp": "Honeypot banners are the rare false positive.",
-    "recordDesc": "{name} banners carrying release numbers turn reconnaissance into a version lookup. Quiet banners slow targeted attacks.",
-    "applicability": "HTTP responses carrying banners.",
-    "risk": "Targeted exploit selection; LOW severity.",
-    "why": "{name} discloses its release number.",
-    "fix": [
-      "Suppress with {safe}."
-    ],
-    "verifyT": "Rescan observes no versioned banner.",
-    "cells": [
-      {
-        "suffix": "server",
-        "lang": "http",
-        "name": "Server header",
-        "safe": "ServerTokens Prod",
-        "check": {
-          "type": "response-header-matches",
-          "header": "Server",
-          "valuePattern": "[0-9]+\\.[0-9]+"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Server": "Apache/2.4.58"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Server": "nginx/1.25.3"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Server": "web"
-              }
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {}
-            },
-            "match": false
-          }
-        ]
-      },
-      {
-        "suffix": "xpoweredby",
-        "lang": "http",
-        "name": "X-Powered-By header",
-        "safe": "expose_php Off or header removal",
-        "check": {
-          "type": "response-header-matches",
-          "header": "X-Powered-By",
-          "valuePattern": "[^ ]"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "X-Powered-By": "PHP/8.2.1"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "X-Powered-By": "Express"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {}
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Server": "web"
-              }
-            },
-            "match": false
-          }
-        ]
-      },
-      {
-        "suffix": "aspnet",
-        "lang": "http",
-        "name": "X-AspNet-Version header",
-        "safe": "enableVersionHeader false",
-        "check": {
-          "type": "response-header-matches",
-          "header": "X-AspNet-Version",
-          "valuePattern": "[^ ]"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "X-AspNet-Version": "4.0.30319"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "X-AspNet-Version": "2.0.50727"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {}
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Server": "web"
-              }
-            },
-            "match": false
-          }
-        ]
-      },
-      {
-        "suffix": "generator",
-        "lang": "http",
-        "name": "X-Generator header",
-        "safe": "header removal",
-        "check": {
-          "type": "response-header-matches",
-          "header": "X-Generator",
-          "valuePattern": "[^ ]"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "X-Generator": "Drupal 10"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "X-Generator": "WordPress 6.4"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {}
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Server": "web"
-              }
-            },
-            "match": false
-          }
-        ]
-      },
-      {
-        "suffix": "jenkins",
-        "lang": "http",
-        "name": "X-Jenkins header",
-        "safe": "restricted Jenkins access",
-        "check": {
-          "type": "response-header-matches",
-          "header": "X-Jenkins",
-          "valuePattern": "[^ ]"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "X-Jenkins": "2.440"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "X-Jenkins": "2.1"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {}
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Server": "web"
-              }
-            },
-            "match": false
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "class": "cors-open",
-    "kind": "dast",
-    "category": "cors",
-    "cwe": "CWE-942",
-    "cweDef": {
-      "name": "Overly Permissive Cross-domain Whitelist",
-      "summary": "Wildcard CORS origins let any site read responses."
+    "overrides": {
+     "description": "The response omits Strict-Transport-Security, so the browser stores no instruction to upgrade later requests. The next navigation to this host can still be sent over plaintext, where an on-path attacker can intercept or rewrite it before the redirect to HTTPS happens. HSTS is the only control that removes that first-request window.",
+     "remediation": "Send Strict-Transport-Security: max-age=31536000; includeSubDomains once every subdomain serves HTTPS. Start with a short max-age while validating, then raise it; adding preload is a separate, deliberate step.",
+     "limitation": "Header-name check on one response. It cannot tell whether the host is ever reached over plaintext, and it reports the missing policy rather than an observed downgrade.",
+     "recordDesc": "No Strict-Transport-Security header was sent. With no stored policy the browser may use http for the next request to this host, so the first hop of every new session stays interceptable even though the site serves HTTPS.",
+     "why": "The response carries no Strict-Transport-Security header.",
+     "fix": [
+      "Serve every subdomain over TLS first.",
+      "Then send max-age=31536000; includeSubDomains and keep it on every response."
+     ],
+     "verifyT": "Request the host over HTTPS and confirm Strict-Transport-Security is present with a max-age of at least one year.",
+     "risk": "First-request downgrade window on every new session; MEDIUM severity."
+    }
+   },
+   {
+    "suffix": "permissions",
+    "lang": "http",
+    "name": "Permissions-Policy",
+    "safe": "camera=(), microphone=()",
+    "check": {
+     "type": "missing-response-header",
+     "header": "Permissions-Policy"
     },
-    "severity": "MEDIUM",
-    "framing": "custom",
-    "title": "Wildcard CORS ({name})",
-    "description": "The response allows every origin: {name}. Any site can read the response. This check matches the wildcard directly.",
-    "remediation": "Allowlist origins ({safe}).",
-    "limitation": "Header check: it cannot confirm which callers are legitimate.",
-    "scopeT": "Single response header value.",
-    "fp": "Public APIs are the common accepted case.",
-    "recordDesc": "{name} lets arbitrary sites read responses.",
-    "applicability": "HTTP responses with CORS headers.",
-    "risk": "Cross-origin data theft; MEDIUM severity.",
-    "why": "CORS allows every origin ({name}).",
-    "fix": [
-      "Allowlist with {safe}."
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/login",
+       "status": 200,
+       "headers": {
+        "Server": "web"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Permissions-Policy": "camera=()"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 500,
+       "headers": {
+        "Permissions-Policy": "camera=()"
+       }
+      },
+      "match": false
+     }
     ],
-    "verifyT": "Rescan observes explicit origins.",
-    "cells": [
-      {
-        "suffix": "wildcard",
-        "lang": "http",
-        "name": "Access-Control-Allow-Origin *",
-        "safe": "an explicit origin list",
-        "check": {
-          "type": "response-header-matches",
-          "header": "Access-Control-Allow-Origin",
-          "valuePattern": "^\\*$"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Access-Control-Allow-Origin": "*"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/api",
-              "status": 200,
-              "headers": {
-                "Access-Control-Allow-Origin": "*"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Access-Control-Allow-Origin": "https://app.example/"
-              }
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {}
-            },
-            "match": false
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "class": "http-methods",
-    "kind": "dast",
-    "category": "http-methods",
-    "cwe": "CWE-749",
-    "cweDef": {
-      "name": "Exposed Dangerous Method or Function",
-      "summary": "Dangerous HTTP methods on a resource let clients alter, proxy through, or probe the server."
+    "overrides": {
+     "severity": "LOW",
+     "description": "The response omits Permissions-Policy. Browser defaults already restrict camera, microphone and geolocation to the top-level origin, so absence does not expose a feature; it removes the ability to narrow access for embedded frames and for features whose default allowlist is broader. The finding is the missing declaration, not an exposed capability.",
+     "remediation": "Declare the features the application does not use as empty allowlists, for example camera=(), microphone=(), geolocation=(). Add a directive only where a feature must be delegated to a named origin.",
+     "limitation": "Header-name check on one response. It cannot see which features the page uses, and default allowlists differ per feature, so absence is a policy gap rather than an observed exposure.",
+     "recordDesc": "No Permissions-Policy was declared. Default allowlists still apply, but the application cannot narrow feature access for embedded content or record a deliberate delegation, which leaves the decision to browser defaults that change between releases.",
+     "why": "The response carries no Permissions-Policy header.",
+     "fix": [
+      "Declare unused powerful features as empty allowlists.",
+      "Delegate a feature to a named origin only where the product requires it."
+     ],
+     "verifyT": "Request the page and confirm Permissions-Policy names the features the application intends to keep available.",
+     "risk": "Feature access left to browser defaults; LOW severity because those defaults are restrictive and the finding is a policy gap."
+    }
+   },
+   {
+    "suffix": "coep",
+    "lang": "http",
+    "name": "Cross-Origin-Embedder-Policy",
+    "safe": "require-corp",
+    "check": {
+     "type": "missing-response-header",
+     "header": "Cross-Origin-Embedder-Policy"
     },
-    "severity": "MEDIUM",
-    "framing": "custom",
-    "title": "Dangerous HTTP method allowed",
-    "description": "The Allow response lists a dangerous method. PUT, DELETE, TRACE, and CONNECT widen what anonymous clients can do. This check matches the method name directly.",
-    "remediation": "Disable unneeded methods ({safe}).",
-    "limitation": "Header check: it cannot exercise the method.",
-    "scopeT": "Single Allow header value.",
-    "fp": "APIs needing PUT or DELETE are the common accepted case \u2014 confirm auth.",
-    "recordDesc": "Dangerous methods in Allow headers widen anonymous capability. Restricting methods shrinks the reachable surface.",
-    "applicability": "HTTP Allow responses.",
-    "risk": "Unauthorized alteration or proxying; MEDIUM severity at MEDIUM confidence.",
-    "why": "Allow lists a dangerous method.",
-    "fix": [
-      "Apply {safe}."
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/login",
+       "status": 200,
+       "headers": {
+        "Server": "web"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Cross-Origin-Embedder-Policy": "require-corp"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 500,
+       "headers": {
+        "Cross-Origin-Embedder-Policy": "require-corp"
+       }
+      },
+      "match": false
+     }
     ],
-    "verifyT": "Rescan observes a minimal method set.",
-    "cells": [
-      {
-        "suffix": "allow-danger",
-        "lang": "http",
-        "name": "Allow header",
-        "safe": "GET, POST only",
-        "check": {
-          "type": "response-header-matches",
-          "header": "Allow",
-          "valuePattern": "\\b(?:PUT|DELETE|TRACE|CONNECT)\\b"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Allow": "GET, PUT"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Allow": "GET, HEAD, OPTIONS, TRACE"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Allow": "GET, POST"
-              }
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {}
-            },
-            "match": false
-          }
-        ]
-      }
+    "overrides": {
+     "severity": "LOW",
+     "limitation": "Header-name check on one response. It cannot tell whether the document needs isolation, and it does not see the CORP or CORS headers on the resources that decide whether require-corp can be deployed.",
+     "remediation": "Send Cross-Origin-Embedder-Policy: require-corp only on documents that need cross-origin isolation, and make every embedded resource carry CORP or CORS. Leave the header absent on documents that do not need isolation and record that decision.",
+     "risk": "No cross-origin isolation; isolation-gated features unavailable and embedding not gated by an explicit opt-in; LOW severity.",
+     "description": "The response omits Cross-Origin-Embedder-Policy, so the document is not cross-origin isolated. Without the header a cross-origin subresource that refuses CORP or CORS is not gated by an explicit policy, and isolation-gated features such as SharedArrayBuffer stay unavailable. Isolation is opt-in and costs compatibility, so absence is a hardening gap to weigh rather than a defect on its own.",
+     "recordDesc": "No Cross-Origin-Embedder-Policy was sent. The document stays outside cross-origin isolation: cross-origin resources are not gated by an explicit opt-in and isolation-gated APIs stay unavailable. Whether that matters depends on what the document embeds, so the finding is a hardening gap rather than a confirmed exposure.",
+     "why": "The response carries no Cross-Origin-Embedder-Policy header.",
+     "fix": [
+      "Decide whether the document needs cross-origin isolation.",
+      "If it does, send require-corp and make each embedded resource carry CORP or CORS; if it does not, record the decision and leave the header out."
+     ],
+     "verifyT": "Request the document and confirm the policy is either absent by documented decision, or present with require-corp while every subresource still loads."
+    }
+   },
+   {
+    "suffix": "coop",
+    "lang": "http",
+    "name": "Cross-Origin-Opener-Policy",
+    "safe": "same-origin",
+    "check": {
+     "type": "missing-response-header",
+     "header": "Cross-Origin-Opener-Policy"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/login",
+       "status": 200,
+       "headers": {
+        "Server": "web"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Cross-Origin-Opener-Policy": "same-origin"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 500,
+       "headers": {
+        "Cross-Origin-Opener-Policy": "same-origin"
+       }
+      },
+      "match": false
+     }
+    ],
+    "overrides": {
+     "severity": "LOW",
+     "limitation": "Header-name check on one response. It cannot show whether an opener relationship actually exists, and it does not see the popups a page opens.",
+     "risk": "Opener relationship retained across origins; LOW severity because the header is defense-in-depth.",
+     "description": "The response omits Cross-Origin-Opener-Policy, so the browser default of unsafe-none applies and a cross-origin window that opens this one, or that this one opens, keeps a live WindowProxy reference to it. COOP is the only header that severs that relationship; its absence leaves cross-window navigation and timing observations in place.",
+     "remediation": "Send Cross-Origin-Opener-Policy: same-origin on pages that do not need popup round-trips, or same-origin-allow-popups where a popup must keep a relationship. Test the OAuth and payment popups before enforcing it site-wide.",
+     "recordDesc": "No Cross-Origin-Opener-Policy was declared, so the browsing context keeps its default opener relationship. A cross-origin page can retain a live reference to this window, which exposes navigation and timing observations that COOP isolation would remove.",
+     "why": "The response carries no Cross-Origin-Opener-Policy header.",
+     "fix": [
+      "Send same-origin where popups are not part of the flow.",
+      "Send same-origin-allow-popups where they are, and verify the popup flow still completes."
+     ],
+     "verifyT": "Request the page and confirm Cross-Origin-Opener-Policy is present with same-origin or same-origin-allow-popups."
+    }
+   },
+   {
+    "suffix": "corp",
+    "lang": "http",
+    "name": "Cross-Origin-Resource-Policy",
+    "safe": "same-origin",
+    "check": {
+     "type": "missing-response-header",
+     "header": "Cross-Origin-Resource-Policy"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/login",
+       "status": 200,
+       "headers": {
+        "Server": "web"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Cross-Origin-Resource-Policy": "same-origin"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 500,
+       "headers": {
+        "Cross-Origin-Resource-Policy": "same-origin"
+       }
+      },
+      "match": false
+     }
+    ],
+    "overrides": {
+     "severity": "LOW",
+     "limitation": "Header-name check on one response. It cannot distinguish a public CDN asset from an authenticated document, so a deliberate public resource is reported exactly like an unprotected one.",
+     "risk": "Cross-origin embedding of responses that should stay origin-bound; LOW severity because the header is defense-in-depth.",
+     "description": "The response omits Cross-Origin-Resource-Policy. CORP is what stops another site from embedding this response in a no-cors context such as an image, script or iframe tag. Without it, embedding is governed by browser defaults and by whatever CORS the embedding request carries, which is fine for public assets and wrong for authenticated documents.",
+     "remediation": "Send Cross-Origin-Resource-Policy: same-origin on authenticated responses, and same-site where subdomains legitimately share an asset. Keep cross-origin only for resources that are public by design.",
+     "recordDesc": "No Cross-Origin-Resource-Policy was sent. The response can be embedded by another origin in a no-cors context, subject only to browser defaults, so a resource meant to stay origin-bound becomes observable through size, timing and error behaviour.",
+     "why": "The response carries no Cross-Origin-Resource-Policy header.",
+     "fix": [
+      "Send same-origin on application and API responses.",
+      "Send same-site where subdomains share assets, and cross-origin only for deliberately public resources."
+     ],
+     "verifyT": "Request the resource and confirm Cross-Origin-Resource-Policy matches its intended audience."
+    }
+   }
+  ]
+ },
+ {
+  "class": "header-weak",
+  "kind": "dast",
+  "category": "security-headers",
+  "cwe": "CWE-693",
+  "severity": "LOW",
+  "framing": "custom",
+  "title": "Weak {name} header value",
+  "description": "The response carries {name} with a weak or deprecated value. A weak value grants partial protection at best. This check matches the weak value directly.",
+  "remediation": "Immediate: strengthen the value to the recommended form recorded for this header ({safe}), and confirm it is delivered on every response type, including errors and redirects. Durable: set security headers once at the edge or in one middleware so individual routes cannot drift, and add a test that asserts the expected value per header. Trade-off: a stricter value can break embedding, inline scripts or legacy clients, so deploy it in report-only or observe-only mode first where the header supports one.",
+  "limitation": "Value check: it cannot confirm the deployment context.",
+  "scopeT": "Single response header value.",
+  "fp": "Transitional deployments are the common accepted case.",
+  "recordDesc": "{name} with a weak value leaves most of the attack class open. Weak values are worth flagging even where the header exists.",
+  "applicability": "HTTP responses carrying the header.",
+  "risk": "Partial protection only; LOW severity.",
+  "why": "{name} carries a weak value.",
+  "fix": [
+   "Strengthen the value to the recommended form ({safe}).",
+   "Deliver it on every response type, including errors and redirects.",
+   "Set security headers once at the edge or in a single middleware."
+  ],
+  "verifyT": "Re-request the page and confirm the hardened value; check an error response and a static asset, and confirm the flow the header constrains still works.",
+  "cells": [
+   {
+    "suffix": "hsts-short",
+    "lang": "http",
+    "name": "Strict-Transport-Security max-age",
+    "safe": "max-age=31536000",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Strict-Transport-Security",
+     "valuePattern": "max-age\\s*=\\s*\"[^\"\\n]*\"|max-age\\s*=\\s*(?:[0-9]{1,7}|1[0-9]{7}|2[0-9]{7}|30[0-9]{6}|31[0-4][0-9]{5}|315[0-2][0-9]{4}|3153[0-5][0-9]{3})\\b"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Strict-Transport-Security": "max-age=86400"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Strict-Transport-Security": "max-age=1000; includeSubDomains"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Strict-Transport-Security": "max-age=10000000"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Strict-Transport-Security": "max-age=31535999"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Strict-Transport-Security": "max-age=31536000"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Strict-Transport-Security": "max-age=36000000; includeSubDomains"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {}
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Strict-Transport-Security": "max-age=\"300\""
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Strict-Transport-Security": "max-age=\"31536000\""
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Strict-Transport-Security": "max-age=\"86400\"; includeSubDomains"
+       }
+      },
+      "match": true
+     }
+    ],
+    "overrides": {
+     "limitation": "Value check on one header value. It cannot see how the client parsed it: the quoted shape is discarded by a strict parser, which is closer in effect to a missing header (DPK-DAST-016) than to a short duration.",
+     "remediation": "Send max-age as a bare unsigned integer of at least 31536000, with no quotes and no units, and keep the directive on every HTTPS response.",
+     "description": "The Strict-Transport-Security max-age is shorter than one year or the value is quoted. A short duration leaves a recurring window in which an interceptable request can reset the policy; a quoted value is not valid delta-seconds, so a strict parser discards the whole header. The rule reports both shapes.",
+     "recordDesc": "The HSTS max-age is short or quoted. A short value leaves a recurring downgrade window; a quoted value makes a strict parser discard the header entirely, so a site can look protected in a header dump while no policy is stored.",
+     "why": "The max-age value is quoted, or its duration is below one year.",
+     "fix": [
+      "Emit max-age=31536000 with no quotes.",
+      "Keep the directive on every HTTPS response so the duration never lapses."
+     ],
+     "verifyT": "Request the host and confirm max-age is an unquoted integer of at least 31536000.",
+     "risk": "Short or discarded HSTS policy; LOW severity, with the quoted shape reading as a missing policy."
+    }
+   },
+   {
+    "suffix": "hsts-nopreload",
+    "lang": "http",
+    "name": "HSTS preload directive",
+    "safe": "preload with list submission",
+    "check": {
+     "type": "response-header-missing-directive",
+     "header": "Strict-Transport-Security",
+     "directive": "preload"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Strict-Transport-Security": "max-age=31536000"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Strict-Transport-Security": "max-age=63072000; includeSubDomains"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Strict-Transport-Security": "max-age=31536000; preload"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "http://app.example/",
+       "status": 200,
+       "headers": {
+        "Strict-Transport-Security": "max-age=1; preload"
+       }
+      },
+      "match": false
+     }
+    ],
+    "overrides": {
+     "limitation": "Directive-presence check on one header value. It also matches a response with no Strict-Transport-Security header at all, which DPK-DAST-016 reports as the stronger finding, and it cannot confirm that a preload submission happened.",
+     "description": "The Strict-Transport-Security policy has no preload directive, so the host is not eligible for the browsers' preloaded HSTS list. Without preload the first visit still depends on a redirect that can be intercepted; the header protects only after a successful HTTPS response has been stored.",
+     "remediation": "Add preload only after max-age is at least one year, includeSubDomains is present, every subdomain serves HTTPS, and the host is submitted to the preload list. Removal from that list takes months, so treat the change as long-lived.",
+     "recordDesc": "The HSTS policy omits preload, so first-visit protection relies on a redirect that an on-path attacker can intercept. The host is reachable over HTTPS from the very first request only once it is on the preload list.",
+     "why": "The Strict-Transport-Security value has no preload directive.",
+     "fix": [
+      "Raise max-age to at least one year and add includeSubDomains.",
+      "Then add preload and submit the host to the preload list."
+     ],
+     "verifyT": "Request the host and confirm the policy contains max-age=31536000 or more, includeSubDomains and preload.",
+     "risk": "First visit still interceptable; LOW severity because preload is the last hardening step."
+    }
+   },
+   {
+    "suffix": "csp-unsafe",
+    "lang": "http",
+    "name": "Content-Security-Policy (unsafe-inline)",
+    "safe": "nonce-based scripts",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Content-Security-Policy",
+     "valuePattern": "(?:^|;)\\s*(?:script-src(?:-elem|-attr)?|style-src(?:-elem|-attr)?|default-src)(?=[\\s;]|$)(?![^;]*(?:'nonce-[^'\\s]+'|'sha(?:256|384|512)-[^'\\s]+'))[^;]*'?unsafe-inline'?(?=['\\s;]|$)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "script-src 'unsafe-inline'"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "default-src 'self'; style-src 'unsafe-inline'"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "script-src-attr 'unsafe-inline'"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "script-src 'unsafe-inline' 'nonce-abc'"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "script-src 'unsafe-inline' 'sha256-AAA'"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "style-src 'unsafe-inline' 'nonce-xyz'"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "img-src 'unsafe-inline'"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "script-src 'unsafe-inline-x'"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "script-src 'nonce-a1b2'"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {}
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "script-src https://nonce-cdn.example 'unsafe-inline'"
+       }
+      },
+      "match": true
+     }
+    ],
+    "overrides": {
+     "title": "Weak Content-Security-Policy (unsafe-inline) header value",
+     "description": "A script or style directive still permits inline code through 'unsafe-inline'. When the same directive also carries a nonce or a hash, browsers ignore 'unsafe-inline', so that policy is not reported. The check looks at script-src, script-src-elem, script-src-attr, style-src, style-src-elem, style-src-attr and default-src only; a policy that neutralises inline code with a nonce is left alone.",
+     "limitation": "Directive-scoped value check: a nonce or hash anywhere in the same directive neutralises 'unsafe-inline' and suppresses the finding. It cannot tell whether the nonce is actually random, nor whether every inline script carries it, and it does not evaluate the deployment context.",
+     "recordDesc": "A script or style directive still lists 'unsafe-inline' and carries no nonce or hash, so inline code is accepted exactly as the keyword states. Inline code is the delivery form of most cross-site scripting payloads, which makes the keyword the difference between a policy that stops injection and one that only documents it.",
+     "why": "An effective script or style directive states 'unsafe-inline' without a nonce or hash.",
+     "risk": "Inline script and style injection executes under the policy; LOW severity alone, because the policy is not the only control.",
+     "remediation": "Replace 'unsafe-inline' with a per-response nonce or a hash of each inline block, and remove the keyword so a regression is visible."
+    }
+   },
+   {
+    "suffix": "csp-wildcard",
+    "lang": "http",
+    "name": "Content-Security-Policy default-src wildcard",
+    "safe": "explicit source lists",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Content-Security-Policy",
+     "valuePattern": "^(?:(?!default-src)[^;]*;\\s*)*default-src(?=\\s)[^;]*?(?<=\\s)(?:\\*|(?:https?|wss?)://\\*)(?=\\s|;|$)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "default-src *"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "default-src 'self' *"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "script-src 'self'; default-src *"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "default-src 'self'; default-src *"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "default-src https://*.example.com"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "default-src 'self'"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {}
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "default-src https://*"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "default-src http://*; script-src 'self'"
+       }
+      },
+      "match": true
+     }
+    ],
+    "overrides": {
+     "severity": "MEDIUM",
+     "risk": "Unrestricted loading for every directive that falls back to default-src; MEDIUM severity.",
+     "description": "The first default-src declaration contains the wildcard source, either a bare `*` or a scheme wildcard such as `https://*`. Every fetch directive that does not override the fallback then accepts any origin, so CSP constrains only the directives the policy names explicitly while the header still reads like a restriction.",
+     "remediation": "Replace the wildcard with an explicit source list, keep `default-src 'self'` and add the hosts, schemes or nonces each directive needs. Use `'none'` for directives the page never uses.",
+     "limitation": "Value check on the first default-src declaration. It cannot see the directives the policy overrides later, and it cannot read a policy delivered by a meta element.",
+     "recordDesc": "default-src was declared with a wildcard source. Every directive that falls back to it becomes unconstrained, so CSP stops mitigating those resource types even though the header is present and looks configured.",
+     "why": "The first default-src declaration contains a bare or scheme wildcard.",
+     "fix": [
+      "List the origins each directive needs instead of the wildcard.",
+      "Use 'none' for directives the page never uses."
+     ],
+     "verifyT": "Request the page and confirm default-src lists explicit sources rather than a wildcard."
+    }
+   },
+   {
+    "suffix": "xfo-allowfrom",
+    "lang": "http",
+    "name": "X-Frame-Options (ALLOW-FROM)",
+    "safe": "frame-ancestors in CSP",
+    "check": {
+     "type": "response-header-matches",
+     "header": "X-Frame-Options",
+     "valuePattern": "ALLOW-FROM"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-Frame-Options": "ALLOW-FROM https://a.example/"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-Frame-Options": "ALLOW-FROM https://b.example/"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-Frame-Options": "DENY"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {}
+      },
+      "match": false
+     }
+    ],
+    "overrides": {
+     "description": "The response sends X-Frame-Options: ALLOW-FROM. No current browser implements that directive: Chrome, Edge and Safari ignore the header value, so the response is framed without restriction unless a CSP frame-ancestors directive also applies. The header reads as a restriction while enforcing none.",
+     "remediation": "Express the allowed embedder with Content-Security-Policy frame-ancestors, and keep X-Frame-Options: DENY or SAMEORIGIN for clients that predate CSP support.",
+     "limitation": "Value check on one header value. It cannot see whether a CSP frame-ancestors directive also covers the response, and it does not test the framing result.",
+     "recordDesc": "X-Frame-Options uses ALLOW-FROM, a directive current browsers do not implement. The response is framed without the restriction the header appears to state, which is worse than an absent header because it suppresses review.",
+     "why": "The X-Frame-Options value contains ALLOW-FROM.",
+     "fix": [
+      "Replace ALLOW-FROM with a CSP frame-ancestors list.",
+      "Keep DENY or SAMEORIGIN in X-Frame-Options for older clients."
+     ],
+     "verifyT": "Request the page and confirm frame-ancestors states the allowed embedders and X-Frame-Options is DENY or SAMEORIGIN.",
+     "risk": "Header ignored and framing unrestricted; LOW severity because frame-ancestors may still apply."
+    }
+   }
+  ]
+ },
+ {
+  "class": "server-version",
+  "kind": "dast",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "LOW",
+  "framing": "custom",
+  "title": "Server version disclosed ({name})",
+  "description": "The response discloses a versioned {name} banner. Version banners let attackers aim known exploits. This check matches the banner directly.",
+  "remediation": "Immediate: suppress the banner using the control recorded for this stack ({safe}), then confirm the header is gone from a success response, an error response and a static asset. Durable: normalise version banners at the reverse proxy or CDN so a framework upgrade cannot reintroduce one, and keep the component patched \u2014 hiding a version lowers reconnaissance value but does not fix a vulnerable release.",
+  "limitation": "Banner check: version visibility alone is not exploitability.",
+  "scopeT": "Single response header value.",
+  "fp": "Honeypot banners are the rare false positive.",
+  "recordDesc": "{name} banners carrying release numbers turn reconnaissance into a version lookup. Quiet banners slow targeted attacks.",
+  "applicability": "HTTP responses carrying banners.",
+  "risk": "Targeted exploit selection; LOW severity.",
+  "why": "{name} discloses its release number.",
+  "fix": [
+   "Suppress the banner using {safe}.",
+   "Normalise version banners at the proxy or CDN.",
+   "Keep the component patched; a hidden version is not a fixed version."
+  ],
+  "verifyT": "Re-request the page and confirm the banner no longer carries a release number; check an error response and a static asset too, because they can be produced by a different code path.",
+  "cells": [
+   {
+    "suffix": "server",
+    "lang": "http",
+    "name": "Server header",
+    "safe": "ServerTokens Prod",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Server",
+     "valuePattern": "[0-9]+\\.[0-9]+"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Server": "Apache/2.4.58"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Server": "nginx/1.25.3"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Server": "web"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {}
+      },
+      "match": false
+     }
     ]
-  }
+   },
+   {
+    "suffix": "xpoweredby",
+    "lang": "http",
+    "name": "X-Powered-By header",
+    "safe": "expose_php Off or header removal",
+    "check": {
+     "type": "response-header-matches",
+     "header": "X-Powered-By",
+     "valuePattern": "[^ ]"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-Powered-By": "PHP/8.2.1"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-Powered-By": "Express"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {}
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Server": "web"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-Powered-By": ""
+       }
+      },
+      "match": false
+     }
+    ]
+   },
+   {
+    "suffix": "aspnet",
+    "lang": "http",
+    "name": "X-AspNet-Version header",
+    "safe": "enableVersionHeader false",
+    "check": {
+     "type": "response-header-matches",
+     "header": "X-AspNet-Version",
+     "valuePattern": "[^ ]"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-AspNet-Version": "4.0.30319"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-AspNet-Version": "2.0.50727"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {}
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Server": "web"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-AspNet-Version": ""
+       }
+      },
+      "match": false
+     }
+    ]
+   },
+   {
+    "suffix": "generator",
+    "lang": "http",
+    "name": "X-Generator header",
+    "safe": "header removal",
+    "check": {
+     "type": "response-header-matches",
+     "header": "X-Generator",
+     "valuePattern": "[^ ]"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-Generator": "Drupal 10"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-Generator": "WordPress 6.4"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {}
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Server": "web"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-Generator": ""
+       }
+      },
+      "match": false
+     }
+    ]
+   },
+   {
+    "suffix": "jenkins",
+    "lang": "http",
+    "name": "X-Jenkins header",
+    "safe": "restricted Jenkins access",
+    "check": {
+     "type": "response-header-matches",
+     "header": "X-Jenkins",
+     "valuePattern": "[^ ]"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-Jenkins": "2.440"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-Jenkins": "2.1"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {}
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Server": "web"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-Jenkins": ""
+       }
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "class": "cors-open",
+  "kind": "dast",
+  "category": "cors",
+  "cwe": "CWE-942",
+  "cweDef": {
+   "name": "Overly Permissive Cross-domain Whitelist",
+   "summary": "Wildcard CORS origins let any site read responses."
+  },
+  "severity": "MEDIUM",
+  "framing": "custom",
+  "title": "Wildcard CORS ({name})",
+  "description": "The response allows every origin: {name}. Any site can read the response. This check matches the wildcard directly.",
+  "remediation": "Immediate: replace the wildcard with the exact origins that must call the API, and send `Vary: Origin` when the value is computed per request. Durable: keep the allowlist in configuration rather than code, and grant each origin only the methods and headers it needs; never combine a wildcard with `Access-Control-Allow-Credentials: true`, because browsers reject that pair and a reflected-origin workaround re-creates the exposure. Trade-off: callers outside the allowlist stop working, so inventory them before narrowing.",
+  "limitation": "Header check: it cannot confirm which callers are legitimate.",
+  "scopeT": "Single response header value.",
+  "fp": "Public APIs are the common accepted case.",
+  "recordDesc": "{name} accepts every origin, so a page on any site can read responses that the browser sends with the user's ambient session. Allowlisting named origins keeps cross-origin reads limited to applications the owner controls.",
+  "applicability": "HTTP responses with CORS headers.",
+  "risk": "Cross-origin data theft; MEDIUM severity.",
+  "why": "CORS allows every origin ({name}).",
+  "fix": [
+   "Replace the wildcard with the exact origins that must be allowed.",
+   "Send `Vary: Origin` when the allowlist is computed from the request.",
+   "Keep the allowlist in configuration and add a regression test that fails on a wildcard."
+  ],
+  "verifyT": "Re-request the endpoint with an allowed and a disallowed `Origin` and confirm only the allowed one is echoed; keep a test that fails if a wildcard value returns.",
+  "cells": [
+   {
+    "suffix": "wildcard",
+    "lang": "http",
+    "name": "Access-Control-Allow-Origin *",
+    "safe": "an explicit origin list",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Access-Control-Allow-Origin",
+     "valuePattern": "^\\*$"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Access-Control-Allow-Origin": "*"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/api",
+       "status": 200,
+       "headers": {
+        "Access-Control-Allow-Origin": "*"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Access-Control-Allow-Origin": "https://app.example/"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {}
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "class": "http-methods",
+  "kind": "dast",
+  "category": "http-methods",
+  "cwe": "CWE-749",
+  "cweDef": {
+   "name": "Exposed Dangerous Method or Function",
+   "summary": "Dangerous HTTP methods on a resource let clients alter, proxy through, or probe the server."
+  },
+  "severity": "MEDIUM",
+  "framing": "custom",
+  "title": "Dangerous HTTP method allowed",
+  "description": "The Allow response lists a dangerous method. PUT, DELETE, TRACE, and CONNECT widen what anonymous clients can do. This check matches the method name directly.",
+  "remediation": "Immediate: stop advertising methods the route does not serve, and make the server reject PUT, DELETE, TRACE and CONNECT with 405 where they are not implemented. Durable: derive the `Allow` list from the route table so it cannot drift, and disable the WebDAV or default servlet handlers that add these methods. The header proves advertisement, not reachability: confirm by sending the method and reading the status, which this passive check cannot do.",
+  "limitation": "Header check: it cannot exercise the method.",
+  "scopeT": "Single Allow header value.",
+  "fp": "APIs needing PUT or DELETE are the common accepted case \u2014 confirm auth.",
+  "recordDesc": "Dangerous methods in Allow headers widen anonymous capability. Restricting methods shrinks the reachable surface.",
+  "applicability": "HTTP Allow responses.",
+  "risk": "Unauthorized alteration or proxying; MEDIUM severity at MEDIUM confidence.",
+  "why": "Allow lists a dangerous method.",
+  "fix": [
+   "Remove unneeded methods from the `Allow` advertisement.",
+   "Return 405 for methods the route does not implement.",
+   "Generate `Allow` from the route table so it cannot drift."
+  ],
+  "verifyT": "Send OPTIONS and confirm `Allow` lists only served methods; send a disallowed method and confirm a 405 rather than a 200.",
+  "cells": [
+   {
+    "suffix": "allow-danger",
+    "lang": "http",
+    "name": "Allow header",
+    "safe": "GET, POST only",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Allow",
+     "valuePattern": "\\b(?:PUT|DELETE|TRACE|CONNECT)\\b"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Allow": "GET, PUT"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Allow": "GET, HEAD, OPTIONS, TRACE"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Allow": "GET, POST"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {}
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ }
 ]

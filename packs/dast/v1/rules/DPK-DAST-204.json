@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-204",
+  "title": "Content-Security-Policy script-src allows unsafe-hashes",
+  "description": "The Content-Security-Policy script-src directive lists the `'unsafe-hashes'` keyword, which re-enables inline event-handler attributes and `javascript:` URLs whenever their body matches a hash in the same policy. A policy that otherwise looks nonce-based therefore still accepts a set of inline handlers written into the markup.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-693",
+  "category": "csp-weakness",
+  "remediation": "Remove `'unsafe-hashes'` and move the handler bodies into nonce-approved script blocks. Where a legacy handler must stay, rewrite it as an addEventListener call in an external script that the policy already allows.",
+  "limitation": "One header value and one directive. The rule reports the keyword in script-src; it does not evaluate whether the policy also lists a hash that matches a handler in the page, because that comparison needs the document body and the policy together.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Content-Security-Policy",
+    "valuePattern": "(?:^|;)\\s*script-src\\s[^;]*(?<=\\s)'unsafe-hashes'(?=[\\s;]|$)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'self' 'unsafe-hashes'"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src 'self'; script-src 'unsafe-hashes' 'sha256-abc123='"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'self' 'sha256-abc123='"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'self'; style-src 'unsafe-hashes'"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1273"
+  ]
+}

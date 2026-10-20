@@ -1,0 +1,89 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-108",
+  "title": "Content-Security-Policy worker-src allows every origin",
+  "description": "The policy lets a Worker or SharedWorker script load from any origin (worker-src wildcard). A worker runs script outside the document, keeps the origin of the page that created it, and can outlive the view, so a foreign worker source is a script-execution path that survives navigation. The directive is read from its first declaration only.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-693",
+  "category": "csp-weakness",
+  "remediation": "Name the worker script origins, for example worker-src 'self'. Serve worker scripts from the same origin as the page that creates them.",
+  "limitation": "One header value, first declaration of the directive only. worker-src falls back to child-src and script-src when absent, so this rule judges explicit declarations only.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Content-Security-Policy",
+    "valuePattern": "^(?:(?!worker-src(?=[\\s;]|$))[^;]*;\\s*)*worker-src(?=[\\s;]|$)[^;]*?(?<=\\s)(?:\\*|(?:https?|wss?)://\\*)(?=\\s|;|$)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "worker-src *"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src 'self'; worker-src 'self' https://*"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "worker-src 'self'"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "worker-src https://*.example.com"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src *"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "worker-src 'self'; worker-src *"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {}
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1177"
+  ]
+}

@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-237",
+  "title": "npm authentication token file served",
+  "description": "The response is an npm configuration file: the scope-qualified `_authToken` line together with a registry setting is the format npm reads for package-publishing credentials. The token is written in clear text.",
+  "severity": "HIGH",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Remove the file from the web root, revoke the token at the registry, and deliver registry credentials through CI secrets or a short-lived OIDC exchange rather than a committed file.",
+  "limitation": "One response body. The rule reports the token line and registry setting; it does not use the token and cannot determine its publish scope.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*_authToken)(?=[\\s\\S]*registry)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "registry=https://registry.npmjs.org/\n//registry.npmjs.org/:_authToken=npm_AbCdEfGhIjKlMnOpQrStUvWxYz0123456789\nsave-exact=true"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "//npm.pkg.github.com/:_authToken=redacted-for-fixture\nregistry=https://npm.pkg.github.com/\nlegacy-peer-deps=true"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "=https://.npmjs.org/\n//.npmjs.org/:=npm_AbCdEfGhIjKlMnOpQrStUvWxYz0123456789\nsave-exact=true"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1306"
+  ]
+}

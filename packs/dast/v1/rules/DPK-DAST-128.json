@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-128",
+  "title": "Environment file contents disclosed in a response",
+  "description": "The response body carries environment-file assignments: an APP_KEY entry together with an APP_ENV entry. That pair identifies a framework .env file, which holds the application key, database credentials and third-party tokens in plain text.",
+  "severity": "HIGH",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Stop serving dotfiles from the document root, move the environment file outside it, and rotate every secret it contained.",
+  "limitation": "Two body markers. A documentation page that shows a redacted .env example is reported only if both assignments appear unredacted in the body.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*\\bAPP_KEY\\s*=)(?=[\\s\\S]*\\bAPP_ENV\\s*=)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/.env",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "APP_NAME=shop\nAPP_ENV=production\nAPP_KEY=base64:Q2hhbmdlTWU=\nDB_PASSWORD=example\n"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/.env.production",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/octet-stream"
+        },
+        "body": "APP_ENV = prod\nAPP_KEY = base64:AAAA\n"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/.env",
+        "status": 403,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body>Forbidden</body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/docs/env",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<p>Set APP_KEY in your environment file before deploying.</p>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1197"
+  ]
+}

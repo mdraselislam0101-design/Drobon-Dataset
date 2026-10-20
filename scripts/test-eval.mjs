@@ -48,8 +48,15 @@ function assert(condition, name, detail = '') {
 // --- 1. committed corpus loads clean and the runner never rewrites it --------
 const before = loadCases(ROOT);
 assert(before.errors.length === 0, 'corpus: all committed cases load clean', before.errors.join(' | '));
-  assert(before.cases.length >= 89, `corpus: at least 89 cases present (got ${before.cases.length})`);
-const runOnce = execFileSync(process.execPath, [join(ROOT, 'scripts', 'run-eval.mjs')], { cwd: ROOT, encoding: 'utf8' });
+  assert(before.cases.length >= 261, `corpus: at least 261 cases present (got ${before.cases.length})`);
+// The report exceeds Node's 1 MiB default pipe buffer (244 cases already did;
+// the corpus is now 1,588), so both full-run reads raise the buffer. The buffer
+// is a transport limit, not an assertion: no expectation is relaxed here.
+const runOnce = execFileSync(process.execPath, [join(ROOT, 'scripts', 'run-eval.mjs')], {
+  cwd: ROOT,
+  encoding: 'utf8',
+  maxBuffer: 64 * 1024 * 1024,
+});
 const after = loadCases(ROOT);
 assert(
   JSON.stringify(before.hashes) === JSON.stringify(after.hashes),
@@ -78,11 +85,45 @@ assert(
   report.metrics.scope.includes('assessed synthetic cases') && report.caseOutcomes.UNASSESSED.includes('EVAL-SAST-004'),
   'metrics: computed over assessed synthetic population only',
 );
+// Workstream B pin (DAST cumulative gap-closure pump, 2026-10-19): the UNASSESSED
+// population is a fixed, documented set. Each member is ambiguous by design
+// (commented-out code, unknown-callee dataflow, truncated snippets, a
+// version-like token). Pinning the ids means a case can never silently drop out
+// of the population, nor be quietly re-labelled ASSESSED to improve a metric.
+const PINNED_UNASSESSED = [
+  'EVAL-CMD-023', 'EVAL-CMD-024', 'EVAL-CMD-025',
+  'EVAL-SAST-004', 'EVAL-SAST-007', 'EVAL-SAST-014', 'EVAL-SAST-015', 'EVAL-SAST-016',
+  'EVAL-SEC-111', 'EVAL-SQL-027', 'EVAL-SQL-028',
+].sort();
+const unassessedIds = unassessed.map((r) => r.id).sort();
 assert(
-    report.counts.truePositives === 46 && report.counts.falseNegatives === 0 && report.counts.falsePositives === 1,
-    'metrics: population counts pinned (46 TP / 0 FN / 1 documented FP — Phase 9 totals)',
+  JSON.stringify(unassessedIds) === JSON.stringify(PINNED_UNASSESSED),
+  `invariant: the UNASSESSED population is exactly the ${PINNED_UNASSESSED.length} pinned cases`,
+  JSON.stringify(unassessedIds),
+);
+assert(
+  unassessed.every((r) => r.falsePositives === 0 && r.falseNegatives === 0 && r.actual.length === 0),
+  'invariant: UNASSESSED cases contribute no TP, FP, FN and execute no detector',
+  JSON.stringify(unassessed.filter((r) => r.falsePositives !== 0 || r.falseNegatives !== 0 || r.actual.length !== 0).map((r) => r.id)),
+);
+assert(
+    report.counts.truePositives === 1336 && report.counts.falseNegatives === 0 && report.counts.falsePositives === 1,
+    'metrics: population counts pinned (1336 TP / 0 FN / 1 documented FP — additive SAST/DAST breadth totals)',
   JSON.stringify(report.counts),
 );
+
+// Breadth ratchet: the independent evaluation layer must keep widening, never
+// silently shrink. 169 = distinct rules exercised by positive expectations after the
+// 2026-10-19 1000x batch and the ultimate-pump batch 4 (187 referenced once
+// negative controls are counted).
+{
+  const exercised = new Set();
+  for (const r of report.results) for (const e of r.expected) exercised.add(e.ruleId);
+  assert(exercised.size >= 250, `breadth: >=250 distinct rules exercised by independent eval (got ${exercised.size})`);
+  const withCases = new Set(report.results.flatMap((r) => r.expected.map((e) => e.ruleId)));
+  const missing = [...withCases].filter((id) => !report.results.some((r) => r.expected.some((e) => e.ruleId === id)));
+  assert(missing.length === 0, 'breadth: every named rule is exercised by at least one case');
+}
 
 // --- 3. evidence-grounded detection versus keyword match ---------------------
 {
@@ -177,7 +218,9 @@ expectError((c) => { c.id = 'EVAL-1'; }, 'id: must match', 'regression: malforme
 
 // --- 5. determinism: two full runs are byte-identical -------------------------
 {
-  const runTwice = execFileSync(process.execPath, [join(ROOT, 'scripts', 'run-eval.mjs')], { cwd: ROOT, encoding: 'utf8' });
+  const runTwice = execFileSync(process.execPath, [join(ROOT, 'scripts', 'run-eval.mjs')], {
+    cwd: ROOT, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024,
+  });
   assert(runOnce === runTwice, 'determinism: two runner executions are byte-identical');
   const inProcess = `${JSON.stringify(buildReport(ROOT, loadCases(ROOT).cases), null, 1)}\n`;
   assert(sha256(runOnce) === sha256(inProcess), 'determinism: in-process report matches runner output byte-identically');

@@ -10,11 +10,11 @@
     "check": {
       "type": "response-header-matches",
       "header": "Content-Security-Policy",
-      "valuePattern": "default-src(?=\\s)[^;*]*?(?<=\\s)\\*(?=\\s*(?:;|$))"
+      "valuePattern": "^(?:(?!default-src)[^;]*;\\s*)*default-src(?=\\s)[^;]*?(?<=\\s)(?:\\*|(?:https?|wss?)://\\*)(?=\\s|;|$)"
     }
   },
   "scope": "Single response header value.",
-  "limitations": "Value check: it cannot confirm the deployment context.",
+  "limitations": "Value check on the first default-src declaration. It cannot see the directives the policy overrides later, and it cannot read a policy delivered by a meta element.",
   "examples": [
     {
       "observation": {
@@ -31,10 +31,40 @@
         "url": "https://app.example/",
         "status": 200,
         "headers": {
-          "Content-Security-Policy": "default-src *; script-src 'self'"
+          "Content-Security-Policy": "default-src 'self' *"
         }
       },
       "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'self'; default-src *"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src 'self'; default-src *"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src https://*.example.com"
+        }
+      },
+      "match": false
     },
     {
       "observation": {
@@ -59,7 +89,7 @@
         "url": "https://app.example/",
         "status": 200,
         "headers": {
-          "Content-Security-Policy": "default-src 'self' *"
+          "Content-Security-Policy": "default-src https://*"
         }
       },
       "match": true
@@ -69,20 +99,10 @@
         "url": "https://app.example/",
         "status": 200,
         "headers": {
-          "Content-Security-Policy": "default-src *.example.com"
+          "Content-Security-Policy": "default-src http://*; script-src 'self'"
         }
       },
-      "match": false
-    },
-    {
-      "observation": {
-        "url": "https://app.example/",
-        "status": 200,
-        "headers": {
-          "Content-Security-Policy": "default-src 'self'; script-src *"
-        }
-      },
-      "match": false
+      "match": true
     }
   ],
   "fpNotes": "Transitional deployments are the common accepted case.",

@@ -2,16 +2,16 @@
   "schemaVersion": "drobon.pack.dast/v1",
   "id": "DPK-DAST-022",
   "title": "Weak Content-Security-Policy default-src wildcard header value",
-  "description": "The response carries Content-Security-Policy default-src wildcard with a weak or deprecated value. A weak value grants partial protection at best. This check matches the weak value directly.",
-  "severity": "LOW",
+  "description": "The first default-src declaration contains the wildcard source, either a bare `*` or a scheme wildcard such as `https://*`. Every fetch directive that does not override the fallback then accepts any origin, so CSP constrains only the directives the policy names explicitly while the header still reads like a restriction.",
+  "severity": "MEDIUM",
   "cwe": "CWE-693",
   "category": "security-headers",
-  "remediation": "Strengthen the value (explicit source lists).",
-  "limitation": "Value check: it cannot confirm the deployment context.",
+  "remediation": "Replace the wildcard with an explicit source list, keep `default-src 'self'` and add the hosts, schemes or nonces each directive needs. Use `'none'` for directives the page never uses.",
+  "limitation": "Value check on the first default-src declaration. It cannot see the directives the policy overrides later, and it cannot read a policy delivered by a meta element.",
   "check": {
     "type": "response-header-matches",
     "header": "Content-Security-Policy",
-    "valuePattern": "default-src(?=\\s)[^;*]*?(?<=\\s)\\*(?=\\s*(?:;|$))"
+    "valuePattern": "^(?:(?!default-src)[^;]*;\\s*)*default-src(?=\\s)[^;]*?(?<=\\s)(?:\\*|(?:https?|wss?)://\\*)(?=\\s|;|$)"
   },
   "tests": [
     {
@@ -29,10 +29,40 @@
         "url": "https://app.example/",
         "status": 200,
         "headers": {
-          "Content-Security-Policy": "default-src *; script-src 'self'"
+          "Content-Security-Policy": "default-src 'self' *"
         }
       },
       "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'self'; default-src *"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src 'self'; default-src *"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src https://*.example.com"
+        }
+      },
+      "match": false
     },
     {
       "observation": {
@@ -57,7 +87,7 @@
         "url": "https://app.example/",
         "status": 200,
         "headers": {
-          "Content-Security-Policy": "default-src 'self' *"
+          "Content-Security-Policy": "default-src https://*"
         }
       },
       "match": true
@@ -67,20 +97,10 @@
         "url": "https://app.example/",
         "status": 200,
         "headers": {
-          "Content-Security-Policy": "default-src *.example.com"
+          "Content-Security-Policy": "default-src http://*; script-src 'self'"
         }
       },
-      "match": false
-    },
-    {
-      "observation": {
-        "url": "https://app.example/",
-        "status": 200,
-        "headers": {
-          "Content-Security-Policy": "default-src 'self'; script-src *"
-        }
-      },
-      "match": false
+      "match": true
     }
   ],
   "patternRefs": [

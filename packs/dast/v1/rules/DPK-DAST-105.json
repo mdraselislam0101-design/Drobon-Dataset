@@ -1,0 +1,89 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-105",
+  "title": "Content-Security-Policy object-src allows every origin",
+  "description": "The policy explicitly permits plugin content from any origin (object-src wildcard or scheme wildcard) while the rest of the policy is narrow. An object element loads its content with plugin semantics that modern browsers no longer sandbox consistently, so the restriction the policy otherwise imposes does not apply to it. The directive is read from its first declaration only.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-693",
+  "category": "csp-weakness",
+  "remediation": "Set object-src 'none'. Object and embed elements are legacy plugin surfaces; an application that still needs one should name its single origin explicitly.",
+  "limitation": "One header value, first declaration of the directive only. It reports the wildcard permission, not whether an object element exists on the page.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Content-Security-Policy",
+    "valuePattern": "^(?:(?!object-src(?=[\\s;]|$))[^;]*;\\s*)*object-src(?=[\\s;]|$)[^;]*?(?<=\\s)(?:\\*|(?:https?|wss?)://\\*)(?=\\s|;|$)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "object-src *"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src 'self'; object-src 'self' https://*"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "object-src 'self'"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "object-src https://*.example.com"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src *"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "object-src 'self'; object-src *"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {}
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1174"
+  ]
+}

@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-097",
+  "title": "CORS allows every request header",
+  "description": "The preflight response accepts any request header (Access-Control-Allow-Headers: *). Every origin the policy also allows can then send arbitrary custom headers without the server ever naming what it expects - including headers that an application trusts for routing, tenancy or authentication decisions. This is a permissive configuration; the rule does not show that any origin actually uses it.",
+  "severity": "LOW",
+  "cwe": "CWE-942",
+  "category": "cors",
+  "remediation": "List the request headers the API consumes, for example Access-Control-Allow-Headers: Content-Type, Authorization. Make sure no header used for a tenancy or authorization decision can be chosen by a cross-origin caller.",
+  "limitation": "One header value. The rule does not read Access-Control-Allow-Origin, so it reports the permissive allow-list without showing which origins may use it, and it cannot tell a credentialed from a non-credentialed policy.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Access-Control-Allow-Headers",
+    "valuePattern": "^\\s*\\*\\s*$"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://api.example/",
+        "status": 204,
+        "headers": {
+          "Access-Control-Allow-Headers": "*"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://api.example/",
+        "status": 204,
+        "headers": {
+          "Access-Control-Allow-Headers": "   *   "
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://api.example/",
+        "status": 204,
+        "headers": {
+          "Access-Control-Allow-Headers": "Content-Type, Authorization"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://api.example/",
+        "status": 204,
+        "headers": {
+          "Access-Control-Allow-Headers": "X-*"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://api.example/",
+        "status": 204,
+        "headers": {
+          "Access-Control-Allow-Headers": ""
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://api.example/",
+        "status": 204,
+        "headers": {}
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1166"
+  ]
+}

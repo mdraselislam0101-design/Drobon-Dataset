@@ -1,0 +1,113 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-071",
+  "title": "Cookie sets SameSite=None without Secure",
+  "description": "The observed Set-Cookie header declares SameSite=None but the same cookie carries no Secure attribute. Modern browsers reject such a cookie outright, and where they do not, the cookie is eligible to travel on cross-site requests without transport protection. This observation check reports the combination visible in one response.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1275",
+  "category": "cookie-flags",
+  "remediation": "Send the cookie with both attributes, for example `Set-Cookie: sid=...; SameSite=None; Secure; HttpOnly`. If the cookie does not need to be sent in third-party contexts, prefer `SameSite=Lax` or `SameSite=Strict`, which do not require Secure.",
+  "limitation": "Value check on the cookie attribute list. A flag attribute ignores its value (RFC 6265 section 5.3), so `Secure=0` counts as Secure and is not reported. Only a cookie that the browser would store is judged: a discarded header sets no cookie. The rule reads one Set-Cookie value and cannot confirm that the cookie is used for a session.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Set-Cookie",
+    "valuePattern": "^(?![^\\n]*(?:^|;)\\s*secure(?=[\\s;=]|$))(?=[^\\n]*(?:^|;)\\s*samesite\\s*=\\s*none\\s*(?:;|$))"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; SameSite=None"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Path=/; SameSite=None"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; SameSite=None; Secure"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; SameSite=Lax"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/x",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Secure; SameSite=None"
+        },
+        "body": ""
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/x",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; HttpOnly; SameSite=None; Secure"
+        },
+        "body": ""
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "id=1; SameSite=None; Secure=0"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "id=1; SameSite=None; Secure=1; HttpOnly"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "id=1; SameSite=None; HttpOnly"
+        }
+      },
+      "match": true
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1023"
+  ]
+}

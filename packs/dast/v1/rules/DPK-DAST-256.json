@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-256",
+  "title": "Obsolete Feature-Policy header present",
+  "description": "The response sends `Feature-Policy`, the header that Permissions-Policy replaced. Current browsers ignore it, so a deployment that believes it restricted a powerful feature through this header has in fact declared nothing, and the two headers can disagree while both are present.",
+  "severity": "LOW",
+  "cwe": "CWE-693",
+  "category": "security-headers",
+  "remediation": "Move every directive to Permissions-Policy, which uses `feature=(allow-list)` syntax, and remove Feature-Policy once the translation is verified.",
+  "limitation": "One header value. The rule reports the obsolete header; it does not compare it with any Permissions-Policy that is also present and cannot say which features end up allowed.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Feature-Policy",
+    "valuePattern": "\\S"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Feature-Policy": "camera 'none'; microphone 'none'"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Feature-Policy": "geolocation=()"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Permissions-Policy": "camera=()"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src 'self'"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1325"
+  ]
+}

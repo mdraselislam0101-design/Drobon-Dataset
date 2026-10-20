@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-257",
+  "title": "Removed Public-Key-Pins header present",
+  "description": "The response sends `Public-Key-Pins`, a header that was removed from the specification after browsers stopped implementing it. It now adds bytes to every response and no protection, and a pinning mistake is not mitigated by anything the header claims.",
+  "severity": "LOW",
+  "cwe": "CWE-693",
+  "category": "security-headers",
+  "remediation": "Remove Public-Key-Pins and rely on HSTS plus certificate transparency monitoring. If pinning is required, implement it in the client rather than through a removed header.",
+  "limitation": "One header value. The rule reports the removed header; it does not evaluate the pin list and cannot say whether any client still honours it.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Public-Key-Pins",
+    "valuePattern": "\\S"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Public-Key-Pins": "pin-sha256=\"abc=\"; max-age=5184000"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Public-Key-Pins": "max-age=100; pin-sha256=\"def=\""
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Strict-Transport-Security": "max-age=63072000"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1326"
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-212",
+  "title": "Refresh header targets a data: URL",
+  "description": "The Refresh header tells the browser to navigate to a `data:` URL. The target is an inline document rather than a web address, so the navigation renders attacker-authored markup under a page transition the user reads as a normal redirect.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-601",
+  "category": "open-redirect",
+  "remediation": "Restrict Refresh to absolute https URLs on hosts you operate, and prefer a server-side redirect with a validated Location. Reject data: and script schemes before emitting the header.",
+  "limitation": "One header value. The rule reports the scheme the header names; it cannot prove the value is attacker-influenced, and some browsers block top-level data: navigation outright.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Refresh",
+    "valuePattern": "^\\s*[0-9]*\\s*;?\\s*url\\s*=\\s*[\"\\']?\\s*data\\s*:"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Refresh": "0; url=data:text/html;base64,PHNjcmlwdD4="
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Refresh": "5; URL=\"data:text/html,<script>alert(1)</script>\""
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Refresh": "0; url=https://app.example/"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Refresh": "30"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1281"
+  ]
+}

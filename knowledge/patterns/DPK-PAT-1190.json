@@ -1,0 +1,115 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1190",
+  "title": "Signal: Strict-Transport-Security max-age is not a valid delta-seconds value",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-header-matches",
+      "header": "Strict-Transport-Security",
+      "valuePattern": "(?:^|;)\\s*max-age\\s*(?:;|$)|(?:^|;)\\s*max-age\\s*=\\s*(?![0-9]+\\s*(?:;|$))(?!\")[^;\\s]*"
+    }
+  },
+  "scope": "One response whose Strict-Transport-Security max-age directive is present with an unquoted, non-numeric or missing value.",
+  "limitations": "One header value. The rule judges the max-age syntax visible in the response; it cannot prove that a browser discarded the header, and quoted values are graded by DPK-DAST-024 instead.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Strict-Transport-Security": "max-age=abc"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Strict-Transport-Security": "max-age="
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Strict-Transport-Security": "max-age"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Strict-Transport-Security": "max-age=-1; includeSubDomains"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Strict-Transport-Security": "max-age=300abc"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Strict-Transport-Security": "max-age=31536000; includeSubDomains"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Strict-Transport-Security": "max-age=\"300\""
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Strict-Transport-Security": "includeSubDomains"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {}
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A deployment that deliberately sends a non-numeric placeholder during a rollout is reported; the browser ignores the header in that state either way.",
+  "linkedRules": [
+    "DPK-DAST-121"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:hsts-invalid-max-age:invalid-value",
+  "validationStatus": "VALIDATED"
+}

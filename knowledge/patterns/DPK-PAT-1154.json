@@ -1,0 +1,93 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1154",
+  "title": "Signal: Redirect target carries embedded credentials",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-header-matches",
+      "header": "Location",
+      "valuePattern": "^[a-zA-Z][a-zA-Z0-9+.-]*://[^/\\s@]+@|^//[^/\\s@]+@"
+    }
+  },
+  "scope": "One redirect response with a Location header containing userinfo.",
+  "limitations": "Observation-level: evaluates the Location header of a 3xx response. Credentials carried in a query string are a different evidence shape and are not reported. A cross-host userinfo target also matches DPK-DAST-056 (host change); 056 answers \"does the target leave the origin?\" and this rule answers \"does the target carry credentials?\", so both fire on the same header by design.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 302,
+        "headers": {
+          "Location": "https://admin:s3cret@legacy.example/home"
+        },
+        "body": ""
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/legacy",
+        "status": 301,
+        "headers": {
+          "Location": "http://svc:token123@internal.example/next"
+        },
+        "body": ""
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 302,
+        "headers": {
+          "Location": "https://legacy.example/home"
+        },
+        "body": ""
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://cdn.example/pkg",
+        "status": 302,
+        "headers": {
+          "Location": "https://cdn.example/@scope/pkg"
+        },
+        "body": ""
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 302,
+        "headers": {
+          "Location": "//admin:s3cret@legacy.example/home"
+        },
+        "body": ""
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 302,
+        "headers": {
+          "Location": "//cdn.example/@scope/pkg"
+        },
+        "body": ""
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A deliberately published example URL in documentation is reported by design.",
+  "linkedRules": [
+    "DPK-DAST-085"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:credentials-in-redirect:userinfo",
+  "validationStatus": "VALIDATED"
+}

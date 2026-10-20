@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-852",
+  "title": "Server-side fetch with a computed URL in go — review required",
+  "description": "net/http is called with a URL assembled at runtime rather than a literal. When any part of that URL comes from a request, the server can be steered to internal services, cloud metadata endpoints, or arbitrary hosts. The rule flags the non-literal call; whether the URL is attacker-influenced is a review decision.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-918",
+  "category": "server-side-request-forgery",
+  "remediation": "Resolve the destination against an allowlist of hosts and schemes, reject private and link-local address ranges after DNS resolution, and never pass request text directly to net/http.",
+  "limitation": "Lexical: matches http.Get/Post/Head with a non-literal argument; URLs built in a helper are out of scope.",
+  "languages": [
+    "go"
+  ],
+  "patterns": [
+    {
+      "source": "\\bhttp\\.(?:Get|Post|Head)\\(\\s*(?![\"'`])"
+    }
+  ],
+  "tests": [
+    {
+      "line": "http.Get(targetURL)",
+      "match": true
+    },
+    {
+      "line": "# audit: http.Get(targetURL) present",
+      "match": true
+    },
+    {
+      "line": "http.Get(\"https://api.example.com/v1/status\")",
+      "match": false
+    },
+    {
+      "line": "# verified: http.Get(\"https://api.example.com/v1/status\")",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1035"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-907",
+  "title": "Unchecked type reinterpretation via transmute in rust — review required",
+  "description": "std::mem::transmute reinterprets the bits of one type as another with no validation. If the source size or layout is not guaranteed equal, or the destination type has invariants such as a non-zero discriminant, the result is undefined behaviour. The rule flags the call; whether the layouts were checked is a review decision.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-843",
+  "category": "memory-safety",
+  "remediation": "Use a checked conversion such as TryFrom, or bytemuck with a Pod bound where a zero-copy reinterpretation is genuinely required.",
+  "limitation": "Lexical: matches transmute calls; a transmute behind a sound abstraction is still reported for review.",
+  "languages": [
+    "rust"
+  ],
+  "patterns": [
+    {
+      "source": "\\b(?:std::)?mem::transmute\\s*[<(]"
+    }
+  ],
+  "tests": [
+    {
+      "line": "let header: Header = unsafe { std::mem::transmute(bytes) };",
+      "match": true
+    },
+    {
+      "line": "# audit: let header: Header = unsafe { std::mem::transmute(bytes) }; present",
+      "match": true
+    },
+    {
+      "line": "let header = Header::try_from(bytes)?;",
+      "match": false
+    },
+    {
+      "line": "# verified: let header = Header::try_from(bytes)?;",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1090"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-948",
+  "title": "Remote download from a runtime URL in csharp — review required",
+  "description": "WebClient.DownloadString or DownloadData with a non-literal address fetches whatever target the value names. If the value includes request data, the server can be steered to internal services or metadata endpoints. The rule flags the call; whether the address is allowlisted is a review decision.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-918",
+  "category": "server-side-request-forgery",
+  "remediation": "Use HttpClient with an allowlisted base address, and reject private ranges after DNS resolution.",
+  "limitation": "Lexical: matches a non-literal first argument; a validated helper is not inspected.",
+  "languages": [
+    "csharp"
+  ],
+  "patterns": [
+    {
+      "source": "\\.Download(?:String|Data)\\s*\\(\\s*[A-Za-z_]"
+    }
+  ],
+  "tests": [
+    {
+      "line": "var body = client.DownloadString(targetUrl);",
+      "match": true
+    },
+    {
+      "line": "# audit: var body = client.DownloadString(targetUrl); present",
+      "match": true
+    },
+    {
+      "line": "var body = client.DownloadString(\"https://api.example.com/health\");",
+      "match": false
+    },
+    {
+      "line": "# verified: var body = client.DownloadString(\"https://api.example.com/health\");",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1133"
+  ]
+}

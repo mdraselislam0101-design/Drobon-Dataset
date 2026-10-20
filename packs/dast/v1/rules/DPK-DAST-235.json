@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-235",
+  "title": "nginx stub_status page disclosed",
+  "description": "The response is the nginx stub_status template: the Active connections line followed by the accepts/handled/requests table is the fixed output of that module. It reports live connection counters.",
+  "severity": "LOW",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Restrict the stub_status location to loopback or an internal monitoring network with an allow directive, or remove it.",
+  "limitation": "One response body. The rule reports the stub_status template; it cannot identify the proxied services or their configuration.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*Active\\ connections:)(?=[\\s\\S]*server\\ accepts\\ handled\\ requests)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "Active connections: 291\nserver accepts handled requests\n 16630948 16630948 31070465\nReading: 6 Writing: 179 Waiting: 106"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "Active connections: 12\nserver accepts handled requests\n 8432 8432 12011\nReading: 0 Writing: 1 Waiting: 11"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": " 291\n\n 16630948 16630948 31070465\nReading: 6 Writing: 179 Waiting: 106"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1304"
+  ]
+}

@@ -1,0 +1,81 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-159",
+  "title": "Set-Cookie carries an unrecognised SameSite value",
+  "description": "A Set-Cookie header names SameSite with a value that is not Strict, Lax or None, or names the attribute with no value at all. A user agent cannot interpret the attribute, so it falls back to its own default policy: the site does not get the cross-site behaviour it declared, and the cookie may be sent on cross-site requests the author meant to block.",
+  "severity": "LOW",
+  "cwe": "CWE-1275",
+  "category": "cookie-flags",
+  "remediation": "Send one of the three defined values, spelled exactly: SameSite=Strict, SameSite=Lax or SameSite=None together with Secure. Fix the template or framework setting that produced the misspelling so the attribute cannot regress.",
+  "limitation": "One header value. The rule validates the attribute token as written and never infers the browser's fallback for a particular version; a cookie the browser discards is also reported, because the header is still wrong.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Set-Cookie",
+    "valuePattern": ";\\s*samesite\\s*(?:;|$)|;\\s*samesite\\s*=\\s*(?!(?:strict|lax|none)(?:\\s*;|\\s*$))[^;]*"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Path=/; Secure; HttpOnly; SameSite=Strictt"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Path=/; Secure; HttpOnly; SameSite="
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Path=/; Secure; HttpOnly; SameSite"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Path=/; SameSite=Lax"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Path=/; SameSite=Strict; Secure"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Path=/; SameSite=None; Secure"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1228"
+  ]
+}

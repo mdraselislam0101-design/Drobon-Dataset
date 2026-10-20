@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-126",
+  "title": "Apache mod_status page disclosed in a response",
+  "description": "The response is an Apache server-status page: it carries the module's status heading and the per-worker request table. It lists live requests with client addresses, URLs, virtual hosts and worker state, so it discloses active traffic and internal hostnames.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Restrict /server-status to localhost with the mod_status Require directive, or disable the module on internet-facing virtual hosts.",
+  "limitation": "One body marker. The heading is specific to mod_status; a page that links to server-status is not matched.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*Apache Server Status for)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/server-status",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Apache Server Status for app.example</title></head></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/server-status?auto",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "Total Accesses: 41\n# Apache Server Status for app.example (via 10.0.0.4)"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/docs",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<p>Enable mod_status and visit /server-status for load details.</p>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body>Home</body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1195"
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-073",
+  "title": "X-Content-Type-Options present with a non-nosniff value",
+  "description": "The response carries an X-Content-Type-Options header whose value is not nosniff. A present-but-wrong value looks like protection in a header inventory while leaving MIME sniffing enabled, so a resource served with an ambiguous type can still be reinterpreted as script. The check compares the observed value.",
+  "severity": "LOW",
+  "cwe": "CWE-693",
+  "category": "security-headers",
+  "remediation": "Send exactly X-Content-Type-Options: nosniff, and pair it with accurate Content-Type values (nosniff on every response).",
+  "limitation": "Header value only: multiple values and case variants are compared literally apart from letter case.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "x-content-type-options",
+    "valuePattern": "^(?!\\s*nosniff\\s*$).+"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/upload",
+        "status": 200,
+        "headers": {
+          "X-Content-Type-Options": "sniff"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/upload",
+        "status": 200,
+        "headers": {
+          "X-Content-Type-Options": "nosniff, sniff"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/upload",
+        "status": 200,
+        "headers": {
+          "X-Content-Type-Options": "nosniff"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/upload",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1025"
+  ]
+}

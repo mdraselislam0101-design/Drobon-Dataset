@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-166",
+  "title": "Grafana interface disclosed",
+  "description": "The response is the Grafana front end: the page inlines grafanaBootData with the build information used to bootstrap the application. Grafana is a dashboarding product that often holds data-source credentials and query access to production metrics.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "debug-exposure",
+  "remediation": "Keep Grafana on an internal network behind an authenticating proxy, disable anonymous access, and do not expose it through the application ingress.",
+  "limitation": "One response body. The rule reports the Grafana shell; it does not prove that a dashboard or data source is readable without credentials.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*grafanaBootData)(?=[\\s\\S]*\"buildInfo\")"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Grafana</title></head><body><script>window.grafanaBootData = {\"user\":{\"isSignedIn\":false},\"settings\":{\"buildInfo\":{\"version\":\"10.2.0\"}}};</script></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<!doctype html><html><body><script>window.grafanaBootData={\"settings\":{\"buildInfo\":{\"version\":\"9.5.2\",\"commit\":\"abc\"}}};</script></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Grafana</title></head><body><script>window. = {\"user\":{\"isSignedIn\":false},\"settings\":{:{\"version\":\"10.2.0\"}}};</script></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1235"
+  ]
+}

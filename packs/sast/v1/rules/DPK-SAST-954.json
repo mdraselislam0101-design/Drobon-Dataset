@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-954",
+  "title": "URL built from a runtime value in java — review required",
+  "description": "new URL with a runtime string produces a connection target chosen outside the code. If the value includes request data, the server can be steered to internal addresses, cloud metadata endpoints or file schemes. The rule flags the construction; whether the value is validated against an allowlist is a review decision.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-918",
+  "category": "server-side-request-forgery",
+  "remediation": "Parse the value, require an https scheme and an allowlisted host, resolve it, and block private address ranges before connecting.",
+  "limitation": "Lexical: matches a non-literal first argument; a validated helper is not inspected.",
+  "languages": [
+    "java"
+  ],
+  "patterns": [
+    {
+      "source": "\\b(?:new\\s+URL\\s*\\(\\s*[A-Za-z_$][\\w$]*\\s*\\))"
+    }
+  ],
+  "tests": [
+    {
+      "line": "URL url = new URL(targetUrl);",
+      "match": true
+    },
+    {
+      "line": "# audit: URL url = new URL(targetUrl); present",
+      "match": true
+    },
+    {
+      "line": "URL url = new URL(\"https://api.example.com/health\");",
+      "match": false
+    },
+    {
+      "line": "# verified: URL url = new URL(\"https://api.example.com/health\");",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1139"
+  ]
+}

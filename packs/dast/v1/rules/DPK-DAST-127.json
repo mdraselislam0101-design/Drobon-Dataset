@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-127",
+  "title": "ASP.NET Core developer exception page disclosed in a response",
+  "description": "The response is the ASP.NET Core developer exception page: it carries the framework's unhandled-exception heading and references the Microsoft.AspNetCore assemblies. The page prints the exception, the stack trace, the request and, depending on configuration, the source lines around the failure.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-489",
+  "category": "debug-exposure",
+  "remediation": "Run the application with the Production environment name so the developer exception page is not registered, and return a generic error page instead.",
+  "limitation": "Two body markers. A generic ASP.NET stack trace without the developer page heading is reported by the .NET stack-frame rule instead.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*An unhandled exception occurred while processing the request)(?=[\\s\\S]*Microsoft\\.AspNetCore)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/boom",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<h1>An unhandled exception occurred while processing the request.</h1><p>InvalidOperationException: boom at Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddleware</p>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/api/boom",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "An unhandled exception occurred while processing the request. See Microsoft.AspNetCore.Server.Kestrel output."
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body>Home</body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/boom",
+        "status": 500,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"error\":\"internal server error\"}"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1196"
+  ]
+}

@@ -10,11 +10,11 @@
     "check": {
       "type": "response-header-matches",
       "header": "Content-Security-Policy",
-      "valuePattern": "unsafe-inline"
+      "valuePattern": "(?:^|;)\\s*(?:script-src(?:-elem|-attr)?|style-src(?:-elem|-attr)?|default-src)(?=[\\s;]|$)(?![^;]*(?:'nonce-[^'\\s]+'|'sha(?:256|384|512)-[^'\\s]+'))[^;]*'?unsafe-inline'?(?=['\\s;]|$)"
     }
   },
   "scope": "Single response header value.",
-  "limitations": "Value check: it cannot confirm the deployment context.",
+  "limitations": "Directive-scoped value check: a nonce or hash anywhere in the same directive neutralises 'unsafe-inline' and suppresses the finding. It cannot tell whether the nonce is actually random, nor whether every inline script carries it, and it does not evaluate the deployment context.",
   "examples": [
     {
       "observation": {
@@ -41,6 +41,66 @@
         "url": "https://app.example/",
         "status": 200,
         "headers": {
+          "Content-Security-Policy": "script-src-attr 'unsafe-inline'"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'unsafe-inline' 'nonce-abc'"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'unsafe-inline' 'sha256-AAA'"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "style-src 'unsafe-inline' 'nonce-xyz'"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "img-src 'unsafe-inline'"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'unsafe-inline-x'"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
           "Content-Security-Policy": "script-src 'nonce-a1b2'"
         }
       },
@@ -53,6 +113,16 @@
         "headers": {}
       },
       "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src https://nonce-cdn.example 'unsafe-inline'"
+        }
+      },
+      "match": true
     }
   ],
   "fpNotes": "Transitional deployments are the common accepted case.",

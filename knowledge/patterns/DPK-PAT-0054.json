@@ -10,11 +10,11 @@
     "check": {
       "type": "response-header-matches",
       "header": "Strict-Transport-Security",
-      "valuePattern": "max-age\\s*=\\s*[0-9]{1,7}\\b"
+      "valuePattern": "max-age\\s*=\\s*\"[^\"\\n]*\"|max-age\\s*=\\s*(?:[0-9]{1,7}|1[0-9]{7}|2[0-9]{7}|30[0-9]{6}|31[0-4][0-9]{5}|315[0-2][0-9]{4}|3153[0-5][0-9]{3})\\b"
     }
   },
   "scope": "Single response header value.",
-  "limitations": "Value check: it cannot confirm the deployment context.",
+  "limitations": "Value check on one header value. It cannot see how the client parsed it: the quoted shape is discarded by a strict parser, which is closer in effect to a missing header (DPK-DAST-016) than to a short duration.",
   "examples": [
     {
       "observation": {
@@ -41,7 +41,37 @@
         "url": "https://app.example/",
         "status": 200,
         "headers": {
+          "Strict-Transport-Security": "max-age=10000000"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Strict-Transport-Security": "max-age=31535999"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
           "Strict-Transport-Security": "max-age=31536000"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Strict-Transport-Security": "max-age=36000000; includeSubDomains"
         }
       },
       "match": false
@@ -53,6 +83,36 @@
         "headers": {}
       },
       "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Strict-Transport-Security": "max-age=\"300\""
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Strict-Transport-Security": "max-age=\"31536000\""
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Strict-Transport-Security": "max-age=\"86400\"; includeSubDomains"
+        }
+      },
+      "match": true
     }
   ],
   "fpNotes": "Transitional deployments are the common accepted case.",

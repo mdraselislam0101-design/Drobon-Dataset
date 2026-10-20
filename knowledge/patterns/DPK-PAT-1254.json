@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1254",
+  "title": "Signal: ZooKeeper stat command output disclosed",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-body-matches",
+      "valuePattern": "(?=[\\s\\S]*Zookeeper\\ version)(?=[\\s\\S]*Latency\\ min/avg/max)"
+    }
+  },
+  "scope": "One response whose body carries a ZooKeeper version banner and the stat latency counters.",
+  "limitations": "One response body. The rule reports the stat output; it does not attempt a write command and cannot show whether one is enabled.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "Zookeeper version: 3.8.2-abc123, built on 2023-02-14 12:00 UTC\nClients:\n /10.0.0.5:52344[1](queued=0,recved=10,sent=10)\nLatency min/avg/max: 0/0.4/12\nReceived: 120\nSent: 119\nConnections: 1\nOutstanding: 0\nZxid: 0x1a2b3c\nMode: standalone\nNode count: 42"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "Zookeeper version: 3.7.1\nLatency min/avg/max: 1/2.0/30\nConnections: 3\nMode: follower\nNode count: 120"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": ": 3.8.2-abc123, built on 2023-02-14 12:00 UTC\nClients:\n /10.0.0.5:52344[1](queued=0,recved=10,sent=10)\n: 0/0.4/12\nReceived: 120\nSent: 119\nConnections: 1\nOutstanding: 0\nZxid: 0x1a2b3c\nMode: standalone\nNode count: 42"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A deliberately restricted stat response is still reported; the finding is that the command surface answered, not that a write is possible.",
+  "linkedRules": [
+    "DPK-DAST-185"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:body-zookeeper-stat:zookeeper-stat",
+  "validationStatus": "VALIDATED"
+}

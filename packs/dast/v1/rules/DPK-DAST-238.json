@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-238",
+  "title": "OpenAPI specification served",
+  "description": "The response is an OpenAPI document: the openapi version field and the paths object list every documented operation, including any administrative or internal route the author left in.",
+  "severity": "LOW",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Publish the description only to authenticated developers, and remove internal or administrative routes from the published subset. Where a public description is required, generate it without the internal operations.",
+  "limitation": "One response body. The rule reports the description document; it does not call the routes it lists and cannot show which of them authorize correctly.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*\"openapi\"\\s*:\\s*\"3\\.)(?=[\\s\\S]*\"paths\")"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "{\"openapi\":\"3.0.3\",\"info\":{\"title\":\"Shop API\",\"version\":\"1.0.0\"},\"paths\":{\"/admin/users\":{\"get\":{\"responses\":{\"200\":{\"description\":\"ok\"}}}},\"/internal/config\":{\"get\":{}}}}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "{\"openapi\":\"3.1.0\",\"info\":{\"title\":\"Internal\",\"version\":\"2\"},\"paths\":{\"/v2/tenants\":{\"post\":{}},\"/v2/tenants/{id}/keys\":{\"get\":{}}}}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "{0.3\",\"info\":{\"title\":\"Shop API\",\"version\":\"1.0.0\"},:{\"/admin/users\":{\"get\":{\"responses\":{\"200\":{\"description\":\"ok\"}}}},\"/internal/config\":{\"get\":{}}}}"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1307"
+  ]
+}

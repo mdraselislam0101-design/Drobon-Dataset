@@ -1,0 +1,89 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-106",
+  "title": "Content-Security-Policy sandbox can remove itself",
+  "description": "The policy applies sandbox with both allow-scripts and allow-same-origin. A sandboxed document that can run script and is treated as same-origin with the embedding page can reach its own sandbox attribute and remove it, so the isolation the directive was meant to create does not hold. The directive is read from its first declaration only.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-693",
+  "category": "csp-weakness",
+  "remediation": "Drop allow-same-origin from the sandbox token list, or serve the sandboxed content from a different origin. A document that needs both tokens should not be sandboxed at all, because the sandbox provides no boundary.",
+  "limitation": "One header value, first declaration of the directive only. The rule reports the token combination; it does not model what the framed document does with the escape.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Content-Security-Policy",
+    "valuePattern": "(?:^|;)\\s*sandbox(?=[\\s;]|$)[^;]*?\\ballow-scripts\\b[^;]*?\\ballow-same-origin\\b|(?:^|;)\\s*sandbox(?=[\\s;]|$)[^;]*?\\ballow-same-origin\\b[^;]*?\\ballow-scripts\\b"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "sandbox allow-scripts allow-same-origin"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src 'self'; sandbox allow-same-origin allow-scripts"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "sandbox allow-scripts"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "sandbox allow-same-origin"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "sandbox allow-forms allow-scripts"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "sandbox allow-scripts; sandbox allow-same-origin"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {}
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1175"
+  ]
+}

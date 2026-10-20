@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-870",
+  "title": "Cipher initialized with a zero-filled static IV in javascript — review required",
+  "description": "createCipheriv receives an IV allocated with Buffer.alloc(size, 0), so every message encrypted under the same key uses an identical starting block. In CBC that leaks equality of plaintext prefixes; in a stream mode it reuses the keystream outright. The rule flags the constant IV; whether the key is long-lived is a review decision.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-329",
+  "category": "weak-cryptography",
+  "remediation": "Generate a fresh random IV with crypto.randomBytes for every encryption and store it alongside the ciphertext.",
+  "limitation": "Lexical: matches a zero-filled buffer passed on the same line as createCipheriv; IVs built elsewhere are out of scope.",
+  "languages": [
+    "javascript"
+  ],
+  "patterns": [
+    {
+      "source": "\\b(?:createCipheriv\\s*\\([^)\\n]*Buffer\\.alloc\\s*\\(\\s*\\d+\\s*,\\s*0\\s*\\))"
+    }
+  ],
+  "tests": [
+    {
+      "line": "const c = crypto.createCipheriv(\"aes-256-cbc\", key, Buffer.alloc(16, 0));",
+      "match": true
+    },
+    {
+      "line": "# audit: const c = crypto.createCipheriv(\"aes-256-cbc\", key, Buffer.alloc(16, 0)); present",
+      "match": true
+    },
+    {
+      "line": "const c = crypto.createCipheriv(\"aes-256-gcm\", key, crypto.randomBytes(12));",
+      "match": false
+    },
+    {
+      "line": "# verified: const c = crypto.createCipheriv(\"aes-256-gcm\", key, crypto.randomBytes(12));",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1053"
+  ]
+}

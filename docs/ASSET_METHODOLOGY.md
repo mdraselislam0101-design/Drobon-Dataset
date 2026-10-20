@@ -1,6 +1,7 @@
-# ASSET_METHODOLOGY.md — how the generated intelligence set is authored (953 pack rules, 953 patterns, 913 generated records)
+# ASSET_METHODOLOGY.md — how the generated intelligence set is authored (1310 pack rules, 1310 patterns, 1310 generated records)
 
-Date: 2026-10-15. This document states the authoring method so an auditor
+Date: 2026-10-15; counts refreshed 2026-10-20 from `docs/CURRENT_INVENTORY.json` (1,310 packs / 1,310 patterns / 1,310 records / 1,310 remediation / 68 CWE). The earlier 954/954/914 header was the 2026-10-18 state and is kept here only as history.
+This document states the authoring method so an auditor
 can tell systematic original work from padding. The generator
 (`scripts/generate-assets.mjs`) is a deterministic compiler: every byte it
 writes comes from hand-designed cell data (`data/asset-cells/*.json`) plus
@@ -23,6 +24,36 @@ A cell is a (vulnerability class, language/tool) pair, e.g.
 A cell that fails any gate is quarantined (listed, never written). Counts
 report validated cells only; quarantined cells are an explicit shortfall,
 never silently retried into existence.
+
+### 1.1 Per-sink text and weakness overrides (2026-10-20)
+
+A multi-sink class (one `class` object with a `sinks` map, e.g. `csharp-flag`
+or `sys-services`) shares one text template across its sinks. That is right for
+the detection logic and wrong for the prose: `PrivateTmp=no`,
+`ServerCertificateValidationCallback => true` and `ValidateRequest="false"`
+weaken three different things, so a shared sentence either hedges ("relaxes a
+security control such as …") or defers the judgement ("Varies by control").
+
+A class may now carry `sinkOverrides`, keyed by the same sink ids as `sinks`:
+
+```json
+"sinkOverrides": { "csharp:certcb": { "cwe": "CWE-295", "recordDesc": "…", "risk": "…" } }
+```
+
+- Allowed fields: the same text fields as a custom cell's `overrides`
+  (`title`, `description`, `remediation`, `limitation`, `why`, `fix`,
+  `verifyT`, `recordDesc`, `risk`, `fp`, `scopeT`, `severity`) **plus `cwe`**,
+  because one class can legitimately hold constructs from different weakness
+  families (request validation, certificate validation, deserialisation, SQL
+  building all appear in the .NET flag class).
+- Fail-closed: an unknown sink id, an unknown field, a non-string value, or a
+  `cwe` with no `knowledge/cwe` entry throws before any file is composed, so a
+  typo quarantines the run instead of silently keeping the generic text.
+- IDs, `kind`, `class`, `sinks` and the signal are not overridable: allocation
+  and detection semantics stay with the cell data.
+
+`scripts/test-assets.mjs` pins the outcome: no record may carry a "Varies by
+control" risk line or one of the multi-mechanism hedge templates.
 
 ## 2. Why language x class cells are distinct (not trivial variations)
 
@@ -66,13 +97,20 @@ re-running the generator on unchanged data produces byte-identical files.
 generated file independently (schema, execution, linkage, leak scan,
 inventory), so generator output is evidence, never self-certification.
 
-Retired reservations (26): the manifest keeps the IDs of cells whose source
-was removed from `data/asset-cells/` but whose rule files were never
-generated. Those IDs stay reserved, because `docs/PACKS.md` says rule IDs are
-never reused. The consistency suite pins this list: any other manifest cell
-without a rule file fails the test. Retired: DPK-DAST-015, DPK-DAST-018, DPK-DAST-019, DPK-DAST-020, DPK-DAST-048,
+Retired reservations (29): the manifest keeps the IDs of cells whose source
+was removed from `data/asset-cells/` and whose rule files are not on disk.
+Those IDs stay reserved, because `docs/PACKS.md` says rule IDs are never
+reused. The consistency suite pins this list: any other manifest cell
+without a rule file fails the test.
+Retired: DPK-DAST-015, DPK-DAST-018, DPK-DAST-019, DPK-DAST-020, DPK-DAST-048, DPK-DAST-151, DPK-DAST-154,
 DPK-SAST-048, DPK-SAST-508,
 DPK-SAST-518, DPK-SAST-535, DPK-SAST-538, DPK-SAST-539, DPK-SAST-551,
-DPK-SAST-595, DPK-SAST-631, DPK-SAST-634, DPK-SEC-009, DPK-SEC-012,
+DPK-SAST-595, DPK-SAST-631, DPK-SAST-634, DPK-SAST-960, DPK-SEC-009, DPK-SEC-012,
 DPK-SEC-013, DPK-SEC-027, DPK-SEC-035, DPK-SEC-038, DPK-SEC-041,
 DPK-SEC-042, DPK-SEC-053, DPK-SEC-062, DPK-SEC-066.
+
+DPK-DAST-151 (`script-src-attr` unsafe-inline) and DPK-DAST-154 (`style-src-attr` unsafe-inline)
+were composed and then withdrawn inside the 2026-10-20 pump: their evidence is a
+strict subset of DPK-DAST-021, whose pattern already covers the -elem and -attr
+directives with a nonce/hash escape. Withdrawing them keeps the pack free of a
+second rule for the same evidence; the IDs stay reserved and are never reused.

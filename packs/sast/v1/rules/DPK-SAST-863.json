@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-863",
+  "title": "Dynamic method dispatch from a non-literal name in ruby — review required",
+  "description": "send is called with a method name that is not a literal symbol or string. When the name comes from request data, the caller can invoke any public method on the receiver, including ones the route never intended to expose. The rule flags the dynamic dispatch; provenance is a review decision.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-470",
+  "category": "unsafe-reflection",
+  "remediation": "Dispatch through an explicit map from request values to allowed method names, and never pass request text directly to send.",
+  "limitation": "Lexical: matches send calls whose first argument is not a literal; public_send is not distinguished.",
+  "languages": [
+    "ruby"
+  ],
+  "patterns": [
+    {
+      "source": "\\b\\w+\\.send\\(\\s*(?![:\"'])\\w"
+    }
+  ],
+  "tests": [
+    {
+      "line": "user.send(params[:action])",
+      "match": true
+    },
+    {
+      "line": "# audit: user.send(params[:action]) present",
+      "match": true
+    },
+    {
+      "line": "user.send(:name)",
+      "match": false
+    },
+    {
+      "line": "# verified: user.send(:name)",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1046"
+  ]
+}

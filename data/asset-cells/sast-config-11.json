@@ -1,0 +1,717 @@
+[
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "kotlin-rawquery-concat",
+    "category": "sql-injection",
+    "cwe": "CWE-89",
+    "severity": "HIGH",
+    "title": "SQL built by concatenation in a rawQuery call in {lang} — review required",
+    "description": "SQLiteDatabase.rawQuery executes whatever SQL string it is given. When a request value is concatenated into that string, the value becomes SQL syntax and can widen the WHERE clause or append a second statement. Concatenation is the only signal available to a lexical rule; whether the value is attacker-controlled is a review decision.",
+    "remediation": "Use a bound parameter (?) and pass values through the selectionArgs array, or move the statement behind a Room DAO with typed parameters.",
+    "limitation": "Lexical: matches rawQuery calls whose arguments contain a + concatenation on one line; interpolation through helper functions is out of scope.",
+    "scopeT": "Single-line match on a concatenated rawQuery in {lang}.",
+    "fp": "Statements assembled from compile-time constants are the accepted false positives.",
+    "recordDesc": "In {lang}, rawQuery receives a statement built with + concatenation. SQLite parses the result as SQL, so an injected quote or UNION ends the intended predicate and adds attacker-chosen logic. The API has no injection protection of its own; only bound arguments do.",
+    "applicability": "{lang} Android apps that query SQLite directly instead of a typed DAO.",
+    "risk": "Data disclosure, authentication bypass and destructive statements; HIGH severity.",
+    "why": "A SQL string is assembled with concatenation before rawQuery.",
+    "fix": [
+      "Replace concatenation with ? placeholders.",
+      "Pass values through selectionArgs.",
+      "Prefer a Room DAO with typed parameters."
+    ],
+    "verifyT": "A quote-bearing payload is treated as data and returns no extra rows.",
+    "sinks": {
+      "kotlin": [
+        "\\brawQuery\\s*\\([^)\\n]*\\+",
+        "db.rawQuery(\"SELECT * FROM users WHERE id = \" + userId, null)",
+        "db.rawQuery(\"SELECT * FROM users WHERE id = ?\", arrayOf(userId))",
+        "rawQuery with a bound argument array"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "swift-sqlite-exec",
+    "category": "sql-injection",
+    "cwe": "CWE-89",
+    "severity": "HIGH",
+    "title": "SQLite statement built from an interpolated string in {lang} — review required",
+    "description": "sqlite3_exec compiles and runs a complete SQL string. Swift string interpolation splices values directly into that string, so any quote or UNION in a request value becomes part of the statement. The rule flags the call; the provenance of interpolated values is a review decision.",
+    "remediation": "Prepare the statement with sqlite3_prepare_v2 and bind values with sqlite3_bind_*, never interpolate them into SQL.",
+    "limitation": "Lexical: matches sqlite3_exec calls only; statements built in a helper are out of scope.",
+    "scopeT": "Single-line match on sqlite3_exec in {lang}.",
+    "fp": "Schema statements assembled from constants are the accepted false positives.",
+    "recordDesc": "In {lang}, sqlite3_exec runs a statement assembled with string interpolation. Interpolation has no escaping step, so a value containing a single quote terminates the literal and the rest is parsed as SQL. The C API will happily execute multiple statements separated by semicolons.",
+    "applicability": "{lang} apps that use the SQLite C API directly.",
+    "risk": "Query manipulation and data disclosure; HIGH severity.",
+    "why": "A full SQL string is passed to sqlite3_exec.",
+    "fix": [
+      "Use sqlite3_prepare_v2 with ? placeholders.",
+      "Bind every value with sqlite3_bind_text or the typed equivalent."
+    ],
+    "verifyT": "An interpolated payload is stored or matched literally and cannot change the statement.",
+    "sinks": {
+      "swift": [
+        "\\bsqlite3_exec\\s*\\(",
+        "sqlite3_exec(db, \"SELECT * FROM users WHERE name = '\\(name)'\", nil, nil, nil)",
+        "sqlite3_prepare_v2(db, \"SELECT * FROM users WHERE name = ?\", -1, &stmt, nil)",
+        "sqlite3_prepare_v2 with a bound parameter"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "java-zip-entry",
+    "category": "path-traversal",
+    "cwe": "CWE-22",
+    "severity": "MEDIUM",
+    "title": "Archive entry name used without a traversal check in {lang} — review required",
+    "description": "ZipInputStream.getNextEntry returns entry names that the archive controls. Writing to a path built from that name lets a crafted archive escape the extraction directory with ../ segments or an absolute path. The rule flags the enumeration point; whether the resolved path is constrained is a review decision.",
+    "remediation": "Resolve the entry against the target directory, normalize it, and reject the entry unless the result still starts with that directory.",
+    "limitation": "Lexical: matches getNextEntry calls; the rule cannot see whether the later write validates the name.",
+    "scopeT": "Single-line match on archive entry enumeration in {lang}.",
+    "fp": "Archives whose entries are validated immediately after enumeration are the accepted false positives.",
+    "recordDesc": "In {lang}, getNextEntry supplies an entry name taken from the archive. The name is attacker data when the archive is uploaded or downloaded from an untrusted source, and joining it to a destination path without normalization allows writes outside the extraction root. This is the classic zip-slip shape and it survives archive signing because the name is inside the signed bytes.",
+    "applicability": "{lang} services that extract uploaded or downloaded archives.",
+    "risk": "Arbitrary file write outside the extraction directory; MEDIUM severity.",
+    "why": "An archive-controlled name reaches the extraction path.",
+    "fix": [
+      "Normalize the entry against the destination.",
+      "Reject entries that escape the destination or are absolute."
+    ],
+    "verifyT": "An archive containing ../ payloads writes nothing outside the destination directory.",
+    "sinks": {
+      "java": [
+        "\\bgetNextEntry\\s*\\(",
+        "while ((entry = zip.getNextEntry()) != null) {",
+        "ZipEntry entry = zip.getEntry(\"readme.txt\");",
+        "a normalized entry path check before writing"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "ruby-instance-eval",
+    "category": "code-injection",
+    "cwe": "CWE-95",
+    "severity": "HIGH",
+    "title": "Dynamic code evaluation via instance_eval in {lang} — review required",
+    "description": "instance_eval evaluates a string in the receiver context. A string that contains request data is parsed as Ruby and runs with the application privileges, in addition to reaching the receiver private state. The rule flags the call; whether the string is externally influenced is a review decision.",
+    "remediation": "Use instance_exec with a block and explicit arguments, or dispatch through an allowlist of method names.",
+    "limitation": "Lexical: matches parenthesized instance_eval calls; the block form is not flagged.",
+    "scopeT": "Single-line match on a string-form instance_eval in {lang}.",
+    "fp": "Development consoles and test helpers that evaluate constant strings are the accepted false positives.",
+    "recordDesc": "In {lang}, instance_eval receives a string. Unlike the block form, the string is compiled by the interpreter, so interpolation or concatenation of request data yields arbitrary code execution inside the object context. The receiver context also exposes private methods that ordinary public dispatch would not reach.",
+    "applicability": "{lang} applications that evaluate DSL fragments or user-authored expressions.",
+    "risk": "Arbitrary Ruby execution with application privileges; HIGH severity.",
+    "why": "A string is compiled and evaluated in an object context.",
+    "fix": [
+      "Use the block form with explicit arguments.",
+      "Map input values onto an allowlist before dispatch."
+    ],
+    "verifyT": "No request-controlled string reaches the interpreter.",
+    "sinks": {
+      "ruby": [
+        "\\binstance_eval\\s*\\(",
+        "obj.instance_eval(params[:code])",
+        "obj.instance_eval { @count += 1 }",
+        "instance_eval block form only"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "ruby-weak-cipher-select",
+    "category": "weak-cryptography",
+    "cwe": "CWE-327",
+    "severity": "MEDIUM",
+    "title": "Legacy cipher selected by name in {lang} — review required",
+    "description": "OpenSSL::Cipher.new selects the cipher from a string. DES, 3DES, RC4, Blowfish and CAST5 are deprecated primitives with small keys or known structural weaknesses, and selecting one makes every message protected by it weaker regardless of key length. The rule flags the selection; whether the data is sensitive is a review decision.",
+    "remediation": "Select AES-256-GCM or ChaCha20-Poly1305 through the same API and rotate any data protected with a legacy cipher.",
+    "limitation": "Lexical: matches literal cipher names at the call site; names resolved from configuration are out of scope.",
+    "scopeT": "Single-line match on a legacy cipher name in {lang}.",
+    "fp": "Interoperability shims that only decrypt archived data are the accepted, time-boxed exception.",
+    "recordDesc": "In {lang}, OpenSSL::Cipher.new is given a legacy algorithm name. DES has a 56-bit key space, 3DES is deprecated by NIST, and RC4 has known statistical biases; none of these provide the margin expected of modern transport or storage encryption. The selection often arrives through a configuration default and is never revisited.",
+    "applicability": "{lang} services and scripts that encrypt stored or transmitted data.",
+    "risk": "Recoverable plaintext through algorithm weakness; MEDIUM severity.",
+    "why": "A deprecated cipher is selected explicitly.",
+    "fix": [
+      "Use AES-256-GCM.",
+      "Rotate data protected by the legacy algorithm."
+    ],
+    "verifyT": "Re-inspection shows an AEAD cipher and backward compatibility limited to read-only migrations.",
+    "sinks": {
+      "ruby": [
+        "OpenSSL::Cipher\\.new\\s*\\(\\s*[\"'](?:des|des3|rc4|bf|cast5)",
+        "cipher = OpenSSL::Cipher.new(\"des-cbc\")",
+        "cipher = OpenSSL::Cipher.new(\"aes-256-gcm\")",
+        "AES-256-GCM selected"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "js-createcipher-deprecated",
+    "category": "weak-cryptography",
+    "cwe": "CWE-327",
+    "severity": "MEDIUM",
+    "title": "Deprecated key-derivation cipher in {lang} — review required",
+    "description": "crypto.createCipher derives an encryption key and IV from a password with an obsolete routine and is deprecated by Node.js. The derived material is weaker than a KDF such as scrypt or PBKDF2, and the API cannot separate key and IV management. The rule flags the call; whether it protects sensitive data is a review decision.",
+    "remediation": "Derive a key with scrypt or PBKDF2, then encrypt with crypto.createCipheriv using a random IV per message.",
+    "limitation": "Lexical: matches crypto.createCipher only; createCipheriv is handled by separate IV rules.",
+    "scopeT": "Single-line match on crypto.createCipher in {lang}.",
+    "fp": "Legacy decrypt-only paths kept for migration are the accepted, documented exception.",
+    "recordDesc": "In {lang}, crypto.createCipher is used. Node.js marks it deprecated because it derives key material from a password with an outdated routine and offers no control over the IV, so the same password can produce repeated keystreams. Modern review expects an explicit KDF and an authenticated mode.",
+    "applicability": "{lang} services that encrypt configuration values or user data.",
+    "risk": "Weak key derivation and keystream reuse; MEDIUM severity.",
+    "why": "A deprecated password-based cipher API is called.",
+    "fix": [
+      "Derive with scrypt or PBKDF2.",
+      "Encrypt with createCipheriv and a random IV."
+    ],
+    "verifyT": "Re-inspection shows an explicit KDF, AEAD mode and a per-message IV.",
+    "sinks": {
+      "javascript": [
+        "\\bcrypto\\.createCipher\\s*\\(",
+        "const cipher = crypto.createCipher(\"aes192\", password);",
+        "const cipher = crypto.createCipheriv(\"aes-256-gcm\", key, iv);",
+        "createCipheriv with an explicit key and IV"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "js-static-zero-iv",
+    "category": "weak-cryptography",
+    "cwe": "CWE-329",
+    "severity": "MEDIUM",
+    "title": "Cipher initialized with a zero-filled static IV in {lang} — review required",
+    "description": "createCipheriv receives an IV allocated with Buffer.alloc(size, 0), so every message encrypted under the same key uses an identical starting block. In CBC that leaks equality of plaintext prefixes; in a stream mode it reuses the keystream outright. The rule flags the constant IV; whether the key is long-lived is a review decision.",
+    "remediation": "Generate a fresh random IV with crypto.randomBytes for every encryption and store it alongside the ciphertext.",
+    "limitation": "Lexical: matches a zero-filled buffer passed on the same line as createCipheriv; IVs built elsewhere are out of scope.",
+    "scopeT": "Single-line match on a zero-filled IV in {lang}.",
+    "fp": "Test vectors and fixed-vector interoperability tests are the accepted false positives.",
+    "recordDesc": "In {lang}, createCipheriv is given a zero-filled buffer as the IV. An IV exists to make each message under a key unique; a constant one restores deterministic encryption and exposes equal plaintext blocks across records. The pattern is easy to introduce because the code still runs and still produces ciphertext.",
+    "applicability": "{lang} services that encrypt stored fields or messages.",
+    "risk": "Plaintext equality disclosure and keystream reuse; MEDIUM severity.",
+    "why": "A static, zero-filled IV is used for encryption.",
+    "fix": [
+      "Generate the IV with crypto.randomBytes.",
+      "Store the IV with the ciphertext."
+    ],
+    "verifyT": "Two encryptions of the same plaintext produce different IVs and different ciphertexts.",
+    "sinks": {
+      "javascript": [
+        "createCipheriv\\s*\\([^)\\n]*Buffer\\.alloc\\s*\\(\\s*\\d+\\s*,\\s*0\\s*\\)",
+        "const c = crypto.createCipheriv(\"aes-256-cbc\", key, Buffer.alloc(16, 0));",
+        "const c = crypto.createCipheriv(\"aes-256-gcm\", key, crypto.randomBytes(12));",
+        "randomBytes IV per message"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "kotlin-ssl-proceed",
+    "category": "transport-security",
+    "cwe": "CWE-295",
+    "severity": "HIGH",
+    "title": "TLS error accepted via SslErrorHandler.proceed in {lang} — review required",
+    "description": "SslErrorHandler.proceed continues a WebView navigation after a certificate error. Accepting the connection nullifies certificate validation for that host and turns the WebView into a channel that an on-path attacker can read and modify. The rule flags the call; whether the handler is only reached for a pinned host is a review decision.",
+    "remediation": "Call handler.cancel() on every SSL error and fix the server certificate chain instead of bypassing validation.",
+    "limitation": "Lexical: matches handler.proceed() calls; a different handler variable name is out of scope.",
+    "scopeT": "Single-line match on SslErrorHandler.proceed in {lang}.",
+    "fp": "A deliberately pinned internal host with a documented exception is the accepted, reviewed exception.",
+    "recordDesc": "In {lang}, the WebView SSL error handler calls proceed. The callback exists so the app can refuse a connection the platform rejected; proceeding instead accepts any certificate the attacker presents. Because the WebView keeps cookies and can expose JavaScript bridges, the impact reaches session theft, not just content spoofing.",
+    "applicability": "{lang} Android apps that render remote content in a WebView.",
+    "risk": "Traffic interception and content substitution; HIGH severity.",
+    "why": "A certificate error is explicitly accepted.",
+    "fix": [
+      "Call handler.cancel().",
+      "Repair the certificate chain and remove the bypass."
+    ],
+    "verifyT": "A test host with an invalid chain fails to load and the handler logs the cancellation.",
+    "sinks": {
+      "kotlin": [
+        "\\bhandler\\.proceed\\s*\\(\\s*\\)",
+        "handler.proceed()",
+        "handler.cancel()",
+        "handler.cancel() on every SSL error"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "scala-source-fromurl",
+    "category": "server-side-request-forgery",
+    "cwe": "CWE-918",
+    "severity": "MEDIUM",
+    "title": "Server-side fetch through Source.fromURL in {lang} — review required",
+    "description": "scala.io.Source.fromURL opens a connection to whatever URL it receives. When that URL is assembled from request data, the server can be steered to loopback services, cloud metadata endpoints or arbitrary hosts. The rule flags the call; whether the URL is externally influenced is a review decision.",
+    "remediation": "Resolve the destination against an allowlist of hosts and schemes, and reject private and link-local address ranges after resolution.",
+    "limitation": "Lexical: matches Source.fromURL calls; URLs built by helpers are out of scope.",
+    "scopeT": "Single-line match on Source.fromURL in {lang}.",
+    "fp": "Fetches of a constant URL are the accepted false positives.",
+    "recordDesc": "In {lang}, Source.fromURL performs an outbound request with the JVM network stack. The call is often used to read a remote configuration or template and therefore receives a value that originates from a request. There is no egress policy in the API, so loopback and metadata addresses are reachable by default.",
+    "applicability": "{lang} services that fetch remote documents or templates.",
+    "risk": "Access to internal services and metadata endpoints; MEDIUM severity.",
+    "why": "A URL is passed to an outbound fetch without an allowlist.",
+    "fix": [
+      "Allowlist scheme and host.",
+      "Reject private and link-local addresses after resolution."
+    ],
+    "verifyT": "A request for an internal address is rejected before the connection opens.",
+    "sinks": {
+      "scala": [
+        "\\bSource\\.fromURL\\s*\\(",
+        "val body = Source.fromURL(userUrl).mkString",
+        "val body = Source.fromFile(\"config.json\").mkString",
+        "an allowlisted host resolved and checked before the fetch"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "php-phpinfo",
+    "category": "information-disclosure",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "Diagnostic page exposed via phpinfo in {lang} — review required",
+    "description": "phpinfo prints the full PHP configuration, loaded modules, environment variables, request headers and file paths. A reachable diagnostic page hands an attacker the exact version inventory needed to choose an exploit and often leaks credentials held in the environment. The rule flags the call; whether the route is public is a review decision.",
+    "remediation": "Remove phpinfo calls from deployed code; use a restricted health endpoint that returns a fixed status document.",
+    "limitation": "Lexical: matches phpinfo calls; a page gated by an authentication middleware is still reported.",
+    "scopeT": "Single-line match on phpinfo in {lang}.",
+    "fp": "Local-only development bootstrap files are the accepted exception.",
+    "recordDesc": "In {lang}, phpinfo is called. The output includes configuration values, enabled extensions, environment variables and absolute paths, which is precisely the reconnaissance an attacker would otherwise have to guess. It also confirms the exact patch level, so version-specific exploits can be selected without probing.",
+    "applicability": "{lang} applications that still ship a diagnostic page.",
+    "risk": "Version and configuration disclosure, including environment secrets; MEDIUM severity.",
+    "why": "A full configuration dump is reachable from application code.",
+    "fix": [
+      "Remove the call from deployed code.",
+      "Return a fixed status document from health checks."
+    ],
+    "verifyT": "The diagnostic route is absent from the deployment and returns 404.",
+    "sinks": {
+      "php": [
+        "\\bphpinfo\\s*\\(",
+        "phpinfo();",
+        "error_log(\"startup complete\");",
+        "no diagnostic dump route in the deployment"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "php-laravel-guarded-empty",
+    "category": "mass-assignment",
+    "cwe": "CWE-915",
+    "severity": "MEDIUM",
+    "title": "Eloquent mass assignment left fully open in {lang} — review required",
+    "description": "Setting $guarded to an empty array removes the mass-assignment guard on an Eloquent model, so every request key that matches a column can be written, including is_admin or role. The rule flags the empty guard; whether the controller limits the payload is a review decision.",
+    "remediation": "List writable attributes in $fillable and keep privileged columns out of it, or validate and filter the payload before filling.",
+    "limitation": "Lexical: matches an empty $guarded assignment; a guarded list with entries is not reported.",
+    "scopeT": "Single-line match on $guarded = [] in {lang}.",
+    "fp": "Models whose controller always passes a validated, closed attribute set are the accepted, documented exception.",
+    "recordDesc": "In {lang}, the model disables mass-assignment protection entirely. Eloquent then maps every key in the input array onto a column, so a request that adds is_admin or balance changes those fields if the controller passes the request through. The setting is usually added to make a seeder work and is never narrowed again.",
+    "applicability": "{lang} Laravel applications with Eloquent models.",
+    "risk": "Privilege escalation and unauthorized field writes; MEDIUM severity.",
+    "why": "The model accepts every attribute from mass assignment.",
+    "fix": [
+      "Define an explicit $fillable list.",
+      "Keep privileged columns out of it and set them deliberately."
+    ],
+    "verifyT": "A request that adds is_admin leaves the column unchanged.",
+    "sinks": {
+      "php": [
+        "\\$(?:guarded)\\s*=\\s*\\[\\s*\\]",
+        "protected $guarded = [];",
+        "protected $fillable = ['name', 'email'];",
+        "an explicit fillable allowlist"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "ruby-null-session-csrf",
+    "category": "csrf-protection",
+    "cwe": "CWE-352",
+    "severity": "MEDIUM",
+    "title": "CSRF protection downgraded to a null session in {lang} — review required",
+    "description": "protect_from_forgery with: :null_session runs the request without the session when the CSRF token is missing instead of rejecting it. State-changing actions that read the session elsewhere can still proceed, and the raised-then-rescued pattern hides the failure. The rule flags the downgrade; whether the controller is read-only is a review decision.",
+    "remediation": "Use with: :exception and ensure every state-changing route carries a token; exempt only verified webhook controllers.",
+    "limitation": "Lexical: matches the null_session option; a rescue_from that converts the exception into a redirect is not seen.",
+    "scopeT": "Single-line match on protect_from_forgery with null_session in {lang}.",
+    "fp": "Read-only JSON APIs with a separate authentication scheme are the accepted exception.",
+    "recordDesc": "In {lang}, Rails is configured to null the session on a CSRF failure. The request continues with an empty session, which turns a rejected forgery into an anonymous request that may still hit an action that does not need login but does change shared state. The setting is often copied to stop 422 responses in an API controller and then applies to siblings through inheritance.",
+    "applicability": "{lang} Rails controllers that mix HTML and API routes.",
+    "risk": "Cross-site state change without a token; MEDIUM severity.",
+    "why": "A failed CSRF check no longer rejects the request.",
+    "fix": [
+      "Use with: :exception.",
+      "Exempt only controllers that authenticate by another mechanism."
+    ],
+    "verifyT": "A forged POST without a token is rejected with 422 and changes nothing.",
+    "sinks": {
+      "ruby": [
+        "protect_from_forgery\\s+with\\s*:\\s*:null_session",
+        "protect_from_forgery with: :null_session",
+        "protect_from_forgery with: :exception",
+        "with: :exception and a token on every state-changing route"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "nginx-legacy-tls",
+    "category": "weak-cryptography",
+    "cwe": "CWE-327",
+    "severity": "MEDIUM",
+    "title": "Legacy TLS protocol enabled in the server configuration in {lang} — review required",
+    "description": "ssl_protocols still offers SSLv2, SSLv3, TLS 1.0 or TLS 1.1. These versions are deprecated and fail modern compliance baselines; SSLv3 is broken outright and TLS 1.0/1.1 lack the AEAD suites expected today. The rule flags the directive; whether the listener is public is a review decision.",
+    "remediation": "Set ssl_protocols TLSv1.2 TLSv1.3 and confirm that the certificate chain and client population support it.",
+    "limitation": "Lexical: reads one directive line; an included snippet that overrides it is out of scope.",
+    "scopeT": "Single-line match on a legacy protocol in ssl_protocols in {lang}.",
+    "fp": "A documented legacy-client listener isolated to a private network is the accepted exception.",
+    "recordDesc": "In {lang}, the TLS listener advertises protocol versions that are deprecated or broken. Allowing them lets a downgrade-capable attacker negotiate a version with weaker record protection and cipher suites, and it fails baseline scans even when clients would have used TLS 1.3. The directive is usually inherited from an old template.",
+    "applicability": "{lang} web servers that terminate TLS.",
+    "risk": "Protocol downgrade and weak record protection; MEDIUM severity.",
+    "why": "Deprecated TLS versions remain enabled.",
+    "fix": [
+      "Restrict ssl_protocols to TLSv1.2 and TLSv1.3.",
+      "Re-test the client population."
+    ],
+    "verifyT": "A client limited to TLS 1.0 fails the handshake.",
+    "sinks": {
+      "nginx": [
+        "\\bssl_protocols\\b[^\\n;]*\\b(?:SSLv2|SSLv3|TLSv1(?!\\.\\d)|TLSv1\\.1)\\b",
+        "ssl_protocols TLSv1 TLSv1.1 TLSv1.2;",
+        "ssl_protocols TLSv1.2 TLSv1.3;",
+        "TLSv1.2 and TLSv1.3 only"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "nginx-autoindex",
+    "category": "information-disclosure",
+    "cwe": "CWE-548",
+    "severity": "LOW",
+    "title": "Directory listing enabled in the server configuration in {lang} — review required",
+    "description": "autoindex on makes nginx generate an HTML index for any directory without an index file. The listing exposes backup files, editor swap files and unlinked uploads that were never meant to be browsable. The rule flags the directive; whether the root contains sensitive files is a review decision.",
+    "remediation": "Turn autoindex off and serve only the explicit file set that the application publishes.",
+    "limitation": "Lexical: matches the directive; an inherited value from a parent block is out of scope.",
+    "scopeT": "Single-line match on autoindex on in {lang}.",
+    "fp": "A deliberately published artifact directory with no private content is the accepted exception.",
+    "recordDesc": "In {lang}, directory listing is enabled. Without an index file the server enumerates everything in the directory, including temporary files and copies left by editors or deployment scripts. Those names are exactly what an attacker needs to turn a guessing attack into a direct download.",
+    "applicability": "{lang} web servers that serve static directories.",
+    "risk": "Exposure of unlinked and temporary files; LOW severity.",
+    "why": "The server generates directory indexes.",
+    "fix": [
+      "Set autoindex off.",
+      "Delete temporary and backup files from the document root."
+    ],
+    "verifyT": "A request for a directory without an index returns 403 or 404, not a listing.",
+    "sinks": {
+      "nginx": [
+        "\\bautoindex\\s+on\\s*;",
+        "autoindex on;",
+        "autoindex off;",
+        "autoindex off"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "postgres-md5-password",
+    "category": "weak-cryptography",
+    "cwe": "CWE-327",
+    "severity": "MEDIUM",
+    "title": "PostgreSQL password hashing set to MD5 in {lang} — review required",
+    "description": "password_encryption = md5 stores database passwords as a single MD5 of the password and username. MD5 is fast and unsalted in this scheme, so a stolen pg_authid dump can be attacked at high rate. The rule flags the setting; whether the cluster is reachable by untrusted users is a review decision.",
+    "remediation": "Set password_encryption = scram-sha-256 and rotate every stored password, then require SCRAM in pg_hba.conf.",
+    "limitation": "Lexical: matches the configuration line; a value supplied on the server command line is out of scope.",
+    "scopeT": "Single-line match on password_encryption = md5 in {lang}.",
+    "fp": "A cluster whose authentication is entirely external and whose role passwords are unusable is the accepted exception.",
+    "recordDesc": "In {lang}, the cluster still hashes role passwords with MD5. The scheme is unsalted per role and fast to evaluate, so an offline copy of the catalog is crackable at billions of candidates per second on commodity hardware. PostgreSQL has supported SCRAM-SHA-256 for years, so the setting is almost always stale rather than required.",
+    "applicability": "{lang} database clusters managed through configuration files.",
+    "risk": "Credential recovery from a stolen catalog; MEDIUM severity.",
+    "why": "A fast legacy hash protects stored role passwords.",
+    "fix": [
+      "Set password_encryption = scram-sha-256.",
+      "Rotate all role passwords.",
+      "Switch pg_hba.conf to scram-sha-256."
+    ],
+    "verifyT": "pg_authid shows SCRAM verifiers for every role.",
+    "sinks": {
+      "postgres": [
+        "\\bpassword_encryption\\s*=\\s*['\"]?md5",
+        "password_encryption = md5",
+        "password_encryption = scram-sha-256",
+        "scram-sha-256 verifiers for every role"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "c-sqlite-exec",
+    "category": "sql-injection",
+    "cwe": "CWE-89",
+    "severity": "HIGH",
+    "title": "SQL statement executed through sqlite3_exec in {lang} — review required",
+    "description": "sqlite3_exec compiles and runs a complete SQL string immediately. When that string is built with sprintf or strcat from request data, the value becomes SQL and can change the query or append another statement. The rule flags the call; whether the statement is assembled from input is a review decision.",
+    "remediation": "Use sqlite3_prepare_v2 with ? placeholders and bind values with sqlite3_bind_*, and never format SQL with sprintf.",
+    "limitation": "Lexical: matches sqlite3_exec calls; statements passed in from another translation unit are out of scope.",
+    "scopeT": "Single-line match on sqlite3_exec in {lang}.",
+    "fp": "Schema migrations built from constant strings are the accepted false positives.",
+    "recordDesc": "In {lang}, sqlite3_exec receives a statement string. The API offers no parameter binding, so any dynamic value has to be interpolated by the caller, and C string handling gives no escaping for SQL. A single quote in a value is enough to terminate the literal and continue with attacker syntax.",
+    "applicability": "{lang} programs that embed SQLite directly.",
+    "risk": "Query manipulation and data disclosure; HIGH severity.",
+    "why": "A complete SQL string is executed without binding.",
+    "fix": [
+      "Prepare the statement with sqlite3_prepare_v2.",
+      "Bind values with sqlite3_bind_*."
+    ],
+    "verifyT": "A payload containing a quote is stored literally and does not alter the statement.",
+    "sinks": {
+      "c": [
+        "\\bsqlite3_exec\\s*\\(",
+        "sqlite3_exec(db, sql, callback, NULL, &err);",
+        "sqlite3_prepare_v2(db, \"SELECT 1\", -1, &stmt, NULL);",
+        "sqlite3_prepare_v2 with bound values"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "kotlin-md5",
+    "category": "weak-cryptography",
+    "cwe": "CWE-327",
+    "severity": "MEDIUM",
+    "title": "MD5 selected through MessageDigest in {lang} — review required",
+    "description": "MessageDigest.getInstance(\"MD5\") returns a broken hash. It is unsuitable for signatures, password storage, integrity checks or token derivation because collisions are practical and the digest is fast to brute-force. The rule flags the algorithm choice; whether the digest protects a security value is a review decision.",
+    "remediation": "Select SHA-256 or stronger for integrity, and a slow password hash such as bcrypt, scrypt or Argon2 for credentials.",
+    "limitation": "Lexical: matches the literal algorithm name; a name resolved from configuration is out of scope.",
+    "scopeT": "Single-line match on MD5 via MessageDigest in {lang}.",
+    "fp": "Non-security checksums over non-adversarial data are the accepted false positives.",
+    "recordDesc": "In {lang}, MD5 is selected through the standard JVM MessageDigest API. The call looks like ordinary cryptography, but collisions can be generated on demand and the digest is far too fast to resist guessing. When it protects passwords or signed tokens, the security margin is gone regardless of how the value is later encoded.",
+    "applicability": "{lang} Android and JVM applications that hash values.",
+    "risk": "Collision and brute-force attacks on protected values; MEDIUM severity.",
+    "why": "A broken hash algorithm is selected explicitly.",
+    "fix": [
+      "Use SHA-256 for integrity.",
+      "Use bcrypt, scrypt or Argon2 for passwords."
+    ],
+    "verifyT": "Re-inspection shows SHA-256 or a password KDF and no MD5 in the code path.",
+    "sinks": {
+      "kotlin": [
+        "MessageDigest\\.getInstance\\s*\\(\\s*[\"'](?:MD5|md5)[\"']",
+        "val md = MessageDigest.getInstance(\"MD5\")",
+        "val md = MessageDigest.getInstance(\"SHA-256\")",
+        "SHA-256 or a password KDF"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "scala-weak-cipher",
+    "category": "weak-cryptography",
+    "cwe": "CWE-327",
+    "severity": "MEDIUM",
+    "title": "Legacy cipher selected through Cipher.getInstance in {lang} — review required",
+    "description": "Cipher.getInstance with DES, DESede, RC4 or Blowfish selects a deprecated primitive. DES has a 56-bit key, 3DES is withdrawn, and RC4 has known biases, so the resulting protection is below what modern data handling expects. The rule flags the selection; whether the data is sensitive is a review decision.",
+    "remediation": "Select AES/GCM/NoPadding with a 256-bit key and a fresh IV for every message.",
+    "limitation": "Lexical: matches literal algorithm names; provider aliases resolved elsewhere are out of scope.",
+    "scopeT": "Single-line match on a legacy cipher name in {lang}.",
+    "fp": "Read-only decrypt paths kept for a documented migration window are the accepted exception.",
+    "recordDesc": "In {lang}, Cipher.getInstance is given a legacy transformation. The JVM will supply the algorithm, so the code works, but the primitive no longer provides the margin expected of encryption at rest or in transit. Legacy names also tend to arrive with ECB or fixed IV defaults that compound the weakness.",
+    "applicability": "{lang} services that encrypt stored or transmitted data.",
+    "risk": "Recoverable plaintext through algorithm weakness; MEDIUM severity.",
+    "why": "A deprecated cipher transformation is requested.",
+    "fix": [
+      "Use AES/GCM/NoPadding.",
+      "Rotate data protected by the legacy algorithm."
+    ],
+    "verifyT": "Re-inspection shows an AEAD transformation with a random IV.",
+    "sinks": {
+      "scala": [
+        "Cipher\\.getInstance\\s*\\(\\s*[\"'](?:DES|DESede|RC4|Blowfish)",
+        "val cipher = Cipher.getInstance(\"DES/ECB/PKCS5Padding\")",
+        "val cipher = Cipher.getInstance(\"AES/GCM/NoPadding\")",
+        "AES/GCM with a random IV"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "dockerfile-curl-insecure",
+    "category": "transport-security",
+    "cwe": "CWE-295",
+    "severity": "MEDIUM",
+    "title": "TLS verification disabled for a download during the image build in {lang} — review required",
+    "description": "A RUN step invokes curl with -k or --insecure, so the build accepts any certificate for the downloaded content. The resulting image bakes in whatever the network returned, and no signature or checksum step is implied by the command. The rule flags the option; whether the URL is internal is a review decision.",
+    "remediation": "Remove the verification bypass and validate a published checksum or signature for the downloaded artifact.",
+    "limitation": "Lexical: matches curl options on the RUN line; downloads performed by other tools are out of scope.",
+    "scopeT": "Single-line match on an insecure curl flag in {lang}.",
+    "fp": "A build that immediately verifies a pinned checksum is the accepted, documented exception.",
+    "recordDesc": "In {lang}, the image build downloads content with certificate verification disabled. The build host trusts the network path completely, so an on-path attacker can substitute the artifact and every container built from the image inherits it. The flag is usually added to work around a broken internal mirror and then remains in the recipe.",
+    "applicability": "{lang} images that fetch tools or artifacts at build time.",
+    "risk": "Supply-chain substitution during the build; MEDIUM severity.",
+    "why": "A download runs with certificate validation turned off.",
+    "fix": [
+      "Remove -k and --insecure.",
+      "Verify a pinned checksum or signature after download."
+    ],
+    "verifyT": "The build fails against a self-signed endpoint instead of accepting it.",
+    "sinks": {
+      "dockerfile": [
+        "\\bcurl\\s+(?:-[a-zA-Z]*k\\b|--insecure\\b)",
+        "RUN curl -k https://example.internal/install.sh | sh",
+        "RUN curl -fsS https://example.internal/install.sh -o /tmp/install.sh",
+        "no insecure flag and a verified checksum"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "compose-pid-host",
+    "category": "container-security",
+    "cwe": "CWE-250",
+    "severity": "MEDIUM",
+    "title": "Compose service shares the host PID namespace — review required",
+    "description": "pid: host puts the container in the host process namespace, so it can see and signal every process on the node and inspect their command lines. A compromise of the service then reaches workloads it was never meant to touch. The rule flags the setting; whether the service is trusted is a review decision.",
+    "remediation": "Remove pid: host and use the default isolated namespace, or add the specific capability the service actually needs.",
+    "limitation": "Lexical: matches the pid key at service level; an override file that replaces it is out of scope.",
+    "scopeT": "Single-line match on pid: host in {lang}.",
+    "fp": "A documented node-level agent that requires host process visibility is the accepted exception.",
+    "recordDesc": "In {lang}, a service shares the host PID namespace. Process isolation is one of the boundaries a container is expected to provide, and removing it exposes process lists and signal delivery across the node. Command lines frequently carry credentials, so the exposure is not limited to availability.",
+    "applicability": "{lang} Compose deployments on shared hosts.",
+    "risk": "Cross-container process visibility and signalling; MEDIUM severity.",
+    "why": "The container joins the host PID namespace.",
+    "fix": [
+      "Remove pid: host.",
+      "Grant only the specific capability the service needs."
+    ],
+    "verifyT": "The service sees only its own processes inside the container.",
+    "sinks": {
+      "compose": [
+        "\\bpid\\s*:\\s*[\"']?host\\b",
+        "    pid: \"host\"",
+        "    pid: \"container\"",
+        "default PID namespace"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "java-client-trust-empty",
+    "category": "transport-security",
+    "cwe": "CWE-295",
+    "severity": "HIGH",
+    "title": "Client certificate validation left empty in a trust manager in {lang} — review required",
+    "description": "An X509TrustManager implementation with an empty checkClientTrusted body accepts every client certificate, including self-signed and expired ones. Mutual TLS then authenticates nothing while the server still believes it is protected. The rule flags the empty override; whether the listener is exposed is a review decision.",
+    "remediation": "Load the intended trust store and delegate validation to it, or remove the custom trust manager entirely.",
+    "limitation": "Lexical: matches an empty method body on one line; a body that only logs is not reported.",
+    "scopeT": "Single-line match on an empty checkClientTrusted in {lang}.",
+    "fp": "A test harness with a documented in-memory trust store is the accepted false positive.",
+    "recordDesc": "In {lang}, checkClientTrusted is implemented as an empty method. The contract is to throw when the chain is not trusted; returning normally means every chain is trusted. This pattern appears in quick mutual-TLS setups where the client is authenticated by another header, leaving the certificate path as decoration.",
+    "applicability": "{lang} services that require or offer mutual TLS.",
+    "risk": "Authentication bypass on the client-certificate path; HIGH severity.",
+    "why": "The trust manager accepts any client chain.",
+    "fix": [
+      "Delegate to a trust store.",
+      "Remove the custom manager if mutual TLS is not required."
+    ],
+    "verifyT": "A self-signed client certificate is rejected during the handshake.",
+    "sinks": {
+      "java": [
+        "\\bcheckClientTrusted\\s*\\([^)]*\\)\\s*\\{\\s*\\}",
+        "public void checkClientTrusted(X509Certificate[] chain, String authType) {}",
+        "public void checkClientTrusted(X509Certificate[] chain, String authType) { validate(chain); }",
+        "a trust-store-backed checkClientTrusted"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "swift-ats-arbitrary-loads",
+    "category": "cleartext-transmission",
+    "cwe": "CWE-319",
+    "severity": "MEDIUM",
+    "title": "App Transport Security disabled for arbitrary loads in {lang} — review required",
+    "description": "NSAllowsArbitraryLoads in the Info.plist disables App Transport Security for every host, so the app accepts plain HTTP and weak TLS again. The setting also removes forward secrecy expectations that ATS would otherwise enforce. The rule flags the key; whether a specific host still needs an exception is a review decision.",
+    "remediation": "Remove NSAllowsArbitraryLoads and, if a legacy host is unavoidable, add a narrowly scoped exception dictionary for that domain only.",
+    "limitation": "Lexical: matches the plist key line; per-domain exception dictionaries are out of scope.",
+    "scopeT": "Single-line match on the ATS arbitrary-loads key in {lang}.",
+    "fp": "A documented, time-boxed exception for one legacy host is the accepted exception when scoped per domain.",
+    "recordDesc": "In {lang}, App Transport Security is disabled globally. ATS exists to make plaintext and outdated TLS fail closed; the arbitrary-loads key reopens both for every connection the app makes, including third-party SDK traffic the team may not have enumerated. A global switch is rarely what the failing host actually needed.",
+    "applicability": "{lang} iOS applications that call remote services.",
+    "risk": "Plaintext and downgraded TLS connections; MEDIUM severity.",
+    "why": "The app opts out of ATS for all hosts.",
+    "fix": [
+      "Remove NSAllowsArbitraryLoads.",
+      "Use a per-domain exception only where a legacy host requires it."
+    ],
+    "verifyT": "The plist contains no global ATS bypass and a plaintext request fails.",
+    "sinks": {
+      "swift": [
+        "NSAllowsArbitraryLoads\\s*</key>",
+        "<key>NSAllowsArbitraryLoads</key>",
+        "<key>NSAllowsArbitraryLoadsInWebContent</key>",
+        "no global ATS bypass key"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "rust-thread-rng",
+    "category": "weak-cryptography",
+    "cwe": "CWE-330",
+    "severity": "MEDIUM",
+    "title": "Non-cryptographic thread RNG used where a token may be generated in {lang} — review required",
+    "description": "rand::thread_rng is a fast user-space generator seeded from the OS but not designed for secrets; its output can be predicted once state is observed. Using it for tokens, reset codes or keys weakens the value regardless of length. The rule flags the call; whether the value is security-relevant is a review decision.",
+    "remediation": "Use rand::rngs::OsRng or getrandom for tokens, nonces and keys, and reserve thread_rng for simulations and sampling.",
+    "limitation": "Lexical: matches thread_rng() calls; a wrapper that already mixes in OsRng is out of scope.",
+    "scopeT": "Single-line match on thread_rng() in {lang}.",
+    "fp": "Sampling and test-data generation are the accepted false positives.",
+    "recordDesc": "In {lang}, thread_rng is used. The generator is fast and convenient, but its state is process-local and reachable by any code in the same process; it is not a cryptographically secure source. Security tokens need the OS generator, which is what OsRng provides.",
+    "applicability": "{lang} services that mint tokens, nonces or identifiers.",
+    "risk": "Predictable tokens enabling guessing; MEDIUM severity.",
+    "why": "A non-cryptographic RNG may feed a security value.",
+    "fix": [
+      "Use OsRng or getrandom for security values.",
+      "Keep thread_rng for non-security sampling."
+    ],
+    "verifyT": "Token generation calls OsRng and a state-compromise test cannot reproduce outputs.",
+    "sinks": {
+      "rust": [
+        "\\bthread_rng\\s*\\(\\s*\\)",
+        "let token: u64 = thread_rng().gen();",
+        "let key = OsRng.gen::<[u8; 32]>();",
+        "OsRng for every security value"
+      ]
+    }
+  }
+]

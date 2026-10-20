@@ -1,0 +1,219 @@
+[
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "spring-permit-all",
+    "category": "access-control",
+    "cwe": "CWE-284",
+    "severity": "HIGH",
+    "title": "Spring Security permits every request in {lang} — review required",
+    "description": "The security chain ends with anyRequest().permitAll(), so every path that reaches the filter chain is allowed without authentication or role checks. Endpoints that relied on the global rule for protection stay reachable by anonymous callers. The rule matches the terminal permission on the chain; whether every path is intentionally public is a review decision.",
+    "remediation": "Replace the blanket permit with explicit matchers: public paths get permitAll(), everything else gets authenticated() plus the required authority, and the fallback is denyAll().",
+    "limitation": "Lexical: matches a single-line anyRequest().permitAll() chain; multi-line builders and path-specific matchers are out of scope.",
+    "scopeT": "Single-line match on the terminal permitAll() of a Spring Security chain in {lang}.",
+    "fp": "Services with no protected endpoints at all are the accepted, documented exception.",
+    "recordDesc": "In {lang}, the authorization chain ends with anyRequest().permitAll(). Spring then treats every request as allowed once it reaches the filter, so a controller added months later is exposed by default rather than protected by default. Authentication may still run, but no authorization decision is made, and nothing in the configuration records which endpoints were meant to be public.",
+    "applicability": "{lang} services using Spring Security HttpSecurity configuration.",
+    "risk": "Unauthenticated access to every mapped endpoint; HIGH severity.",
+    "why": "The terminal authorization rule allows every request.",
+    "fix": [
+      "Use authenticated() as the default and permitAll() only for named public paths.",
+      "Finish the chain with denyAll()."
+    ],
+    "verifyT": "Re-scan shows anyRequest().authenticated() and an anonymous request to a protected path returns 401/403.",
+    "sinks": {
+      "java": [
+        "anyRequest\\(\\)\\s*\\.permitAll\\(\\)",
+        "http.authorizeRequests().anyRequest().permitAll()",
+        "http.authorizeRequests().anyRequest().authenticated()",
+        "a chain ending in authenticated() with named public paths"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "express-stack-disclosure",
+    "category": "information-disclosure",
+    "cwe": "CWE-209",
+    "severity": "MEDIUM",
+    "title": "Stack trace returned to the client in {lang} — review required",
+    "description": "The error handler serializes err.stack into the HTTP response. A stack trace names internal files, functions, dependencies and sometimes query fragments or configuration values, which shortens an attacker’s path to a working exploit. The rule matches the response sink; whether the branch is reachable in production is a review decision.",
+    "remediation": "Return a generic error body with a correlation id, log the stack server-side, and expose details only behind an authenticated diagnostics route.",
+    "limitation": "Lexical: matches .send/.json carrying err.stack on one line; custom error serializers are out of scope.",
+    "scopeT": "Single-line match on a response sink receiving a stack trace in {lang}.",
+    "fp": "Development-only handlers gated by an explicit environment check are the accepted exception.",
+    "recordDesc": "In {lang}, the error path writes err.stack into the response body. Stack traces reveal the framework, library versions, absolute paths and the internal call sequence, and error objects frequently carry request data as well. What looks like a developer convenience becomes reconnaissance for anyone who can trigger an exception.",
+    "applicability": "{lang} Express-style error handlers.",
+    "risk": "Internal structure and dependency disclosure; MEDIUM severity.",
+    "why": "A stack trace is serialized into the HTTP response.",
+    "fix": [
+      "Send a generic message plus a correlation id.",
+      "Log the stack server-side."
+    ],
+    "verifyT": "Triggered errors return no stack and the server log still carries the trace.",
+    "sinks": {
+      "javascript": [
+        "\\.(?:send|json)\\([^)\\n]*\\b(?:err|error)\\.stack\\b",
+        "res.status(500).send(err.stack)",
+        "res.status(500).send({ message: \"Internal error\" })",
+        "a generic error body with a correlation id"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "js-function-constructor",
+    "category": "code-injection",
+    "cwe": "CWE-95",
+    "severity": "HIGH",
+    "title": "Dynamic code compilation via Function constructor in {lang} — review required",
+    "description": "new Function() compiles a string into executable code in the global scope. When any part of that string is request-derived, the caller runs arbitrary JavaScript with the application’s privileges. The rule flags the constructor; the provenance of the string is a review decision.",
+    "remediation": "Replace dynamic compilation with a fixed dispatch table, or parse the expression with a restricted, non-executing evaluator.",
+    "limitation": "Lexical: matches the Function constructor on one line; dataflow to the argument is out of scope.",
+    "scopeT": "Single-line match on new Function() in {lang}.",
+    "fp": "Template engines that compile only constant source at start-up are the accepted false positives.",
+    "recordDesc": "In {lang}, new Function() turns a string into code. Unlike eval it always compiles in global scope and cannot see local closures, but that does not make it safe: whatever reaches the argument executes with full access to the window, network and storage. Feature flags, formula builders and rule engines are the usual places where user text reaches this constructor.",
+    "applicability": "{lang} browser or Node.js code that evaluates user-supplied expressions.",
+    "risk": "Arbitrary script execution in the application origin; HIGH severity.",
+    "why": "A runtime string is compiled by the Function constructor.",
+    "fix": [
+      "Use a dispatch table of pre-defined functions.",
+      "If expressions are required, use a non-executing parser with a closed grammar."
+    ],
+    "verifyT": "Re-scan shows no Function constructor on request data and an injection test cannot execute code.",
+    "sinks": {
+      "javascript": [
+        "\\bnew\\s+Function\\s*\\(",
+        "const fn = new Function(\"return \" + expression);",
+        "const fn = (x) => x + 1;",
+        "a dispatch table of pre-defined functions"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "ruby-marshal-load",
+    "category": "unsafe-deserialization",
+    "cwe": "CWE-502",
+    "severity": "HIGH",
+    "title": "Object injection via Marshal.load in {lang} — review required",
+    "description": "Marshal.load rebuilds arbitrary Ruby objects from a byte string, including their class names and instance state. A crafted payload reaches code paths in classes the application has loaded, which is the entry point for Ruby object-injection chains. The rule flags the call; whether the bytes are trusted is a review decision.",
+    "remediation": "Use JSON.parse for untrusted data, or sign the payload and verify the signature before decoding; never Marshal.load request data.",
+    "limitation": "Lexical call match; reachable gadget classes depend on the loaded application.",
+    "scopeT": "Single-line match on Marshal.load in {lang}.",
+    "fp": "Cache entries produced and consumed inside one trusted process are the accepted false positives.",
+    "recordDesc": "In {lang}, Marshal.load decodes a byte string into live objects. Ruby honours the class names embedded in the stream and invokes hooks during reconstruction, so an attacker who controls the bytes chooses which code runs. Session cookies, queue messages and cached fragments are the common carriers for this payload.",
+    "applicability": "{lang} applications that decode cookies, jobs, or cache values with Marshal.",
+    "risk": "Remote code execution through object injection; HIGH severity.",
+    "why": "Untrusted bytes are reconstructed into Ruby objects.",
+    "fix": [
+      "Decode untrusted data with JSON.parse.",
+      "Authenticate the payload before decoding."
+    ],
+    "verifyT": "Re-scan shows no Marshal.load on request data and a malformed payload is rejected without object construction.",
+    "sinks": {
+      "ruby": [
+        "\\bMarshal\\.(?:load|restore)\\b",
+        "data = Marshal.load(params[:state])",
+        "data = JSON.parse(params[:state])",
+        "JSON.parse on a signed payload"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "js-redos-regexp",
+    "category": "denial-of-service",
+    "cwe": "CWE-1333",
+    "severity": "MEDIUM",
+    "title": "Regular expression compiled from input in {lang} — review required",
+    "description": "new RegExp() compiles a pattern supplied at runtime. A pattern with nested quantifiers backtracks catastrophically on crafted input and blocks the event loop, so one request can stall every other. The rule flags compilation of non-literal patterns; the complexity of the supplied pattern is a review decision.",
+    "remediation": "Compile constant patterns only, escape user input with a vetted escaper, and bound input length and matching time.",
+    "limitation": "Lexical: detects a non-literal first argument; patterns assembled elsewhere are out of scope.",
+    "scopeT": "Single-line match on new RegExp() with a non-literal argument in {lang}.",
+    "fp": "Patterns built from a validated allowlist of constant fragments are the accepted exception.",
+    "recordDesc": "In {lang}, new RegExp() builds a matcher from a runtime string. JavaScript has no match timeout, so a pattern like (a+)+$ against a long non-matching string pins the thread for seconds or minutes. Search filters, routing rules and validation helpers are the usual places where request text becomes a pattern.",
+    "applicability": "{lang} services that build matchers from request parameters or configuration.",
+    "risk": "Single-request event-loop exhaustion; MEDIUM severity.",
+    "why": "A regular expression is compiled from non-literal input.",
+    "fix": [
+      "Compile constant patterns only.",
+      "Escape input with a vetted escaper and bound its length."
+    ],
+    "verifyT": "Re-scan shows literal-only RegExp construction and a long crafted input completes within the request budget.",
+    "sinks": {
+      "javascript": [
+        "\\bnew\\s+RegExp\\(\\s*(?![\"'`])",
+        "const re = new RegExp(userPattern);",
+        "const re = new RegExp(\"^[a-z]+$\");",
+        "a constant pattern with escaped user input"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "python-redos-compile",
+    "category": "denial-of-service",
+    "cwe": "CWE-1333",
+    "severity": "MEDIUM",
+    "title": "Regular expression compiled from input in {lang} — review required",
+    "description": "re.compile() builds a matcher from a runtime string. Python’s backtracking engine has no default timeout, so a pattern with nested quantifiers can consume a worker for an unbounded time on crafted input. The rule flags compilation from a non-literal argument.",
+    "remediation": "Compile constant patterns only, escape user input with re.escape, cap input length, and run untrusted matches in a bounded worker.",
+    "limitation": "Lexical: detects a non-literal first argument; patterns assembled in other modules are out of scope.",
+    "scopeT": "Single-line match on re.compile() with a non-literal argument in {lang}.",
+    "fp": "Patterns assembled from a fixed allowlist of constant fragments are the accepted exception.",
+    "recordDesc": "In {lang}, re.compile() turns request text into a matcher. The backtracking engine explores alternatives exponentially on adversarial input, and nothing in the standard library stops it. Validation endpoints, log parsers and search filters therefore become a denial-of-service surface when the pattern is user supplied.",
+    "applicability": "{lang} services that compile patterns from parameters or stored configuration.",
+    "risk": "Worker exhaustion through catastrophic backtracking; MEDIUM severity.",
+    "why": "A regular expression is compiled from non-literal input.",
+    "fix": [
+      "Compile constant patterns only.",
+      "Escape input with re.escape and bound its length."
+    ],
+    "verifyT": "Re-scan shows literal-only compilation and a crafted input returns within the request budget.",
+    "sinks": {
+      "python": [
+        "\\bre\\.compile\\(\\s*(?![rRbB]?\\s*[\"'])",
+        "pattern = re.compile(user_input)",
+        "pattern = re.compile(r\"^[a-z]+$\")",
+        "a constant pattern with re.escape on input"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "jwt-verify-disabled",
+    "category": "authentication",
+    "cwe": "CWE-347",
+    "severity": "HIGH",
+    "title": "JWT signature verification disabled in {lang} — review required",
+    "description": "The decode options set verify_signature to False, so the token payload is trusted without checking who signed it. Anyone can mint a token with any subject or role and the application accepts it. The rule flags the explicit option; a verifier that is genuinely disabled elsewhere is a review decision.",
+    "remediation": "Leave signature verification enabled, pin an explicit algorithm allowlist, and validate issuer, audience and expiry on every decode.",
+    "limitation": "Lexical: matches the explicit option assignment on one line; custom verifier wrappers are out of scope.",
+    "scopeT": "Single-line match on verify_signature disabled in {lang}.",
+    "fp": "Decoders used only to read an already-verified token’s claims are the accepted exception and must say so.",
+    "recordDesc": "In {lang}, the JWT decode options disable signature verification. The token then becomes a self-asserted identity document: the subject, roles and tenant come from the attacker’s own payload and every downstream authorization decision inherits them. The mistake is easy to introduce while debugging an expired key and easy to miss in review because the token still parses.",
+    "applicability": "{lang} services that validate bearer tokens.",
+    "risk": "Authentication bypass and privilege escalation; HIGH severity.",
+    "why": "Signature verification is explicitly turned off.",
+    "fix": [
+      "Remove the verify_signature override.",
+      "Pin algorithms and validate iss/aud/exp."
+    ],
+    "verifyT": "A token signed with the wrong key is rejected and claims are never read without verification.",
+    "sinks": {
+      "python": [
+        "[\"']?verify_signature[\"']?\\s*[:=]\\s*(?:False|false)",
+        "jwt.decode(token, options={\"verify_signature\": False})",
+        "jwt.decode(token, options={\"verify_signature\": True})",
+        "verification enabled with a pinned algorithm allowlist"
+      ]
+    }
+  }
+]

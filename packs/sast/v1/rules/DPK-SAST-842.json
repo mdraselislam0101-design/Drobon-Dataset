@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-842",
+  "title": "Log line built with an explicit CRLF in javascript — review required",
+  "description": "A logging call in javascript concatenates an explicit carriage-return/line-feed pair into the message. A log processor that treats the event as one line will then show a forged second entry: an attacker who can influence the appended text writes whatever the operator later reads as a separate, trusted event. The rule matches the explicit CRLF in the call; it does not prove the value is attacker controlled.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-117",
+  "category": "log-forging",
+  "remediation": "Strip or encode CR and LF before logging, log structured fields instead of concatenated text, and configure the sink to escape control characters.",
+  "limitation": "Lexical: matches explicit CRLF escapes inside common log calls; loggers that encode control characters internally are out of scope.",
+  "languages": [
+    "javascript"
+  ],
+  "patterns": [
+    {
+      "source": "\\b(?:log(?:ger)?|console)\\.(?:info|warn|error|debug|log)\\([^)\\n]*\\\\r\\\\n"
+    }
+  ],
+  "tests": [
+    {
+      "line": "logger.info(\"login \" + user + \"\\r\\n\")",
+      "match": true
+    },
+    {
+      "line": "# audit: logger.info(\"login \" + user + \"\\r\\n\") present",
+      "match": true
+    },
+    {
+      "line": "logger.info(\"login\", { user })",
+      "match": false
+    },
+    {
+      "line": "# verified: logger.info(\"login\", { user })",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1020"
+  ]
+}

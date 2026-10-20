@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-255",
+  "title": "Expires header is not a valid HTTP date",
+  "description": "The Expires header carries a value that is not an HTTP date, such as `0` or `-1`. A user agent cannot parse it, so the attribute is ignored and the freshness decision falls back to heuristic caching from the other headers, which usually gives the response a longer life than the deployment intended.",
+  "severity": "LOW",
+  "cwe": "CWE-16",
+  "category": "cache-control",
+  "remediation": "Send an HTTP date, or drop Expires and express the lifetime with Cache-Control max-age. Never use the legacy `0` or `-1` sentinels.",
+  "limitation": "One header value. The rule validates the date shape only; it does not compute the freshness lifetime a cache would derive.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Expires",
+    "valuePattern": "^\\s*(?![A-Za-z]{3}, \\d{2} [A-Za-z]{3} \\d{4} \\d{2}:\\d{2}:\\d{2} GMT\\s*$)\\S"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Expires": "0"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Expires": "-1"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Expires": "Thu, 01 Jan 1970 00:00:00 GMT"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Cache-Control": "no-store"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1324"
+  ]
+}

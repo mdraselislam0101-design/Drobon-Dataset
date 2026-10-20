@@ -7,7 +7,7 @@
   "cwe": "CWE-1275",
   "category": "cookie-flags",
   "remediation": "Add SameSite=Lax (or Strict for sensitive sessions; None only with Secure for intentional third-party use) to every cookie.",
-  "limitation": "One header value counts as one cookie: a folded multi-cookie single value may under-flag. Responses that set no cookies never match.",
+  "limitation": "One header value counts as one cookie: a folded multi-cookie single value may under-flag. Only a recognised SameSite value (Strict, Lax or None) counts as the attribute: an empty or unrecognised value is ignored by user agents, which then apply their own default, and that default is browser policy rather than evidence in this response. A `SameSite=None` cookie without `Secure` is refused by browsers and is reported by DPK-DAST-071. Responses that set no cookies never match.",
   "check": {
     "type": "cookie-missing-flag",
     "flag": "SameSite"
@@ -40,7 +40,62 @@
         "headers": {}
       },
       "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "set-cookie": "id=1; Path=/; Secure; HttpOnly; SameSite = Strict"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "set-cookie": "id=1; Secure; HttpOnly; SameSite="
+        },
+        "body": ""
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "set-cookie": "no-equals-sign"
+        },
+        "body": ""
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "set-cookie": "id=1; Secure; HttpOnly; SameSite=none"
+        },
+        "body": ""
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "set-cookie": "id=1; SameSite=None"
+        }
+      },
+      "match": false
     }
   ],
-  "patternRefs": ["DPK-PAT-0008"]
+  "patternRefs": [
+    "DPK-PAT-0008"
+  ]
 }

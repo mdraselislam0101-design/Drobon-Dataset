@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-207",
+  "title": "Content-Security-Policy style-src allows unsafe-hashes",
+  "description": "The Content-Security-Policy style-src directive lists the `'unsafe-hashes'` keyword, which permits style attributes and inline style blocks whose text matches a hash listed in the policy. Any injected markup that reuses one of those trusted style bodies is applied even though the policy otherwise requires a nonce.",
+  "severity": "LOW",
+  "cwe": "CWE-693",
+  "category": "csp-weakness",
+  "remediation": "Remove `'unsafe-hashes'` from style-src and move the trusted declarations into a stylesheet the policy already allows. Replace attribute styles with classes.",
+  "limitation": "One header value and one directive. The rule reports the keyword in style-src; it cannot tell whether any element in the document carries a style body that matches a listed hash.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Content-Security-Policy",
+    "valuePattern": "(?:^|;)\\s*style-src\\s[^;]*(?<=\\s)'unsafe-hashes'(?=[\\s;]|$)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "style-src 'self' 'unsafe-hashes'"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-hashes' 'sha256-def456='"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "style-src 'self' 'sha256-def456='"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'unsafe-hashes'; style-src 'self'"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1276"
+  ]
+}

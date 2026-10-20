@@ -2,16 +2,16 @@
   "schemaVersion": "drobon.pack.dast/v1",
   "id": "DPK-DAST-021",
   "title": "Weak Content-Security-Policy (unsafe-inline) header value",
-  "description": "The response carries Content-Security-Policy (unsafe-inline) with a weak or deprecated value. A weak value grants partial protection at best. This check matches the weak value directly.",
+  "description": "A script or style directive still permits inline code through 'unsafe-inline'. When the same directive also carries a nonce or a hash, browsers ignore 'unsafe-inline', so that policy is not reported. The check looks at script-src, script-src-elem, script-src-attr, style-src, style-src-elem, style-src-attr and default-src only; a policy that neutralises inline code with a nonce is left alone.",
   "severity": "LOW",
   "cwe": "CWE-693",
   "category": "security-headers",
-  "remediation": "Strengthen the value (nonce-based scripts).",
-  "limitation": "Value check: it cannot confirm the deployment context.",
+  "remediation": "Replace 'unsafe-inline' with a per-response nonce or a hash of each inline block, and remove the keyword so a regression is visible.",
+  "limitation": "Directive-scoped value check: a nonce or hash anywhere in the same directive neutralises 'unsafe-inline' and suppresses the finding. It cannot tell whether the nonce is actually random, nor whether every inline script carries it, and it does not evaluate the deployment context.",
   "check": {
     "type": "response-header-matches",
     "header": "Content-Security-Policy",
-    "valuePattern": "unsafe-inline"
+    "valuePattern": "(?:^|;)\\s*(?:script-src(?:-elem|-attr)?|style-src(?:-elem|-attr)?|default-src)(?=[\\s;]|$)(?![^;]*(?:'nonce-[^'\\s]+'|'sha(?:256|384|512)-[^'\\s]+'))[^;]*'?unsafe-inline'?(?=['\\s;]|$)"
   },
   "tests": [
     {
@@ -39,6 +39,66 @@
         "url": "https://app.example/",
         "status": 200,
         "headers": {
+          "Content-Security-Policy": "script-src-attr 'unsafe-inline'"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'unsafe-inline' 'nonce-abc'"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'unsafe-inline' 'sha256-AAA'"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "style-src 'unsafe-inline' 'nonce-xyz'"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "img-src 'unsafe-inline'"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'unsafe-inline-x'"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
           "Content-Security-Policy": "script-src 'nonce-a1b2'"
         }
       },
@@ -51,6 +111,16 @@
         "headers": {}
       },
       "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src https://nonce-cdn.example 'unsafe-inline'"
+        }
+      },
+      "match": true
     }
   ],
   "patternRefs": [

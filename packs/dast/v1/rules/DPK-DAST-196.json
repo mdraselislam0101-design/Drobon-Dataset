@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-196",
+  "title": "Access-Control-Allow-Origin carries userinfo",
+  "description": "The Access-Control-Allow-Origin value contains a `user@host` form. An origin has no userinfo component, so the value can never match the requesting origin; it also suggests the value was assembled from an untrusted URL rather than from a fixed allow-list.",
+  "severity": "LOW",
+  "cwe": "CWE-942",
+  "category": "cors",
+  "remediation": "Compare a parsed origin object against an allow-list and emit `origin.scheme://origin.host[:port]`. Never copy a URL string into the header.",
+  "limitation": "One header value. The rule reports the userinfo form and cannot see whether the value was derived from the request Origin.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Access-Control-Allow-Origin",
+    "valuePattern": "^\\s*https?://[^\\s/@]+@"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Access-Control-Allow-Origin": "https://user@app.example"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Access-Control-Allow-Origin": "https://user:pass@app.example"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Access-Control-Allow-Origin": "https://app.example"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Access-Control-Allow-Origin": "https://app.example/path@x"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1265"
+  ]
+}

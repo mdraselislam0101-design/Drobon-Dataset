@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-223",
+  "title": "H2 database console disclosed",
+  "description": "The response is the H2 console login form: the H2 Console heading together with the JDBC URL field identifies the embedded database console. The form accepts a JDBC URL, so the console itself decides which database to open.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "debug-exposure",
+  "remediation": "Disable spring.h2.console.enabled outside development, and never expose the console on a network interface. If it is needed, bind it to loopback and require the database password.",
+  "limitation": "One response body. The rule reports the console form; it does not submit a JDBC URL and cannot show which databases the server can reach.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*H2\\ Console)(?=[\\s\\S]*JDBC\\ URL)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>H2 Console</title></head><body><form method=\"post\" action=\"login.do\"><input name=\"url\" value=\"jdbc:h2:mem:test\"><label>JDBC URL</label><input name=\"user\"></form></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<!doctype html><html><body><h1>H2 Console</h1><form><input name=\"driver\" value=\"org.h2.Driver\"><span>JDBC URL</span></form></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title></title></head><body><form method=\"post\" action=\"login.do\"><input name=\"url\" value=\"jdbc:h2:mem:test\"><label></label><input name=\"user\"></form></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1292"
+  ]
+}

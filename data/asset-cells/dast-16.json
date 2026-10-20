@@ -1,0 +1,801 @@
+[
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "alt-svc-h2c",
+  "category": "transport-security",
+  "cwe": "CWE-319",
+  "severity": "MEDIUM",
+  "title": "Alt-Svc advertises a cleartext HTTP/2 alternative",
+  "description": "The Alt-Svc response header names h2c as an alternative service. h2c is HTTP/2 without TLS: a client that follows the advertisement sends subsequent requests to the named authority in cleartext, even when the original response arrived over HTTPS. The header is evidence of an offered cleartext path, not of a client that took it.",
+  "remediation": "Stop advertising h2c on internet-facing origins. Publish only TLS-based alternatives (h2, h3) and let HTTP/1.1 clients upgrade through the normal TLS listener.",
+  "limitation": "Header value check on one response. It cannot prove the advertised authority is reachable or that any client selected the alternative, and it does not follow the advertisement.",
+  "scopeT": "One response whose Alt-Svc value offers an h2c alternative.",
+  "fp": "A lab or loopback deployment may advertise h2c deliberately for local testing; the observation still shows a cleartext alternative offered to whoever received the header.",
+  "recordDesc": "An Alt-Svc advertisement offers h2c, the cleartext variant of HTTP/2, as an alternative service. A client that switches to it keeps the same origin semantics but loses TLS on every later request, so cookies and tokens for that origin cross the network unprotected.",
+  "applicability": "Responses from services that publish alternative-service advertisements, including CDNs and HTTP/3 front ends.",
+  "risk": "Later requests to the same origin may be downgraded to cleartext; MEDIUM severity because the header is an offer, not a completed downgrade.",
+  "why": "The Alt-Svc value contains an h2c protocol identifier.",
+  "fix": [
+   "Remove h2c from Alt-Svc advertisements.",
+   "Advertise h2 and h3 only, with authorities that terminate TLS."
+  ],
+  "verifyT": "Request the endpoint and confirm Alt-Svc lists only TLS-based protocol identifiers or is absent.",
+  "cells": [
+   {
+    "suffix": "h2c",
+    "lang": "http",
+    "name": "Alt-Svc h2c alternative",
+    "safe": "Alt-Svc with TLS-based alternatives only",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Alt-Svc",
+     "valuePattern": "(?:^|,)\\s*h2c\\s*=\\s*\""
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Alt-Svc": "h2c=\":80\""
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Alt-Svc": "h3=\":443\", h2c=\":8080\"; ma=86400"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Alt-Svc": "h2c=\":443\""
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Alt-Svc": "h3=\":443\"; ma=86400"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Alt-Svc": "h2=\":443\"; ma=60"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Alt-Svc": "clear"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {}
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "corp-cross-origin",
+  "category": "security-headers",
+  "cwe": "CWE-693",
+  "severity": "LOW",
+  "title": "Cross-Origin-Resource-Policy explicitly allows every origin",
+  "description": "The response sets Cross-Origin-Resource-Policy to cross-origin, which is the permissive value: any site may embed the resource and read it through a no-cors or cross-origin load. The header is present, so DPK-DAST-014 (missing CORP) stays silent; the finding is the deliberate opt-out of the protection that rule asks for.",
+  "remediation": "Set Cross-Origin-Resource-Policy to same-origin for application responses, or same-site where subdomains legitimately share assets. Keep cross-origin only for resources that are public by design.",
+  "limitation": "One header value. It does not classify the resource (public image versus authenticated document), so a deliberate public asset and an accidental application response look identical.",
+  "scopeT": "One response whose Cross-Origin-Resource-Policy value is cross-origin.",
+  "fp": "Public assets (fonts, images, CDN payloads) that are meant to be embedded by any site are reported; the observation cannot distinguish design intent.",
+  "recordDesc": "Cross-Origin-Resource-Policy was explicitly set to cross-origin, the value that permits every site to load the resource in a cross-origin context. The protection exists to stop other origins from embedding a response; this value removes it, and a leak or a side-channel that relies on embedding becomes reachable again.",
+  "applicability": "Responses that opt into cross-origin embedding of their body.",
+  "risk": "Cross-origin embedding of responses that should stay origin-bound; LOW severity because the header is defense-in-depth.",
+  "why": "The Cross-Origin-Resource-Policy value is exactly cross-origin.",
+  "fix": [
+   "Use same-origin for application and API responses.",
+   "Use same-site when subdomains must share the resource."
+  ],
+  "verifyT": "Request the endpoint and confirm Cross-Origin-Resource-Policy is same-origin or same-site.",
+  "cells": [
+   {
+    "suffix": "cross-origin",
+    "lang": "http",
+    "name": "CORP set to cross-origin",
+    "safe": "CORP scoped to the origin",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Cross-Origin-Resource-Policy",
+     "valuePattern": "^cross-origin$"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/doc/1",
+       "status": 200,
+       "headers": {
+        "Cross-Origin-Resource-Policy": "cross-origin"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/doc/1",
+       "status": 200,
+       "headers": {
+        "Cross-Origin-Resource-Policy": "CROSS-ORIGIN"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/doc/1",
+       "status": 200,
+       "headers": {
+        "Cross-Origin-Resource-Policy": "same-origin"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/doc/1",
+       "status": 200,
+       "headers": {
+        "Cross-Origin-Resource-Policy": "same-site"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/doc/1",
+       "status": 200,
+       "headers": {
+        "Cross-Origin-Resource-Policy": "cross-origin; same-origin"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/doc/1",
+       "status": 200,
+       "headers": {}
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "csp-report-uri-plaintext",
+  "category": "transport-security",
+  "cwe": "CWE-319",
+  "severity": "LOW",
+  "title": "Content-Security-Policy report-uri uses a plaintext endpoint",
+  "description": "The policy declares report-uri with an http:// endpoint. Violation reports travel outside the page: they carry the blocked URL, the document URL and the violated directive, so a plaintext collector exposes browsing context to anyone on the path. report-to is a different mechanism that names a group, not a URL, and is handled by the Report-To rule instead.",
+  "remediation": "Serve the report collector over HTTPS and list only https:// endpoints in report-uri, or migrate to report-to with an HTTPS endpoint in the Report-To header.",
+  "limitation": "First report-uri declaration only, matching the specification rule that later duplicates are ignored. It does not verify the endpoint is reachable, and it cannot see whether reports are actually sent.",
+  "scopeT": "One Content-Security-Policy value whose first report-uri declaration contains an http:// endpoint.",
+  "fp": "A collector on a loopback or private address that is deliberately plaintext is reported; the observation cannot judge where the report travels.",
+  "recordDesc": "A CSP report-uri declaration points at a plaintext endpoint. Every violation report sends the blocked resource URL, the document URL and policy details to that endpoint, so the reporting channel itself becomes a cleartext channel about the user’s browsing context.",
+  "applicability": "Responses that deliver a Content-Security-Policy with violation reporting.",
+  "risk": "Browsing context and blocked-URL information readable on the path; LOW severity because no credentials are included by the report format itself.",
+  "why": "The first report-uri declaration contains an http:// source.",
+  "fix": [
+   "Serve the collector over TLS and reference it with https://.",
+   "Migrate to Reporting API groups with an HTTPS endpoint."
+  ],
+  "verifyT": "Inspect the policy and confirm every report-uri value uses https://.",
+  "cells": [
+   {
+    "suffix": "report-uri",
+    "lang": "http",
+    "name": "CSP report-uri plaintext endpoint",
+    "safe": "CSP report-uri over TLS",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Content-Security-Policy",
+     "valuePattern": "^(?:(?!report-uri(?=[\\s;]|$))[^;]*;\\s*)*report-uri(?=[\\s;]|$)[^;]*?\\shttp://[^\\s;]+"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "default-src 'self'; report-uri http://collector.example/r"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "report-uri https://collector.example/r http://backup.example/r"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "report-uri https://collector.example/r"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "report-uri /local-collector"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "report-to http://collector.example"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "report-uri https://a.example; report-uri http://b.example"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {}
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "link-header-plaintext",
+  "category": "transport-security",
+  "cwe": "CWE-319",
+  "severity": "LOW",
+  "title": "Link header points at a plaintext origin",
+  "description": "An https response advertises a preconnect, preload or stylesheet target over http:// in its Link header. The browser may open the connection or fetch the resource as instructed, so the referenced request leaves TLS even though the document itself arrived over https. The observation is the advertised target, not proof of a completed fetch.",
+  "remediation": "Reference the target with https:// or a scheme-relative form that inherits the document scheme. Keep Link preconnect hints limited to origins that terminate TLS.",
+  "limitation": "Header value check on one https response. The rule reads Link targets only, not resource hints expressed in markup or CSS, and it cannot prove the browser acted on the hint.",
+  "scopeT": "One https response whose Link header names an http:// target.",
+  "fp": "An http:// target that immediately redirects to https is still reported; the first request already crossed the network in cleartext.",
+  "recordDesc": "A Link header on an https response names an http:// target. Resource hints are acted on before the page finishes loading: a preconnect opens a cleartext connection and a preload fetches the asset, so metadata and possibly content are exposed on the path even though the document was encrypted.",
+  "applicability": "HTTPS responses that emit Link preconnect, preload or stylesheet hints.",
+  "risk": "Cleartext metadata or asset fetch on the connection the hint opens; LOW severity because the fetched resource is usually public.",
+  "why": "The response is https and a Link target begins with http://.",
+  "fix": [
+   "Change the Link target to https://.",
+   "Use a scheme-relative target so the hint inherits https."
+  ],
+  "verifyT": "Request the endpoint over https and confirm every Link target keeps the https scheme.",
+  "cells": [
+   {
+    "suffix": "http-target",
+    "lang": "http",
+    "name": "Link header plaintext target",
+    "safe": "Link header over TLS",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Link",
+     "valuePattern": "<http://",
+     "requireScheme": "https"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Link": "<http://cdn.example/app.css>; rel=preload; as=style"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Link": "<http://api.example>; rel=preconnect"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Link": "<https://cdn.example/app.css>; rel=preload"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Link": "<//cdn.example/app.css>; rel=preload"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "http://app.example/",
+       "status": 200,
+       "headers": {
+        "Link": "<http://cdn.example/app.css>; rel=preload"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {}
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "refresh-protocol-relative",
+  "category": "open-redirect",
+  "cwe": "CWE-601",
+  "severity": "MEDIUM",
+  "title": "Refresh header uses a protocol-relative target",
+  "description": "The Refresh header names a protocol-relative target (//host/path). Browsers resolve it against the current scheme, so the navigation leaves the origin while the value itself carries no scheme for a reviewer or a filter to notice. The rule is distinct from DPK-DAST-094 (absolute Refresh target) and DPK-DAST-110 (plaintext Refresh target): here the value is cross-origin only after resolution.",
+  "remediation": "Use a path-relative Refresh target (a single leading slash) or an absolute https URL on an allow-listed host. Do not accept a Refresh value from request input.",
+  "limitation": "One Refresh value. The rule does not resolve the target, follow the navigation, or judge whether the destination is trusted.",
+  "scopeT": "One response whose Refresh header contains url= followed by a protocol-relative target.",
+  "fp": "A deliberate cross-origin jump to a trusted sibling host is reported; the header cannot express that trust.",
+  "recordDesc": "A Refresh header points at a protocol-relative URL. The browser resolves it against the response scheme and navigates to another host, so a value that looks local in a header dump becomes a cross-origin redirect at parse time; if any part of the value is attacker-influenced it is an open redirect.",
+  "applicability": "Responses that emit a Refresh header with a URL target.",
+  "risk": "Cross-origin navigation to a destination the server did not pin; MEDIUM severity when the value is influenced by request input.",
+  "why": "The Refresh value contains url= followed by //host.",
+  "fix": [
+   "Use a path-relative target such as /home.",
+   "If a cross-origin target is required, use an absolute https URL with an allow-list check."
+  ],
+  "verifyT": "Request the endpoint and confirm the Refresh target is path-relative or an allow-listed https URL.",
+  "cells": [
+   {
+    "suffix": "url",
+    "lang": "http",
+    "name": "Refresh protocol-relative target",
+    "safe": "Refresh with a path-relative target",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Refresh",
+     "valuePattern": "(?:^|;)\\s*url\\s*=\\s*['\"]?\\s*//"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Refresh": "0; url=//evil.example/x"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Refresh": "5; URL='//cdn.example/a'"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Refresh": "0; url=/home"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Refresh": "0; url=https://app.example/home"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Refresh": "0; url=http://app.example/home"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Refresh": "30"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {}
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "referrer-policy-nrwd",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "LOW",
+  "title": "Referrer-Policy sends full URLs to cross-origin destinations",
+  "description": "The policy no-referrer-when-downgrade sends the full referrer URL to every destination that is at least as secure as the current page. It strips the referrer only on a downgrade, so an https page still hands full paths and query strings to unrelated https sites. DPK-DAST-068 covers unsafe-url, which sends the full URL on every request; this rule covers the narrower default that leaks on every non-downgrade hop.",
+  "remediation": "Use strict-origin-when-cross-origin or same-origin. Both keep the full URL on same-origin navigation and send only the origin, or nothing, across origins.",
+  "limitation": "Header value check on one response. It cannot see which URLs carry sensitive query strings or whether a destination is third-party.",
+  "scopeT": "One response whose Referrer-Policy value is no-referrer-when-downgrade.",
+  "fp": "A site whose URLs are entirely public is still reported; the observation cannot judge the sensitivity of individual paths.",
+  "recordDesc": "The Referrer-Policy value is no-referrer-when-downgrade. The browser sends the full URL, including path and query string, to cross-origin destinations that use an equal or stronger scheme, and strips it only when the destination is weaker. Third-party analytics, CDNs and linked sites therefore learn the exact page a user came from.",
+  "applicability": "Responses that set Referrer-Policy, including framework defaults.",
+  "risk": "Path and query-string disclosure to third parties; LOW severity because the leak is metadata rather than credentials.",
+  "why": "The Referrer-Policy value is exactly no-referrer-when-downgrade.",
+  "fix": [
+   "Set strict-origin-when-cross-origin.",
+   "Set same-origin when no cross-origin referrer is needed at all."
+  ],
+  "verifyT": "Request the endpoint and confirm Referrer-Policy does not contain no-referrer-when-downgrade.",
+  "cells": [
+   {
+    "suffix": "value",
+    "lang": "http",
+    "name": "Referrer-Policy no-referrer-when-downgrade",
+    "safe": "Referrer-Policy scoped to origin",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Referrer-Policy",
+     "valuePattern": "(?:^|[,\\s])no-referrer-when-downgrade(?:$|[,\\s])"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Referrer-Policy": "no-referrer-when-downgrade"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Referrer-Policy": "strict-origin-when-cross-origin, no-referrer-when-downgrade"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Referrer-Policy": "strict-origin-when-cross-origin"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Referrer-Policy": "no-referrer"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Referrer-Policy": "unsafe-url"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {}
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "report-to-plaintext",
+  "category": "transport-security",
+  "cwe": "CWE-319",
+  "severity": "LOW",
+  "title": "Report-To names a plaintext endpoint",
+  "description": "The Report-To header is JSON that names reporting endpoints. One endpoint URL begins with http://, so CSP, NEL, deprecation and crash reports for this origin are posted in cleartext. DPK-DAST-043 reports a missing Report-To header; this rule reports a present header whose endpoint is unencrypted.",
+  "remediation": "Serve every reporting endpoint over HTTPS and update the Report-To JSON. If the collector is internal, terminate TLS in front of it rather than posting across a plaintext hop.",
+  "limitation": "One header value, matched on the endpoint URL form. The rule does not parse the JSON, so it cannot rank groups or max_age, and it does not cover the Reporting-Endpoints header syntax.",
+  "scopeT": "One Report-To header whose endpoint url value begins with http://.",
+  "fp": "A local-only collector is reported; the observation cannot show whether the endpoint is reachable from the internet.",
+  "recordDesc": "The Report-To header lists a plaintext endpoint. Reports describe blocked requests, network errors and other events tied to the user’s session, and they are posted by the browser to the named URL; over http:// those reports and their metadata are readable on the path.",
+  "applicability": "Responses that configure the Reporting API.",
+  "risk": "Session-linked event reports readable in transit; LOW severity because report bodies are diagnostic rather than credential-bearing.",
+  "why": "The Report-To JSON contains a url value beginning with http://.",
+  "fix": [
+   "Change the endpoint URL to https://.",
+   "Terminate TLS at the collector if it currently speaks plaintext."
+  ],
+  "verifyT": "Request the endpoint and confirm every Report-To endpoint url uses https://.",
+  "cells": [
+   {
+    "suffix": "endpoint",
+    "lang": "http",
+    "name": "Report-To plaintext endpoint",
+    "safe": "Report-To over TLS",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Report-To",
+     "valuePattern": "\"url\"\\s*:\\s*\"http://"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Report-To": "{\"group\":\"default\",\"max_age\":60,\"endpoints\":[{\"url\":\"http://collector.example/r\"}]}"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Report-To": "{\"group\":\"default\",\"endpoints\":[{\"url\":\"HTTP://collector.example/r\"}]}"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Report-To": "{\"group\":\"default\",\"endpoints\":[{\"url\":\"https://collector.example/r\"}]}"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Report-To": "{\"group\":\"default\",\"max_age\":60}"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Reporting-Endpoints": "default=\"http://collector.example/r\""
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {}
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "x-permitted-cross-domain-policies-all",
+  "category": "security-headers",
+  "cwe": "CWE-693",
+  "severity": "LOW",
+  "title": "X-Permitted-Cross-Domain-Policies permits every policy file",
+  "description": "The header is set to all, the most permissive value of the cross-domain policy control. Legacy plugin and document readers may then load a policy file from any location on the site and grant cross-domain access to the origin. DPK-DAST-044 reports the header missing; this rule reports an explicit all value, which is a different decision: the site has opted into permissive policy loading.",
+  "remediation": "Set X-Permitted-Cross-Domain-Policies to none unless a specific legacy client requires otherwise, and remove crossdomain.xml files that grant broad access.",
+  "limitation": "One header value. It grades the declared policy only, does not fetch the policy file it governs, and does not apply to clients that ignore the header.",
+  "scopeT": "One response whose X-Permitted-Cross-Domain-Policies value is all.",
+  "fp": "A site that does not serve cross-domain policy files at all is still reported; the header expresses intent, not an existing file.",
+  "recordDesc": "X-Permitted-Cross-Domain-Policies is set to all. The value tells legacy clients that a cross-domain policy file may live anywhere on the origin, removing the restriction on where a permissive policy can be picked up; combined with a forgotten crossdomain.xml it re-opens cross-origin data access.",
+  "applicability": "Responses consumed by legacy plugin or document clients.",
+  "risk": "Permissive cross-domain policy loading through legacy clients; LOW severity because modern browsers no longer use the mechanism.",
+  "why": "The X-Permitted-Cross-Domain-Policies value is exactly all.",
+  "fix": [
+   "Set the header to none.",
+   "Remove crossdomain.xml files that grant wildcard access."
+  ],
+  "verifyT": "Request the endpoint and confirm X-Permitted-Cross-Domain-Policies is none or absent.",
+  "cells": [
+   {
+    "suffix": "all",
+    "lang": "http",
+    "name": "cross-domain policies set to all",
+    "safe": "cross-domain policies restricted",
+    "check": {
+     "type": "response-header-matches",
+     "header": "X-Permitted-Cross-Domain-Policies",
+     "valuePattern": "^all$"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-Permitted-Cross-Domain-Policies": "all"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-Permitted-Cross-Domain-Policies": "ALL"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-Permitted-Cross-Domain-Policies": "none"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-Permitted-Cross-Domain-Policies": "master-only"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-Permitted-Cross-Domain-Policies": "all, none"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {}
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ }
+]

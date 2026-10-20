@@ -1,0 +1,71 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-143",
+  "title": "Access-Control-Allow-Origin is not a bare origin",
+  "description": "The Access-Control-Allow-Origin value carries a path or a trailing slash after the host. An origin, by definition, has no path component, so a browser never matches this value; the cross-origin read the configuration intended to allow is blocked, and the misconfiguration usually points at a CORS helper that concatenates configuration strings instead of parsing origins.",
+  "severity": "LOW",
+  "cwe": "CWE-942",
+  "category": "cors",
+  "remediation": "Compare the request Origin against an allowlist and echo the origin exactly, with no path, no trailing slash and no query. Fix the helper so configuration values are parsed as URLs and reduced to scheme, host and port.",
+  "limitation": "One header value. The rule reports the shape of the declared origin and cannot observe whether the browser rejected the response.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Access-Control-Allow-Origin",
+    "valuePattern": "^\\s*https?://[^\\s/]+/"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Access-Control-Allow-Origin": "https://example.com/"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Access-Control-Allow-Origin": "https://example.com/app"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Access-Control-Allow-Origin": "https://example.com"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Access-Control-Allow-Origin": "https://example.com:8443"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Access-Control-Allow-Origin": "*"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1212"
+  ]
+}

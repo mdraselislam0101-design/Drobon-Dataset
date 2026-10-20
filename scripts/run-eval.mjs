@@ -36,5 +36,8 @@ if (only !== null && selected.length === 0) {
   process.exit(2);
 }
 const report = buildReport(ROOT, selected);
+// Never call process.exit() right after a large stdout write: on a pipe the
+// write is asynchronous and the exit truncates the report (caught at ~146 KB
+// once the corpus passed 240 cases). Set the exit code and let the stream drain.
+process.exitCode = 0;
 process.stdout.write(`${JSON.stringify(report, null, 1)}\n`);
-process.exit(0);

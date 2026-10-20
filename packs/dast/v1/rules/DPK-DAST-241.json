@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-241",
+  "title": "PHP-FPM status page disclosed",
+  "description": "The response is the PHP-FPM status page: the pool name together with the process manager line is the status template that pm.status_path serves. It reports live worker counts and queue depth.",
+  "severity": "LOW",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Restrict pm.status_path to localhost through the web server, or disable it. Never publish it on the public interface.",
+  "limitation": "One response body. The rule reports the status template; it does not exercise the workers and cannot show the pool configuration beyond what the page prints.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*pool:)(?=[\\s\\S]*process\\ manager)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body><h1>PHP-FPM Status Page</h1><table><tr><td>pool:</td><td>www</td></tr><tr><td>process manager:</td><td>dynamic</td></tr><tr><td>accepted conn:</td><td>4821</td></tr></table></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "PHP-FPM Status Page\npool: www\nprocess manager: ondemand\naccepted conn: 912\nlisten queue: 0"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body><h1>PHP-FPM Status Page</h1><table><tr><td></td><td>www</td></tr><tr><td>:</td><td>dynamic</td></tr><tr><td>accepted conn:</td><td>4821</td></tr></table></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1310"
+  ]
+}

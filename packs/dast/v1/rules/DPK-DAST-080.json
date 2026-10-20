@@ -1,0 +1,77 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-080",
+  "title": "Form submits to a plaintext HTTP action on an HTTPS page",
+  "description": "An HTTPS page contains a form whose action is an absolute http:// URL. Submitting it sends every field, including credentials or payment details, over plaintext even though the page itself was delivered securely. The check reports the downgrade target; it does not claim the destination is attacker-controlled.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-319",
+  "category": "mixed-content",
+  "remediation": "Point the form action at an https:// URL, or use a relative action so the browser keeps the page's scheme.",
+  "limitation": "Observation-level: only observations fetched over HTTPS are judged. Subresource downloads are covered by the separate mixed-content rule.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "<form\\b[^>]*\\saction\\s*=\\s*[\"']?\\s*http://",
+    "requireScheme": "https"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://shop.example/checkout",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8"
+        },
+        "body": "<form action=\"http://pay.example/charge\" method=\"post\"><input name=\"card\"></form>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://shop.example/login",
+        "status": 200,
+        "headers": {},
+        "body": "<FORM METHOD=\"POST\" ACTION='HTTP://auth.example/session'>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://shop.example/checkout",
+        "status": 200,
+        "headers": {},
+        "body": "<form action=\"https://pay.example/charge\" method=\"post\"></form>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "http://shop.example/checkout",
+        "status": 200,
+        "headers": {},
+        "body": "<form action=\"http://pay.example/charge\" method=\"post\"></form>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://shop.example/checkout",
+        "status": 200,
+        "headers": {},
+        "body": "<form action=http://pay.example/charge method=post></form>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://shop.example/checkout",
+        "status": 200,
+        "headers": {},
+        "body": "<form action=https://pay.example/charge method=post></form>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1149"
+  ]
+}

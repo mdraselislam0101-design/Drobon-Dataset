@@ -1,0 +1,71 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-072",
+  "title": "Content-Security-Policy delivered in report-only mode",
+  "description": "The response sets Content-Security-Policy-Report-Only, so the policy collects violation reports while the browser enforces nothing. Teams often keep this mode for longer than intended, and header inventories then list a CSP as present even though no restriction applies. The check flags the report-only header.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-693",
+  "category": "security-headers",
+  "remediation": "Promote the policy to the enforcing Content-Security-Policy header once reports are clean, keeping the report-only copy during the transition (an enforcing Content-Security-Policy).",
+  "limitation": "Header observation only: the policy contents and the violation reports are not evaluated.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Content-Security-Policy-Report-Only",
+    "valuePattern": "\\S"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy-Report-Only": "default-src 'self'; report-uri /csp"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/account",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy-Report-Only": "script-src 'self'"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src 'self'"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy-Report-Only": ""
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1024"
+  ]
+}

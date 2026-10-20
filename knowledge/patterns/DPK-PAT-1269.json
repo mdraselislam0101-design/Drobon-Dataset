@@ -1,0 +1,67 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1269",
+  "title": "Signal: Content-Security-Policy frame-src allows plaintext HTTP sources",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-header-matches",
+      "header": "Content-Security-Policy",
+      "valuePattern": "(?:^|;)\\s*frame-src\\s[^;]*(?<=\\s)http:(?=[\\s;/]|$)"
+    }
+  },
+  "scope": "One response whose Content-Security-Policy carries an explicit frame-src directive whose source list contains the `http:` scheme token.",
+  "limitations": "One header value and one directive. The rule reports the scheme token in frame-src only; when frame-src is absent the default-src fallback decides, and other rules report that case. It cannot tell whether the plaintext origin is reachable from the browser that receives the policy.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "frame-src http:"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src 'self'; frame-src https://cdn.example.com http://legacy.example.com; frame-ancestors 'none'"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "frame-src https://cdn.example.com"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "frame-src frames 'self'"
+        }
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A deployment that deliberately proxies a legacy plaintext origin is still flagged; the finding is the scheme in the policy, not proof that the origin answers the browser.",
+  "linkedRules": [
+    "DPK-DAST-200"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:csp-framesrc-http:framesrc-http",
+  "validationStatus": "VALIDATED"
+}

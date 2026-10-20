@@ -319,9 +319,17 @@ computed.advisoryIds = advisoryIds.size;
     `coverage-map: seed identity items ${map.domains.sca.advisorySeedItems} match recomputed ${items.size}`);
   assert(map.domains.advisory.advisories === ids.size,
     `coverage-map: unique advisory ids ${map.domains.advisory.advisories} match recomputed ${ids.size}`);
-  assert(Array.isArray(map.blockedExpansions) && map.blockedExpansions.length >= 5
+  // A resolved expansion moves to resolvedExpansions instead of vanishing: the
+  // documented total may not shrink, so a shrinking blocked list has to be paid
+  // for by a resolved entry, not by deletion.
+  const resolvedCount = Array.isArray(map.resolvedExpansions) ? map.resolvedExpansions.length : 0;
+  assert(Array.isArray(map.blockedExpansions) && map.blockedExpansions.length + resolvedCount >= 5
     && map.blockedExpansions.every((e) => typeof e.status === 'string' && typeof e.nextLegitimateStep === 'string' && e.nextLegitimateStep.length > 0),
-    'coverage-map: every blocked expansion carries status + next legitimate step');
+    'coverage-map: every blocked expansion carries status + next legitimate step',
+    `${map.blockedExpansions?.length ?? 0} blocked + ${resolvedCount} resolved`);
+  assert(map.resolvedExpansions.every((e) => /^\d{4}-\d{2}-\d{2}$/.test(String(e.resolvedAt))
+    && typeof e.resolution === 'string' && e.resolution.length > 40),
+    'coverage-map: every resolved expansion records a date + a substantive resolution');
   assert(map.blockedExpansions.every((e) => e.status.startsWith('BLOCKED_') || e.status.endsWith('_BY_DESIGN') || e.status === 'UNREACHABLE_VOCAB'),
     'coverage-map: blocked-expansion statuses use honest vocabulary', '');
   assert(Array.isArray(map.verifiedGaps) && map.verifiedGaps.length >= 3,
@@ -345,13 +353,13 @@ if (existsSync(join(ROOT, 'DROBON_COVERAGE_EVIDENCE.json'))) {
   const countFiles = (dir, re) => existsSync(join(ROOT, dir))
     ? readdirSync(join(ROOT, dir)).filter((f) => re.test(f)).length : 0;
   const claims = [
-    ['sast rules', countFiles('packs/sast/v1/rules', /^DPK-.*\.json$/), 792],
+    ['sast rules', countFiles('packs/sast/v1/rules', /^DPK-.*\.json$/), 950],
     ['secrets rules', countFiles('packs/secrets/v1/rules', /^DPK-.*\.json$/), 97],
-    ['dast rules', countFiles('packs/dast/v1/rules', /^DPK-.*\.json$/), 65],
-    ['patterns', countFiles('knowledge/patterns', /^DPK-PAT-.*\.json$/), 954],
-    ['records', countFiles('knowledge/records', /^DPK-REC-.*\.json$/), 914],
-    ['remediation', countFiles('knowledge/remediation', /^DPK-.*\.json$/), 954],
-    ['cwe', countFiles('knowledge/cwe', /\.json$/), 61],
+    ['dast rules', countFiles('packs/dast/v1/rules', /^DPK-.*\.json$/), 263],
+    ['patterns', countFiles('knowledge/patterns', /^DPK-PAT-.*\.json$/), 1310],
+    ['records', countFiles('knowledge/records', /^DPK-REC-.*\.json$/), 1310],
+    ['remediation', countFiles('knowledge/remediation', /^DPK-.*\.json$/), 1310],
+    ['cwe', countFiles('knowledge/cwe', /\.json$/), 68],
     ['lessons', countFiles('learning/lessons', /\.json$/), 6],
     ['templates', countFiles('assessments/templates', /\.json$/), 3],
     ['engagements', countFiles('engagements', /\.json$/), 2],

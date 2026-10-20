@@ -1,0 +1,100 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-100",
+  "title": "HTTPS response redirects to a plaintext URL",
+  "description": "The response is delivered over https and its Location header names an http URL. The browser follows it, so everything the next request carries - cookies, form fields, bearer tokens - crosses the network in cleartext. The check is scoped to https observations: a redirect from an already-plaintext response does not downgrade anything that was protected, and DPK-DAST-001 reports that response itself.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-319",
+  "category": "transport-security",
+  "remediation": "Redirect to an https URL, or to a path-relative target that keeps the current scheme. If a legacy plaintext host is unavoidable, keep the hop free of credentials and have that host redirect straight back to https.",
+  "limitation": "One Location value on one https observation. It does not follow the redirect chain, so it cannot tell whether the plaintext target redirects back to https before any credential is sent, and it does not grade the target's certificate or availability.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Location",
+    "valuePattern": "^http://",
+    "requireScheme": "https"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/start",
+        "status": 302,
+        "headers": {
+          "Location": "http://app.example/home"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/start",
+        "status": 301,
+        "headers": {
+          "Location": "HTTP://APP.EXAMPLE/home"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/start",
+        "status": 302,
+        "headers": {
+          "Location": "http://user:pass@app.example/home"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/start",
+        "status": 302,
+        "headers": {
+          "Location": "https://app.example/home"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/start",
+        "status": 302,
+        "headers": {
+          "Location": "/home"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/start",
+        "status": 302,
+        "headers": {
+          "Location": "//app.example/home"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "http://app.example/start",
+        "status": 302,
+        "headers": {
+          "Location": "http://app.example/home"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/start",
+        "status": 200,
+        "headers": {}
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1169"
+  ]
+}

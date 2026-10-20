@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-249",
+  "title": "ASP.NET web.config served with settings",
+  "description": "The response is an ASP.NET configuration file: the configuration root, the system.webServer section and usually a connectionStrings block are the file schema. A served copy exposes connection strings and application keys in clear text.",
+  "severity": "HIGH",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Configure the server to refuse requests for configuration files, remove the file from the static root, and rotate every credential the file contains.",
+  "limitation": "One response body. The rule reports the configuration schema; it does not enumerate the values and cannot tell whether the credentials are still valid.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*<system\\.webServer>)(?=[\\s\\S]*</configuration>)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<?xml version=\"1.0\" encoding=\"utf-8\"?><configuration><connectionStrings><add name=\"shop\" connectionString=\"Server=db;Database=shop;User Id=sa;Password=Pa55w0rd!\"/></connectionStrings><system.webServer><handlers><add name=\"x\" path=\"*.x\" verb=\"*\"/></handlers></system.webServer></configuration>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<?xml version=\"1.0\"?><configuration><appSettings><add key=\"ApiKey\" value=\"abc123\"/></appSettings><system.webServer><httpErrors mode=\"Detailed\"/></system.webServer></configuration>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<?xml version=\"1.0\" encoding=\"utf-8\"?><configuration><connectionStrings><add name=\"shop\" connectionString=\"Server=db;Database=shop;User Id=sa;Password=Pa55w0rd!\"/></connectionStrings><handlers><add name=\"x\" path=\"*.x\" verb=\"*\"/></handlers></system.webServer>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1318"
+  ]
+}

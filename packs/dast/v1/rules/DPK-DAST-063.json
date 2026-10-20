@@ -6,7 +6,7 @@
   "severity": "MEDIUM",
   "cwe": "CWE-215",
   "category": "debug-exposure",
-  "remediation": "Disable the profiler outside development (a production build with the profiler disabled).",
+  "remediation": "Immediate: turn the profiler off outside development. In Symfony this is `web_profiler` disabled with `collect: false` in the production configuration; other frameworks have an equivalent environment switch. Durable: gate the profiler behind an environment check rather than a URL parameter, and add a deployment test that fails when the token header appears in a production response. Trade-off: you lose profiler data from staging-like environments, so keep a dedicated profiling environment instead of enabling it broadly.",
   "limitation": "Header presence check: the profiler may be protected by a firewall that the scanner cannot see.",
   "check": {
     "type": "response-header-matches",
@@ -33,6 +33,39 @@
         }
       },
       "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "X-Debug-Token": ""
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "X-Debug-Token": "   "
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "X-Debug-Token": [
+            "",
+            "a1b2c3"
+          ]
+        }
+      },
+      "match": true
     }
   ],
   "patternRefs": [

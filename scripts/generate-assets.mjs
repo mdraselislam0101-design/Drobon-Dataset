@@ -34,6 +34,7 @@ const ROOT = process.cwd();
 const CELLS_DIR = join(ROOT, 'data', 'asset-cells');
 const MANIFEST_FILE = join(CELLS_DIR, '.manifest.json');
 const QUARANTINE_FILE = join(CELLS_DIR, 'quarantine.json');
+const LEGACY_BODIES_FILE = join(ROOT, 'data', 'legacy-record-bodies.json');
 
 // --- leak pre-screen mirror (same shapes as test-consistency §13) -------------
 const STRICT = [
@@ -110,8 +111,55 @@ function composeCallCell(cls, lang, sink) {
   return { source, flags: undefined, tests, literal, safe };
 }
 
+// Split a fragment on top-level `|` (ignoring groups, classes and escapes) and
+// add a word boundary to each alternative that starts with a word character.
+// Wrapping the whole alternation instead would wrongly require a boundary
+// before alternatives that begin with punctuation (for example `\\$"`).
+function splitAlternatives(frag) {
+  const parts = [];
+  let current = '';
+  let depth = 0;
+  let inClass = false;
+  for (let i = 0; i < frag.length; i += 1) {
+    const ch = frag[i];
+    if (ch === '\\' && i + 1 < frag.length) {
+      current += ch + frag[i + 1];
+      i += 1;
+      continue;
+    }
+    if (inClass) {
+      if (ch === ']') inClass = false;
+      current += ch;
+      continue;
+    }
+    if (ch === '[') { inClass = true; current += ch; continue; }
+    if (ch === '(') { depth += 1; current += ch; continue; }
+    if (ch === ')') { depth -= 1; current += ch; continue; }
+    if (ch === '|' && depth === 0) { parts.push(current); current = ''; continue; }
+    current += ch;
+  }
+  parts.push(current);
+  return parts;
+}
+
+function boundFragment(frag) {
+  return splitAlternatives(frag)
+    .map((part) => {
+      const bare = part.replace(/^\(\?:/, '');
+      if (part.startsWith('\\b') || !/^[A-Za-z0-9_]/.test(bare)) return part;
+      return `\\b(?:${part})`;
+    })
+    .join('|');
+}
+
 function composeFlagCell(cls, lang, sink) {
   const [frag, posLit, negLit, safeNote, extraTests] = sink;
+  // A flag fragment is matched anywhere on the line, so a bare identifier also
+  // matches longer identifiers (`mypermissions:` for `permissions:`). Prefix a
+  // word boundary when the fragment (or its first alternative) starts with a
+  // word character; fragments that already anchor (`\b`) or start with a
+  // non-word character are left untouched.
+  const bounded = boundFragment(frag);
   const pos2 = cls.pos2ctx !== undefined ? fill(cls.pos2ctx, { v: posLit }) : `# audit: ${posLit} present`;
   const neg2 = cls.neg2ctx !== undefined ? fill(cls.neg2ctx, { v: negLit }) : `# verified: ${negLit}`;
   const tests = [
@@ -129,7 +177,7 @@ function composeFlagCell(cls, lang, sink) {
     }
     tests.push({ line: extra.line, match: extra.match });
   }
-  return { source: frag, flags: cls.flags, tests, literal: unescapeLiteral(frag).slice(0, 60), safe: safeNote };
+  return { source: bounded, flags: cls.flags, tests, literal: unescapeLiteral(frag).slice(0, 60), safe: safeNote };
 }
 
 function unescapeSecretFragment(fragment) {
@@ -191,8 +239,65 @@ function languageTags(lang) {
   return lang === 'shell' ? ['shell', 'bash'] : [appLanguage(lang)];
 }
 
+// `{sink}` appears in human-readable prose (title, description, record text),
+// so it must be a readable name, never a regex. Cell literals are readable for
+// call cells, but flag/custom cells store regex fragments: interpolating those
+// (with escapes stripped) produced text like `bprintfs*(s*[A-Za-z_]w*s*)` in
+// 200 SAST rules. Use the first declared positive example for those cells, and
+// keep secrets literals untouched (they are fixture placeholders, not regexes).
+const READABLE_SINK = /^[A-Za-z_][A-Za-z0-9_.]*$/;
+function displaySink(signal) {
+  const literal = signal.literal ?? '';
+  if (READABLE_SINK.test(literal)) return literal;
+  const positive = (signal.tests ?? []).find((t) => t?.match === true && typeof t.line === 'string' && t.line.trim());
+  if (positive) {
+    const line = positive.line.trim();
+    return line.length > 48 ? `${line.slice(0, 47)}…` : line;
+  }
+  return literal;
+}
+
+// Text fields a cell may override (documented deprecation path). IDs, kind,
+// class, sinks and signal are never overridable, so ID allocation and detection
+// semantics stay owned by the cell data itself.
+const TEXT_OVERRIDABLE = ['title', 'description', 'remediation', 'limitation', 'why', 'fix', 'verifyT', 'recordDesc', 'risk', 'fp', 'scopeT', 'severity'];
+// A per-sink override may also correct the weakness mapping, because one class
+// can legitimately hold constructs that belong to different CWEs (a .NET class
+// mixing request validation with certificate validation is the motivating case).
+const SINK_OVERRIDABLE = [...TEXT_OVERRIDABLE, 'cwe'];
+
+// Merge `cls.sinkOverrides[key]` into a class for one sink. Fail-closed on an
+// unknown sink key or an unknown field: a typo must quarantine the cell, never
+// silently produce a rule that keeps the generic text.
+function applySinkOverride(cls, key, cweIds) {
+  const map = cls.sinkOverrides;
+  if (map === undefined) return cls;
+  if (typeof map !== 'object' || map === null || Array.isArray(map)) {
+    throw new Error(`${cls.class}: sinkOverrides must be an object keyed by sink id`);
+  }
+  for (const k of Object.keys(map)) {
+    if (!Object.prototype.hasOwnProperty.call(cls.sinks ?? {}, k)) {
+      throw new Error(`${cls.class}: sinkOverrides key "${k}" is not a declared sink`);
+    }
+  }
+  const own = map[key];
+  if (own === undefined) return cls;
+  for (const field of Object.keys(own)) {
+    if (!SINK_OVERRIDABLE.includes(field)) {
+      throw new Error(`${cls.class}/${key}: sinkOverrides field "${field}" is not allowed`);
+    }
+    if (typeof own[field] !== 'string' || own[field].trim() === '') {
+      throw new Error(`${cls.class}/${key}: sinkOverrides.${field} must be a non-empty string`);
+    }
+  }
+  if (own.cwe !== undefined && !cweIds.has(own.cwe)) {
+    throw new Error(`${cls.class}/${key}: sinkOverrides.cwe ${own.cwe} has no knowledge/cwe entry`);
+  }
+  return { ...cls, ...own };
+}
+
 function buildFiles({ kind, cellId, ruleId, patId, recId, cls, lang, signal, tests, extra }) {
-  const vars = { lang, fw: extra?.fw ?? lang, sink: signal.literal ?? '', safe: extra?.safe ?? signal.safe ?? '', name: extra?.name ?? '' };
+  const vars = { lang, fw: extra?.fw ?? lang, sink: kind === 'secrets' ? (signal.literal ?? '') : displaySink(signal), safe: extra?.safe ?? signal.safe ?? '', name: extra?.name ?? '' };
   const files = {};
   const ruleTitle = fill(cls.title, vars);
   const rule = {
@@ -275,6 +380,17 @@ function loadCellData() {
   return classes;
 }
 
+function existingMaxNumberIn(dir, prefix) {
+  if (!existsSync(dir)) return 0;
+  let max = 0;
+  for (const file of readdirSync(dir)) {
+    if (!file.startsWith(prefix) || !file.endsWith('.json')) continue;
+    const n = Number.parseInt(file.slice(prefix.length), 10);
+    if (Number.isFinite(n) && n > max) max = n;
+  }
+  return max;
+}
+
 function existingMaxNumber(kind) {
   const dir = join(ROOT, 'packs', kind, 'v1', 'rules');
   const prefix = kind === 'sast' ? 'DPK-SAST-' : kind === 'secrets' ? 'DPK-SEC-' : 'DPK-DAST-';
@@ -292,9 +408,22 @@ function main() {
   const manifest = existsSync(MANIFEST_FILE) ? JSON.parse(readFileSync(MANIFEST_FILE, 'utf8')) : { cells: {}, legacy: [] };
   const classes = loadCellData();
   const quarantined = [];
+  // Weakness ids that actually resolve in knowledge/cwe. A per-sink CWE
+  // override is checked against this set before any file is composed, so a
+  // typo cannot ship a rule whose CWE the App cannot resolve.
+  const cweIds = new Set(readdirSync(join(ROOT, 'knowledge', 'cwe'))
+    .filter((f) => f.endsWith('.json'))
+    .map((f) => JSON.parse(readFileSync(join(ROOT, 'knowledge', 'cwe', f), 'utf8')).id));
   const nextIds = { sast: existingMaxNumber('sast'), secrets: existingMaxNumber('secrets'), dast: existingMaxNumber('dast') };
-  let nextPat = 40;
-  let nextRec = 0;
+  // Id allocation floors. Patterns and records are allocated from the manifest,
+  // but a hand-authored file (or a record composed for a legacy rule) is not in
+  // `manifest.cells`, so the on-disk maximum is read first: allocation can then
+  // never collide with, or silently overwrite, an existing asset.
+  let nextPat = Math.max(40, existingMaxNumberIn(join(ROOT, 'knowledge', 'patterns'), 'DPK-PAT-'));
+  let nextRec = existingMaxNumberIn(join(ROOT, 'knowledge', 'records'), 'DPK-REC-');
+  const legacyBodies = existsSync(LEGACY_BODIES_FILE)
+    ? JSON.parse(readFileSync(LEGACY_BODIES_FILE, 'utf8')).records ?? {}
+    : {};
   for (const cell of Object.values(manifest.cells)) {
     const patN = Number.parseInt(cell.patId.slice('DPK-PAT-'.length), 10);
     const recN = Number.parseInt(cell.recId.slice('DPK-REC-'.length), 10);
@@ -436,10 +565,20 @@ function main() {
     .map(({ kind, file }) => ({ kind, record: JSON.parse(readFileSync(join(ROOT, 'packs', kind, 'v1', 'rules', file), 'utf8')) }))
     .filter(({ record }) => !generatedRuleIds.has(record.id))
     .sort((a, b) => (a.record.id < b.record.id ? -1 : 1));
+  // Legacy entries keep their allocated pattern id, and gain a record id the
+  // first time they are seen. Both ids are persisted in the manifest so the
+  // assets stay stable across runs.
+  const previousLegacy = new Map((manifest.legacy ?? []).map((entry) => [entry.ruleId, entry]));
   manifest.legacy = [];
   legacyRules.forEach(({ kind, record }, index) => {
     const patId = `DPK-PAT-${String(index + 1).padStart(4, '0')}`;
-    manifest.legacy.push({ ruleId: record.id, patId });
+    const previous = previousLegacy.get(record.id);
+    let recId = previous?.recId;
+    if (recId === undefined) {
+      nextRec += 1;
+      recId = `DPK-REC-${String(nextRec).padStart(4, '0')}`;
+    }
+    manifest.legacy.push({ ruleId: record.id, recId, patId });
     const signal =
       kind === 'dast'
         ? { kind: 'check', check: record.check }
@@ -475,6 +614,43 @@ function main() {
     const sigKey = kind === 'dast' ? `check:${JSON.stringify(record.check)}` : `re:${[...(record.languages ?? ['universal'])].sort().join(',')}::${record.patterns[0].source}::${record.patterns[0].flags ?? ''}`;
     seenSignals.set(sigKey, `legacy:${record.id}`);
     wanted.set(join('knowledge', 'patterns', `${patId}.json`), pattern);
+
+    // The legacy rule predates the cell pipeline, so the generator used to emit
+    // its pattern but never its record: 40 rules ended up with a rule, a
+    // pattern, a remediation entry and no concept record. The bodies are
+    // authored in data/legacy-record-bodies.json; a missing body is reported as
+    // a quarantine, never silently skipped.
+    const body = legacyBodies[record.id];
+    if (body === undefined) {
+      quarantined.push({ cell: `legacy:${record.id}`, reason: 'legacy record body missing' });
+      return;
+    }
+    const legacyRecord = {
+      schemaVersion: 'drobon.knowledge.record/v1',
+      id: recId,
+      category: record.category,
+      subcategory: kind === 'dast' ? 'observed-response' : `${record.languages?.[0] ?? 'universal'}-context`,
+      title: body.title,
+      description: body.description,
+      applicability: body.applicability,
+      risk: body.risk,
+      relatedPatterns: [patId],
+      relatedRules: [record.id],
+      origin: 'original-authored',
+      cell: `legacy:${record.id}`,
+      validationStatus: 'VALIDATED',
+    };
+    const recordErrors = validateRecord(legacyRecord);
+    if (recordErrors.length > 0) {
+      quarantined.push({ cell: `legacy:${record.id}`, reason: `record schema: ${recordErrors[0]}` });
+      return;
+    }
+    if (seenDescriptions.has(legacyRecord.description)) {
+      quarantined.push({ cell: `legacy:${record.id}`, reason: 'duplicate record description' });
+      return;
+    }
+    seenDescriptions.add(legacyRecord.description);
+    wanted.set(join('knowledge', 'records', `${recId}.json`), legacyRecord);
   });
 
   // Compile cells (sorted for determinism).
@@ -483,7 +659,7 @@ function main() {
     if (cls.framing === 'call' || cls.framing === 'flag') {
       for (const key of Object.keys(cls.sinks ?? {}).sort()) {
         const [lang, fw] = key.split(':');
-        jobs.push({ kind: cls.kind, cellId: `${cls.kind}:${cls.class}:${key}`, cls, lang, fw: fw ?? lang, sink: cls.sinks[key] });
+        jobs.push({ kind: cls.kind, cellId: `${cls.kind}:${cls.class}:${key}`, cls, sinkKey: key, lang, fw: fw ?? lang, sink: cls.sinks[key] });
       }
     } else if (cls.framing === 'custom') {
       for (const cell of cls.cells ?? []) {
@@ -505,21 +681,22 @@ function main() {
       // Per-cell text overrides (documented deprecation, see docs/ASSET_METHODOLOGY.md).
       // Only whitelisted text fields and severity may be overridden; IDs, kind,
       // class and sinks are never overridable, so ID allocation is unaffected.
-      const OVERRIDABLE = ['title', 'description', 'remediation', 'limitation', 'why', 'fix', 'verifyT', 'recordDesc', 'risk', 'fp', 'scopeT', 'severity'];
       const overrides = cell.overrides ?? {};
       for (const key of Object.keys(overrides)) {
-        if (!OVERRIDABLE.includes(key)) {
+        if (!TEXT_OVERRIDABLE.includes(key)) {
           throw new Error(`cell ${job.cellId}: override "${key}" is not allowed`);
         }
       }
       const effCls = Object.keys(overrides).length > 0 ? { ...job.cls, ...overrides } : job.cls;
       gateAndStage({ kind: job.kind, cellId: job.cellId, cls: effCls, lang: job.lang, signal, tests, extra: { name: cell.name, fw: cell.fw, safe: cell.safe, confidence: cell.build?.confidence } });
     } else if (job.cls.framing === 'call') {
-      const signal = composeCallCell(job.cls, job.lang, job.sink);
-      gateAndStage({ kind: job.kind, cellId: job.cellId, cls: job.cls, lang: job.lang, signal, tests: signal.tests, extra: { fw: job.fw } });
+      const cls = applySinkOverride(job.cls, job.sinkKey, cweIds);
+      const signal = composeCallCell(cls, job.lang, job.sink);
+      gateAndStage({ kind: job.kind, cellId: job.cellId, cls, lang: job.lang, signal, tests: signal.tests, extra: { fw: job.fw } });
     } else {
-      const signal = composeFlagCell(job.cls, job.lang, job.sink);
-      gateAndStage({ kind: job.kind, cellId: job.cellId, cls: job.cls, lang: job.lang, signal, tests: signal.tests, extra: { fw: job.fw } });
+      const cls = applySinkOverride(job.cls, job.sinkKey, cweIds);
+      const signal = composeFlagCell(cls, job.lang, job.sink);
+      gateAndStage({ kind: job.kind, cellId: job.cellId, cls, lang: job.lang, signal, tests: signal.tests, extra: { fw: job.fw } });
     }
   }
 

@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-851",
+  "title": "Spring Security permits every request in java — review required",
+  "description": "The security chain ends with anyRequest().permitAll(), so every path that reaches the filter chain is allowed without authentication or role checks. Endpoints that relied on the global rule for protection stay reachable by anonymous callers. The rule matches the terminal permission on the chain; whether every path is intentionally public is a review decision.",
+  "severity": "HIGH",
+  "cwe": "CWE-284",
+  "category": "access-control",
+  "remediation": "Replace the blanket permit with explicit matchers: public paths get permitAll(), everything else gets authenticated() plus the required authority, and the fallback is denyAll().",
+  "limitation": "Lexical: matches a single-line anyRequest().permitAll() chain; multi-line builders and path-specific matchers are out of scope.",
+  "languages": [
+    "java"
+  ],
+  "patterns": [
+    {
+      "source": "\\b(?:anyRequest\\(\\)\\s*\\.permitAll\\(\\))"
+    }
+  ],
+  "tests": [
+    {
+      "line": "http.authorizeRequests().anyRequest().permitAll()",
+      "match": true
+    },
+    {
+      "line": "# audit: http.authorizeRequests().anyRequest().permitAll() present",
+      "match": true
+    },
+    {
+      "line": "http.authorizeRequests().anyRequest().authenticated()",
+      "match": false
+    },
+    {
+      "line": "# verified: http.authorizeRequests().anyRequest().authenticated()",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1032"
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-077",
+  "title": "Permissions-Policy grants a powerful feature to every origin",
+  "description": "The Permissions-Policy header contains a wildcard grant for a powerful feature such as camera, microphone or geolocation. Any embedded frame can then request the feature without the top-level document narrowing it, which is the opposite of what the header exists to do. The check reports the wildcard grant on one observation; it does not claim the feature is actually reachable.",
+  "severity": "LOW",
+  "cwe": "CWE-693",
+  "category": "security-headers",
+  "remediation": "Replace wildcard grants with an explicit allowlist of origins, or close the feature with an empty allowlist (camera=()).",
+  "limitation": "Observation-level: the check reads the declared header text and does not evaluate how a browser applies the policy to a specific frame.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Permissions-Policy",
+    "valuePattern": "(?:^|[,;\\s])(?:camera|microphone|geolocation)\\s*=\\s*\\(?\\s*\\*"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Permissions-Policy": "camera=*"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/embed",
+        "status": 200,
+        "headers": {
+          "Permissions-Policy": "geolocation=*, microphone=()"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Permissions-Policy": "camera=(self), microphone=()"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src 'self'"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1114"
+  ]
+}

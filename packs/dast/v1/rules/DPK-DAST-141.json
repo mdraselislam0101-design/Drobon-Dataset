@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-141",
+  "title": "WildFly or JBoss error report disclosed in a response",
+  "description": "The response is the Undertow error report served by WildFly or JBoss: the body names the application server or its Undertow subsystem and carries an Error Report section with the exception detail.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-209",
+  "category": "debug-exposure",
+  "remediation": "Deploy a custom error page and turn off the container's default error handling so the server does not render Undertow diagnostics to clients.",
+  "limitation": "Two body markers. A page that mentions WildFly in documentation is not matched; the error report section must also be present.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*(?:WildFly|JBoss Web))(?=[\\s\\S]*Error Report)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/boom",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<h1>Error Report</h1><p>WildFly 31.0.1.Final (WildFly Core 23.0.2.Final)</p><p>java.lang.RuntimeException: boom</p>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/api/boom",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<h1>Error Report</h1><address>JBoss Web/7.0</address>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body>Home</body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/docs",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<p>WildFly deployments set the error page in web.xml.</p>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1210"
+  ]
+}

@@ -1,0 +1,704 @@
+[
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "go-panic-dump",
+  "category": "debug-exposure",
+  "cwe": "CWE-209",
+  "severity": "MEDIUM",
+  "title": "Go panic with goroutine dump disclosed in a response",
+  "description": "The response body contains a Go runtime panic followed by a goroutine dump. The dump lists the call stack of every active goroutine with function names, source file paths and argument words, so a single failing request maps the service internals. The check reports the disclosed dump; it does not claim the panic is reachable on demand.",
+  "remediation": "Recover panics at the HTTP boundary (a middleware with recover()) and return a generic error response with a correlation id.",
+  "limitation": "Observation-level: requires the 'goroutine N [running]:' header that the Go runtime prints. A panic message without the dump header is not reported.",
+  "scopeT": "One response body: confirm a Go goroutine dump.",
+  "fp": "A deliberately published crash report or a chaos-test endpoint is reported by design.",
+  "recordDesc": "A response carries a Go goroutine dump. Go prints the full stack of every goroutine on an unrecovered panic, including runtime paths and function arguments, which discloses the module layout, the dependency graph and often credentials or request payloads held in arguments.",
+  "applicability": "Go HTTP services that let panics reach the response writer.",
+  "risk": "Full call stack, module paths and argument words disclosed; MEDIUM severity.",
+  "why": "The body contains the runtime goroutine-dump header.",
+  "fix": [
+   "Add a recover() middleware around the handler chain.",
+   "Return a generic error body with a correlation id."
+  ],
+  "verifyT": "Trigger a panic and confirm the response contains no goroutine dump.",
+  "cells": [
+   {
+    "suffix": "goroutine",
+    "lang": "http",
+    "name": "Go goroutine dump",
+    "safe": "A recovered handler returns a generic error",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "goroutine \\d+ \\[running\\]:"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://api.example/orders/42",
+       "status": 500,
+       "headers": {
+        "Content-Type": "text/plain; charset=utf-8"
+       },
+       "body": "panic: runtime error: index out of range [3] with length 2\n\ngoroutine 1 [running]:\nmain.handler(0x0, 0x0)"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://api.example/reports",
+       "status": 500,
+       "headers": {},
+       "body": "goroutine 18 [running]:\nnet/http.(*conn).serve.func1(0xc0001b4000)"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://api.example/orders/42",
+       "status": 500,
+       "headers": {},
+       "body": "Request failed. Reference 7c1a90."
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://api.example/health",
+       "status": 200,
+       "headers": {},
+       "body": "{\"status\":\"ok\"}"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "rust-panic",
+  "category": "debug-exposure",
+  "cwe": "CWE-209",
+  "severity": "MEDIUM",
+  "title": "Rust panic message with source location disclosed in a response",
+  "description": "The response body contains the Rust panic format \"thread 'NAME' panicked at LOCATION\". The message carries the thread name and the exact source path and line that panicked, which maps the crate layout and the failing branch. The check reports the disclosed panic; it does not claim the path is attacker-controllable.",
+  "remediation": "Catch panics at the request boundary (std::panic::catch_unwind or the framework's error layer) and return a generic error response.",
+  "limitation": "Observation-level: matches the standard panic banner. A custom panic hook that prints its own message is out of scope.",
+  "scopeT": "One response body: confirm the Rust panic banner.",
+  "fp": "A deliberately published crash report is reported by design.",
+  "recordDesc": "A response carries a Rust panic banner with a source location. Panic output names the internal module and the file:line of the failing branch, and Rust services frequently forward the raw error to the client while the same text is also written to logs.",
+  "applicability": "Rust HTTP services that render panic output.",
+  "risk": "Internal module layout and failing branch disclosed; MEDIUM severity.",
+  "why": "The body contains the standard Rust panic banner.",
+  "fix": [
+   "Install a panic hook that does not write to the response.",
+   "Return a generic error body."
+  ],
+  "verifyT": "Trigger a panic in a handler and confirm the response carries neither the banner nor the source path.",
+  "cells": [
+   {
+    "suffix": "panic",
+    "lang": "http",
+    "name": "Rust panic banner",
+    "safe": "A generic error response",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "thread '[^']{1,64}' panicked at"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://api.example/orders/42",
+       "status": 500,
+       "headers": {
+        "Content-Type": "text/plain; charset=utf-8"
+       },
+       "body": "thread 'main' panicked at src/handlers/orders.rs:42:9:\ncalled `Result::unwrap()` on an `Err` value"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://api.example/v1/pay",
+       "status": 500,
+       "headers": {},
+       "body": "thread 'actix-rt|system:0|arbiter:1' panicked at src/payments.rs:118:5:"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://api.example/orders/42",
+       "status": 500,
+       "headers": {},
+       "body": "Internal error. Reference 12ab34."
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://api.example/health",
+       "status": 200,
+       "headers": {},
+       "body": "{\"status\":\"ok\"}"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "vcs-metadata-exposed",
+  "category": "information-disclosure",
+  "cwe": "CWE-540",
+  "severity": "MEDIUM",
+  "title": "Git repository metadata served by the web server",
+  "description": "The response is the contents of a Git configuration file, proving that the .git directory is inside the served tree. When that directory is reachable, the full commit history, branch names and often embedded credentials can be reconstructed with standard tooling. The check reports the configuration file; it does not assume the history has been downloaded.",
+  "remediation": "Deny dot-directories at the web server and deploy build output instead of the working tree.",
+  "limitation": "Observation-level: matches the Git configuration key that identifies a repository config file. A bare .git/config exposed under another name is out of scope.",
+  "scopeT": "One response body: confirm a Git repository configuration file.",
+  "fp": "A service that intentionally publishes a repository mirror is reported by design.",
+  "recordDesc": "A response serves a Git configuration file. Deploying a working copy instead of build output leaves .git reachable, and tooling that walks the object store reconstructs source, history and any secret that was committed and later removed.",
+  "applicability": "Static deployments and any web root populated from a working copy.",
+  "risk": "Full source history and historical secrets exposed; MEDIUM severity.",
+  "why": "The body is the repository configuration file a Git working copy carries.",
+  "fix": [
+   "Block /.git at the web server.",
+   "Deploy build output, not the working tree.",
+   "Rotate any secret that was committed historically."
+  ],
+  "verifyT": "Request /.git/config and confirm the server answers 403 or 404.",
+  "cells": [
+   {
+    "suffix": "gitconfig",
+    "lang": "http",
+    "name": "Git configuration file",
+    "safe": "A 404 for the same path",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "repositoryformatversion\\s*=\\s*0"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://site.example/.git/config",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "[core]\n\trepositoryformatversion = 0\n\tfilemode = true\n\tbare = false"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://site.example/.git/config",
+       "status": 200,
+       "headers": {},
+       "body": "repositoryformatversion=0\n[remote \"origin\"]\n\turl = https://git.example/app.git"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://site.example/",
+       "status": 200,
+       "headers": {},
+       "body": "<html><body>Welcome</body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://site.example/.git/config",
+       "status": 404,
+       "headers": {},
+       "body": "Not Found"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "credentials-in-redirect",
+  "category": "open-redirect",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "Redirect target carries embedded credentials",
+  "description": "The Location header contains a URL with a userinfo component (user:password@host). Browsers ignore the userinfo but proxies, logs and link scanners record it, so the credential is disclosed to every hop and to anyone reading the access log. The check reports the userinfo redirect; it does not claim the destination is attacker-chosen.",
+  "remediation": "Remove credentials from redirect targets and pass authenticated state through a session cookie or a one-time code.",
+  "limitation": "Observation-level: evaluates the Location header of a 3xx response. Credentials carried in a query string are a different evidence shape and are not reported.",
+  "scopeT": "One redirect response with a Location header containing userinfo.",
+  "fp": "A deliberately published example URL in documentation is reported by design.",
+  "recordDesc": "A redirect target embeds credentials. The userinfo segment is not used for authentication by modern browsers, so it provides no login benefit while exposing the secret in redirect chains, referrer chains and server logs.",
+  "applicability": "Endpoints that redirect to a credentialed upstream.",
+  "risk": "Credential disclosed to intermediaries and logs; MEDIUM severity.",
+  "why": "The Location header carries a userinfo component.",
+  "fix": [
+   "Remove userinfo from the redirect URL.",
+   "Authenticate with a session cookie or one-time code."
+  ],
+  "verifyT": "Follow the redirect and confirm the Location value contains no userinfo segment.",
+  "cells": [
+   {
+    "suffix": "userinfo",
+    "lang": "http",
+    "name": "Credentials in Location",
+    "safe": "A Location without userinfo",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Location",
+     "valuePattern": "^[a-zA-Z][a-zA-Z0-9+.-]*://[^/\\s@]+@|^//[^/\\s@]+@"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/login",
+       "status": 302,
+       "headers": {
+        "Location": "https://admin:s3cret@legacy.example/home"
+       },
+       "body": ""
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/legacy",
+       "status": 301,
+       "headers": {
+        "Location": "http://svc:token123@internal.example/next"
+       },
+       "body": ""
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/login",
+       "status": 302,
+       "headers": {
+        "Location": "https://legacy.example/home"
+       },
+       "body": ""
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://cdn.example/pkg",
+       "status": 302,
+       "headers": {
+        "Location": "https://cdn.example/@scope/pkg"
+       },
+       "body": ""
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/login",
+       "status": 302,
+       "headers": {
+        "Location": "//admin:s3cret@legacy.example/home"
+       },
+       "body": ""
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/login",
+       "status": 302,
+       "headers": {
+        "Location": "//cdn.example/@scope/pkg"
+       },
+       "body": ""
+      },
+      "match": false
+     }
+    ],
+    "overrides": {
+     "limitation": "Observation-level: evaluates the Location header of a 3xx response. Credentials carried in a query string are a different evidence shape and are not reported. A cross-host userinfo target also matches DPK-DAST-056 (host change); 056 answers \"does the target leave the origin?\" and this rule answers \"does the target carry credentials?\", so both fire on the same header by design."
+    }
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "cors-expose-headers-wildcard",
+  "category": "cors",
+  "cwe": "CWE-942",
+  "severity": "LOW",
+  "title": "CORS exposes every response header to any origin",
+  "description": "The Access-Control-Expose-Headers response header declares a wildcard, so a cross-origin reader can inspect every response header the API emits, including rate-limit state, trace ids and any custom header that carries account metadata. The check reads the declared exposure list; it does not claim a specific header is sensitive.",
+  "remediation": "List the headers the client actually reads (for example X-Total-Count, ETag) instead of exposing all of them.",
+  "limitation": "Observation-level: evaluates the Access-Control-Expose-Headers header alone. It does not evaluate whether the origin policy also permits an untrusted origin.",
+  "scopeT": "One response: confirm a wildcard exposure declaration.",
+  "fp": "A public read-only API may expose all headers deliberately; it is still reported because the header cannot express that distinction.",
+  "recordDesc": "A CORS policy exposes every response header to the reading origin. The header is easy to set to a wildcard while diagnosing a client and is rarely narrowed again; custom headers frequently carry tenant or trace information that the API never intended a third-party origin to read.",
+  "applicability": "HTTP APIs that answer cross-origin reads.",
+  "risk": "Response metadata readable by any permitted origin; LOW severity.",
+  "why": "The expose-headers response header is a wildcard.",
+  "fix": [
+   "List only the headers the client reads.",
+   "Keep the origin allowlist explicit."
+  ],
+  "verifyT": "Send a cross-origin request and confirm only the documented header names are exposed.",
+  "cells": [
+   {
+    "suffix": "expose",
+    "lang": "http",
+    "name": "Expose-Headers wildcard",
+    "safe": "X-Total-Count, ETag",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Access-Control-Expose-Headers",
+     "valuePattern": "^\\*$"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://api.example/v1/orders",
+       "status": 200,
+       "headers": {
+        "Access-Control-Allow-Origin": "https://app.example",
+        "Access-Control-Expose-Headers": "*"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://api.example/v1/orders",
+       "status": 200,
+       "headers": {
+        "Access-Control-Expose-Headers": " * "
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://api.example/v1/orders",
+       "status": 200,
+       "headers": {
+        "Access-Control-Expose-Headers": "X-Total-Count, ETag"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://api.example/v1/orders",
+       "status": 200,
+       "headers": {
+        "Access-Control-Allow-Origin": "https://app.example"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/x",
+       "status": 200,
+       "headers": {
+        "Access-Control-Expose-Headers": "X-*"
+       },
+       "body": ""
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "csp-no-default-src",
+  "category": "csp-weakness",
+  "cwe": "CWE-693",
+  "severity": "MEDIUM",
+  "title": "Content-Security-Policy without default-src",
+  "description": "The Content-Security-Policy header declares specific directives but no default-src fallback. Every fetch directive that is not named falls back to the unrestricted default, so a policy that looks comprehensive can leave image, font, frame and worker sources wide open. The check reports the missing fallback.",
+  "remediation": "Add a restrictive default-src 'self' (or 'none') so unnamed directives inherit a safe policy.",
+  "limitation": "Observation-level: the same check also fires when the header is entirely absent, which DPK-DAST-002 separately reports as the stronger finding. Read both rows together.",
+  "scopeT": "One response: the policy has no default-src directive.",
+  "fp": "A policy that lists every fetch directive explicitly needs no fallback and is a documented false positive of this check.",
+  "recordDesc": "A policy omits its default-src fallback. Security teams often add script-src and object-src first and never add the fallback; the omitted directives stay unrestricted, so the effective policy is far weaker than the header text suggests.",
+  "applicability": "HTML responses that deliver a Content-Security-Policy header.",
+  "risk": "Unnamed directives remain unrestricted; MEDIUM severity.",
+  "why": "The policy carries no default-src directive.",
+  "fix": [
+   "Add default-src 'self' or default-src 'none'.",
+   "Audit which directives must be widened explicitly."
+  ],
+  "verifyT": "Parse the delivered policy and confirm default-src is present and restrictive.",
+  "cells": [
+   {
+    "suffix": "default-src",
+    "lang": "http",
+    "name": "CSP default-src fallback",
+    "safe": "default-src 'self'; script-src 'self'",
+    "check": {
+     "type": "response-header-missing-directive",
+     "header": "Content-Security-Policy",
+     "directive": "default-src"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "script-src 'self'; object-src 'none'; frame-ancestors 'self'"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/checkout",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "script-src 'self' https://cdn.example; img-src 'self'"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "default-src 'self'; script-src 'self'; object-src 'none'"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "img-src 'self'; default-src 'none'"
+       }
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "phpinfo-page",
+  "category": "debug-exposure",
+  "cwe": "CWE-489",
+  "severity": "MEDIUM",
+  "title": "phpinfo() configuration page disclosed",
+  "description": "The response is the page generated by PHP's phpinfo(), which prints the build configuration, loaded extensions, environment variables, include paths and often database hostnames and credentials. The check reports the page; it does not claim every value on it is secret.",
+  "remediation": "Delete the diagnostic script from the served tree and treat the disclosed environment values as exposed.",
+  "limitation": "Observation-level: matches the phpinfo title or the version banner it prints. A custom diagnostics page that does not carry those markers is out of scope.",
+  "scopeT": "One response body: confirm a phpinfo() page.",
+  "fp": "A deliberately published environment report is reported by design.",
+  "recordDesc": "A response is the phpinfo() page. The script is a one-line diagnostic that is frequently uploaded to production to debug an extension and then forgotten; the page prints the full environment of the PHP process, including any secret passed through the environment.",
+  "applicability": "PHP deployments reachable from untrusted networks.",
+  "risk": "Build configuration, paths and environment secrets disclosed; MEDIUM severity.",
+  "why": "The body carries the phpinfo() page markers.",
+  "fix": [
+   "Delete the diagnostic script.",
+   "Rotate any secret shown in the environment block."
+  ],
+  "verifyT": "Request the diagnostic path and confirm the server returns 404.",
+  "cells": [
+   {
+    "suffix": "phpinfo",
+    "lang": "http",
+    "name": "phpinfo page",
+    "safe": "A 404 for the diagnostic path",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "<title>phpinfo\\(\\)|PHP Version [0-9]+\\.[0-9]+"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/info.php",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=utf-8"
+       },
+       "body": "<html><head><title>phpinfo()</title></head><body><h1>PHP Version 8.2.4</h1></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/phpinfo.php",
+       "status": 200,
+       "headers": {},
+       "body": "<h1>PHP Version 7.4.33</h1><table><tr><td>DOCUMENT_ROOT</td>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {},
+       "body": "<html><head><title>Orders</title></head><body>Your orders</body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/info.php",
+       "status": 404,
+       "headers": {},
+       "body": "Not Found"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "csp-connect-src-wildcard",
+  "category": "csp-weakness",
+  "cwe": "CWE-693",
+  "severity": "MEDIUM",
+  "title": "Content-Security-Policy connect-src allows every origin",
+  "description": "The Content-Security-Policy header grants a standalone wildcard to connect-src, so script running on the page may send fetch, XHR, WebSocket and EventSource traffic to any host. A strict script-src does not help once injected code can exfiltrate through a permitted channel. The check reports the directive value; it does not claim injection is present.",
+  "remediation": "Replace the wildcard with the explicit API origins the application calls.",
+  "limitation": "Observation-level: matches a standalone * source in connect-src. Host wildcards such as *.example.com and other directives are separate checks.",
+  "scopeT": "One response: connect-src contains a standalone wildcard source.",
+  "fp": "An API that genuinely calls arbitrary customer-supplied endpoints is reported by design.",
+  "recordDesc": "A policy permits outbound connections to any origin. connect-src is the directive that bounds exfiltration: with a wildcard, a single injected script can post the session to an attacker host without violating the policy, which defeats the purpose of a strict script-src.",
+  "applicability": "HTML responses that deliver a Content-Security-Policy header.",
+  "risk": "Data exfiltration channel from injectable pages; MEDIUM severity.",
+  "why": "The connect-src directive carries a standalone wildcard source.",
+  "fix": [
+   "List the API origins the client calls.",
+   "Remove the wildcard source."
+  ],
+  "verifyT": "Parse the policy and confirm connect-src lists explicit origins only.",
+  "cells": [
+   {
+    "suffix": "connect-src",
+    "lang": "http",
+    "name": "CSP connect-src wildcard",
+    "safe": "connect-src 'self' https://api.example",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Content-Security-Policy",
+     "valuePattern": "^(?:(?!connect-src)[^;]*;\\s*)*connect-src(?=\\s)[^;]*?(?<=\\s)(?:\\*|(?:https?|wss?)://\\*)(?=\\s|;|$)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "connect-src *"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "connect-src 'self' *"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "connect-src 'self'; connect-src *"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "connect-src 'self' https://api.example"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "default-src *"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {}
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "connect-src https://*"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "connect-src wss://*"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "connect-src https://*.api.example"
+       }
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ }
+]

@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-224",
+  "title": "Harbor registry UI disclosed",
+  "description": "The response is the Harbor registry UI: the Harbor name together with the Projects view identifies the container registry console. The console lists projects, repositories and their scan results.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "debug-exposure",
+  "remediation": "Require authentication for project browsing, keep the UI on the internal network, and restrict anonymous pull to projects that need it.",
+  "limitation": "One response body. The rule reports the UI; it does not pull an image and cannot show whether anonymous pull is enabled.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*Harbor)(?=[\\s\\S]*Projects)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Harbor</title></head><body><div id=\"harbor-app\"></div><h1>Projects</h1><script src=\"/static/harbor.js\"></script></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<!doctype html><html><body><span>Harbor</span><nav>Projects</nav><div class=\"registry-app\"></div></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title></title></head><body><div id=\"-app\"></div><h1></h1><script src=\"/static/.js\"></script></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1293"
+  ]
+}

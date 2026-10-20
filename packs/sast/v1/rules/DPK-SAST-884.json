@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-884",
+  "title": "Legacy cipher selected through Cipher.getInstance in scala — review required",
+  "description": "Cipher.getInstance with DES, DESede, RC4 or Blowfish selects a deprecated primitive. DES has a 56-bit key, 3DES is withdrawn, and RC4 has known biases, so the resulting protection is below what modern data handling expects. The rule flags the selection; whether the data is sensitive is a review decision.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-327",
+  "category": "weak-cryptography",
+  "remediation": "Select AES/GCM/NoPadding with a 256-bit key and a fresh IV for every message.",
+  "limitation": "Lexical: matches literal algorithm names; provider aliases resolved elsewhere are out of scope.",
+  "languages": [
+    "scala"
+  ],
+  "patterns": [
+    {
+      "source": "\\b(?:Cipher\\.getInstance\\s*\\(\\s*[\"'](?:DES|DESede|RC4|Blowfish))"
+    }
+  ],
+  "tests": [
+    {
+      "line": "val cipher = Cipher.getInstance(\"DES/ECB/PKCS5Padding\")",
+      "match": true
+    },
+    {
+      "line": "# audit: val cipher = Cipher.getInstance(\"DES/ECB/PKCS5Padding\") present",
+      "match": true
+    },
+    {
+      "line": "val cipher = Cipher.getInstance(\"AES/GCM/NoPadding\")",
+      "match": false
+    },
+    {
+      "line": "# verified: val cipher = Cipher.getInstance(\"AES/GCM/NoPadding\")",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1067"
+  ]
+}

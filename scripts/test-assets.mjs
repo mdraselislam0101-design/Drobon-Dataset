@@ -170,6 +170,46 @@ for (const [id, { record }] of records) {
   }
 }
 assert(descriptionCollisions.length === 0, `unique: no duplicate record descriptions (${seenDescriptions.size} unique)`, descriptionCollisions.join('; '));
+// Concept records must carry real prose: a one-line fragment ("In x, y. The
+// remedy is z.") teaches nothing, and regex fragments leak into text when a
+// cell's `{sink}` literal is a pattern rather than a name. Both regressions are
+// pinned here because they are generated, not hand-written, defects.
+const MIN_RECORD_DESCRIPTION = 80;
+const shortDescriptions = [];
+const regexNoise = [];
+const REGEX_NOISE = /[A-Za-z]s\*\(|\[[A-Za-z]_|\)\w\*|\\\\b|\\\\s\*|\\\\\(/;
+for (const [id, { record }] of records) {
+  const text = String(record.description ?? '');
+  if (text.length < MIN_RECORD_DESCRIPTION) shortDescriptions.push(`${id} (${text.length})`);
+  if (REGEX_NOISE.test(text)) regexNoise.push(id);
+}
+assert(
+  shortDescriptions.length === 0,
+  `quality: every record description is at least ${MIN_RECORD_DESCRIPTION} chars (${records.size} records)`,
+  shortDescriptions.join(', '),
+);
+assert(regexNoise.length === 0, 'quality: no record description contains a regex fragment', regexNoise.join(', '));
+
+// Text that defers the judgement ("Varies by control; MEDIUM severity.") or that
+// hedges one template across unrelated mechanisms ("relaxes a security control
+// such as polymorphic binding, certificate validation or output encoding")
+// teaches a reader nothing and hides which weakness the rule actually reports.
+// Both were real generated defects (25 vacuous risk lines - "Varies by control",
+// "Varies by setting", "Varies by service" - and 22 hedged descriptions, fixed
+// 2026-10-20), so they are pinned here as regressions. The risk pattern matches
+// every "Varies by ..." opener, not just the one phrasing that first appeared.
+const VACUOUS_RISK = /^\s*Varies by\b/i;
+const HEDGE_TEMPLATES = [/such as polymorphic binding/i, /relaxes a hardening control/i,
+  /protections weaken\. The remedy/i, /weakens a control\. Hardening/i];
+const vacuousRisk = [];
+const hedgedDescriptions = [];
+for (const [id, { record }] of records) {
+  if (VACUOUS_RISK.test(String(record.risk ?? ''))) vacuousRisk.push(id);
+  const text = String(record.description ?? '');
+  if (HEDGE_TEMPLATES.some((re) => re.test(text))) hedgedDescriptions.push(id);
+}
+assert(vacuousRisk.length === 0, 'quality: no record risk line defers the consequence', vacuousRisk.join(', '));
+assert(hedgedDescriptions.length === 0, 'quality: no record description uses a multi-mechanism hedge', hedgedDescriptions.join(', '));
 assert(patterns.size === patternFiles.length, `unique: pattern ids are distinct (${patterns.size}/${patternFiles.length})`);
 assert(records.size === recordFiles.length, `unique: record ids are distinct (${records.size}/${recordFiles.length})`);
 
@@ -241,6 +281,58 @@ for (const [id, { record }] of records) {
   }
 }
 assert(danglingRecordRefs.length === 0, 'linkage: every record reference resolves', danglingRecordRefs.join('; '));
+// --- 6. record coverage: every rule has exactly one record -------------------
+// Root cause this guards (DAST cumulative gap-closure pump, Workstream A): the
+// generator emitted a pattern for each legacy hand-written rule but no record,
+// so 40 of the oldest rules had no concept layer. The generator now composes one
+// record per legacy rule from data/legacy-record-bodies.json; these assertions
+// make the gap impossible to reintroduce silently.
+const recordCountByRule = new Map();
+const recordCountByPattern = new Map();
+for (const [id, { record }] of records) {
+  for (const ruleId of record.relatedRules ?? []) {
+    recordCountByRule.set(ruleId, (recordCountByRule.get(ruleId) ?? 0) + 1);
+  }
+  for (const patId of record.relatedPatterns ?? []) {
+    recordCountByPattern.set(patId, (recordCountByPattern.get(patId) ?? 0) + 1);
+  }
+}
+const rulesWithoutRecord = [...rules.keys()].filter((id) => !recordCountByRule.has(id));
+const rulesWithManyRecords = [...rules.keys()].filter((id) => (recordCountByRule.get(id) ?? 0) > 1);
+assert(
+  rulesWithoutRecord.length === 0,
+  `records: every rule has a concept record (${rules.size} rules, ${records.size} records)`,
+  rulesWithoutRecord.join(', '),
+);
+assert(
+  rulesWithManyRecords.length === 0,
+  'records: no rule carries more than one record (no duplicate concepts)',
+  rulesWithManyRecords.join(', '),
+);
+const patternsWithoutRecord = [...patterns.keys()].filter((id) => !recordCountByPattern.has(id));
+const patternsWithManyRecords = [...patterns.keys()].filter((id) => (recordCountByPattern.get(id) ?? 0) > 1);
+assert(
+  patternsWithoutRecord.length === 0 && patternsWithManyRecords.length === 0,
+  `records: every pattern has exactly one record (${patterns.size} patterns)`,
+  `missing: ${patternsWithoutRecord.join(', ')}; duplicated: ${patternsWithManyRecords.join(', ')}`,
+);
+const cellMismatches = [];
+for (const [id, { record }] of records) {
+  for (const patId of record.relatedPatterns ?? []) {
+    const patternCell = patterns.get(patId)?.record.cell;
+    if (patternCell !== record.cell) {
+      cellMismatches.push(`${id} cell ${String(record.cell)} vs ${patId} cell ${String(patternCell)}`);
+    }
+  }
+}
+assert(cellMismatches.length === 0, 'records: record.cell matches the cell of every related pattern', cellMismatches.join('; '));
+const legacyManifest = JSON.parse(readFileSync(join(ROOT, 'data', 'asset-cells', '.manifest.json'), 'utf8')).legacy ?? [];
+assert(legacyManifest.length === 40, 'manifest: 40 legacy rules are recorded (each with a stable record id)', String(legacyManifest.length));
+assert(
+  legacyManifest.every((entry) => typeof entry.recId === 'string' && /^DPK-REC-\d{4,}$/.test(entry.recId)),
+  'manifest: every legacy entry carries an allocated record id',
+  JSON.stringify(legacyManifest.filter((e) => !/^DPK-REC-\d{4,}$/.test(String(e.recId))).slice(0, 3)),
+);
 const uncoveredRules = [...rules.keys()].filter((id) => (rules.get(id).record.patternRefs ?? []).length === 0);
 const uncoveredPatterns = [...patterns.keys()].filter((id) => (patterns.get(id).record.linkedRules ?? []).length === 0);
 assert(

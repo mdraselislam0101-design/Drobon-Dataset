@@ -1,0 +1,41 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-828",
+  "title": "Downloaded script piped into a shell in shell — review required",
+  "description": "curl or wget output is piped directly into a shell interpreter. The shell runs whatever the server returned at that moment, with no digest or signature check, so a compromised endpoint, an intercepted TLS session, or a re-released artifact executes immediately in the build or host context. The rule matches the pipeline; it cannot tell whether the origin is trusted.",
+  "severity": "HIGH",
+  "cwe": "CWE-494",
+  "category": "command-injection",
+  "remediation": "Download to a file, verify a pinned checksum or signature, then execute the verified file. Prefer versioned packages from an internal mirror over install scripts.",
+  "limitation": "Lexical pipeline match for curl/wget into a shell; aliases, wrappers, and multi-line constructs are out of scope.",
+  "languages": [
+    "shell",
+    "bash"
+  ],
+  "patterns": [
+    {
+      "source": "\\b(?:curl|wget)\\b[^\\n|]*\\|\\s*(?:sudo\\s)?(?:ba|z|k|fi|da)?sh\\b"
+    }
+  ],
+  "tests": [
+    {
+      "line": "curl -fsSL https://get.example.com/install.sh | sh",
+      "match": true
+    },
+    {
+      "line": "# audit: curl -fsSL https://get.example.com/install.sh | sh present",
+      "match": true
+    },
+    {
+      "line": "curl -fsSL -o install.sh https://get.example.com/install.sh",
+      "match": false
+    },
+    {
+      "line": "# verified: curl -fsSL -o install.sh https://get.example.com/install.sh",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1006"
+  ]
+}

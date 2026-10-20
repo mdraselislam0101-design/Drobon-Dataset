@@ -6,7 +6,7 @@ each gap would be closed — evidence-first. Baseline: branch
 `arena/9fe99288-drobon-dataset` @ `7b683d9` (= remote tip at inspection).
 Companion canon (not duplicated here): `docs/CAPABILITY_COVERAGE.md` (app
 capability → dataset position), `DROBON_COVERAGE_EVIDENCE.json` (64-requirement
-ledger, 74.9% verified coverage), `DROBON_REMAINING_WORK.csv` (GAP-001..026),
+ledger, 74.9% verified coverage), `DROBON_REMAINING_WORK.csv` (GAP-001..039, 35 rows),
 `docs/COMPLETION_MATRIX.json` (CAP-* rows), `docs/AGENT_ARCHITECTURE.md`
 (AI-agent design; area F detail), `docs/DATASET_APP_CONTRACT.md`.
 
@@ -109,7 +109,7 @@ evidence + tests (research pipeline §9). 8. **Alternatives:** DSL (proposal
 only). 9. **Security:** rules fire conservatively; `limitation` field mandatory
 per rule. 10. **Acceptance:** every new rule ≥1 positive + ≥1 negative executed
 test (enforced by `test-assets` linkage). 11. **Deps:** none. 12. **Perf:**
-linear regex scan; deterministic. 13. **Status note:** "953 rules" is breadth,
+linear regex scan; deterministic. 13. **Status note:** "1310 rules" is breadth,
 not measured real-world detection rate (see CGM-I2).
 
 ### CGM-B2 · Semantic vulnerability conditions & taint / data-flow detection
@@ -293,14 +293,14 @@ coverage. 10. **Acceptance:** invariants stay machine-checked. 11. **Deps:** —
 
 ### CGM-D1 · Context-aware secret detection
 1. **ID:** CGM-D1. 2. **Outcome:** detect credential shapes with context. 3.
-**Status:** `PARTIAL`. 4. **Evidence:** 96 rules (`DPK-SEC-*`) shape-only with
+**Status:** `PARTIAL`. 4. **Evidence:** 97 rules (`DPK-SEC-*`) shape-only with
 `confidence`, `denylist` veto, `matchOnlyEvidence` class; context = line regex
 + allowlisted non-secret placeholders (e.g. `password=EXAMPLE` negatives).
 Phase 5 probe-gap closure (2026-10-17): DPK-SEC-106 (unquoted password
 assignments — env `export`/`DB_PASSWORD=`, YAML `password:`, ADO `Password=;`)
 and DPK-SEC-107 (URL userinfo passwords containing symbols) authored via
 `data/asset-cells/secrets-5.json`. 5. **Tests:** `test-packs` denylist-veto
-mutants; `test-assets` linkage 953/953; edge tests for DPK-SEC-105 (11);
+mutants; `test-assets` linkage 1310/1310; edge tests for DPK-SEC-105 (11);
 DPK-SEC-106 carries 16 executed tests and DPK-SEC-107 carries 14 (pos/neg/
 boundary/malformed with exact outcomes). 6. **Gap:** Phase 8 added a Dataset-side evidence-gated CANDIDATE evaluator
 (`scripts/secret-candidates.mjs`, `drobon.secret.candidate/v1` — Shannon
@@ -343,7 +343,7 @@ placeholder bodies (`z`×32 non-hex — GitHub push-protection lesson);
 leak scanner in `test-consistency` §13 asserts no credential shapes outside
 `packs/secrets` fixtures (it caught a real slip in Phase 3 packet wording —
 proof it works). 5. **Tests:** leak-scan fires on all 5 synthetic shapes + stays
-silent on safe lines (`test-consistency` PASS 208/208). 6. **Gap:** none
+silent on safe lines (`test-consistency` PASS 222/222). 6. **Gap:** none
 in-repo; app finding-render must honor `redact` (contract). 7. **Approach:**
 status quo. 8. **Alternatives:** —. 9. **Security:** primary control. 10.
 **Acceptance:** leak-scan stays in CI. 11. **Deps:** —. 12. **Perf:** scan cost
@@ -535,7 +535,7 @@ asserted. 11. **Deps:** runtime for live enforcement. 12. **Perf:** negligible.
 5/5); `rehearse.mjs` pure PRNG corpora; manifest digests; W3 evaluation
 foundation (`scripts/eval-foundation.mjs`, `drobon.eval.report/v1`)
 byte-identical across runs with case-manifest hashes unchanged (Phase 6). 5.
-**Tests:** `test-determinism.mjs` 5/5; `test-eval` 25/25 (determinism +
+**Tests:** `test-determinism.mjs` 5/5; `test-eval` 43/43 (determinism +
 ground-truth-hash invariants). 6. **Gap:** agent-run traces (needs runtime). 7.
 **Approach:** trace schema in AGENT_ARCHITECTURE §5. 8. **Alternatives:** —. 9.
 **Security:** reproducibility enables audit. 10. **Acceptance:** future runs
@@ -561,10 +561,10 @@ must be impossible. 10. **Acceptance:** app tests. 11. **Deps:** app. 12.
 **Status:** `PARTIAL` (dataset content side strong; rendering app-side
 unverified). 4. **Evidence:** every rule has `description`, `remediation`,
 `limitation`; patterns carry `examples` (pos+neg), `fpNotes`, `scope`;
-remediation 953 entries keyed `ruleId`; CWE 61 own-words summaries with
+remediation 1310 entries keyed `ruleId`; CWE 63 own-words summaries with
 canonical links; severity is rule-fixed (contract §2). 5. **Tests:**
-`validate-audiences` 964 files; `test-consistency` CWE resolution;
-`test-finding-evidence` 24/24 (evidence record: exact path/line-range/excerpt/
+`validate-audiences` 1174 files; `test-consistency` CWE resolution;
+`test-finding-evidence` 31/31 (evidence record: exact path/line-range/excerpt/
 context computed, remediation separate, CVSS never invented — Phase 6
 `docs/FINDING_EVIDENCE_CONTRACT.md`). 6. **Gap:**
 no CVSS/OWASP mapping (GAP-010, lock + app decision); app rendering of
@@ -594,7 +594,7 @@ identity (rule+path+normalized-span hash; line-shift tolerant) and
 PARTIALLY_FIXED / STILL_PRESENT / CHANGED_REQUIRES_REVIEW /
 NOT_OBSERVED_UNVERIFIED) per `docs/FINDING_EVIDENCE_CONTRACT.md`; dataset
 contributes stable rule ids (never reused — 26 retired reservations pinned). 5.
-**Tests:** `test-finding-evidence` 24/24 (all five statuses, line-shift
+**Tests:** `test-finding-evidence` 31/31 (all five statuses, line-shift
 stability, disappearance is never remediation, change detection). 6.
 **Gap:** scan/finding store + retest execution flow (app/DB workstreams,
 SCOPE.md rows 9–11). 7. **Approach:** app workstream consumes the contract. 8.
@@ -660,7 +660,7 @@ asserts. 11. **Deps:** —. 12. **Perf:** digest ≈ seconds. 13. **Limits:** �
 ### CGM-I2 · False-positive / false-negative measurement
 1. **ID:** CGM-I2. 2. **Outcome:** quantify detector error. 3. **Status:**
 `PARTIAL`. 4. **Evidence:** per-rule synthetic pos/neg fixtures give
-fixture-level TP/FN (953 rules × executed tests); FP classes documented
+fixture-level TP/FN (954 rules × executed tests); FP classes documented
 (`fpNotes`, limitations); **no** real-world precision/recall — no defensible
 real ground-truth set exists (explicitly not claimed anywhere). 5. **Tests:**
 `test-packs`/`test-assets` totals (§Validation); Phase 6 W3 evaluation
@@ -844,7 +844,7 @@ shipped Phase 6), CGM-C1/C3 app-side verification, CGM-D1 context analysis
   snapshot re-pinned 32 groups/87 rules: ruby backtick diverged from perl
   on language-native #{} interpolation). Eval populations scored per cohort
   (core 12/0/1 documented FP; sql-concat-xlang 16/0/0; cmd-injection
-  13/0/0; secret-userinfo 5/0/0; 46 TP / 0 FN / 1 FP totals; 11 UNASSSED
+  13/0/0; secret-userinfo 5/0/0; 46 TP / 0 FN / 1 FP totals; 11 UNASSESSED
   excluded; trap execution rate 32/32 = 100%). SoT audit: 0 orphans, 0
   mirror mismatches, 0 unused patterns, 0 missing remediation. Coverage
   ledger REPRODUCED — no requirement row moved; coverage stays **74.8%
@@ -858,7 +858,7 @@ shipped Phase 6), CGM-C1/C3 app-side verification, CGM-D1 context analysis
   57/57, finding-evidence 31/31, secret-candidates 35/35, eval-tests
   39/39, doc-drift 119/119, determinism 5/5 — **15,730 assertions total**
   (same runner sums as Phase 9). Validators: packs 957, assets 1868,
-  audiences 965, cwe 61, matrix ("no license file"), sources 1, corpus 3 —
+  audiences 995, cwe 61, matrix ("no license file"), sources 1, corpus 3 —
   all PASS. Inventory re-recomputed UNCHANGED (954 = 792+97+65 rules, 954
   patterns, 914 records, 954 remediation, 61 cwe, 89 test-only eval cases):
   no new rules were authored. Probe battery (evidence-first, tests-first)

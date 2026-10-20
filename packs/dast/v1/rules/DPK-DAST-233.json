@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-233",
+  "title": "MinIO object-storage console disclosed",
+  "description": "The response is the MinIO console: the MinIO product name together with the console shell identifies the object-storage administration UI. The console manages buckets, access keys and lifecycle rules.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "debug-exposure",
+  "remediation": "Keep the console on the internal network behind an authenticating proxy and issue scoped service accounts instead of root credentials.",
+  "limitation": "One response body. The rule reports the console shell; it does not list a bucket and cannot show whether a login would succeed.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*MinIO)(?=[\\s\\S]*Console)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>MinIO Console</title></head><body><div id=\"minio-console\"></div><script src=\"/static/minio.js\"></script><h1>Console</h1></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<!doctype html><html><body><span>MinIO</span><div class=\"console-app\" data-console=\"minio\"></div></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title> </title></head><body><div id=\"-\"></div><script src=\"/static/.js\"></script><h1></h1></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1302"
+  ]
+}

@@ -1,0 +1,89 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-095",
+  "title": "Content-Security-Policy script-src allows data: scripts",
+  "description": "The script-src directive lists the data: scheme as an allowed source. A data: script executes in the document's context even though its URL has an opaque origin, so an attacker who can inject markup or a URL can supply script bytes without hosting a file on any allowed origin. The check reports the scheme source; it does not claim an injection point exists.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-693",
+  "category": "csp-weakness",
+  "remediation": "Remove data: from script-src (and from default-src when script-src is absent) and serve scripts from a fixed HTTPS origin, preferably with a nonce or hash.",
+  "limitation": "Observation-level: reads script-src only. A policy that allows data: through default-src without a script-src override is a separate scope and is not reported by this check.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Content-Security-Policy",
+    "valuePattern": "^(?:(?!script-src(?=[\\s;]|$))[^;]*;\\s*)*script-src(?=[\\s;]|$)[^;]*?(?<=\\s)data:(?=\\s|;|/|$)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src data:"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src 'self'; script-src 'self' data: blob:"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'self'; script-src data:"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'self' https://cdn.example 'nonce-abc123'"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "img-src data:"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src data:"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {}
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1164"
+  ]
+}

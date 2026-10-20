@@ -1,0 +1,246 @@
+{
+  "schemaVersion": "drobon.data.legacy-record-bodies/v1",
+  "note": "Authored concept bodies for the 40 legacy rules that predate the cell pipeline. The generator composes one knowledge record per legacy rule from these entries, so the legacy set carries the same four assets as every generated cell. Nothing here is fetched, copied or inferred from third-party data; the text restates the rules' own authored mechanics.",
+  "records": {
+    "DPK-DAST-001": {
+      "title": "Concept: unencrypted HTTP transport",
+      "description": "The observed URL uses http, so the request line, headers, cookies and body cross the network in cleartext and any on-path device can read or rewrite them. The weakness belongs to the URL that was fetched, not to any header, which is why this record is decided from the scheme alone.",
+      "applicability": "Any http:// observation, including API calls, document loads and asset fetches.",
+      "risk": "Cleartext exposure of credentials, session cookies and content; MEDIUM severity because exploitation needs a position on the path."
+    },
+    "DPK-DAST-002": {
+      "title": "Concept: absent Content-Security-Policy",
+      "description": "No Content-Security-Policy is present, so the browser has no source restriction to apply to scripts, styles, frames or connections and any injected script runs with the page's full authority. This record covers the absence of a policy, not the quality of one that is present.",
+      "applicability": "HTML responses served to browser clients.",
+      "risk": "No browser-side containment of injected script; MEDIUM severity because the impact depends on an injection existing."
+    },
+    "DPK-DAST-003": {
+      "title": "Concept: HSTS header without max-age",
+      "description": "Strict-Transport-Security is present but has no max-age directive, and max-age is the only directive that enables the policy; a browser ignores the header entirely. The header therefore looks like transport protection in an inventory while enforcing nothing.",
+      "applicability": "HTTPS responses that carry a Strict-Transport-Security header.",
+      "risk": "No enforced HTTPS-only window; MEDIUM severity, and the defect is visible in the header text itself."
+    },
+    "DPK-DAST-004": {
+      "title": "Concept: cookie without the Secure attribute",
+      "description": "A Set-Cookie value carries no Secure attribute, so the browser may also attach the cookie to http requests and a single plaintext request anywhere on the site exposes it to an on-path observer. The attribute binds the cookie to TLS and is decided per cookie, not per site.",
+      "applicability": "Any response whose Set-Cookie values are inspected.",
+      "risk": "Session or preference cookie readable on the wire; LOW severity alone, higher when the cookie is a session credential."
+    },
+    "DPK-DAST-005": {
+      "title": "Concept: absent X-Content-Type-Options",
+      "description": "Without X-Content-Type-Options: nosniff a browser may re-interpret a response as a different type than the server declared, so a text upload can become an executable script. The sniffing decision happens inside the browser and is invisible in the body.",
+      "applicability": "Responses that serve user-uploaded or user-influenced content.",
+      "risk": "MIME confusion enabling script execution from a non-script type; MEDIUM severity."
+    },
+    "DPK-DAST-006": {
+      "title": "Concept: cookie without HttpOnly",
+      "description": "A cookie without HttpOnly is readable by JavaScript on the origin, so any script injection can copy the session and keep using it after the injection is fixed. The flag does not prevent cross-site scripting; it removes cookie theft as the most valuable payoff.",
+      "applicability": "Any response whose Set-Cookie values are inspected.",
+      "risk": "Script-readable session cookie; LOW severity alone, higher for authentication cookies."
+    },
+    "DPK-DAST-007": {
+      "title": "Concept: absent X-Frame-Options",
+      "description": "No X-Frame-Options means the response can be placed in a frame by any site, which enables clickjacking: an invisible frame puts real controls under attacker-chosen text. Current browsers also honour CSP frame-ancestors, which is the preferred control.",
+      "applicability": "HTML responses that a browser may render inside a frame.",
+      "risk": "Clickjacking of authenticated UI; MEDIUM severity."
+    },
+    "DPK-DAST-008": {
+      "title": "Concept: cookie without SameSite",
+      "description": "A cookie without SameSite is attached to cross-site navigations and, depending on the browser, to some cross-site subrequests, so another origin can trigger authenticated state changes. Lax and Strict narrow when the cookie travels.",
+      "applicability": "Any response whose Set-Cookie values are inspected.",
+      "risk": "Cross-site request forgery against cookie-authenticated actions; LOW severity alone."
+    },
+    "DPK-DAST-009": {
+      "title": "Concept: absent Referrer-Policy",
+      "description": "Without Referrer-Policy the browser default decides how much of the current URL travels in the Referer header to other origins, and paths often carry identifiers or tokens. A policy is the only way to pin that decision per site.",
+      "applicability": "HTML responses and any response that may navigate or load cross-origin resources.",
+      "risk": "Leakage of URL paths and query values to third parties; LOW severity."
+    },
+    "DPK-DAST-010": {
+      "title": "Concept: CSP without frame-ancestors",
+      "description": "A Content-Security-Policy is present but has no frame-ancestors directive, so it constrains scripts and sources yet says nothing about which sites may frame the page. Framing protection has to be stated explicitly because it is not inherited from other directives.",
+      "applicability": "HTML responses that carry a Content-Security-Policy and are rendered in a browser.",
+      "risk": "Framing remains unrestricted despite an apparent policy; MEDIUM severity."
+    },
+    "DPK-SAST-001": {
+      "title": "Concept: eval() as a code sink",
+      "description": "eval() compiles a string at run time, so the executed code is whatever that string holds; if any part is attacker-influenced the result is code execution with the application's privileges. Even static strings are opaque to review and to Content-Security-Policy.",
+      "applicability": "JavaScript and TypeScript source, including JSX and TSX components.",
+      "risk": "Arbitrary code execution in the page or runtime context; MEDIUM severity pending review of the argument's provenance."
+    },
+    "DPK-SAST-002": {
+      "title": "Concept: innerHTML as an HTML sink",
+      "description": "Assigning to innerHTML parses the value as HTML, so markup in the string creates elements and event handlers instead of showing as text. The rule flags the sink; whether the value can carry attacker input is what review has to establish.",
+      "applicability": "JavaScript and TypeScript source that manipulates the DOM.",
+      "risk": "DOM cross-site scripting when the value is attacker-influenced; MEDIUM severity pending review."
+    },
+    "DPK-SAST-003": {
+      "title": "Concept: subprocess with shell=True",
+      "description": "subprocess with shell=True hands the command string to a shell, so metacharacters inside an interpolated value are interpreted as operators instead of data. Passing an argument list without a shell keeps the two roles separate.",
+      "applicability": "Python source that starts subprocesses.",
+      "risk": "Command injection when the command string is interpolated; MEDIUM severity pending review."
+    },
+    "DPK-SAST-004": {
+      "title": "Concept: MD5 for security-relevant hashing",
+      "description": "MD5 is broken for collision resistance and is fast enough to brute-force for password storage, so two different inputs can share a digest and short secrets fall quickly. The call is only a defect where the digest is used for integrity or credentials, which the rule cannot see.",
+      "applicability": "Any source file that computes an MD5 digest.",
+      "risk": "Forged integrity checks and fast offline cracking; LOW severity until the use of the digest is established."
+    },
+    "DPK-SAST-005": {
+      "title": "Concept: pickle deserialization",
+      "description": "Unpickling is not parsing: the stream names classes and invokes their constructors, so a hostile payload can run code while it loads. Only bytes from a trusted producer are safe to unpickle.",
+      "applicability": "Python source that loads pickled data.",
+      "risk": "Remote code execution through a crafted payload; MEDIUM severity pending review of the data source."
+    },
+    "DPK-SAST-006": {
+      "title": "Concept: PHP shell execution functions",
+      "description": "PHP's shell execution functions run a command line through a shell, so any unescaped interpolation becomes shell syntax rather than an argument. Escaping has to match the shell grammar, and an argument-vector API removes the problem entirely.",
+      "applicability": "PHP source that runs external commands.",
+      "risk": "Command injection through interpolated command strings; MEDIUM severity."
+    },
+    "DPK-SAST-007": {
+      "title": "Concept: unbounded C string copy",
+      "description": "An unbounded copy writes until it finds a terminator in the source, so a longer source overwrites adjacent memory. The call is only safe when the destination size is enforced at the call site, which lexical review must check.",
+      "applicability": "C and C++ source that copies strings.",
+      "risk": "Memory corruption and potential code execution; MEDIUM severity pending review."
+    },
+    "DPK-SAST-008": {
+      "title": "Concept: SQL built by string concatenation",
+      "description": "Concatenating values into SQL makes the query text depend on data, so a quote in the value ends the literal and starts new syntax. Parameters keep the statement structure fixed while values travel separately.",
+      "applicability": "JavaScript and TypeScript source that builds SQL text.",
+      "risk": "SQL injection across the data the query can reach; MEDIUM severity pending review."
+    },
+    "DPK-SAST-009": {
+      "title": "Concept: document.write as an HTML sink",
+      "description": "document.write parses its argument as HTML in the current document, so markup in the string becomes live DOM and event handlers. Called after load it also replaces the document, which makes the failure mode worse than an ordinary sink.",
+      "applicability": "JavaScript and TypeScript source that writes into the document.",
+      "risk": "DOM cross-site scripting; MEDIUM severity pending review."
+    },
+    "DPK-SAST-010": {
+      "title": "Concept: os.system shell command",
+      "description": "os.system passes a string to the system shell, so a semicolon, pipe or backtick inside interpolated data starts another command. There is no argument vector, so the command and its data cannot be separated by construction.",
+      "applicability": "Python source that runs shell commands.",
+      "risk": "Command execution with the application's privileges; HIGH severity because no separation exists at the call."
+    },
+    "DPK-SAST-011": {
+      "title": "Concept: gets() with no bound",
+      "description": "gets() reads until a newline and writes without knowing the destination size, so any line longer than the buffer overflows it. The function cannot be used safely and has been removed from the C standard.",
+      "applicability": "C and C++ source that reads input.",
+      "risk": "Buffer overflow with control-flow impact; HIGH severity."
+    },
+    "DPK-SAST-012": {
+      "title": "Concept: yaml.load object construction",
+      "description": "yaml.load can instantiate arbitrary Python objects named by tags in the document, so a hostile document constructs objects and can run code during parsing. yaml.safe_load excludes those constructors.",
+      "applicability": "Python source that parses YAML with the full loader.",
+      "risk": "Code execution through a crafted document; HIGH severity."
+    },
+    "DPK-SAST-013": {
+      "title": "Concept: Math.random for security values",
+      "description": "Math.random is a fast statistical generator rather than a cryptographic one, and its output becomes predictable from a small number of observations. Tokens, keys and reset codes need a cryptographically secure source.",
+      "applicability": "JavaScript and TypeScript source that generates values.",
+      "risk": "Predictable tokens and identifiers; LOW severity until the value is shown to be security-relevant."
+    },
+    "DPK-SAST-014": {
+      "title": "Concept: XML parser without visible hardening",
+      "description": "An XML parser that resolves external entities fetches URLs named inside the document, which exposes local files and allows server-side requests to internal services. Hardening means disabling DTDs and external entity resolution before parsing untrusted text.",
+      "applicability": "Java source that parses XML.",
+      "risk": "File disclosure and server-side request forgery; MEDIUM severity pending review of parser configuration."
+    },
+    "DPK-SAST-015": {
+      "title": "Concept: debug mode in application code",
+      "description": "A debug flag that ships inside application code turns on verbose errors and sometimes an interactive console whenever the deployment environment is mis-set. The flag is one configuration mistake away from being live.",
+      "applicability": "Python source that configures an application framework.",
+      "risk": "Information disclosure and, with interactive debuggers, code execution; MEDIUM severity."
+    },
+    "DPK-SAST-016": {
+      "title": "Concept: JWT decode without verified signature",
+      "description": "A decode call only reads the token; the signature is verified only when the API is asked to verify and is given the key and permitted algorithms. Used as authentication, a decode accepts forged tokens.",
+      "applicability": "Python source that reads JSON Web Tokens.",
+      "risk": "Authentication bypass through forged tokens; MEDIUM severity pending review of the called options."
+    },
+    "DPK-SAST-017": {
+      "title": "Concept: wildcard CORS origin in code",
+      "description": "A wildcard Access-Control-Allow-Origin lets every site read responses that the browser sends with the user's ambient credentials where the policy permits it. An explicit origin allowlist keeps reads to named applications.",
+      "applicability": "Python source that configures CORS responses.",
+      "risk": "Cross-origin data theft from a victim's session; MEDIUM severity."
+    },
+    "DPK-SAST-018": {
+      "title": "Concept: public-read storage ACL",
+      "description": "A public-read ACL on a storage bucket makes every object readable without authentication, including objects written later. Exposure is a property of the container, so fixing one object does not fix the bucket.",
+      "applicability": "Terraform configuration that declares storage resources.",
+      "risk": "Public disclosure of stored objects; HIGH severity because exposure is immediate and global."
+    },
+    "DPK-SAST-019": {
+      "title": "Concept: TLS verification disabled",
+      "description": "Disabling certificate verification removes the only check that the TLS peer is the intended host, so any on-path device can present its own certificate and read the traffic. The parameter is usually added to silence a local error and left in place.",
+      "applicability": "Python source that makes outbound TLS connections.",
+      "risk": "Interception of outbound traffic and credentials; HIGH severity."
+    },
+    "DPK-SAST-020": {
+      "title": "Concept: ECB block-cipher mode",
+      "description": "ECB encrypts each block independently with the same key, so equal plaintext blocks produce equal ciphertext blocks and the structure of the data survives encryption. It is not a secure mode for anything longer than one block.",
+      "applicability": "Python source that selects a cipher mode.",
+      "risk": "Pattern disclosure and chosen-plaintext attacks on structured data; HIGH severity."
+    },
+    "DPK-SAST-021": {
+      "title": "Concept: security group open to the world",
+      "description": "A rule that admits 0.0.0.0/0 accepts traffic from every address on the internet, so the exposed port is reachable by anyone who scans it. The range is the defect; whether the service should be public at all is a separate design decision.",
+      "applicability": "Terraform configuration that declares network security groups.",
+      "risk": "Unrestricted network exposure of the port; HIGH severity."
+    },
+    "DPK-SAST-022": {
+      "title": "Concept: hardcoded application secret key",
+      "description": "A secret written into source is readable by everyone with repository access and remains in history after deletion. Rotation is the only remedy once the value has been pushed, because copies of the history persist.",
+      "applicability": "Python source that configures application secrets.",
+      "risk": "Forgery of signed sessions or tokens; HIGH severity because the secret is a durable credential."
+    },
+    "DPK-SEC-001": {
+      "title": "Concept: AWS access key id in source",
+      "description": "An AWS access key id names a principal and pairs with a secret to sign every request, so committing one exposes a durable credential that survives cleanup. The rule reports the shape; validity and scope must be confirmed by the owner.",
+      "applicability": "Any source file that may contain configuration or fixtures.",
+      "risk": "Unauthorised AWS API use with the key's permissions; MEDIUM severity until validity is confirmed."
+    },
+    "DPK-SEC-002": {
+      "title": "Concept: GitHub personal access token in source",
+      "description": "A GitHub personal access token authorises API and git operations as its owner, often across many repositories and organisations. A token in source is exposed to everyone who can read the file or its history.",
+      "applicability": "Any source file that may contain configuration or fixtures.",
+      "risk": "Repository read or write with the owner's permissions; HIGH severity."
+    },
+    "DPK-SEC-003": {
+      "title": "Concept: hardcoded API key assignment",
+      "description": "An API key assigned inline in source travels with the code into forks, logs and backups, and every copy is a working credential. A secret store is what makes rotation possible without a code change.",
+      "applicability": "Any source file that assigns a credential-looking value to a key-like name.",
+      "risk": "Third-party API abuse billed to the owner; MEDIUM severity until the key is shown to be live."
+    },
+    "DPK-SEC-004": {
+      "title": "Concept: private key block in source",
+      "description": "A PEM private key block in source is the key material itself, not a reference to it, so anyone who reads the file can act as the holder. Once exposed, the only remedy is revocation and reissue.",
+      "applicability": "Any source file, including test fixtures, that may contain key material.",
+      "risk": "Impersonation of the key's holder; HIGH severity."
+    },
+    "DPK-SEC-005": {
+      "title": "Concept: Slack token in source",
+      "description": "A Slack token grants workspace API access as the app or user that owns it, which can mean messages, files and channel metadata. Tokens pasted into source are exposed to everyone with repository access.",
+      "applicability": "Any source file that may contain configuration or fixtures.",
+      "risk": "Workspace data access and message posting; HIGH severity."
+    },
+    "DPK-SEC-006": {
+      "title": "Concept: AWS secret access key in source",
+      "description": "The AWS secret access key is the signing half of a credential pair, so together with its key id it authenticates every API call. It is not reversible once pushed and must be rotated rather than deleted.",
+      "applicability": "Any source file that may contain configuration or fixtures.",
+      "risk": "Full use of the AWS identity's permissions; HIGH severity."
+    },
+    "DPK-SEC-007": {
+      "title": "Concept: hardcoded password assignment",
+      "description": "A password literal in source is the authentication secret itself and is shared by every deployment that uses the file. Injecting it from the environment keeps the secret out of the repository and its history.",
+      "applicability": "Any source file that assigns a password-like value to a password-like name.",
+      "risk": "Account takeover where the credential is live; HIGH severity."
+    },
+    "DPK-SEC-008": {
+      "title": "Concept: GitHub fine-grained token in source",
+      "description": "A fine-grained GitHub token is limited to named repositories and permissions, but it is still a bearer credential: whoever holds it has exactly those rights. Committed tokens must be revoked, not merely deleted from the file.",
+      "applicability": "Any source file that may contain configuration or fixtures.",
+      "risk": "Scoped repository access with the token's permissions; HIGH severity."
+    }
+  }
+}

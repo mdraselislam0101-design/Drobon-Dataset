@@ -1,0 +1,374 @@
+[
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "log-crlf-injection",
+    "category": "log-forging",
+    "cwe": "CWE-117",
+    "severity": "MEDIUM",
+    "title": "Log line built with an explicit CRLF in {lang} — review required",
+    "description": "A logging call in {lang} concatenates an explicit carriage-return/line-feed pair into the message. A log processor that treats the event as one line will then show a forged second entry: an attacker who can influence the appended text writes whatever the operator later reads as a separate, trusted event. The rule matches the explicit CRLF in the call; it does not prove the value is attacker controlled.",
+    "remediation": "Strip or encode CR and LF before logging, log structured fields instead of concatenated text, and configure the sink to escape control characters.",
+    "limitation": "Lexical: matches explicit CRLF escapes inside common log calls; loggers that encode control characters internally are out of scope.",
+    "scopeT": "Single-line match on a log call carrying a CRLF escape in {lang}.",
+    "fp": "Messages built from trusted constants that already contain a CRLF are the accepted false positives.",
+    "recordDesc": "In {lang}, a log call builds its message with a literal CRLF sequence. Many collectors split events on newlines, so the second half becomes an independent line that appears to come from the application itself. An attacker who controls any appended value can fabricate entries, hide activity, or poison downstream alerting without ever touching the log file.",
+    "applicability": "{lang} services that log request-derived values through text sinks.",
+    "risk": "Log forgery and alerting evasion; MEDIUM severity.",
+    "why": "A CRLF escape is written into the log message.",
+    "fix": [
+      "Encode CR/LF before logging.",
+      "Prefer structured fields over concatenated messages."
+    ],
+    "verifyT": "Rescan shows no CRLF in log calls and a test confirms the sink escapes newlines.",
+    "sinks": {
+      "javascript": [
+        "\\b(?:log(?:ger)?|console)\\.(?:info|warn|error|debug|log)\\([^)\\n]*\\\\r\\\\n",
+        "logger.info(\"login \" + user + \"\\r\\n\")",
+        "logger.info(\"login\", { user })",
+        "a structured logger"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "debug-mode-on",
+    "category": "debug-code",
+    "cwe": "CWE-489",
+    "severity": "MEDIUM",
+    "title": "Debug mode enabled in {lang} — review required",
+    "description": "Debug mode is switched on in {lang}, either through a framework setting or the development server launch call. Debug builds expose stack traces, interactive consoles, configuration values, and sometimes remote code paths that production must never serve. This lexical rule flags the switch; whether the file is production configuration is a review decision.",
+    "remediation": "Force debug off outside local development, drive it from an environment variable that defaults to false, and assert the production setting at start-up.",
+    "limitation": "Lexical: matches literal debug assignments and run-call flags; configuration merged from other files is out of scope.",
+    "scopeT": "Single-line match on a literal debug enablement in {lang}.",
+    "fp": "Test-only settings loaded exclusively by the test runner are the documented exception.",
+    "recordDesc": "In {lang}, debug mode is enabled through a literal setting. When that configuration reaches production the framework serves stack traces, environment details, and interactive debugger endpoints to whoever triggers an error. Those pages have repeatedly turned a benign exception into credential disclosure or code execution.",
+    "applicability": "{lang} web frameworks and development servers; lexical scope.",
+    "risk": "Information disclosure and debugger-assisted code execution; MEDIUM severity.",
+    "why": "Debug mode is enabled by a literal setting.",
+    "fix": [
+      "Default debug to false and read it from the environment.",
+      "Fail start-up when debug is on in production."
+    ],
+    "verifyT": "Rescan shows debug disabled and a production start-up test asserts the flag is false.",
+    "sinks": {
+      "python": [
+        "\\bDEBUG\\s*=\\s*True\\b",
+        "DEBUG = True",
+        "DEBUG = False",
+        "an environment-driven flag"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "assert-authorization",
+    "category": "access-control",
+    "cwe": "CWE-284",
+    "severity": "MEDIUM",
+    "title": "Authorization enforced with assert in {lang} — review required",
+    "description": "An assert statement carries an authorization decision in {lang}. Python removes every assert when the interpreter runs with -O, so the check disappears in exactly the optimised deployments that face real traffic. The rule flags asserts whose expression mentions a role, permission, or authentication predicate.",
+    "remediation": "Replace the assert with an explicit conditional that raises a denial, and keep authorization in one middleware layer rather than scattered asserts.",
+    "limitation": "Lexical: matches authorization-shaped assert expressions; custom predicate names are out of scope.",
+    "scopeT": "Single-line match on an assert carrying an access decision in {lang}.",
+    "fp": "Asserts that document an invariant inside a test file are the accepted false positives.",
+    "recordDesc": "In {lang}, an access decision is expressed as an assert. Under the optimised interpreter every assert is compiled away, so the authorization branch silently vanishes and the request proceeds as the authenticated principal. The same statement looks correct in development, which is why the failure only appears in the deployment that matters.",
+    "applicability": "{lang} request handlers and service functions; lexical scope.",
+    "risk": "Authorization bypass in optimised deployments; MEDIUM severity.",
+    "why": "An access decision is implemented as an assert.",
+    "fix": [
+      "Raise an explicit denial instead of asserting.",
+      "Route the decision through shared authorization middleware."
+    ],
+    "verifyT": "Rescan shows no authorization asserts and an optimised-interpreter test still denies the request.",
+    "sinks": {
+      "python": [
+        "\\bassert\\s+[^\\n]*(?:is_admin|is_authenticated|is_staff|has_perm|has_role|authorized|allowed|permission)",
+        "assert user.is_admin",
+        "assert response.status_code == 200",
+        "an explicit raise Denied()"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "uuid1-token",
+    "category": "weak-cryptography",
+    "cwe": "CWE-330",
+    "severity": "MEDIUM",
+    "title": "Time-based UUID used as a security value in {lang} — review required",
+    "description": "uuid.uuid1() mixes the host identifier and a timestamp with a small counter, so the identifiers it produces are ordered and partly predictable. Using one as a password-reset token, session identifier, or object reference lets an observer guess neighbouring values. The rule flags the call; how the value is used is a review decision.",
+    "remediation": "Use uuid.uuid4() or secrets.token_urlsafe() for anything security-relevant, and never encode authorization in an identifier alone.",
+    "limitation": "Lexical call match; the use of the identifier is out of scope.",
+    "scopeT": "Single-line match on uuid.uuid1() in {lang}.",
+    "fp": "Time-based identifiers used purely for sortable database keys are the accepted false positives.",
+    "recordDesc": "In {lang}, uuid.uuid1() generates an identifier from a timestamp, the host identifier, and a clock sequence. Successive values are close to each other and the timestamp is guessable, so an attacker who receives one can enumerate neighbours and probe for valid tokens. Security values must come from a random source, not a time-ordered one.",
+    "applicability": "{lang} services that mint identifiers for links, sessions, or references.",
+    "risk": "Predictable identifiers enabling enumeration and token guessing; MEDIUM severity.",
+    "why": "A time-ordered UUID is used where unpredictability may matter.",
+    "fix": [
+      "Use uuid.uuid4() or secrets.token_urlsafe().",
+      "Keep authorization decisions out of identifiers."
+    ],
+    "verifyT": "Rescan shows no uuid1() in security paths and an enumeration test fails to guess a token.",
+    "sinks": {
+      "python": [
+        "\\buuid\\.uuid1\\(",
+        "token = str(uuid.uuid1())",
+        "token = str(uuid.uuid4())",
+        "secrets.token_urlsafe()"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "git-clone-plaintext",
+    "category": "cleartext-transmission",
+    "cwe": "CWE-319",
+    "severity": "MEDIUM",
+    "title": "Repository cloned over plaintext HTTP in {lang} — review required",
+    "description": "The clone URL uses http://, so the source code and every object fetched travel without transport protection. An on-path attacker can read private code or substitute objects that the build later executes. The rule matches the literal scheme in the command.",
+    "remediation": "Clone over https:// or ssh, pin a commit, and verify signed tags before building.",
+    "limitation": "Lexical match on the clone command; redirects and git config rewriting are out of scope.",
+    "scopeT": "Single-line match on a plaintext git clone in {lang}.",
+    "fp": "Mirrors of public repositories where integrity is checked separately are still flagged and reviewed.",
+    "recordDesc": "In {lang}, git clone fetches from an http:// URL. The protocol carries no server authentication, so an attacker on the path can serve a different repository or altered objects and the build compiles them. Even for public code, the substitution happens before any signature check because there is nothing to check.",
+    "applicability": "{lang} build scripts, container images, and CI steps.",
+    "risk": "Source substitution and code disclosure on the wire; MEDIUM severity.",
+    "why": "The clone URL has no transport protection.",
+    "fix": [
+      "Clone over https or ssh.",
+      "Pin the commit or verify signatures."
+    ],
+    "verifyT": "Rescan shows only https/ssh clones and the build pins a commit.",
+    "sinks": {
+      "shell": [
+        "\\bgit\\s+clone\\s+http://",
+        "git clone http://git.example.com/app.git",
+        "git clone https://git.example.com/app.git",
+        "an https remote with a pinned commit"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "docker-base-unpinned",
+    "category": "container-security",
+    "cwe": "CWE-829",
+    "severity": "MEDIUM",
+    "title": "Container base image is not pinned in {lang} — review required",
+    "description": "The FROM line names a tag such as latest, or omits the tag entirely. The image resolved at build time is then whatever the registry points at that day, so two builds of the same commit can contain different operating-system packages. Pinning a version and preferably a digest makes the base reproducible and reviewable.",
+    "remediation": "Pin the base image to a specific version and digest, and update it through a reviewed dependency process.",
+    "limitation": "Lexical: reads the FROM line only; digest pinning is checked by review.",
+    "scopeT": "Single-line match on an unpinned FROM in {lang}.",
+    "fp": "Throwaway local builds that are never published are the accepted exception.",
+    "recordDesc": "In {lang}, the base image reference floats: either it uses the latest tag or it leaves the tag off and inherits latest by default. Rebuilding the same commit can then pull a different filesystem with different packages and vulnerabilities, so the artifact that was tested is not the artifact that ships. Supply-chain substitution also becomes invisible without a digest.",
+    "applicability": "{lang} container build definitions; lexical scope.",
+    "risk": "Non-reproducible builds and unvetted base updates; MEDIUM severity.",
+    "why": "The base image reference does not pin a version.",
+    "fix": [
+      "Pin a version tag.",
+      "Pin the digest and refresh it through review."
+    ],
+    "verifyT": "Rescan shows a versioned or digest-pinned base and two builds compare identical.",
+    "sinks": {
+      "dockerfile": [
+        "\\bFROM\\s+(?:[^\\s:]+\\s*$|[^\\s:]+:latest\\b)",
+        "FROM node:latest AS build",
+        "FROM node:18.20.4 AS build",
+        "a digest-pinned base image"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "docker-root-user",
+    "category": "container-security",
+    "cwe": "CWE-250",
+    "severity": "MEDIUM",
+    "title": "Container runs as root in {lang} — review required",
+    "description": "The image ends up running its process as root, either because USER root is set explicitly or because no USER instruction narrows the default. A container escape then starts from uid 0 inside the container, with write access to every file the image ships. The rule flags the explicit setting; the missing-instruction case is covered by review.",
+    "remediation": "Create an unprivileged user in the image, switch to it with USER, and keep the root filesystem read-only where possible.",
+    "limitation": "Lexical: only an explicit USER root (or uid 0) is matched; images with no USER line are out of scope for this rule.",
+    "scopeT": "Single-line match on USER root in {lang}.",
+    "fp": "Init images that must start as root and drop privileges immediately are the accepted exception and need evidence.",
+    "recordDesc": "In {lang}, the image sets USER root. The application process keeps full control of the container filesystem, so a compromise can rewrite binaries, install persistence, and reach any mounted secret. Runtime restrictions help, but starting unprivileged removes the easiest escalation path after a container breakout.",
+    "applicability": "{lang} container images that serve application traffic.",
+    "risk": "Privilege escalation inside the container and easier lateral movement; MEDIUM severity.",
+    "why": "The container user is explicitly root.",
+    "fix": [
+      "Create and switch to an unprivileged user.",
+      "Run with a read-only root filesystem."
+    ],
+    "verifyT": "Rescan shows a non-root USER and the runtime reports uid != 0.",
+    "sinks": {
+      "dockerfile": [
+        "\\bUSER\\s+(?:root|0)\\b",
+        "USER root",
+        "USER app",
+        "an unprivileged uid"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "docker-add-remote",
+    "category": "container-security",
+    "cwe": "CWE-494",
+    "severity": "HIGH",
+    "title": "Remote artifact added without integrity check in {lang} — review required",
+    "description": "ADD with a URL downloads the artifact during the build. The download is not verified by a checksum unless the Dockerfile says so, so a compromised host serves different bytes into the image. COPY from a verified build stage, or download and check a digest explicitly.",
+    "remediation": "Fetch the artifact in a builder stage, verify a pinned checksum or signature, then COPY the verified file into the final image.",
+    "limitation": "Lexical: matches ADD with an http(s) URL; checksum verification elsewhere in the file is out of scope.",
+    "scopeT": "Single-line match on a remote ADD in {lang}.",
+    "fp": "Builds that verify a digest in a separate RUN step are still flagged and documented.",
+    "recordDesc": "In {lang}, ADD pulls a remote URL into the image. The fetch happens at build time with no integrity metadata, so the artifact that lands in the layer is whatever the server returned then. A registry or host compromise therefore injects binaries or archives straight into the shipped image, and the Dockerfile gives no evidence of what was expected.",
+    "applicability": "{lang} images that fetch tools, archives, or certificates during build.",
+    "risk": "Supply-chain injection into the built image; HIGH severity.",
+    "why": "A remote artifact enters the image without a checksum.",
+    "fix": [
+      "Download, verify a pinned digest, then COPY.",
+      "Prefer a verified package source."
+    ],
+    "verifyT": "Rescan shows a checksum-verified COPY and the build fails on a mismatched digest.",
+    "sinks": {
+      "dockerfile": [
+        "\\bADD\\s+https?://\\S+",
+        "ADD http://example.com/tool.tar.gz /opt/",
+        "COPY tool.tar.gz /opt/",
+        "a checksum-verified builder stage"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "gha-workflow-run",
+    "category": "ci-security",
+    "cwe": "CWE-829",
+    "severity": "HIGH",
+    "title": "Privileged workflow triggered by workflow_run in {lang} — review required",
+    "description": "A workflow_run trigger fires in the base repository with a write-capable token after another workflow completes, including workflows started by fork pull requests. If the job checks out or executes artifacts from that run, untrusted code reaches a privileged context. The rule flags the trigger; whether the job consumes untrusted output is a review decision.",
+    "remediation": "Avoid workflow_run for untrusted events, or keep the job read-only and never check out the triggering run’s head; validate artifacts by digest before use.",
+    "limitation": "Lexical: matches the trigger only; job steps and token permissions are out of scope.",
+    "scopeT": "Single-line match on a workflow_run trigger in {lang}.",
+    "fp": "workflow_run chains that only publish trusted, already-verified artifacts are the accepted exception.",
+    "recordDesc": "In {lang}, a workflow listens on workflow_run. That event runs with the base repository’s privileges after a run that may have been started by an outside contributor. Jobs that download the triggering artifacts or check out its commit therefore execute attacker-influenced content with a token that can write to the repository.",
+    "applicability": "{lang} repositories that chain workflows across events.",
+    "risk": "Privileged execution of untrusted workflow output; HIGH severity.",
+    "why": "A privileged workflow is chained to an untrusted trigger.",
+    "fix": [
+      "Drop workflow_run for fork-reachable events.",
+      "Keep the job read-only and verify artifacts by digest."
+    ],
+    "verifyT": "Rescan shows no privileged workflow_run chain and a fork test cannot reach a write token.",
+    "sinks": {
+      "yaml": [
+        "\\bworkflow_run\\b",
+        "  workflow_run:",
+        "  pull_request:",
+        "an artifact digest check"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "gha-secrets-inherit",
+    "category": "ci-security",
+    "cwe": "CWE-250",
+    "severity": "MEDIUM",
+    "title": "Reusable workflow inherits every secret in {lang} — review required",
+    "description": "secrets: inherit passes every secret available to the caller into the called workflow, including ones the called job does not need. A compromised or over-broad reusable workflow then reads credentials unrelated to its purpose. Pass named secrets instead, and let the callee declare exactly what it consumes.",
+    "remediation": "Replace secrets: inherit with an explicit map of the secrets the called workflow needs.",
+    "limitation": "Lexical: matches the inherit keyword; actual secret usage inside the callee is out of scope.",
+    "scopeT": "Single-line match on secrets: inherit in {lang}.",
+    "fp": "A callee that genuinely needs every secret is the accepted exception and must be recorded.",
+    "recordDesc": "In {lang}, a job calls a reusable workflow with secrets: inherit. Every secret visible to the caller becomes visible to the callee, so the callee’s permissions are the union of everything the repository holds. A change in that workflow, or a mistake in its steps, exposes credentials that had nothing to do with the job.",
+    "applicability": "{lang} workflows that call reusable workflows.",
+    "risk": "Over-broad credential exposure through a callee; MEDIUM severity.",
+    "why": "All caller secrets are forwarded to the callee.",
+    "fix": [
+      "Pass only the named secrets required.",
+      "Let the callee declare its secret inputs."
+    ],
+    "verifyT": "Rescan shows an explicit secrets map and the callee runs with only those values.",
+    "sinks": {
+      "yaml": [
+        "\\bsecrets:\\s*inherit\\b",
+        "secrets: inherit",
+        "secrets: DEPLOY_TOKEN",
+        "an explicit secret map"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "php-unserialize",
+    "category": "unsafe-deserialization",
+    "cwe": "CWE-502",
+    "severity": "HIGH",
+    "title": "Object injection via unserialize in {lang} — review required",
+    "description": "unserialize() rebuilds PHP objects from a string and honours class names and magic methods embedded in it, so a crafted payload can trigger __wakeup or __destruct on classes the application loads. The rule flags the call; whether the string is trusted is a review decision.",
+    "remediation": "Decode untrusted data with json_decode(), or pass allowed_classes to unserialize and authenticate the payload before decoding.",
+    "limitation": "Lexical call match; reachable gadget chains depend on loaded classes and are out of scope.",
+    "scopeT": "Single-line match on an unserialize() call in {lang}.",
+    "fp": "Values produced and consumed inside one process from a signed cache are the accepted false positives.",
+    "recordDesc": "In {lang}, unserialize() turns a string into objects. Because the payload names its own classes, an attacker who controls the string chooses which constructors run on the way in and which destructors run on the way out. That is the entry point for PHP object-injection chains that end in file writes or command execution.",
+    "applicability": "{lang} applications that decode cookies, queue messages, or cache entries with unserialize.",
+    "risk": "Object injection leading to code execution; HIGH severity.",
+    "why": "Untrusted serialized data is rebuilt into PHP objects.",
+    "fix": [
+      "Use json_decode for untrusted data.",
+      "Restrict allowed_classes and authenticate the payload."
+    ],
+    "verifyT": "Rescan shows no unserialize on untrusted input and a decode test rejects object payloads.",
+    "sinks": {
+      "php": [
+        "unserialize",
+        "unserialize($payload)",
+        "json_decode($payload, true)",
+        "allowed_classes"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "java-expression-eval",
+    "category": "code-injection",
+    "cwe": "CWE-94",
+    "severity": "HIGH",
+    "title": "Dynamic expression evaluation in {lang} — review required",
+    "description": "ScriptEngine or SpEL evaluates a string as an expression inside the Java process. When any part of that string is request-derived, the caller can invoke arbitrary classes and methods with the application’s permissions. The rule flags the evaluator; the provenance of the expression is a review decision.",
+    "remediation": "Replace expression evaluation with a fixed dispatch table, or restrict the parser to trusted templates with a closed function set.",
+    "limitation": "Lexical: matches the evaluator API on one line; dataflow to the expression is out of scope.",
+    "scopeT": "Single-line match on a script or SpEL evaluator in {lang}.",
+    "fp": "Evaluators applied only to constant expressions are the accepted false positives.",
+    "recordDesc": "In {lang}, a script engine or SpEL parser evaluates a runtime string. Expression languages expose class resolution and method invocation, so a payload that reaches eval() runs inside the JVM with the service account’s access. The parser is the dangerous sink even when the current call site looks harmless.",
+    "applicability": "{lang} services that template rules, filters, or formulas at runtime.",
+    "risk": "Remote code execution inside the JVM; HIGH severity.",
+    "why": "A runtime string is evaluated as an expression.",
+    "fix": [
+      "Use a fixed dispatch table.",
+      "If templates are required, expose a closed function set."
+    ],
+    "verifyT": "Rescan shows no dynamic evaluator on request data and an injection test cannot resolve classes.",
+    "sinks": {
+      "java": [
+        "\\b(?:SpelExpressionParser|ScriptEngineManager)\\b|\\bScriptEngine\\b[^\\n]*\\.eval\\(",
+        "SpelExpressionParser parser = new SpelExpressionParser();",
+        "Map<String, Handler> handlers = new HashMap<>();",
+        "a fixed dispatch table"
+      ]
+    }
+  }
+]

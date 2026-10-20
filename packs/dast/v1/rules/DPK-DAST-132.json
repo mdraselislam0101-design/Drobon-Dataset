@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-132",
+  "title": "GraphQL introspection result disclosed in a response",
+  "description": "The response body is a GraphQL introspection result: it carries a __schema object with a queryType entry. Introspection enumerates every type, field, argument and deprecated field the schema exposes, which removes schema guessing from an attacker's work and can reveal administrative mutations.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Disable introspection in production (or allow it only for authenticated tooling) and keep the schema in the build pipeline where it belongs.",
+  "limitation": "Two body markers. A GraphQL error response or a page that quotes a schema fragment is not reported unless both markers appear.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*\"__schema\")(?=[\\s\\S]*\"queryType\")"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/graphql",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"data\":{\"__schema\":{\"queryType\":{\"name\":\"Query\"},\"types\":[{\"name\":\"User\"}]}}}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/graphql",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"data\":{\"__schema\":{\"queryType\":{\"name\":\"RootQuery\"},\"mutationType\":{\"name\":\"Mutation\"}}}}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/graphql",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"errors\":[{\"message\":\"introspection is disabled\"}]}"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/docs/graphql",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<p>Use __schema to explore the API during development.</p>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1201"
+  ]
+}

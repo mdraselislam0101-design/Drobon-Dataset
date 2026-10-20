@@ -1,0 +1,87 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1333",
+  "title": "Signal: Set-Cookie __Host- prefix is paired with a Domain attribute",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-header-matches",
+      "header": "Set-Cookie",
+      "valuePattern": "^(?=\\s*__Host-[^=;\\s]*=)(?=[\\s\\S]*;\\s*domain\\s*=)"
+    }
+  },
+  "scope": "One Set-Cookie header whose __Host- cookie carries a Domain attribute.",
+  "limitations": "One header value and one cookie. The rule reports the contradictory pair and cannot tell which behaviour the caller's browser implements. The check compiles case-insensitively, so a cookie name that differs only in case is reported as if it carried the prefix; browsers treat the prefix as case-sensitive.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "__Host-sid=abc; Path=/; Secure; HttpOnly; Domain=example.com"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "__Host-token=xyz; Domain=.example.com; Path=/; Secure"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "__Host-sid=abc; Path=/; Secure; HttpOnly; SameSite=Lax"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Path=/; Secure; Domain=example.com"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "pref=__Host-x; Path=/; Secure; Domain=example.com"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "__Host-a=1; Domain=example.com"
+        }
+      },
+      "match": true
+    }
+  ],
+  "fpNotes": "A __Host- cookie missing Secure is a different prefix violation and is not reported here.",
+  "linkedRules": [
+    "DPK-DAST-264"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:cookie-host-prefix-domain:host-prefix-domain",
+  "validationStatus": "VALIDATED"
+}

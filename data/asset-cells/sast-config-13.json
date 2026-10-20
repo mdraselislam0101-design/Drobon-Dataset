@@ -1,0 +1,623 @@
+[
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "sql-grant-all",
+    "category": "access-control",
+    "cwe": "CWE-250",
+    "severity": "HIGH",
+    "title": "Database privileges granted without a scope limit in {lang} — review required",
+    "description": "GRANT ALL PRIVILEGES hands an account every right on the target, including DROP and GRANT OPTION when those are implied. A service that only reads one schema then holds the power to destroy it or to grant itself access elsewhere. The rule flags the statement; whether the account is application-facing is a review decision.",
+    "remediation": "Grant only the statements the account uses, scoped to the schemas it owns, and revoke GRANT OPTION.",
+    "limitation": "Lexical: matches GRANT ALL in migration or setup SQL; runtime grants issued by an ORM are out of scope.",
+    "scopeT": "Single-line match on GRANT ALL in {lang}.",
+    "fp": "A documented break-glass administrator role created by a DBA runbook is the accepted exception.",
+    "recordDesc": "In {lang}, an account is granted every privilege. Least privilege is the only control that limits the blast radius of a compromised application credential, and a GRANT ALL removes it in one statement. The privilege often arrives through a convenience line in a bootstrap script and is never narrowed.",
+    "applicability": "{lang} schemas and bootstrap scripts.",
+    "risk": "Destructive or self-escalating database access; HIGH severity.",
+    "why": "The grant covers every privilege on the target.",
+    "fix": [
+      "Grant only SELECT/INSERT/UPDATE on the used tables.",
+      "Scope the grant to one schema.",
+      "Revoke GRANT OPTION."
+    ],
+    "verifyT": "The application account fails to DROP a table and cannot grant to another role.",
+    "sinks": {
+      "sql": [
+        "\\bGRANT\\s+ALL\\b",
+        "GRANT ALL PRIVILEGES ON app.* TO app_user;",
+        "GRANT SELECT, INSERT ON app.orders TO app_user;",
+        "statement-scoped grants without GRANT OPTION"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "sql-xp-cmdshell",
+    "category": "command-injection",
+    "cwe": "CWE-78",
+    "severity": "HIGH",
+    "title": "Operating-system command execution enabled in SQL Server in {lang} — review required",
+    "description": "sp_configure xp_cmdshell turns the extended procedure back on, which lets any sufficiently privileged SQL caller run operating-system commands as the database service account. The database then becomes a pivot into the host. The rule flags the setting; whether the caller set is restricted is a review decision.",
+    "remediation": "Leave xp_cmdshell disabled and move shell work to a job runner with its own identity and audit trail.",
+    "limitation": "Lexical: matches the configuration statement; a server-wide setting changed outside SQL is out of scope.",
+    "scopeT": "Single-line match on enabling xp_cmdshell in {lang}.",
+    "fp": "A documented, monitored emergency procedure that re-disables the feature is the accepted exception.",
+    "recordDesc": "In {lang}, xp_cmdshell is enabled. The procedure executes with the service account, so SQL-level access becomes host-level access; the account often holds more rights than the database needs. Microsoft ships the feature disabled for this reason.",
+    "applicability": "{lang} SQL Server instances configured through scripts.",
+    "risk": "Host command execution from a database session; HIGH severity.",
+    "why": "The command-shell extended procedure is switched on.",
+    "fix": [
+      "Set xp_cmdshell to 0.",
+      "Use a dedicated job runner for shell tasks."
+    ],
+    "verifyT": "EXEC xp_cmdshell fails with the feature disabled.",
+    "sinks": {
+      "sql": [
+        "sp_configure\\s*\\(?\\s*['\"]xp_cmdshell['\"]\\s*,\\s*1",
+        "EXEC sp_configure 'xp_cmdshell', 1;",
+        "EXEC sp_configure 'xp_cmdshell', 0;",
+        "xp_cmdshell disabled and verified"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "objc-nstask",
+    "category": "command-injection",
+    "cwe": "CWE-78",
+    "severity": "HIGH",
+    "title": "External program launched through NSTask in {lang} — review required",
+    "description": "NSTask launches an executable with a path and argument array supplied by the app. When the launch path or arguments come from a document, a URL handler or user input, the app runs code the user did not choose. The rule flags the launch; whether any component is externally influenced is a review decision.",
+    "remediation": "Hard-code the executable path, validate arguments against an allowlist and never derive the launch path from document content.",
+    "limitation": "Lexical: matches NSTask allocations; Process on newer SDKs is reported by the same intent but not by this pattern.",
+    "scopeT": "Single-line match on NSTask launch in {lang}.",
+    "fp": "A fixed helper binary in a signed application bundle is the accepted false positive.",
+    "recordDesc": "In {lang}, a task object is created to run a program. macOS grants the application the user identity, so an attacker who controls the launch path or the arguments can execute code without a further exploit. Documents and URL schemes are the usual delivery channels.",
+    "applicability": "{lang} macOS applications that shell out to helpers.",
+    "risk": "Arbitrary program execution with the user identity; HIGH severity.",
+    "why": "A program launch is reachable from application logic.",
+    "fix": [
+      "Fix the launch path inside the bundle.",
+      "Allowlist every argument."
+    ],
+    "verifyT": "A crafted document cannot change the executable or add arguments.",
+    "sinks": {
+      "objc": [
+        "\\[\\[NSTask\\s+alloc\\]",
+        "NSTask *task = [[NSTask alloc] init];",
+        "NSData *data = [NSData dataWithContentsOfURL:url];",
+        "a fixed bundle-relative executable path"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "nginx-proxy-pass-variable",
+    "category": "server-side-request-forgery",
+    "cwe": "CWE-918",
+    "severity": "MEDIUM",
+    "title": "Reverse proxy target assembled from a request variable in {lang} — review required",
+    "description": "proxy_pass with a variable builds the upstream from request data. A crafted path or query can steer the proxy to arbitrary hosts, including internal services and the metadata endpoint, because nginx resolves the value at request time. The rule flags the variable form; whether the value is constrained by a map is a review decision.",
+    "remediation": "Proxy to a fixed upstream or resolve the host through a map of allowed backends, and reject anything else with a 404.",
+    "limitation": "Lexical: matches proxy_pass values containing a $ variable; a map-driven allowlist is still reported for review.",
+    "scopeT": "Single-line match on a variable proxy_pass in {lang}.",
+    "fp": "A map that restricts the value to a fixed set of backends is the accepted exception.",
+    "recordDesc": "In {lang}, the proxy target contains a variable. nginx will use whatever the variable resolves to, so a request that influences it can select the backend. That turns the proxy into an SSRF primitive with access to everything the nginx host can reach, including link-local metadata.",
+    "applicability": "{lang} reverse proxies with dynamic backends.",
+    "risk": "Access to internal services through the proxy; MEDIUM severity.",
+    "why": "The upstream is resolved from a request-derived value.",
+    "fix": [
+      "Use a fixed upstream.",
+      "Resolve through a map with a default that returns 404."
+    ],
+    "verifyT": "A request for an unlisted host returns 404 and never reaches an upstream.",
+    "sinks": {
+      "nginx": [
+        "\\bproxy_pass\\s+[^;\\n]*\\$",
+        "proxy_pass http://$backend;",
+        "proxy_pass http://app_pool;",
+        "a fixed upstream or a closed map"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "kotlin-execsql-concat",
+    "category": "sql-injection",
+    "cwe": "CWE-89",
+    "severity": "HIGH",
+    "title": "SQL executed from a concatenated string in {lang} — review required",
+    "description": "SQLiteDatabase.execSQL runs a statement string with no parameter slot. Concatenating a request value into it makes the value part of the SQL grammar, so a quote or UNION changes the statement. The rule flags the concatenation; whether the value is attacker-controlled is a review decision.",
+    "remediation": "Use execSQL with bindArgs placeholders, or move the write behind a Room DAO with typed parameters.",
+    "limitation": "Lexical: matches execSQL calls containing + concatenation on one line.",
+    "scopeT": "Single-line match on a concatenated execSQL in {lang}.",
+    "fp": "Statements assembled entirely from compile-time constants are the accepted false positives.",
+    "recordDesc": "In {lang}, execSQL receives a statement built with +. The write path is usually treated as less risky than the read path, but INSERT and UPDATE statements accept subqueries and expressions, so injection there can read or corrupt other rows.",
+    "applicability": "{lang} Android apps that write to SQLite directly.",
+    "risk": "Data disclosure and destructive writes; HIGH severity.",
+    "why": "A SQL statement is assembled with concatenation.",
+    "fix": [
+      "Use bindArgs.",
+      "Prefer a typed DAO."
+    ],
+    "verifyT": "A quote-bearing value is stored literally and changes no statement.",
+    "sinks": {
+      "kotlin": [
+        "\\bexecSQL\\s*\\([^)\\n]*\\+",
+        "db.execSQL(\"UPDATE users SET name = '\" + name + \"'\")",
+        "db.execSQL(\"UPDATE users SET name = ?\", arrayOf(name))",
+        "execSQL with bindArgs"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "swift-wkwebview-computed",
+    "category": "mobile-security",
+    "cwe": "CWE-749",
+    "severity": "MEDIUM",
+    "title": "WKWebView loads a computed URL request in {lang} — review required",
+    "description": "WKWebView.load receives a URLRequest assembled at runtime. A deep link, universal link or message body can steer the embedded browser to an attacker origin that then sees injected scripts, cookies and any message handlers the app registered. The rule flags the non-literal load; whether the URL is validated is a review decision.",
+    "remediation": "Allowlist https hosts before building the request and reject file:, javascript: and data: schemes.",
+    "limitation": "Lexical: matches load(URLRequest(...)) calls whose argument is not a literal host.",
+    "scopeT": "Single-line match on a computed WKWebView load in {lang}.",
+    "fp": "A constant base URL with a fixed path is the accepted false positive.",
+    "recordDesc": "In {lang}, WKWebView is told to load a request built from runtime data. Web content shares the app process boundaries with the script message handlers, so the loaded origin can call whatever the app exposed. Universal links and custom schemes deliver attacker-chosen values without any user typing.",
+    "applicability": "{lang} iOS apps that render remote content.",
+    "risk": "Navigation to attacker content with handler exposure; MEDIUM severity.",
+    "why": "The WebView destination is computed.",
+    "fix": [
+      "Allowlist hosts and schemes.",
+      "Disable script message handlers for untrusted origins."
+    ],
+    "verifyT": "An off-allowlist universal link is rejected before load.",
+    "sinks": {
+      "swift": [
+        "\\.load\\s*\\(\\s*URLRequest\\s*\\(\\s*url\\s*:\\s*URL\\s*\\(\\s*string\\s*:\\s*(?![\"'])\\w",
+        "webView.load(URLRequest(url: URL(string: deepLink)!))",
+        "webView.load(URLRequest(url: URL(string: \"https://app.example/help\")!))",
+        "an allowlisted https URL only"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "js-document-cookie-insecure",
+    "category": "cookie-flags",
+    "cwe": "CWE-614",
+    "severity": "MEDIUM",
+    "title": "Cookie written from script without the Secure attribute in {lang} — review required",
+    "description": "document.cookie assignments bypass the server-side cookie API, so the Secure and HttpOnly attributes are whatever the script writes. A cookie set without Secure travels over plaintext HTTP and cannot carry HttpOnly at all, which means script injection can read it. The rule flags the assignment; whether the value is sensitive is a review decision.",
+    "remediation": "Set cookies from the server with Secure and HttpOnly, or use the Cookie Store API with the attributes spelled out.",
+    "limitation": "Lexical: matches a document.cookie assignment on one line without the Secure attribute; multi-statement builds are out of scope.",
+    "scopeT": "Single-line match on a script cookie without Secure in {lang}.",
+    "fp": "A non-sensitive UI preference cookie is the accepted false positive.",
+    "recordDesc": "In {lang}, a cookie is written from script. Cookies created this way are always readable by script, so an XSS becomes immediate session theft when the value is a token. Without Secure the same value also crosses plaintext requests, which is invisible in a browser that upgrades silently.",
+    "applicability": "{lang} browser applications that store state in cookies.",
+    "risk": "Session theft and cleartext cookie disclosure; MEDIUM severity.",
+    "why": "A cookie is created in script without the Secure attribute.",
+    "fix": [
+      "Set sensitive cookies server-side with Secure and HttpOnly.",
+      "Use the Cookie Store API when script must write it."
+    ],
+    "verifyT": "The Set-Cookie header carries Secure and HttpOnly and script cannot read the value.",
+    "sinks": {
+      "javascript": [
+        "document\\.cookie\\s*=(?![^\\n]*Secure)",
+        "document.cookie = \"theme=dark; path=/\";",
+        "document.cookie = \"theme=dark; path=/; Secure; SameSite=Lax\";",
+        "a server-set cookie with Secure and HttpOnly"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "erlang-os-cmd",
+    "category": "command-injection",
+    "cwe": "CWE-78",
+    "severity": "HIGH",
+    "title": "Operating-system command executed from a string in {lang} — review required",
+    "description": "os:cmd passes its argument to the system shell. When the string contains request data, shell metacharacters append commands running with the Erlang node identity. The rule flags the call; whether the string is externally influenced is a review decision.",
+    "remediation": "Use open_port with an argument vector and no shell, and validate dynamic values.",
+    "limitation": "Lexical: matches os:cmd calls; port-based execution is out of scope.",
+    "scopeT": "Single-line match on os:cmd in {lang}.",
+    "fp": "Constant commands in release tooling are the accepted false positives.",
+    "recordDesc": "In {lang}, os:cmd runs a shell command. The call is convenient in release scripts and then appears in request handlers where the string is assembled from parameters. Erlang gives no automatic escaping, so quoting is the only barrier.",
+    "applicability": "{lang} nodes and release scripts that call system tools.",
+    "risk": "Shell injection with node privileges; HIGH severity.",
+    "why": "A command string reaches the shell.",
+    "fix": [
+      "Use open_port with explicit arguments.",
+      "Allowlist dynamic values."
+    ],
+    "verifyT": "A metacharacter payload is passed as literal argument text.",
+    "sinks": {
+      "erlang": [
+        "\\bos:cmd\\s*\\(",
+        "os:cmd(\"convert \" ++ FileName ++ \" out.png\")",
+        "open_port({spawn_executable, \"/usr/bin/convert\"}, [{args, [FileName, \"out.png\"]}])",
+        "open_port with an argument list"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "ruby-open3-string",
+    "category": "command-injection",
+    "cwe": "CWE-78",
+    "severity": "HIGH",
+    "title": "Shell command executed through Open3 from a string in {lang} — review required",
+    "description": "Open3.capture3 with a single string runs the command through the shell. A value interpolated into that string is parsed as shell syntax, so a semicolon or backtick appends commands. The rule flags the string form; the argument-array form is the safe counterpart.",
+    "remediation": "Call capture3 with separate arguments, or capture2e with an explicit array, and validate dynamic values.",
+    "limitation": "Lexical: matches capture3 calls whose first argument is a variable or interpolated string.",
+    "scopeT": "Single-line match on string-form Open3 execution in {lang}.",
+    "fp": "Constant commands built from literals are the accepted false positives.",
+    "recordDesc": "In {lang}, Open3 runs a command string. The library offers an argument-array form that avoids the shell entirely, so the string form is an avoidable choice; once a request value is interpolated, the shell decides where commands begin and end.",
+    "applicability": "{lang} services and jobs that call external programs.",
+    "risk": "Shell injection with application privileges; HIGH severity.",
+    "why": "A command string is passed to Open3.",
+    "fix": [
+      "Pass arguments as separate values.",
+      "Allowlist dynamic input."
+    ],
+    "verifyT": "A semicolon payload is passed as one literal argument.",
+    "sinks": {
+      "ruby": [
+        "\\bOpen3\\.(?:capture3|capture2e?|popen3)\\s*\\(\\s*[\"']?[^,\\n)]*#\\{",
+        "stdout, stderr, status = Open3.capture3(\"convert #{user_file} out.png\")",
+        "stdout, stderr, status = Open3.capture3(\"convert\", user_file, \"out.png\")",
+        "an argument array without a shell"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "go-shell-c",
+    "category": "command-injection",
+    "cwe": "CWE-78",
+    "severity": "HIGH",
+    "title": "Shell invoked explicitly from exec.Command in {lang} — review required",
+    "description": "exec.Command(\"sh\", \"-c\", ...) starts a shell and hands it a command string. exec.Command itself does not invoke a shell, so this is a deliberate choice that reintroduces shell parsing, and any interpolated value becomes shell syntax. The rule flags the sh -c form; whether the string carries request data is a review decision.",
+    "remediation": "Call exec.Command with the program and its arguments directly, and validate dynamic arguments.",
+    "limitation": "Lexical: matches literal sh/bash -c pairs on one line; a shell name held in a variable is out of scope.",
+    "scopeT": "Single-line match on sh -c in {lang}.",
+    "fp": "A constant one-line command with no interpolation is the accepted false positive.",
+    "recordDesc": "In {lang}, the process is started through sh -c. Go avoids the shell by default, which is why this pattern is a reliable marker of an intentional shell step; the value that follows -c is parsed with all shell metacharacters active.",
+    "applicability": "{lang} services and jobs that run pipeline commands.",
+    "risk": "Shell injection with process privileges; HIGH severity.",
+    "why": "A shell is started with a command string.",
+    "fix": [
+      "Pass program and arguments to exec.Command.",
+      "Remove the shell wrapper."
+    ],
+    "verifyT": "A payload containing a pipe is treated as literal argument text.",
+    "sinks": {
+      "go": [
+        "exec\\.Command\\s*\\(\\s*[\"'](?:sh|bash)[\"']\\s*,\\s*[\"']-c[\"']",
+        "cmd := exec.Command(\"sh\", \"-c\", userCommand)",
+        "cmd := exec.Command(\"ls\", \"-l\", userDir)",
+        "an argument vector without the shell"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "powershell-executionpolicy-bypass",
+    "category": "secure-configuration",
+    "cwe": "CWE-693",
+    "severity": "MEDIUM",
+    "title": "PowerShell execution policy bypassed on the command line in {lang} — review required",
+    "description": "ExecutionPolicy Bypass overrides the machine policy for a single run, so unsigned scripts execute without the warning or block the administrator configured. It is the standard prefix in attacker one-liners and in scripts that were never signed. The rule flags the flag; whether the caller is trusted automation is a review decision.",
+    "remediation": "Sign the scripts and run them under an AllSigned or RemoteSigned policy instead of bypassing it.",
+    "limitation": "Lexical: matches the flag in a command line; a policy set through Group Policy is out of scope.",
+    "scopeT": "Single-line match on -ExecutionPolicy Bypass in {lang}.",
+    "fp": "A signed installer that temporarily bypasses for its own signed payload is the accepted exception.",
+    "recordDesc": "In {lang}, the execution policy is bypassed. The policy is a guardrail, not a security boundary, but it is the only control that stops an unsigned download from running on a default workstation. Bypassing it in scheduled tasks normalises the same flag in interactive use.",
+    "applicability": "{lang} automation and deployment scripts.",
+    "risk": "Unsigned script execution with operator privileges; MEDIUM severity.",
+    "why": "The configured script policy is overridden.",
+    "fix": [
+      "Sign scripts.",
+      "Use AllSigned or RemoteSigned."
+    ],
+    "verifyT": "An unsigned test script is refused by the policy.",
+    "sinks": {
+      "powershell": [
+        "-ExecutionPolicy\\s+Bypass\\b",
+        "powershell -ExecutionPolicy Bypass -File deploy.ps1",
+        "powershell -ExecutionPolicy AllSigned -File deploy.ps1",
+        "a signed script under AllSigned"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "yaml-net-admin-cap",
+    "category": "container-security",
+    "cwe": "CWE-250",
+    "severity": "MEDIUM",
+    "title": "Container granted the NET_ADMIN capability in {lang} — review required",
+    "description": "cap_add with NET_ADMIN lets the container change interfaces, routes, firewall rules and traffic control on the host network namespace. It is the capability most often used to build a tunnel or intercept traffic from a compromised pod. The rule flags the grant; whether the workload genuinely manages networking is a review decision.",
+    "remediation": "Remove NET_ADMIN, or run the network tooling in a dedicated namespace with a documented justification.",
+    "limitation": "Lexical: matches NET_ADMIN in a cap_add list; capabilities granted through a securityContext in another file are out of scope.",
+    "scopeT": "Single-line match on NET_ADMIN in {lang}.",
+    "fp": "A CNI or network agent pod that is reviewed as node-level infrastructure is the accepted exception.",
+    "recordDesc": "In {lang}, NET_ADMIN is added to a container. Linux capabilities are not namespaced for networking in the way process capabilities are, so the grant reaches host interfaces and routing. Workloads that only need to open sockets never require it.",
+    "applicability": "{lang} Kubernetes and Compose manifests.",
+    "risk": "Network interception and host routing changes from a container; MEDIUM severity.",
+    "why": "A powerful network capability is added explicitly.",
+    "fix": [
+      "Remove the capability.",
+      "Isolate network tooling in a dedicated namespace."
+    ],
+    "verifyT": "The container fails to modify routes after the capability is removed.",
+    "sinks": {
+      "yaml": [
+        "\\bNET_ADMIN\\b",
+        "          add: [\"NET_ADMIN\"]",
+        "          drop: [\"ALL\"]",
+        "drop ALL without NET_ADMIN"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "html-form-http-action",
+    "category": "cleartext-transmission",
+    "cwe": "CWE-319",
+    "severity": "MEDIUM",
+    "title": "Form submits over plaintext HTTP in {lang} — review required",
+    "description": "A form whose action is an http:// URL submits its fields in clear text. Any on-path observer reads them, and the response can be replaced, which matters most for login and payment forms. The rule flags the literal action; whether the endpoint redirects to HTTPS before the body is sent is a review decision.",
+    "remediation": "Use an https:// action and enable HSTS so the browser refuses to downgrade.",
+    "limitation": "Lexical: matches a literal http action; a form whose action is built by script is out of scope.",
+    "scopeT": "Single-line match on an http form action in {lang}.",
+    "fp": "A local development page that posts to localhost is the accepted exception.",
+    "recordDesc": "In {lang}, a form posts to an http URL. The browser sends the body over the wire before any redirect can occur, so a redirect to HTTPS does not protect the submission. Mixed-content blocking does not apply to top-level form navigation, which is why the pattern survives in older pages.",
+    "applicability": "{lang} templates that render authentication or checkout forms.",
+    "risk": "Credential and payment data disclosure in transit; MEDIUM severity.",
+    "why": "The form target is plaintext HTTP.",
+    "fix": [
+      "Change the action to https.",
+      "Enable HSTS on the origin."
+    ],
+    "verifyT": "The browser reports a secure submission and no request leaves over port 80.",
+    "sinks": {
+      "html": [
+        "\\baction\\s*=\\s*[\"']http://",
+        "<form method=\"post\" action=\"http://app.example/login\">",
+        "<form method=\"post\" action=\"https://app.example/login\">",
+        "an https action with HSTS"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "r-system-call",
+    "category": "command-injection",
+    "cwe": "CWE-78",
+    "severity": "HIGH",
+    "title": "Operating-system command executed from an R string in {lang} — review required",
+    "description": "system and system2 run a command through the platform shell. A value read from data or a request and pasted into that string is parsed as shell syntax, so a semicolon adds a command. The rule flags the call; whether the string is externally influenced is a review decision.",
+    "remediation": "Use system2 with explicit arguments and validate them, or call the target through a package API instead of a shell.",
+    "limitation": "Lexical: matches system and system2 calls; a constant command in a notebook is still reported.",
+    "scopeT": "Single-line match on system execution in {lang}.",
+    "fp": "Constant commands in analysis scripts are the accepted false positives.",
+    "recordDesc": "In {lang}, system is invoked. R scripts frequently process filenames and identifiers from CSV input, so the command string can contain text the author never typed; the shell interprets it. system2 with separate arguments is the safer form and does not require a shell.",
+    "applicability": "{lang} analysis pipelines and Shiny services.",
+    "risk": "Command execution with the R process identity; HIGH severity.",
+    "why": "A shell command string is executed.",
+    "fix": [
+      "Use system2 with separate arguments.",
+      "Validate values against an allowlist."
+    ],
+    "verifyT": "A filename containing a semicolon is handled as a literal path.",
+    "sinks": {
+      "r": [
+        "\\bsystem2?\\s*\\(\\s*(?:paste|paste0|sprintf|str_c)\\s*\\(",
+        "system(paste(\"convert\", user_file, \"out.png\"))",
+        "system2(\"convert\", args = c(user_file, \"out.png\"))",
+        "system2 with separate arguments"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "java-securerandom-seeded",
+    "category": "weak-cryptography",
+    "cwe": "CWE-330",
+    "severity": "MEDIUM",
+    "title": "SecureRandom constructed with a fixed seed in {lang} — review required",
+    "description": "new SecureRandom(byte[]) mixes a caller-supplied seed into the generator state. A constant seed makes the output reproducible across process restarts, which turns tokens into predictable values even though the class name says Secure. The rule flags the seeded constructor; whether the value is security-relevant is a review decision.",
+    "remediation": "Use the no-argument SecureRandom constructor or getInstanceStrong for tokens and keys.",
+    "limitation": "Lexical: matches the byte-array constructor; setSeed calls after construction are out of scope.",
+    "scopeT": "Single-line match on a seeded SecureRandom in {lang}.",
+    "fp": "A deterministic test generator with a documented fixed seed is the accepted false positive.",
+    "recordDesc": "In {lang}, SecureRandom is constructed with a seed. Reproducibility is exactly what a security token must not have, and the API happily accepts the seed without warning. The pattern usually appears when a developer replaces Random with SecureRandom but keeps the seeding line.",
+    "applicability": "{lang} services that mint tokens or keys.",
+    "risk": "Reproducible tokens and keys; MEDIUM severity.",
+    "why": "A deterministic seed is supplied to the secure generator.",
+    "fix": [
+      "Remove the seed.",
+      "Use getInstanceStrong where policy requires it."
+    ],
+    "verifyT": "Two process restarts produce unrelated token sequences.",
+    "sinks": {
+      "java": [
+        "new\\s+SecureRandom\\s*\\(\\s*(?:new\\s+byte|seed|SEED|[A-Za-z_]\\w*\\s*\\))",
+        "SecureRandom rng = new SecureRandom(seed);",
+        "SecureRandom rng = new SecureRandom();",
+        "an unseeded SecureRandom"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "csharp-xmlresolver",
+    "category": "xml-external-entity",
+    "cwe": "CWE-611",
+    "severity": "HIGH",
+    "title": "XML resolver left enabled on a document parser in {lang} — review required",
+    "description": "Setting XmlResolver on XmlDocument or XmlReader re-enables external entity and DTD resolution, so a crafted document can read local files or make server-side requests during parsing. Modern .NET defaults it to null for this reason. The rule flags the assignment; whether the document is untrusted is a review decision.",
+    "remediation": "Keep XmlResolver null, set DtdProcessing.Prohibit and never resolve external resources for untrusted XML.",
+    "limitation": "Lexical: matches an explicit XmlResolver assignment; a resolver configured through a reader settings object is out of scope.",
+    "scopeT": "Single-line match on an enabled XML resolver in {lang}.",
+    "fp": "A parser restricted to a signed, schema-validated document set is the accepted exception.",
+    "recordDesc": "In {lang}, an XML resolver is attached to the parser. Entity expansion then reaches URLs and file paths the author never intended, which is the XXE primitive: local file disclosure, internal port scanning and denial of service through entity expansion. The assignment is usually copied from an older sample.",
+    "applicability": "{lang} services that parse XML from clients or partners.",
+    "risk": "Local file disclosure and SSRF during parsing; HIGH severity.",
+    "why": "External entity resolution is enabled explicitly.",
+    "fix": [
+      "Remove the resolver assignment.",
+      "Set DtdProcessing.Prohibit."
+    ],
+    "verifyT": "A document with an external entity fails to parse and reads no local file.",
+    "sinks": {
+      "csharp": [
+        "\\bXmlResolver\\s*=\\s*new\\s+XmlUrlResolver",
+        "doc.XmlResolver = new XmlUrlResolver();",
+        "doc.XmlResolver = null;",
+        "a null resolver with DTD prohibited"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "cpp-std-system",
+    "category": "command-injection",
+    "cwe": "CWE-78",
+    "severity": "HIGH",
+    "title": "Shell command executed through std::system in {lang} — review required",
+    "description": "std::system passes its string to the C library shell invocation. A value concatenated into that string is interpreted as shell syntax, so command substitution or separators run additional programs. The rule flags the call; whether the string is externally influenced is a review decision.",
+    "remediation": "Use posix_spawn or CreateProcess with an argument vector and validate dynamic values.",
+    "limitation": "Lexical: matches std::system and ::system calls; a spawn-based wrapper is out of scope.",
+    "scopeT": "Single-line match on std::system in {lang}.",
+    "fp": "A constant command in a diagnostic tool is the accepted false positive.",
+    "recordDesc": "In {lang}, std::system runs a shell command. The call inherits the environment and the working directory, and the shell re-parses the string, so quoting is the only barrier. C++ code frequently builds the string with operator+ from request fields, which makes the injection direct.",
+    "applicability": "{lang} native services and tools that call external programs.",
+    "risk": "Shell injection with process privileges; HIGH severity.",
+    "why": "A command string is handed to the shell.",
+    "fix": [
+      "Use a spawn API with an argument vector.",
+      "Allowlist dynamic values."
+    ],
+    "verifyT": "A semicolon payload is passed as one literal argument.",
+    "sinks": {
+      "cpp": [
+        "\\bstd::system\\s*\\(",
+        "std::system((\"convert \" + userFile + \" out.png\").c_str());",
+        "posix_spawn(&pid, \"/usr/bin/convert\", nullptr, nullptr, argv, environ);",
+        "posix_spawn with an argument vector"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "php-file-get-contents-url",
+    "category": "server-side-request-forgery",
+    "cwe": "CWE-918",
+    "severity": "MEDIUM",
+    "title": "Remote content fetched from a computed URL in {lang} — review required",
+    "description": "file_get_contents accepts URLs when the HTTP wrapper is enabled, so a computed value makes the server fetch whatever host it names. That reaches loopback services, RFC 1918 hosts and cloud metadata. The rule flags the URL argument; whether it is request-derived is a review decision.",
+    "remediation": "Allowlist scheme and host, reject private and link-local addresses after resolution, and prefer a hardened HTTP client.",
+    "limitation": "Lexical: matches file_get_contents with a non-literal argument; URL assembly in a helper is out of scope.",
+    "scopeT": "Single-line match on a computed remote fetch in {lang}.",
+    "fp": "A constant URL built from configuration is the accepted false positive.",
+    "recordDesc": "In {lang}, file_get_contents is given a value rather than a literal path. The function speaks many wrappers, including http, ftp and phar, so the same call can read local files or fetch remote ones. No egress policy is applied, and the default timeouts are generous enough to scan internal ranges.",
+    "applicability": "{lang} applications that read remote resources.",
+    "risk": "Internal service access and metadata retrieval; MEDIUM severity.",
+    "why": "The fetch target is computed and unfiltered.",
+    "fix": [
+      "Allowlist scheme and host.",
+      "Reject private and link-local addresses."
+    ],
+    "verifyT": "A request for an internal address is rejected before the fetch.",
+    "sinks": {
+      "php": [
+        "\\bfile_get_contents\\s*\\(\\s*(?![\"'])",
+        "$body = file_get_contents($_GET[\"url\"]);",
+        "$body = file_get_contents(\"/var/app/config.json\");",
+        "an allowlisted host resolved before the fetch"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "swift-urlsession-http",
+    "category": "cleartext-transmission",
+    "cwe": "CWE-319",
+    "severity": "MEDIUM",
+    "title": "URLSession request target uses plaintext HTTP in {lang} — review required",
+    "description": "A request built from an http:// URL sends its path, query and body in clear text. App Transport Security normally blocks this, so the code either also disables ATS or targets a host with an exception. The rule flags the literal scheme; whether the host is internal is a review decision.",
+    "remediation": "Use https:// for every request and remove ATS exceptions that exist only to allow this host.",
+    "limitation": "Lexical: matches a literal http URL in a URLSession request; a scheme held in configuration is out of scope.",
+    "scopeT": "Single-line match on an http URL request in {lang}.",
+    "fp": "A localhost development endpoint is the accepted exception.",
+    "recordDesc": "In {lang}, a request targets http. TLS is what authenticates the server; without it an on-path attacker reads the request and can answer with their own content. iOS blocks this by default, so the presence of the literal also implies an ATS exception or a disabled policy.",
+    "applicability": "{lang} iOS applications that call backend services.",
+    "risk": "Request and response disclosure in transit; MEDIUM severity.",
+    "why": "The request URL uses a cleartext scheme.",
+    "fix": [
+      "Switch the URL to https.",
+      "Remove the matching ATS exception."
+    ],
+    "verifyT": "The request fails against an http endpoint and succeeds against https.",
+    "sinks": {
+      "swift": [
+        "URL\\s*\\(\\s*string\\s*:\\s*[\"']http://",
+        "let url = URL(string: \"http://api.example.com/v1/items\")!",
+        "let url = URL(string: \"https://api.example.com/v1/items\")!",
+        "https only with no ATS exception"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "csharp-random-seeded",
+    "category": "weak-cryptography",
+    "cwe": "CWE-330",
+    "severity": "MEDIUM",
+    "title": "Pseudo-random generator constructed with a constant seed in {lang} — review required",
+    "description": "new Random(seed) produces the same sequence every time the seed repeats, and Random is not a cryptographic generator in any case. A token or identifier derived from it can be reproduced by anyone who guesses the seed, which is usually a timestamp or a literal.",
+    "remediation": "Use RandomNumberGenerator for security values and reserve Random for simulations and UI effects.",
+    "limitation": "Lexical: matches a seeded Random constructor; an unseeded Random is reported by a separate rule.",
+    "scopeT": "Single-line match on a constant-seeded Random in {lang}.",
+    "fp": "A deterministic test generator is the accepted false positive.",
+    "recordDesc": "In {lang}, Random is constructed with an explicit seed. The sequence is fully determined by the seed and the algorithm, so two deployments with the same seed mint the same values. Security values need an interface backed by the operating system entropy source.",
+    "applicability": "{lang} services that mint identifiers or tokens.",
+    "risk": "Reproducible tokens and identifiers; MEDIUM severity.",
+    "why": "A predictable generator is seeded deliberately.",
+    "fix": [
+      "Use RandomNumberGenerator.",
+      "Remove security uses of Random."
+    ],
+    "verifyT": "Token generation calls RandomNumberGenerator and repeats produce unrelated values.",
+    "sinks": {
+      "csharp": [
+        "new\\s+Random\\s*\\(\\s*(?:[0-9]+|[A-Za-z_]\\w*)\\s*\\)",
+        "var rng = new Random(1234);",
+        "var rng = RandomNumberGenerator.Create();",
+        "RandomNumberGenerator for security values"
+      ]
+    }
+  }
+]

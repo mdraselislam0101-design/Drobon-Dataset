@@ -1,0 +1,101 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-144",
+  "title": "Content-Security-Policy child-src allows a wildcard source",
+  "description": "The Content-Security-Policy child-src directive allows a bare wildcard source: the token `*` or a scheme wildcard such as `https://*` appears inside that directive's source list. The policy therefore permits the browser to load the affected resource type from any origin, which is the opposite of what a restrictive policy is meant to express. Nested browsing contexts and workers can come from any origin whenever frame-src or worker-src are absent, which is exactly the case child-src governs.",
+  "severity": "LOW",
+  "cwe": "CWE-693",
+  "category": "csp-weakness",
+  "remediation": "Replace the wildcard in child-src with the explicit origins that must be reachable, and use 'none' or 'self' where no third-party origin is needed. If the wildcard was added to unblock a single vendor, name that vendor's origin instead so the policy keeps recording intent.",
+  "limitation": "One header value and one directive. The rule judges child-src only when it is written in the policy; when the directive is absent, the default-src or child-src fallback decides the behaviour and other rules report that case. Values are matched lexically, so an origin wildcard such as *.example.com is not treated as a bare wildcard.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Content-Security-Policy",
+    "valuePattern": "(?:^|;)\\s*child-src\\s[^;]*(?<=\\s)(?:\\*|(?:https?|wss?)://\\*)(?=[\\s;]|$)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "child-src *"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "child-src 'self' *"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src 'self'; frame-src 'self'; child-src https://cdn.example.com *; frame-ancestors 'none'"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "child-src 'self'"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "child-src *.example.com"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "child-src https://*.example.com"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src *"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "child-src 'self'; child-src https://cdn.example.com"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1213"
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-253",
+  "title": "Access-Control-Allow-Headers permits Authorization",
+  "description": "The preflight response lists `Authorization` in Access-Control-Allow-Headers, so the browser will attach a bearer token or basic credential to the actual cross-origin request. Every origin the allow-list admits can therefore use the caller's credential against this endpoint.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-942",
+  "category": "cors",
+  "remediation": "Do not permit Authorization cross-origin unless a specific, small set of origins must send it. Keep the origin allow-list explicit and never reflect arbitrary origins beside a credential-bearing endpoint.",
+  "limitation": "One header value. The rule reads the preflight allow-list and cannot see the request Origin, so it does not claim that any particular origin is admitted.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Access-Control-Allow-Headers",
+    "valuePattern": "(?:^|,)\\s*authorization\\s*(?:,|$)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Access-Control-Allow-Headers": "Authorization"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Access-Control-Allow-Headers": "content-type, authorization"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Access-Control-Allow-Headers": "content-type, x-request-id"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Access-Control-Allow-Headers": "x-authorization-id"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1322"
+  ]
+}

@@ -19,6 +19,7 @@ import { readdirSync, statSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { checkBoundedText, checkClosed, readJsonFile } from './validate.mjs';
+import { cookieHasFlag as cookieFlagPresent, cookieIsDiscarded, cookieWillBeStored } from './lib/set-cookie.mjs';
 
 export const PACK_SCHEMAS = {
   sast: 'drobon.pack.sast/v1',
@@ -307,7 +308,14 @@ function normalizeHeaders(headers) {
     return normalized;
   }
   for (const [name, value] of Object.entries(headers)) {
-    normalized[name.toLowerCase()] = Array.isArray(value) ? value : [value];
+    const list = Array.isArray(value) ? value : [value];
+    // RFC 7230 §3.2.4: optional whitespace around a field value is not part of
+    // the value. A real HTTP parser strips it; the evaluator must do the same or
+    // anchored patterns (`^*$`, `^//`, `^null$`) miss semantically identical
+    // values. Non-string values are passed through unchanged.
+    normalized[name.toLowerCase()] = list.map((entry) => (
+      typeof entry === 'string' ? entry.trim() : entry
+    ));
   }
   return normalized;
 }
@@ -325,10 +333,13 @@ function headerHasDirective(values, directive) {
 }
 
 function cookieHasFlag(cookie, flag) {
-  if (flag === 'SameSite') {
-    return /(?:^|;)\s*SameSite\s*=/i.test(cookie);
-  }
-  return new RegExp(`(?:^|;)\\s*${flag}(?:;|$)`, 'i').test(cookie);
+  // Attribute semantics live in the DROBON Set-Cookie model
+  // (scripts/lib/set-cookie.mjs): the first segment is the name=value pair,
+  // later segments are attributes, flag attributes ignore their value, and the
+  // last duplicate attribute is the one a user agent uses. Searching the raw
+  // header for a keyword reported `Secure=0` as unprotected, which browsers do
+  // not: the attribute is present, so the flag is on.
+  return cookieFlagPresent(cookie, flag);
 }
 
 /**
@@ -348,13 +359,35 @@ export function evalDastCheck(check, observation) {
       }
       return protocol === 'http:';
     }
-    case 'missing-response-header':
-      return headers[check.header.toLowerCase()] === undefined;
+    case 'missing-response-header': {
+      // An absent header and a header whose every observed value is empty
+      // (after OWS trimming) are the same security outcome: the browser is
+      // given no value to enforce. An empty `Content-Security-Policy:` is
+      // ignored exactly like an absent one, so treating it as present let a
+      // genuinely unprotected response pass every missing-header rule.
+      const values = headers[check.header.toLowerCase()];
+      return values === undefined
+        || values.every((value) => typeof value !== 'string' || value.trim() === '');
+    }
     case 'response-header-missing-directive': {
       const values = headers[check.header.toLowerCase()];
       return values === undefined || !headerHasDirective(values, check.directive);
     }
     case 'response-header-matches': {
+      if (check.requireScheme !== undefined) {
+        // Optional scheme scope, identical in meaning to the body check's
+        // requireScheme: a rule that reasons about a credential/transport
+        // combination only judges observations fetched with that scheme.
+        let scheme = null;
+        try {
+          scheme = new URL(observation.url).protocol;
+        } catch {
+          return false; // unparseable URL: out of scope, never throws
+        }
+        if (scheme !== `${check.requireScheme}:`) {
+          return false;
+        }
+      }
       const values = headers[check.header.toLowerCase()];
       if (values === undefined) {
         return false; // header absent: nothing discloses
@@ -368,7 +401,11 @@ export function evalDastCheck(check, observation) {
       if (cookies === undefined) {
         return false; // no cookies: nothing to flag
       }
-      return cookies.some((cookie) => !cookieHasFlag(cookie, check.flag));
+      // Only cookies a user agent actually stores can carry a storage flag.
+      // That excludes a discarded header (RFC 6265 5.2 step 2) and a
+      // `SameSite=None` cookie without `Secure`, which browsers refuse and which
+      // DPK-DAST-071 reports. See scripts/lib/set-cookie.mjs.
+      return cookies.some((cookie) => cookieWillBeStored(cookie) && !cookieHasFlag(cookie, check.flag));
     }
     case 'response-body-matches': {
       if (check.requireScheme !== undefined) {
@@ -438,7 +475,7 @@ function checkDastCheck(errors, record) {
     },
     'cookie-missing-flag': { allowed: ['type', 'flag'], required: ['type', 'flag'] },
     'response-header-matches': {
-      allowed: ['type', 'header', 'valuePattern'],
+      allowed: ['type', 'header', 'valuePattern', 'requireScheme'],
       required: ['type', 'header', 'valuePattern'],
     },
     'response-body-matches': {

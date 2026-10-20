@@ -1,0 +1,92 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1329",
+  "title": "Signal: Docker Compose file served",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-body-matches",
+      "valuePattern": "(?:^|\\n)services\\s*:(?=[\\s\\S]*\\n[ \\t]+image\\s*:)"
+    }
+  },
+  "scope": "One response that returns the docker-compose.yml returned document.",
+  "limitations": "One response body. The rule reports the Compose document shape at a line start, so a page that quotes a Compose snippet inside markup is not reported; it does not parse the environment blocks or prove that a credential in them is live.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "services:\n  web:\n    image: shop/web:4.2.1\n    environment:\n      - DATABASE_URL=postgres://shop:redacted-for-fixture@db/shop\n  cache:\n    image: redis:7"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "version: \"3.8\"\nservices:\n  api:\n    image: shop/api:1.4.0\n    ports:\n      - \"8080:8080\""
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "\n  web:\n     shop/web:4.2.1\n    environment:\n      - DATABASE_URL=postgres://shop:redacted-for-fixture@db/shop\n  cache:\n     redis:7"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body><pre>services:\n  web:\n    image: shop/web</pre></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "# deployment stack\nservices:\n  web:\n    image: a\n"
+      },
+      "match": true
+    }
+  ],
+  "fpNotes": "A page that documents or quotes the file without returning it is not reported.",
+  "linkedRules": [
+    "DPK-DAST-260"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:body-docker-compose-served:docker-compose-served",
+  "validationStatus": "VALIDATED"
+}

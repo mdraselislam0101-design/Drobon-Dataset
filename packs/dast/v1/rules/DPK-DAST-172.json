@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-172",
+  "title": "Kubernetes API server version endpoint disclosed",
+  "description": "The response is the Kubernetes API server version document: a JSON object carrying gitVersion, platform and build metadata. That endpoint is part of the cluster control-plane API, so an unauthenticated caller reached the API surface rather than an application page.",
+  "severity": "LOW",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Restrict the Kubernetes API server to the control-plane network and to authenticated callers, and do not publish it through the same ingress as the application. Anonymous access to /version is disabled by default in supported releases; re-check the API server flags if it is enabled.",
+  "limitation": "One response body. The rule reports the version document, which proves the API surface answered; it does not prove that cluster objects are readable without credentials, and the version alone is not a vulnerability.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*\"gitVersion\")(?=[\\s\\S]*\"platform\")"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "{\"major\":\"1\",\"minor\":\"28\",\"gitVersion\":\"v1.28.3\",\"gitCommit\":\"abc123\",\"gitTreeState\":\"clean\",\"buildDate\":\"2023-10-18T11:33:18Z\",\"goVersion\":\"go1.20.10\",\"compiler\":\"gc\",\"platform\":\"linux/amd64\"}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "{\"major\":\"1\",\"gitVersion\":\"v1.27.2+k3s1\",\"gitCommit\":\"def456\",\"platform\":\"linux/arm64\"}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "{\"major\":\"1\",\"minor\":\"28\",:\"v1.28.3\",\"gitCommit\":\"abc123\",\"gitTreeState\":\"clean\",\"buildDate\":\"2023-10-18T11:33:18Z\",\"goVersion\":\"go1.20.10\",\"compiler\":\"gc\",:\"linux/amd64\"}"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1241"
+  ]
+}

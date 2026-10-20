@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-252",
+  "title": "Multipart Content-Type omits the boundary parameter",
+  "description": "The Content-Type declares a multipart media type without the `boundary` parameter. The boundary is what separates the parts, so a receiver cannot split the body and falls back to its own guessing or refuses the message; either way the declared type is not the type the receiver processes.",
+  "severity": "LOW",
+  "cwe": "CWE-16",
+  "category": "response-headers",
+  "remediation": "Send the boundary parameter with the multipart type and keep it unpredictable. Where the body is not multipart, use the type that describes it.",
+  "limitation": "One header value. The rule validates the parameter only; it does not parse the body and cannot show how a particular client handles the missing parameter.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Content-Type",
+    "valuePattern": "^(?![\\s\\S]*\\bboundary\\b)\\s*multipart/[^;\\s]+"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "multipart/form-data"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "multipart/mixed"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "multipart/form-data; boundary=----abc123"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1321"
+  ]
+}

@@ -1,0 +1,102 @@
+[
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "cleartext-basic-auth",
+    "category": "transport-security",
+    "cwe": "CWE-319",
+    "severity": "MEDIUM",
+    "title": "Basic authentication challenge sent over plaintext HTTP",
+    "description": "The response is delivered over http and challenges the client with the Basic scheme. Basic encodes the user name and password in base64, which is reversible, so every credential the client sends is readable by anyone on the path. The check is scoped to http observations: the same challenge over https is not reported, because TLS protects the credential in transit.",
+    "remediation": "Serve the endpoint over HTTPS only and keep HTTP Strict-Transport-Security on the redirect path; replace Basic with a challenge that does not transmit a reusable secret, or restrict Basic to short-lived tokens inside TLS.",
+    "limitation": "Transport-conditioned header check: it reads one WWW-Authenticate value on one http observation. It cannot tell whether the client actually answers the challenge, and an https challenge is out of scope by design.",
+    "scopeT": "One http response: WWW-Authenticate offers the Basic scheme.",
+    "fp": "Endpoints that only ever sit behind a TLS-terminating proxy while the origin speaks http can be reported; the observation URL is the only transport evidence available.",
+    "recordDesc": "A Basic challenge was observed on an http response. Base64 is an encoding, not encryption, so the password travels in a form any intermediary can read. The protection that would make Basic acceptable is transport encryption, and this response does not have it.",
+    "applicability": "HTTP responses that issue an authentication challenge to a browser or API client.",
+    "risk": "Reusable credentials readable in transit; MEDIUM severity.",
+    "why": "The response is http and offers Basic authentication.",
+    "fix": [
+      "Terminate HTTP at a redirect to HTTPS with HSTS.",
+      "Stop using Basic for reusable passwords; use a token scheme inside TLS."
+    ],
+    "verifyT": "Confirm the endpoint answers only over https and the challenge is not Basic.",
+    "cells": [
+      {
+        "suffix": "basic-over-http",
+        "lang": "http",
+        "name": "Basic challenge on an http response",
+        "safe": "HTTPS-only endpoint with a non-Basic challenge",
+        "check": {
+          "type": "response-header-matches",
+          "header": "WWW-Authenticate",
+          "valuePattern": "(?:^|,)\\s*Basic(?:\\s|,|$)",
+          "requireScheme": "http"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "http://app.example/admin",
+              "status": 401,
+              "headers": {
+                "WWW-Authenticate": "Basic realm=\"admin\""
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "http://app.example/api",
+              "status": 401,
+              "headers": {
+                "WWW-Authenticate": [
+                  "Negotiate",
+                  "Basic realm=\"api\""
+                ]
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "http://app.example/admin",
+              "status": 401,
+              "headers": {
+                "WWW-Authenticate": "Basic"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/admin",
+              "status": 401,
+              "headers": {
+                "WWW-Authenticate": "Basic realm=\"admin\""
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "http://app.example/admin",
+              "status": 401,
+              "headers": {
+                "WWW-Authenticate": "Bearer realm=\"admin\""
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "http://app.example/",
+              "status": 200,
+              "headers": {}
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  }
+]

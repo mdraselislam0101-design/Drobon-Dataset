@@ -1,0 +1,89 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-103",
+  "title": "Content-Security-Policy form-action allows plaintext HTTP submissions",
+  "description": "The policy permits a form to submit to a plaintext http origin. Form posts are where credentials and personal data usually leave the page, and a cleartext destination publishes that payload to every intermediary on the path. The directive is read from its first declaration only.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-319",
+  "category": "transport-security",
+  "remediation": "Permit only https: destinations in form-action, for example form-action 'self' https://pay.example. Serve the receiving endpoint over TLS before narrowing the policy.",
+  "limitation": "One header value, first declaration of the directive only. The rule cannot see which forms exist or what they submit.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Content-Security-Policy",
+    "valuePattern": "^(?:(?!form-action(?=[\\s;]|$))[^;]*;\\s*)*form-action(?=[\\s;]|$)[^;]*?(?<=\\s)(?:http:|http://[^\\s;]+)(?=\\s|;|$)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "form-action http:"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src 'self'; form-action 'self' http://api.example"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "form-action 'self' https://api.example wss://api.example"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "form-action 'self'"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src http:"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "form-action https://api.example; form-action http:"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {}
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1172"
+  ]
+}

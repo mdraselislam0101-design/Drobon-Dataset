@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1299",
+  "title": "Signal: Kubernetes kubeconfig served",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-body-matches",
+      "valuePattern": "(?=[\\s\\S]*certificate-authority-data)(?=[\\s\\S]*\"?clusters\"?\\s*:)"
+    }
+  },
+  "scope": "One response whose body is a kubeconfig document with a clusters list and certificate-authority-data.",
+  "limitations": "One response body. The rule reports the kubeconfig shape; it does not use the credential and cannot determine the role bound to it.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "apiVersion: v1\nkind: Config\nclusters:\n- cluster:\n    certificate-authority-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0t\n    server: https://k8s.internal:6443\n  name: prod\nusers:\n- name: deployer\n  user:\n    token: eyJhbGciOiJSUzI1NiIsImtpZCI6ImFiYw"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "{\"apiVersion\":\"v1\",\"kind\":\"Config\",\"clusters\":[{\"name\":\"staging\",\"cluster\":{\"server\":\"https://10.0.0.5:6443\",\"certificate-authority-data\":\"LS0tLS1CRUdJTi\"}}],\"users\":[{\"name\":\"ci\",\"user\":{\"client-certificate-data\":\"LS0tLS1CRUdJTi\"}}]}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "apiVersion: v1\nkind: Config\n\n- cluster:\n    : LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0t\n    server: https://k8s.internal:6443\n  name: prod\nusers:\n- name: deployer\n  user:\n    token: eyJhbGciOiJSUzI1NiIsImtpZCI6ImFiYw"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A kubeconfig with no user credential is still reported, because the API server address and CA are disclosed as well.",
+  "linkedRules": [
+    "DPK-DAST-230"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:body-kubeconfig-file:kubeconfig-file",
+  "validationStatus": "VALIDATED"
+}

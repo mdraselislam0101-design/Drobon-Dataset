@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-189",
+  "title": "Set-Cookie Path attribute is not absolute",
+  "description": "The Set-Cookie header carries a Path attribute that does not begin with `/`, so a user agent ignores the value and derives the default path from the request URL instead. The cookie is then sent to a path scope the deployment did not choose, which is usually wider than the one written in the header.",
+  "severity": "LOW",
+  "cwe": "CWE-15",
+  "category": "cookie-flags",
+  "remediation": "Write Path with a leading slash, normally `Path=/`, and scope it to the narrowest directory that needs the cookie.",
+  "limitation": "One header value. The rule validates the attribute against its grammar and does not compute the default path a particular browser would derive from the request URL.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Set-Cookie",
+    "valuePattern": ";\\s*path\\s*=\\s*(?!/)[^;]*"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Path=app; Secure; HttpOnly; SameSite=Lax"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Path=; Secure; HttpOnly; SameSite=Lax"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Path=/app; Secure; HttpOnly; SameSite=Lax"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Path=/; Secure; HttpOnly; SameSite=Lax"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1258"
+  ]
+}

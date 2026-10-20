@@ -1,0 +1,62 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-078",
+  "title": "CORS allows every HTTP method from any origin",
+  "description": "The Access-Control-Allow-Methods response header declares a wildcard, so a browser preflight accepts any method the resource implements from any origin. Combined with a permissive origin policy this widens the set of cross-origin calls a page can make. The check reads the declared method list; it does not claim that a state-changing method is actually reachable.",
+  "severity": "LOW",
+  "cwe": "CWE-942",
+  "category": "cors",
+  "remediation": "List the methods the API actually serves (for example GET, POST, OPTIONS) and keep the origin allowlist explicit.",
+  "limitation": "Observation-level: evaluates the Access-Control-Allow-Methods header alone. Whether a dangerous method is implemented, and whether credentials are allowed, requires separate evidence.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Access-Control-Allow-Methods",
+    "valuePattern": "(?:^|,)\\s*\\*\\s*(?:,|$)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://api.example/v1/orders",
+        "status": 200,
+        "headers": {
+          "Access-Control-Allow-Origin": "https://app.example",
+          "Access-Control-Allow-Methods": "*"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://api.example/v1/orders",
+        "status": 200,
+        "headers": {
+          "Access-Control-Allow-Methods": "GET, *, POST"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://api.example/v1/orders",
+        "status": 200,
+        "headers": {
+          "Access-Control-Allow-Methods": "GET, POST, OPTIONS"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://api.example/v1/orders",
+        "status": 200,
+        "headers": {
+          "Access-Control-Allow-Origin": "https://app.example"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1147"
+  ]
+}

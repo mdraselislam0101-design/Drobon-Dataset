@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-180",
+  "title": "Apache Solr admin interface disclosed",
+  "description": "The response is the Solr administration interface: the solr-spec-version and lucene-spec-version fields identify the search server and its exact library versions. Solr admin exposes cores, schemas and query endpoints.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "debug-exposure",
+  "remediation": "Keep the Solr admin interface on the management network or behind an authenticating proxy, disable the admin UI where it is not needed, and keep the version patched.",
+  "limitation": "One response body. The rule reports the admin page; it does not run a query or read a core.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*solr\\-spec\\-version)(?=[\\s\\S]*lucene)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body><div id=\"solr-admin\"><span>solr-spec-version: 9.4.0</span><span>lucene-spec-version: 9.8.0</span></div></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<!doctype html><html><body><pre>{\"solr-spec-version\":\"8.11.2\",\"lucene-spec-version\":\"8.11.2\"}</pre></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body><div id=\"solr-admin\"><span>: 9.4.0</span><span>-spec-version: 9.8.0</span></div></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1249"
+  ]
+}

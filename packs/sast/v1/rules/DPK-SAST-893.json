@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-893",
+  "title": "Erlang term decoded from untrusted bytes in elixir — review required",
+  "description": ":erlang.binary_to_term reconstructs arbitrary Erlang terms, including funs and atoms, from a binary. A crafted payload can exhaust the atom table or instantiate references a caller did not expect; the :safe option exists precisely because the default trusts the input. The rule flags the call; whether the bytes are attacker-controlled is a review decision.",
+  "severity": "HIGH",
+  "cwe": "CWE-502",
+  "category": "unsafe-deserialization",
+  "remediation": "Decode only with :erlang.binary_to_term(bytes, [:safe]) from trusted producers, and prefer JSON for external data.",
+  "limitation": "Lexical: matches binary_to_term calls and reports whether :safe is present on the same line.",
+  "languages": [
+    "elixir"
+  ],
+  "patterns": [
+    {
+      "source": ":erlang\\.binary_to_term\\s*\\((?![^)\\n]*:safe)"
+    }
+  ],
+  "tests": [
+    {
+      "line": "term = :erlang.binary_to_term(payload)",
+      "match": true
+    },
+    {
+      "line": "# audit: term = :erlang.binary_to_term(payload) present",
+      "match": true
+    },
+    {
+      "line": "term = :erlang.binary_to_term(payload, [:safe])",
+      "match": false
+    },
+    {
+      "line": "# verified: term = :erlang.binary_to_term(payload, [:safe])",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1076"
+  ]
+}

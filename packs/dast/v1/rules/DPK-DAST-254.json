@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-254",
+  "title": "Access-Control-Allow-Methods permits TRACE",
+  "description": "The preflight response advertises `TRACE` in Access-Control-Allow-Methods. TRACE echoes the request back, and allowing it cross-origin with credentials invites a cross-site tracing attempt against the endpoint; the method is also unnecessary for any JSON API.",
+  "severity": "LOW",
+  "cwe": "CWE-16",
+  "category": "cors",
+  "remediation": "Remove TRACE from Access-Control-Allow-Methods and disable the method at the server. Advertise only the verbs the API actually serves.",
+  "limitation": "One header value. The rule reports the advertised method and cannot show whether the server would answer a TRACE request.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Access-Control-Allow-Methods",
+    "valuePattern": "(?:^|,)\\s*TRACE\\s*(?:,|$)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Access-Control-Allow-Methods": "GET, POST, TRACE"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Access-Control-Allow-Methods": "TRACE"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Access-Control-Allow-Methods": "GET, POST, DELETE"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Access-Control-Allow-Methods": "GET, POST"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1323"
+  ]
+}

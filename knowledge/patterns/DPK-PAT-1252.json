@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1252",
+  "title": "Signal: Spring Actuator health details disclosed",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-body-matches",
+      "valuePattern": "(?=[\\s\\S]*\"status\"\\s*:\\s*\"UP\")(?=[\\s\\S]*\"diskSpace\")"
+    }
+  },
+  "scope": "One response whose body is a health document with a status field and a diskSpace component.",
+  "limitations": "One response body. The rule reports the health detail; it does not call another actuator endpoint and cannot show whether env or heapdump is exposed.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "{\"status\":\"UP\",\"components\":{\"diskSpace\":{\"status\":\"UP\",\"details\":{\"total\":536870912000,\"free\":107374182400,\"path\":\"/var/app/.\"}},\"db\":{\"status\":\"UP\",\"details\":{\"database\":\"PostgreSQL\"}}}}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "{\"status\":\"UP\",\"components\":{\"diskSpace\":{\"status\":\"UP\",\"details\":{\"free\":10737,\"total\":53687,\"path\":\"/\"}},\"ping\":{\"status\":\"UP\"}}}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "{,\"components\":{:{,\"details\":{\"total\":536870912000,\"free\":107374182400,\"path\":\"/var/app/.\"}},\"db\":{,\"details\":{\"database\":\"PostgreSQL\"}}}}"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A health document with a diskSpace component served to an authorised operator is still reported; the finding is that detail is published, not who may read it.",
+  "linkedRules": [
+    "DPK-DAST-183"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:body-spring-actuator-health:spring-actuator-health",
+  "validationStatus": "VALIDATED"
+}

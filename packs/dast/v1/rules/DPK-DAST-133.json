@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-133",
+  "title": "Prometheus metrics endpoint disclosed in a response",
+  "description": "The response is a Prometheus text exposition: it contains # HELP and # TYPE comment lines plus the Go runtime collector series. The metric names expose internal service topology, request paths, database names and error counters, which is reconnaissance for every other attack step.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Require authentication on /metrics or scrape it over a private network path, and drop high-cardinality labels that carry user or path data.",
+  "limitation": "Three body markers. A page that documents the exposition format is not matched unless it reproduces the runtime series as well.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*# HELP )(?=[\\s\\S]*# TYPE )(?=[\\s\\S]*go_gc_duration_seconds)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/metrics",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain; version=0.0.4"
+        },
+        "body": "# HELP go_gc_duration_seconds A summary of the pause duration of garbage collection cycles.\n# TYPE go_gc_duration_seconds summary\ngo_gc_duration_seconds{quantile=\"0\"} 1e-05\n"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/metrics",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "# HELP process_cpu_seconds_total Total user and system CPU time spent in seconds.\n# TYPE process_cpu_seconds_total counter\ngo_gc_duration_seconds_sum 0.03\n"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/docs/metrics",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<p># HELP and # TYPE lines start a metric family.</p>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body>Home</body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1202"
+  ]
+}

@@ -1,0 +1,81 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-270",
+  "title": "Permissions-Policy grants a device-access feature to every origin",
+  "description": "The Permissions-Policy value grants a device-access feature — such as `usb`, `serial`, `hid`, `bluetooth`, `midi` or `nfc` — to the `*` allow-list. Any frame the page embeds, including one an attacker injected, can then ask the user for that device permission with this origin's trust behind the prompt.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-693",
+  "category": "security-headers",
+  "remediation": "Deny device features with `feature=()` unless a specific origin needs them, and name that origin explicitly instead of `*`. Review the list whenever an embed is added.",
+  "limitation": "One header value. The rule reports the declared allow-list and cannot observe whether an embedded frame exists or whether the user would grant the prompt.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Permissions-Policy",
+    "valuePattern": "(?:^|[,;])\\s*(?:usb|serial|hid|bluetooth|midi|nfc|idle-detection|screen-wake-lock|display-capture)\\s*=\\s*\\(?\\s*\\*"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Permissions-Policy": "usb=*"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Permissions-Policy": "camera=(), usb=(*)"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Permissions-Policy": "usb=()"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Permissions-Policy": "camera=*"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Permissions-Policy": "usb=(self \"https://app.example\")"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Permissions-Policy": "camera=(), serial=*"
+        }
+      },
+      "match": true
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1339"
+  ]
+}

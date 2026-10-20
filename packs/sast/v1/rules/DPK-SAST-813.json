@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-813",
+  "title": "Event data in a workflow expression via run: echo \"${{ github.event.issue.title }}\" (github-actions) — review required",
+  "description": "The github-actions expression run: echo \"${{ github.event.issue.title }}\" splices event fields into the workflow. Event fields are attacker-controlled text (issue titles, PR bodies, branch names), and an interpolated field is evaluated as part of the shell or action input, so a crafted title can inject commands. Pass the value through an environment variable instead (env: TITLE: ${{ github.event.issue.title }}). This lexical rule flags the expression.",
+  "severity": "HIGH",
+  "cwe": "CWE-94",
+  "category": "code-injection",
+  "remediation": "Pass event data through env: and reference the variable in the script (env: TITLE: ${{ github.event.issue.title }}); never interpolate event fields directly.",
+  "limitation": "Lexical, line-based: matches the expression wherever it appears, including non-shell inputs such as env: values, which are the safe pattern.",
+  "languages": [
+    "yaml"
+  ],
+  "patterns": [
+    {
+      "source": "\\$\\{\\{\\s*github\\.event\\."
+    }
+  ],
+  "tests": [
+    {
+      "line": "run: echo \"${{ github.event.issue.title }}\"",
+      "match": true
+    },
+    {
+      "line": "# audit: run: echo \"${{ github.event.issue.title }}\" present",
+      "match": true
+    },
+    {
+      "line": "run: echo \"${{ matrix.target }}\"",
+      "match": false
+    },
+    {
+      "line": "# verified: run: echo \"${{ matrix.target }}\"",
+      "match": false
+    },
+    {
+      "line": "run: echo \"${{ secrets.DEPLOY_TOKEN }}\"",
+      "match": false
+    },
+    {
+      "line": "env: TITLE: ${{ github.event.pull_request.title }}",
+      "match": true
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-0991"
+  ]
+}

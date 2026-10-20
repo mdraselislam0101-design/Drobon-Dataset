@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-831",
+  "title": "Outbound request to a computed URL in python — review required",
+  "description": "An HTTP client call in python receives a URL assembled at the call site from an f-string, percent-format, concatenation, or a request field. When any part of that value is user controlled, the server becomes a proxy for the attacker: loopback-only services, internal APIs, and cloud metadata endpoints are reachable from inside the network. This lexical rule sees the computed argument only and cannot prove the value is untrusted.",
+  "severity": "HIGH",
+  "cwe": "CWE-918",
+  "category": "server-side-request-forgery",
+  "remediation": "Build outbound URLs from a constant host, validate the path against an allowlist, resolve and re-check the destination before connecting, and do not follow redirects to unlisted hosts.",
+  "limitation": "Line-based lexical match for requests/httpx/urlopen call shapes; taint propagation, redirect chains, and DNS rebinding are out of scope.",
+  "languages": [
+    "python"
+  ],
+  "patterns": [
+    {
+      "source": "\\b(?:(?:requests\\.(?:get|post|put|delete|patch|head|request)|httpx\\.(?:get|post|request)|urlopen)\\(\\s*(?:f[\"']|[\"'][^\"'\\n]*[\"']\\s*%|[\"'][^\"'\\n]*[\"']\\s*\\+|(?:request|req)\\.(?:args|form|values|json|data|GET|POST|query|body|params)))"
+    }
+  ],
+  "tests": [
+    {
+      "line": "requests.get(f\"https://{host}/api/users\")",
+      "match": true
+    },
+    {
+      "line": "# audit: requests.get(f\"https://{host}/api/users\") present",
+      "match": true
+    },
+    {
+      "line": "requests.get(\"https://api.example.com/v1/users\")",
+      "match": false
+    },
+    {
+      "line": "# verified: requests.get(\"https://api.example.com/v1/users\")",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1009"
+  ]
+}

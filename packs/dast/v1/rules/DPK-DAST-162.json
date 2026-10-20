@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-162",
+  "title": "HashiCorp Consul UI disclosed",
+  "description": "The response is the Consul web UI: the consul-ui root element and the Consul by HashiCorp attribution identify the service-networking console. Consul stores service registrations and key-value entries.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "debug-exposure",
+  "remediation": "Keep the Consul UI on the internal network, enable ACLs, and bind the HTTP listener to a management interface rather than the application ingress.",
+  "limitation": "One response body. The rule reports the UI shell; it does not query the catalogue or the key-value store.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*consul\\-ui)(?=[\\s\\S]*Consul\\ by\\ HashiCorp)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Consul</title></head><body><div id=\"consul-ui\"></div><script src=\"/ui/consul-ui.js\"></script><footer>Consul by HashiCorp</footer></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<!doctype html><html><body><div id=\"consul-ui\" data-version=\"1.17.1\"></div><span>Consul by HashiCorp</span></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Consul</title></head><body><div id=\"\"></div><script src=\"/ui/.js\"></script><footer></footer></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1231"
+  ]
+}

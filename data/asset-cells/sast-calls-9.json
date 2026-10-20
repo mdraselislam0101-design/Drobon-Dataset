@@ -1,0 +1,188 @@
+[
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "js-execsync",
+    "category": "command-injection",
+    "cwe": "CWE-78",
+    "severity": "HIGH",
+    "title": "Synchronous OS command execution in {lang} — review required",
+    "description": "execSync runs a command through the system shell and blocks until it finishes. Any request text concatenated into the command string is interpreted as shell syntax, so metacharacters become command separators. The rule flags the call; argument provenance is a review decision.",
+    "remediation": "Replace execSync with execFile or spawn with an argument array and shell disabled, and validate every argument against an allowlist.",
+    "limitation": "Lexical: matches execSync calls; wrapper functions that call it are out of scope.",
+    "scopeT": "Single-line match on an execSync call in {lang}.",
+    "fp": "Constant commands assembled only from internal literals are the accepted false positives.",
+    "recordDesc": "In {lang}, child_process.execSync is called. The function passes its string to /bin/sh, so a value controlled by a request can inject `;`, `&&`, backticks or `$()` and run additional commands with the application identity. The synchronous form is often chosen in scripts and build steps where review attention is low.",
+    "applicability": "{lang} tooling and services that shell out to system commands.",
+    "risk": "Arbitrary command execution with application privileges; HIGH severity.",
+    "why": "A shell command is executed synchronously from a string.",
+    "fix": [
+      "Use execFile/spawn with an argument array.",
+      "Never concatenate request text into a command string."
+    ],
+    "verifyT": "The same operation runs with an argument array and no shell interpretation.",
+    "sinks": {
+      "javascript": [
+        "\\bexecSync\\s*\\(",
+        "const out = execSync(\"ls \" + userInput);",
+        "const out = execFileSync(\"ls\", [userInput]);",
+        "execFileSync with an argument array"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "php-dynamic-include",
+    "category": "code-injection",
+    "cwe": "CWE-829",
+    "severity": "HIGH",
+    "title": "Include or require path built from a variable in {lang} — review required",
+    "description": "include or require is given a variable path rather than a literal. If any part of that path comes from a request, the attacker selects which local file is executed as PHP, or points the include at a remote URL when allow_url_include is enabled. The rule flags the dynamic include; the source of the variable is a review decision.",
+    "remediation": "Map user values onto a fixed allowlist of include paths and never concatenate request text into include or require.",
+    "limitation": "Lexical: matches include/require/require_once/include_once followed by a variable within the statement.",
+    "scopeT": "Single-line match on a variable-driven include in {lang}.",
+    "fp": "Includes of a constant path held in configuration are the accepted false positives.",
+    "recordDesc": "In {lang}, include/require resolves a path that is not a literal. PHP executes included files as code, so control over the path is control over which code runs; with remote includes enabled it is also control over the host. The statement looks like ordinary templating, which is why lexical review rules flag every variable-driven include rather than guessing provenance.",
+    "applicability": "{lang} applications that assemble include paths from request or configuration data.",
+    "risk": "Local or remote file inclusion leading to code execution; HIGH severity.",
+    "why": "The included path is a variable rather than a literal.",
+    "fix": [
+      "Select from a fixed allowlist of template names.",
+      "Disable allow_url_include and keep includes inside the project root."
+    ],
+    "verifyT": "Only an allowlisted template name can be included and arbitrary paths are rejected.",
+    "sinks": {
+      "php": [
+        "\\b(?:include|require)(?:_once)?\\s*\\(?\\s*\\$",
+        "include($_GET['page'] . '.php');",
+        "include __DIR__ . '/header.php';",
+        "include of a constant path"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "js-pseudorandom-bytes",
+    "category": "weak-cryptography",
+    "cwe": "CWE-330",
+    "severity": "MEDIUM",
+    "title": "Non-cryptographic random bytes used as a token in {lang} — review required",
+    "description": "pseudoRandomBytes is documented as a deprecated alias of randomBytes that does not guarantee cryptographically strong output. When its result is used as a token, identifier, or key material, the value is predictable enough to undermine the secret. The rule flags the call; use of the value is a review decision.",
+    "remediation": "Use crypto.randomBytes or crypto.randomUUID for tokens, and treat pseudoRandomBytes as forbidden in security-relevant code.",
+    "limitation": "Lexical: matches pseudoRandomBytes calls; Math.random and other weak sources are covered by separate rules.",
+    "scopeT": "Single-line match on pseudoRandomBytes in {lang}.",
+    "fp": "Non-security uses such as test data generation are the accepted false positives.",
+    "recordDesc": "In {lang}, crypto.pseudoRandomBytes is called. The Node.js documentation marks the function legacy and states that its output is not cryptographically strong; a token derived from it shrinks the search space an attacker needs when guessing reset links or session identifiers. The call still reads like a crypto API, so reviewers often pass over it.",
+    "applicability": "{lang} services that mint tokens, nonces, or identifiers.",
+    "risk": "Predictable tokens enabling guessing and account takeover; MEDIUM severity.",
+    "why": "A legacy non-cryptographic byte generator feeds a security value.",
+    "fix": [
+      "Replace with crypto.randomBytes.",
+      "Use crypto.randomUUID where a UUID is sufficient."
+    ],
+    "verifyT": "Token generation uses randomBytes and a statistical sanity check shows no fixed prefix.",
+    "sinks": {
+      "javascript": [
+        "\\bpseudoRandomBytes\\s*\\(",
+        "const token = crypto.pseudoRandomBytes(16).toString(\"hex\");",
+        "const token = crypto.randomBytes(16).toString(\"hex\");",
+        "crypto.randomBytes for every token"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "kotlin-webview-loadurl",
+    "category": "mobile-security",
+    "cwe": "CWE-749",
+    "severity": "MEDIUM",
+    "title": "WebView loads a computed URL in {lang} — review required",
+    "description": "WebView.loadUrl receives a URL that is not a literal. A URL taken from an intent extra, deep link, or message can navigate the embedded browser to an attacker origin that then receives injected JavaScript bridge access or phishing content. The rule flags the non-literal load; the provenance of the URL is a review decision.",
+    "remediation": "Allowlist scheme and host before loadUrl, reject javascript: and file: URLs, and keep JavaScript bridges disabled for untrusted content.",
+    "limitation": "Lexical: matches a non-literal argument on one line; URLs assembled in helpers are out of scope.",
+    "scopeT": "Single-line match on a computed WebView.loadUrl in {lang}.",
+    "fp": "A constant base URL concatenated with a fixed path segment is the accepted false positive.",
+    "recordDesc": "In {lang}, a WebView is told to load a URL that is computed at runtime. WebView is not a sandbox boundary: the loaded origin can call any addJavascriptInterface bridge the app registered and can render convincing phishing UI inside the app. Deep links and intent extras are the usual sources, and they are attacker-supplied by definition once the activity is exported.",
+    "applicability": "{lang} Android apps that render remote content in a WebView.",
+    "risk": "Navigation to attacker content with bridge exposure; MEDIUM severity.",
+    "why": "The WebView destination is computed rather than constant.",
+    "fix": [
+      "Allowlist https hosts before loading.",
+      "Reject javascript: and file: schemes."
+    ],
+    "verifyT": "A crafted deep link with an off-allowlist host is blocked before loadUrl.",
+    "sinks": {
+      "kotlin": [
+        "\\b\\w*[Ww]eb[Vv]iew\\w*\\.loadUrl\\s*\\(\\s*(?![\"'])",
+        "webView.loadUrl(intent.getStringExtra(\"url\"))",
+        "webView.loadUrl(\"https://app.example/help\")",
+        "allowlisted https URL only"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "python-subprocess-shell",
+    "category": "command-injection",
+    "cwe": "CWE-78",
+    "severity": "HIGH",
+    "title": "Subprocess invoked with shell=True in {lang} — review required",
+    "description": "subprocess is called with shell=True, so the command string is interpreted by a shell. Request text that reaches the string can append commands with shell metacharacters. The rule flags the option; whether the command contains untrusted text is a review decision.",
+    "remediation": "Pass an argument list with shell left at its default False, and validate dynamic arguments against an allowlist.",
+    "limitation": "Lexical: matches shell=True on the same line as a subprocess call.",
+    "scopeT": "Single-line match on shell=True in a subprocess call in {lang}.",
+    "fp": "Constant commands with no external input are the accepted false positives.",
+    "recordDesc": "In {lang}, subprocess runs with shell=True. The shell re-parses the command, so any `;`, `|`, `&&`, or `$()` in a concatenated value starts a new command. The option is often added to make pipes convenient and then stays while the argument list grows to include request data.",
+    "applicability": "{lang} services and jobs that invoke external programs.",
+    "risk": "Shell injection with application privileges; HIGH severity.",
+    "why": "The subprocess call enables shell interpretation.",
+    "fix": [
+      "Remove shell=True and pass a list of arguments.",
+      "Allowlist dynamic values."
+    ],
+    "verifyT": "The command runs from an argument list and a metacharacter payload is treated as literal text.",
+    "sinks": {
+      "python": [
+        "\\bsubprocess\\.(?:run|call|check_output|check_call|Popen)\\(.*shell\\s*=\\s*True",
+        "subprocess.run(user_cmd, shell=True)",
+        "subprocess.run([\"ls\", \"-l\"], shell=False)",
+        "argument list without a shell"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "ruby-dynamic-send",
+    "category": "unsafe-reflection",
+    "cwe": "CWE-470",
+    "severity": "MEDIUM",
+    "title": "Dynamic method dispatch from a non-literal name in {lang} — review required",
+    "description": "send is called with a method name that is not a literal symbol or string. When the name comes from request data, the caller can invoke any public method on the receiver, including ones the route never intended to expose. The rule flags the dynamic dispatch; provenance is a review decision.",
+    "remediation": "Dispatch through an explicit map from request values to allowed method names, and never pass request text directly to send.",
+    "limitation": "Lexical: matches send calls whose first argument is not a literal; public_send is not distinguished.",
+    "scopeT": "Single-line match on computed send dispatch in {lang}.",
+    "fp": "Dispatch over a closed, internal set of method names is the accepted false positive.",
+    "recordDesc": "In {lang}, send is given a computed method name. The receiver then runs whatever public method the value names, so a request parameter can reach methods that were never routed or authorized. The idiom is common in \"generic\" controllers and service objects, where the method set is assumed to be harmless.",
+    "applicability": "{lang} applications that dispatch methods from parameters.",
+    "risk": "Invocation of unintended methods and authorization bypass; MEDIUM severity.",
+    "why": "The dispatched method name is not a literal.",
+    "fix": [
+      "Map parameter values onto an explicit allowlist.",
+      "Prefer public_send only after validation."
+    ],
+    "verifyT": "An unknown method name is rejected by the allowlist instead of raising or dispatching.",
+    "sinks": {
+      "ruby": [
+        "\\b\\w+\\.send\\(\\s*(?![:\"'])\\w",
+        "user.send(params[:action])",
+        "user.send(:name)",
+        "allowlisted method name"
+      ]
+    }
+  }
+]

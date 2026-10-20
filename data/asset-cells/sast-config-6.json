@@ -1,0 +1,250 @@
+[
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "ssrf-computed-py",
+    "category": "server-side-request-forgery",
+    "cwe": "CWE-918",
+    "severity": "HIGH",
+    "title": "Outbound request to a computed URL in {lang} — review required",
+    "description": "An HTTP client call in {lang} receives a URL assembled at the call site from an f-string, percent-format, concatenation, or a request field. When any part of that value is user controlled, the server becomes a proxy for the attacker: loopback-only services, internal APIs, and cloud metadata endpoints are reachable from inside the network. This lexical rule sees the computed argument only and cannot prove the value is untrusted.",
+    "remediation": "Build outbound URLs from a constant host, validate the path against an allowlist, resolve and re-check the destination before connecting, and do not follow redirects to unlisted hosts.",
+    "limitation": "Line-based lexical match for requests/httpx/urlopen call shapes; taint propagation, redirect chains, and DNS rebinding are out of scope.",
+    "scopeT": "Single-line match on an HTTP client call whose URL argument is computed in {lang}.",
+    "fp": "Calls that compute a path under a hard-coded host from trusted configuration are the accepted false positives.",
+    "recordDesc": "In {lang}, a request is issued to a URL that an f-string, percent-format, concatenation, or a request field produced at the call site. If that value is attacker influenced, the request leaves the trust boundary on the attacker’s behalf and can reach loopback-only services, internal control planes, or cloud metadata credentials. The rule reports the shape of the argument, not its trust level, so every hit needs a human decision.",
+    "applicability": "{lang} services that fetch user-supplied resources, webhooks, images, or import URLs.",
+    "risk": "Server-side request forgery into internal networks and metadata endpoints; HIGH severity.",
+    "why": "The destination URL is computed at the call site rather than fixed.",
+    "fix": [
+      "Pin the host and allowlist accepted paths.",
+      "Resolve, validate, and block private address ranges before the request."
+    ],
+    "verifyT": "Rescan shows no computed URL in an outbound call and an allowlist test rejects an unlisted host.",
+    "sinks": {
+      "python": [
+        "(?:requests\\.(?:get|post|put|delete|patch|head|request)|httpx\\.(?:get|post|request)|urlopen)\\(\\s*(?:f[\"']|[\"'][^\"'\\n]*[\"']\\s*%|[\"'][^\"'\\n]*[\"']\\s*\\+|(?:request|req)\\.(?:args|form|values|json|data|GET|POST|query|body|params))",
+        "requests.get(f\"https://{host}/api/users\")",
+        "requests.get(\"https://api.example.com/v1/users\")",
+        "a fixed host allowlist"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "ssrf-computed-js",
+    "category": "server-side-request-forgery",
+    "cwe": "CWE-918",
+    "severity": "HIGH",
+    "title": "Outbound request to a computed URL in {lang} — review required",
+    "description": "A fetch, axios, or got call in {lang} receives a URL built from a template literal, string concatenation, or request fields. If the interpolated part is attacker controlled, the runtime is a proxy into the private network: internal admin ports, service meshes, and cloud metadata addresses all answer from inside. The rule flags the computed argument, not the trust level of the value.",
+    "remediation": "Resolve outbound destinations against a constant allowlist, strip credentials from URLs, disable automatic redirect following, and block private address ranges after DNS resolution.",
+    "limitation": "Lexical match on common client call shapes; taint, redirects, and DNS rebinding are out of scope.",
+    "scopeT": "Single-line match on an HTTP client call whose URL argument is computed in {lang}.",
+    "fp": "Requests to a fixed host that interpolate only a validated identifier are the accepted false positives.",
+    "recordDesc": "In {lang}, fetch, axios, or got is called with a URL assembled from a template literal, concatenation, or request parameters. An attacker who controls the interpolated segment chooses where the server connects next, which is how SSRF reaches loopback services and cloud metadata that the public internet cannot address. Lexical matching cannot separate trusted identifiers from user input, so each hit is a review item.",
+    "applicability": "{lang} services that proxy, unfurl, or fetch resources named by a client.",
+    "risk": "Server-side request forgery into internal networks and metadata endpoints; HIGH severity.",
+    "why": "The request target is assembled from request data at the call site.",
+    "fix": [
+      "Allowlist destination hosts and paths.",
+      "Reject private and link-local addresses after resolution."
+    ],
+    "verifyT": "Rescan shows literal or allowlisted targets and a test rejects an unlisted host.",
+    "sinks": {
+      "javascript": [
+        "(?:fetch|axios\\.(?:get|post|put|delete|patch|request)|got\\.(?:get|post|put|delete))\\(\\s*(?:`[^`\\n]*\\$\\{|[A-Za-z_$][\\w$]*\\s*\\+|(?:req|request)\\.(?:query|body|params))",
+        "fetch(`https://api.example.com/users/${userId}`)",
+        "fetch(\"https://api.example.com/v1/users\")",
+        "a fixed host allowlist"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "proto-pollution",
+    "category": "mass-assignment",
+    "cwe": "CWE-915",
+    "severity": "HIGH",
+    "title": "Prototype mutation via __proto__ in {lang} — review required",
+    "description": "The code writes through __proto__ or walks constructor.prototype, which replaces the prototype that later property lookups consult. A merge helper fed with a parsed body can therefore add or override inherited properties that authorization and configuration checks read. This lexical rule flags the mutation; it does not trace where the keys came from.",
+    "remediation": "Represent untrusted key-value data with Object.create(null) or a Map, reject __proto__, constructor, and prototype keys in merge and clone helpers, and freeze prototypes that must not change.",
+    "limitation": "Lexical mention of __proto__ or constructor.prototype; reflection-based mutation and library-specific sinks are out of scope.",
+    "scopeT": "Single-line match on a prototype mutation in {lang}.",
+    "fp": "Deliberate prototype setup in trusted bootstrapping code is the accepted false positive.",
+    "recordDesc": "In {lang}, attacker-reachable keys meet a __proto__ assignment or a constructor.prototype path. The write changes the prototype behind an object, so subsequent reads resolve to values the attacker supplied — a route to authorization bypass, configuration override, and denial of service inside merge and clone helpers. The mutation is the defect even when the immediate line looks like ordinary object plumbing.",
+    "applicability": "{lang} code that merges, clones, or deep-assigns parsed documents.",
+    "risk": "Property injection into inherited lookups with authorization bypass potential; HIGH severity.",
+    "why": "The prototype chain is written from a non-literal key path.",
+    "fix": [
+      "Use null-prototype objects or Maps for untrusted keys.",
+      "Reject prototype keys in merge helpers."
+    ],
+    "verifyT": "Rescan shows no __proto__ assignment and a merge test rejects prototype keys.",
+    "sinks": {
+      "javascript": [
+        "(?:\\.__proto__\\s*=|\\[[\"']__proto__[\"']\\]|constructor\\s*\\.\\s*prototype)",
+        "target.__proto__ = payload",
+        "target.prototypeValue = payload",
+        "Object.create(null) maps"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "http-header-inject",
+    "category": "http-response-splitting",
+    "cwe": "CWE-113",
+    "severity": "MEDIUM",
+    "title": "Response header built from a non-literal value in {lang} — review required",
+    "description": "setHeader is called with a value that is not a string literal, so whatever the variable holds is serialized into the response header block. If CR or LF reaches that value, the peer can end the header section early and append headers or a body — response splitting, cache poisoning, and cookie injection all ride on that. The rule flags the non-literal argument; it cannot tell whether the value is sanitized.",
+    "remediation": "Reject CR and LF in header values, build headers through the platform API with validated types, and keep request data out of Location and Set-Cookie construction.",
+    "limitation": "Lexical: one call shape (setHeader) in {lang}; framework helpers that serialize headers differently are out of scope.",
+    "scopeT": "Single-line match on a non-literal header value in {lang}.",
+    "fp": "Values produced by a serializer that already strips CR/LF are the accepted false positives.",
+    "recordDesc": "In {lang}, res.setHeader receives a computed value rather than a literal. A value carrying CR or LF ends the header section, letting the sender inject additional headers or a body that caches and clients attribute to this origin. Even without CRLF, reflecting user input into Location or Set-Cookie changes security decisions the client will make.",
+    "applicability": "{lang} HTTP handlers that forward identifiers, messages, or filenames into headers.",
+    "risk": "HTTP response splitting and cache poisoning; MEDIUM severity.",
+    "why": "A response header value is computed rather than literal.",
+    "fix": [
+      "Strip CR and LF before serializing headers.",
+      "Use the platform API with typed values."
+    ],
+    "verifyT": "Rescan shows only literal or validated header values and a test rejects CR/LF input.",
+    "sinks": {
+      "javascript": [
+        "\\bsetHeader\\(\\s*[^,\\n]{1,80},\\s*(?!(?:\\s*[\"\\'\\d]))",
+        "res.setHeader(\"X-Trace-Id\", traceId)",
+        "res.setHeader(\"X-Frame-Options\", \"DENY\")",
+        "a CR/LF-stripping serializer"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "remote-script-pipe",
+    "category": "command-injection",
+    "cwe": "CWE-494",
+    "severity": "HIGH",
+    "title": "Downloaded script piped into a shell in {lang} — review required",
+    "description": "curl or wget output is piped directly into a shell interpreter. The shell runs whatever the server returned at that moment, with no digest or signature check, so a compromised endpoint, an intercepted TLS session, or a re-released artifact executes immediately in the build or host context. The rule matches the pipeline; it cannot tell whether the origin is trusted.",
+    "remediation": "Download to a file, verify a pinned checksum or signature, then execute the verified file. Prefer versioned packages from an internal mirror over install scripts.",
+    "limitation": "Lexical pipeline match for curl/wget into a shell; aliases, wrappers, and multi-line constructs are out of scope.",
+    "scopeT": "Single-line match on a download piped into a shell in {lang}.",
+    "fp": "Pipelines that fetch a digest-verified artifact through a wrapper are the accepted false positives.",
+    "recordDesc": "In {lang}, the output of curl or wget is piped into a shell. Nothing authenticates the bytes between the remote server and the interpreter, so the effective trust anchor is the network path at install time. A supply-chain compromise or an interception on that path becomes immediate code execution, often with the privileges of the installer.",
+    "applicability": "{lang} build scripts, container images, and host provisioning steps.",
+    "risk": "Remote code execution from an unverified download; HIGH severity.",
+    "why": "A downloaded script is executed without an integrity check.",
+    "fix": [
+      "Download, then verify a pinned digest or signature.",
+      "Execute the verified file instead of a pipeline."
+    ],
+    "verifyT": "Rescan shows no curl|sh pipeline and the install path verifies a pinned digest.",
+    "sinks": {
+      "shell": [
+        "\\b(?:curl|wget)\\b[^\\n|]*\\|\\s*(?:sudo\\s)?(?:ba|z|k|fi|da)?sh\\b",
+        "curl -fsSL https://get.example.com/install.sh | sh",
+        "curl -fsSL -o install.sh https://get.example.com/install.sh",
+        "a pinned checksum verified before execution"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "ci-secret-echo",
+    "category": "sensitive-logging",
+    "cwe": "CWE-532",
+    "severity": "HIGH",
+    "title": "Workflow secret interpolated into a run step in {lang} — review required",
+    "description": "A run: line interpolates a GitHub Actions secret expression. The runner substitutes the secret before the shell sees the command, so the value can reach the job log, child process arguments visible to other steps, or debug output that outlives the job. The rule flags interpolation into run:; it cannot tell whether the command prints the value.",
+    "remediation": "Pass secrets through env: and reference the environment variable, mask derived values, and never echo a secret. Prefer short-lived OIDC federation over stored tokens.",
+    "limitation": "Lexical: matches secrets.* inside run: lines; env: indirection and action inputs are out of scope.",
+    "scopeT": "Single-line match on a secret expression inside a run step in {lang}.",
+    "fp": "Steps that pass a secret to a command without printing it are still flagged and reviewed individually.",
+    "recordDesc": "In {lang}, a run: step interpolates a secret expression directly into the command line. The runner expands it before execution, exposing the value to the job log, to child process argument lists, and to any debugging output the command emits. Masking reduces but does not remove that exposure, and a leaked deployment token stays valid after the job ends.",
+    "applicability": "{lang} workflows that deploy, publish, or call an authenticated API.",
+    "risk": "Credential disclosure in CI logs and process arguments; HIGH severity.",
+    "why": "A secret expression is interpolated into a shell command.",
+    "fix": [
+      "Pass the secret through env: and reference the variable.",
+      "Avoid commands that print their environment or arguments."
+    ],
+    "verifyT": "Rescan shows no secrets.* inside run: and the job uses env: indirection.",
+    "sinks": {
+      "yaml": [
+        "\\brun:[^\\n]*\\$\\{\\{\\s*secrets\\.[A-Z0-9_]*",
+        "run: echo \"${{ secrets.DEPLOY_TOKEN }}\"",
+        "env: TOKEN: ${{ secrets.DEPLOY_TOKEN }}",
+        "env: indirection"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "gha-write-all",
+    "category": "ci-security",
+    "cwe": "CWE-250",
+    "severity": "MEDIUM",
+    "title": "Workflow requests write-all token permissions in {lang} — review required",
+    "description": "The workflow or job declares permissions: write-all. The automatic GITHUB_TOKEN then carries every write scope the repository offers, so any step that executes code from elsewhere — a dependency install script, a composite action, a generated test — inherits the ability to push, publish, or rewrite issues. Least privilege starts by declaring the two or three scopes the job actually uses.",
+    "remediation": "Replace write-all with an explicit map such as contents: read, and grant write scopes only on the job that needs them.",
+    "limitation": "Lexical match on the permissions key; inherited organization defaults are out of scope.",
+    "scopeT": "Single-line match on a write-all permission declaration in {lang}.",
+    "fp": "A workflow that genuinely needs every write scope is the accepted exception and must be recorded in review.",
+    "recordDesc": "In {lang}, permissions: write-all grants the job token every write scope. A compromised action or a script that reads the token can then push commits, publish packages, or edit releases with the repository’s own identity. The declaration is one line and easy to overlook in review, which is why it is flagged even when the job looks read-only.",
+    "applicability": "{lang} workflows that build, test, or deploy from pull-request and branch events.",
+    "risk": "Privilege escalation through an over-scoped CI token; MEDIUM severity.",
+    "why": "The workflow token is granted every write scope.",
+    "fix": [
+      "Declare only the scopes the job uses.",
+      "Move write scopes to a dedicated job."
+    ],
+    "verifyT": "Rescan shows an explicit permissions map and the job passes with read-only defaults.",
+    "sinks": {
+      "yaml": [
+        "\\bpermissions:\\s*write-all\\b",
+        "permissions: write-all",
+        "permissions: read-all",
+        "an explicit per-scope permissions map"
+      ]
+    }
+  },
+  {
+    "class": "weak-bcrypt-cost-js",
+    "kind": "sast",
+    "category": "weak-cryptography",
+    "cwe": "CWE-916",
+    "severity": "MEDIUM",
+    "framing": "flag",
+    "title": "bcrypt work factor below the current floor in {lang} — review required",
+    "description": "The bcrypt call uses a cost factor below 12, or generates a salt with that factor. The cost parameter is the only knob that makes offline guessing expensive: at 4 the hash is roughly a thousand times cheaper to attack than at 14. Hardware improves every year, so a value that was acceptable when the code was written now belongs in a review. This lexical rule reads the literal argument.",
+    "remediation": "Raise the bcrypt cost to 12 or more, plan a rehash-on-login migration for existing hashes, and keep the parameter in one place so it can be raised again.",
+    "limitation": "Lexical: only literal numeric cost arguments are matched; values supplied through configuration are out of scope.",
+    "scopeT": "Single-line match on a bcrypt hash or salt call with a low literal cost in {lang}.",
+    "fp": "A deliberately low cost on a disposable test-only account is the accepted exception and must be recorded.",
+    "recordDesc": "In {lang}, bcrypt is invoked with a cost factor below 12, either directly on hash or when generating a salt. The work factor sets how much computation each guess costs an attacker who has the hash database. A low value makes GPU and ASIC guessing cheap, so a leaked table of hashes falls quickly even if the passwords were reasonable.",
+    "applicability": "{lang} applications that store bcrypt password hashes; lexical scope.",
+    "risk": "Fast offline password recovery after a hash disclosure; MEDIUM severity.",
+    "why": "The bcrypt cost factor is below the current floor.",
+    "fix": [
+      "Raise the cost to 12 or more.",
+      "Rehash stored passwords on next successful login."
+    ],
+    "verifyT": "Rescan shows a cost of 12 or more and a login test confirms a rehash path.",
+    "sinks": {
+      "javascript": [
+        "\\bbcrypt\\.(?:hash|hashSync)\\([^)\\n]*,\\s*(?:[1-9]|10)\\b|\\bbcrypt\\.(?:genSalt|genSaltSync)\\(\\s*(?:[1-9]|10)\\b",
+        "bcrypt.hash(password, 4)",
+        "bcrypt.hash(password, 12)",
+        "a cost of 12 or more"
+      ]
+    }
+  }
+]

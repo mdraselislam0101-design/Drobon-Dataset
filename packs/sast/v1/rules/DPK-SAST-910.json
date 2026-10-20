@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-910",
+  "title": "Shell command executed through std::system in cpp — review required",
+  "description": "std::system passes its string to the C library shell invocation. A value concatenated into that string is interpreted as shell syntax, so command substitution or separators run additional programs. The rule flags the call; whether the string is externally influenced is a review decision.",
+  "severity": "HIGH",
+  "cwe": "CWE-78",
+  "category": "command-injection",
+  "remediation": "Use posix_spawn or CreateProcess with an argument vector and validate dynamic values.",
+  "limitation": "Lexical: matches std::system and ::system calls; a spawn-based wrapper is out of scope.",
+  "languages": [
+    "cpp"
+  ],
+  "patterns": [
+    {
+      "source": "\\bstd::system\\s*\\("
+    }
+  ],
+  "tests": [
+    {
+      "line": "std::system((\"convert \" + userFile + \" out.png\").c_str());",
+      "match": true
+    },
+    {
+      "line": "# audit: std::system((\"convert \" + userFile + \" out.png\").c_str()); present",
+      "match": true
+    },
+    {
+      "line": "posix_spawn(&pid, \"/usr/bin/convert\", nullptr, nullptr, argv, environ);",
+      "match": false
+    },
+    {
+      "line": "# verified: posix_spawn(&pid, \"/usr/bin/convert\", nullptr, nullptr, argv, environ);",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1093"
+  ]
+}

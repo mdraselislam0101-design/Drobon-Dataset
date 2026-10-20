@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-083",
+  "title": "Werkzeug interactive debugger page disclosed",
+  "description": "The response body is the Werkzeug interactive debugger page, which a Flask application renders when debug mode is enabled. The page exposes a traceback with source context and offers an interactive console; the console is gated by a PIN, so the check reports the exposed debugger rather than remote code execution.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-489",
+  "category": "debug-exposure",
+  "remediation": "Run production deployments with debug disabled (app.run(debug=False) or the WSGI server default) and return a generic error page.",
+  "limitation": "Observation-level: matches the debugger's identifying page text. It does not determine whether the console PIN is guessable or whether code execution is possible.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "Werkzeug Debugger"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/orders/42",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8"
+        },
+        "body": "<html><head><title>ZeroDivisionError // Werkzeug Debugger</title></head><body><h1>Werkzeug Debugger</h1></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/console",
+        "status": 500,
+        "headers": {},
+        "body": "<div id=\"debugger\">The Werkzeug Debugger is active</div>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/orders/42",
+        "status": 500,
+        "headers": {},
+        "body": "<h1>Internal Server Error</h1><p>Reference 4c9d.</p>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {},
+        "body": "<h1>Orders</h1><p>Your recent orders.</p>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1152"
+  ]
+}

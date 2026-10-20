@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-260",
+  "title": "Docker Compose file served",
+  "description": "The response is a Docker Compose file: the services mapping together with container image references is the document shape, and the environment blocks inside it carry connection strings and credentials.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Remove deployment descriptors from the web root and pass secrets through the orchestrator's secret store rather than environment literals in a committed file.",
+  "limitation": "One response body. The rule reports the Compose document shape at a line start, so a page that quotes a Compose snippet inside markup is not reported; it does not parse the environment blocks or prove that a credential in them is live.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?:^|\\n)services\\s*:(?=[\\s\\S]*\\n[ \\t]+image\\s*:)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "services:\n  web:\n    image: shop/web:4.2.1\n    environment:\n      - DATABASE_URL=postgres://shop:redacted-for-fixture@db/shop\n  cache:\n    image: redis:7"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "version: \"3.8\"\nservices:\n  api:\n    image: shop/api:1.4.0\n    ports:\n      - \"8080:8080\""
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "\n  web:\n     shop/web:4.2.1\n    environment:\n      - DATABASE_URL=postgres://shop:redacted-for-fixture@db/shop\n  cache:\n     redis:7"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body><pre>services:\n  web:\n    image: shop/web</pre></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "# deployment stack\nservices:\n  web:\n    image: a\n"
+      },
+      "match": true
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1329"
+  ]
+}

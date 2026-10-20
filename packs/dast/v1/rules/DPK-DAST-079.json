@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-079",
+  "title": ".NET stack frame with source path disclosed in a response",
+  "description": "The response body contains a .NET stack frame in the form 'in <path>.cs:line N'. The captured frame discloses the assembly names, method signatures and build path of the application. The check reports the disclosed frame; it does not claim the caller can reach the failing code path deliberately.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-209",
+  "category": "debug-exposure",
+  "remediation": "Disable developer exception pages in production and return a generic error response with a correlation id.",
+  "limitation": "Observation-level: requires the source path and :line marker that the developer exception page emits. Frames without a source file are out of scope.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "\\bin [^\\n]{0,120}\\.cs:line \\d+"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://api.example/orders/42",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "System.NullReferenceException: Object reference not set to an instance of an object.\n   at Contoso.Api.Orders.Get(Int32 id) in C:\\src\\Orders.cs:line 42"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://api.example/checkout",
+        "status": 500,
+        "headers": {},
+        "body": "   at Contoso.Payments.Authorize(Order o) in /srv/app/Payments.cs:line 118"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://api.example/orders/42",
+        "status": 500,
+        "headers": {},
+        "body": "An unexpected error occurred. Reference 77ab12."
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://api.example/health",
+        "status": 200,
+        "headers": {},
+        "body": "{\"status\":\"ok\",\"build\":\"2026.10.19\"}"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1148"
+  ]
+}

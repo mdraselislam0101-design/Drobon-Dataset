@@ -1,0 +1,80 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-116",
+  "title": "Link header points at a plaintext origin",
+  "description": "An https response advertises a preconnect, preload or stylesheet target over http:// in its Link header. The browser may open the connection or fetch the resource as instructed, so the referenced request leaves TLS even though the document itself arrived over https. The observation is the advertised target, not proof of a completed fetch.",
+  "severity": "LOW",
+  "cwe": "CWE-319",
+  "category": "transport-security",
+  "remediation": "Reference the target with https:// or a scheme-relative form that inherits the document scheme. Keep Link preconnect hints limited to origins that terminate TLS.",
+  "limitation": "Header value check on one https response. The rule reads Link targets only, not resource hints expressed in markup or CSS, and it cannot prove the browser acted on the hint.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Link",
+    "valuePattern": "<http://",
+    "requireScheme": "https"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Link": "<http://cdn.example/app.css>; rel=preload; as=style"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Link": "<http://api.example>; rel=preconnect"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Link": "<https://cdn.example/app.css>; rel=preload"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Link": "<//cdn.example/app.css>; rel=preload"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "http://app.example/",
+        "status": 200,
+        "headers": {
+          "Link": "<http://cdn.example/app.css>; rel=preload"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {}
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1185"
+  ]
+}

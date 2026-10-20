@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-179",
+  "title": "RabbitMQ management interface disclosed",
+  "description": "The response is the RabbitMQ management plug-in: the page title and the RabbitMQ bundle identify the broker administration console. That console shows queues, exchanges, connections and consumer counts.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "debug-exposure",
+  "remediation": "Keep the management plug-in on an internal listener behind an authenticating proxy, or disable it where it is not needed. Do not publish it through the application ingress.",
+  "limitation": "One response body. The rule reports the management shell; it does not list a queue or publish a message.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*RabbitMQ\\ Management)(?=[\\s\\S]*rabbitmq)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>RabbitMQ Management</title></head><body><script src=\"/js/rabbitmq.js\"></script><div id=\"rabbitmq-management\"></div></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<!doctype html><html><head><title>RabbitMQ Management</title></head><body><script>var rabbitmq = {\"version\":\"3.12.4\"};</script></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title></title></head><body><script src=\"/js/.js\"></script><div id=\"-management\"></div></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1248"
+  ]
+}

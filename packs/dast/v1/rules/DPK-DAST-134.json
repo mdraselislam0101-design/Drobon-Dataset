@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-134",
+  "title": "better_errors debug page disclosed in a response",
+  "description": "The response is the better_errors gem page: it references the gem and renders its Better Errors heading with the exception, the stack and a live console prompt. In many configurations that prompt evaluates Ruby expressions inside the failing request.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-489",
+  "category": "debug-exposure",
+  "remediation": "Remove the better_errors gem from the production bundle and keep it in the development group of the Gemfile.",
+  "limitation": "Two body markers. A generic Rails stack frame is reported by the Rails stack rule; this rule requires the gem's own page markers.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*better_errors)(?=[\\s\\S]*Better Errors)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/boom",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<div id=\"better_errors_dialog\"><h1>Better Errors</h1><p>RuntimeError: boom</p><div class=\"console\">>> </div></div><script src=\"/assets/better_errors.js\"></script>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/api/boom",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<h1>Better Errors</h1> raised in better_errors/renderer.rb"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body>Home</body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/boom",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<h1>We are sorry, but something went wrong.</h1>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1203"
+  ]
+}

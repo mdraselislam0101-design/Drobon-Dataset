@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-905",
+  "title": "Remote content executed in PowerShell in powershell — review required",
+  "description": "Invoke-Expression combined with DownloadString downloads a script and executes it in the current session, with no signature or hash check. Whoever controls the URL controls the code that runs with the operator privileges. The rule flags the pair; whether the URL is trusted is a review decision.",
+  "severity": "HIGH",
+  "cwe": "CWE-94",
+  "category": "code-injection",
+  "remediation": "Download to a file, verify a published signature or hash, and run it through a constrained execution policy.",
+  "limitation": "Lexical: matches the two cmdlets on one pipeline; obfuscated variants that split the string are out of scope.",
+  "languages": [
+    "powershell"
+  ],
+  "patterns": [
+    {
+      "source": "\\b(?:Invoke-Expression[^\\n]*DownloadString)"
+    }
+  ],
+  "tests": [
+    {
+      "line": "Invoke-Expression (New-Object Net.WebClient).DownloadString(\"http://example.internal/a.ps1\")",
+      "match": true
+    },
+    {
+      "line": "# audit: Invoke-Expression (New-Object Net.WebClient).DownloadString(\"http://example.internal/a.ps1\") present",
+      "match": true
+    },
+    {
+      "line": "$pkg = Get-AuthenticodeSignature ./tool.ps1; if ($pkg.Status -eq \"Valid\") { & ./tool.ps1 }",
+      "match": false
+    },
+    {
+      "line": "# verified: $pkg = Get-AuthenticodeSignature ./tool.ps1; if ($pkg.Status -eq \"Valid\") { & ./tool.ps1 }",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1088"
+  ]
+}

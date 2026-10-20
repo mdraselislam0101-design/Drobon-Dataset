@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1148",
+  "title": "Signal: .NET stack frame with source path disclosed in a response",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-body-matches",
+      "valuePattern": "\\bin [^\\n]{0,120}\\.cs:line \\d+"
+    }
+  },
+  "scope": "One response body: confirm a .NET frame with a source path.",
+  "limitations": "Observation-level: requires the source path and :line marker that the developer exception page emits. Frames without a source file are out of scope.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://api.example/orders/42",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "System.NullReferenceException: Object reference not set to an instance of an object.\n   at Contoso.Api.Orders.Get(Int32 id) in C:\\src\\Orders.cs:line 42"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://api.example/checkout",
+        "status": 500,
+        "headers": {},
+        "body": "   at Contoso.Payments.Authorize(Order o) in /srv/app/Payments.cs:line 118"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://api.example/orders/42",
+        "status": 500,
+        "headers": {},
+        "body": "An unexpected error occurred. Reference 77ab12."
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://api.example/health",
+        "status": 200,
+        "headers": {},
+        "body": "{\"status\":\"ok\",\"build\":\"2026.10.19\"}"
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A deliberately verbose internal endpoint is reported by design; the limitation states this.",
+  "linkedRules": [
+    "DPK-DAST-079"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:dotnet-stack-trace:dotnet-frame",
+  "validationStatus": "VALIDATED"
+}

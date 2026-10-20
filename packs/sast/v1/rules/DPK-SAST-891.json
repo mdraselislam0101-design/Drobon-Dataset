@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-891",
+  "title": "Remote artifact fetched without an integrity check during the build in dockerfile — review required",
+  "description": "ADD with an http or https source downloads content into the image without verifying a checksum or signature. The build trusts whatever the remote host returns at build time, so a compromised or replaced artifact enters every image built from the recipe. The rule flags the remote ADD; whether the artifact is pinned elsewhere is a review decision.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-494",
+  "category": "supply-chain",
+  "remediation": "Download in a RUN step, verify a published checksum, and only then place the artifact in the image.",
+  "limitation": "Lexical: matches ADD with a remote URL; a following RUN that verifies a checksum is not linked to the download.",
+  "languages": [
+    "dockerfile"
+  ],
+  "patterns": [
+    {
+      "source": "\\bADD\\s+https?://"
+    }
+  ],
+  "tests": [
+    {
+      "line": "ADD https://example.internal/tool.tar.gz /opt/tool.tar.gz",
+      "match": true
+    },
+    {
+      "line": "# audit: ADD https://example.internal/tool.tar.gz /opt/tool.tar.gz present",
+      "match": true
+    },
+    {
+      "line": "ADD vendor/tool.tar.gz /opt/tool.tar.gz",
+      "match": false
+    },
+    {
+      "line": "# verified: ADD vendor/tool.tar.gz /opt/tool.tar.gz",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1074"
+  ]
+}

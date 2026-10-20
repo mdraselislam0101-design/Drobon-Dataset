@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-232",
+  "title": "Memcached statistics disclosed",
+  "description": "The response is memcached statistics output: the STAT version line together with the STAT curr_items counter is the text protocol reply to the stats command. The cache speaks this protocol on its client port without authentication.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Bind memcached to loopback or a private interface, enable SASL authentication where a network client needs it, and never expose the client port to untrusted networks.",
+  "limitation": "One response body. The rule reports the statistics reply; it does not issue a get or set and cannot show which keys are stored.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*STAT\\ version)(?=[\\s\\S]*STAT\\ curr_items)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "STAT pid 1\nSTAT uptime 918273\nSTAT version 1.6.21\nSTAT curr_connections 12\nSTAT cmd_get 91823\nSTAT curr_items 4021\nSTAT bytes 1048576\nEND"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "STAT version 1.6.17\nSTAT uptime 991\nSTAT curr_items 12\nSTAT bytes 2048\nEND"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "STAT pid 1\nSTAT uptime 918273\n 1.6.21\nSTAT curr_connections 12\nSTAT cmd_get 91823\n 4021\nSTAT bytes 1048576\nEND"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1301"
+  ]
+}

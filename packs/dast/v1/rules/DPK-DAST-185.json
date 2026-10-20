@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-185",
+  "title": "ZooKeeper stat command output disclosed",
+  "description": "The response is ZooKeeper four-letter command output: the version banner with the latency and node counters is what the stat command returns. The four-letter commands are an unauthenticated administrative surface when they are enabled.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Disable the four-letter commands with the whitelist configuration, or restrict them to the management network. Keep the client port off untrusted networks.",
+  "limitation": "One response body. The rule reports the stat output; it does not attempt a write command and cannot show whether one is enabled.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*Zookeeper\\ version)(?=[\\s\\S]*Latency\\ min/avg/max)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "Zookeeper version: 3.8.2-abc123, built on 2023-02-14 12:00 UTC\nClients:\n /10.0.0.5:52344[1](queued=0,recved=10,sent=10)\nLatency min/avg/max: 0/0.4/12\nReceived: 120\nSent: 119\nConnections: 1\nOutstanding: 0\nZxid: 0x1a2b3c\nMode: standalone\nNode count: 42"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "Zookeeper version: 3.7.1\nLatency min/avg/max: 1/2.0/30\nConnections: 3\nMode: follower\nNode count: 120"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": ": 3.8.2-abc123, built on 2023-02-14 12:00 UTC\nClients:\n /10.0.0.5:52344[1](queued=0,recved=10,sent=10)\n: 0/0.4/12\nReceived: 120\nSent: 119\nConnections: 1\nOutstanding: 0\nZxid: 0x1a2b3c\nMode: standalone\nNode count: 42"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1254"
+  ]
+}

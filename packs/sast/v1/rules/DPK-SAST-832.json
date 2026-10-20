@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-832",
+  "title": "bcrypt work factor below the current floor in javascript — review required",
+  "description": "The bcrypt call uses a cost factor below 12, or generates a salt with that factor. The cost parameter is the only knob that makes offline guessing expensive: at 4 the hash is roughly a thousand times cheaper to attack than at 14. Hardware improves every year, so a value that was acceptable when the code was written now belongs in a review. This lexical rule reads the literal argument.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-916",
+  "category": "weak-cryptography",
+  "remediation": "Raise the bcrypt cost to 12 or more, plan a rehash-on-login migration for existing hashes, and keep the parameter in one place so it can be raised again.",
+  "limitation": "Lexical: only literal numeric cost arguments are matched; values supplied through configuration are out of scope.",
+  "languages": [
+    "javascript"
+  ],
+  "patterns": [
+    {
+      "source": "\\bbcrypt\\.(?:hash|hashSync)\\([^)\\n]*,\\s*(?:[1-9]|10)\\b|\\bbcrypt\\.(?:genSalt|genSaltSync)\\(\\s*(?:[1-9]|10)\\b"
+    }
+  ],
+  "tests": [
+    {
+      "line": "bcrypt.hash(password, 4)",
+      "match": true
+    },
+    {
+      "line": "# audit: bcrypt.hash(password, 4) present",
+      "match": true
+    },
+    {
+      "line": "bcrypt.hash(password, 12)",
+      "match": false
+    },
+    {
+      "line": "# verified: bcrypt.hash(password, 12)",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1010"
+  ]
+}

@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-222",
+  "title": "GraphQL IDE interface disclosed",
+  "description": "The response is a GraphQL IDE shell: the GraphiQL or Playground container together with a graphql endpoint reference is the page a developer uses to run queries interactively. The IDE ships with a query editor pointed at the live endpoint.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "debug-exposure",
+  "remediation": "Disable the IDE in production builds, or serve it only to authenticated developers behind a separate host. Keep introspection restricted to the audiences that need it.",
+  "limitation": "One response body. The rule reports the IDE shell; it does not run a query and cannot show whether introspection is enabled on the endpoint.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*GraphiQL)(?=[\\s\\S]*graphql)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<!doctype html><html><head><title>GraphiQL</title></head><body><div id=\"graphiql\"></div><script>var graphqlEndpoint = \"/graphql\";</script></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body><div class=\"graphiql-container\"></div><script>window.GraphQLPlayground = {endpoint: \"/api/graphql\"};</script></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<!doctype html><html><head><title></title></head><body><div id=\"\"></div><script>var Endpoint = \"/\";</script></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1291"
+  ]
+}

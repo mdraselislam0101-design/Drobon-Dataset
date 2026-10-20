@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1242",
+  "title": "Signal: Azure Blob Storage container listing disclosed",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-body-matches",
+      "valuePattern": "(?=[\\s\\S]*<EnumerationResults)(?=[\\s\\S]*BlobService)"
+    }
+  },
+  "scope": "One response whose body is an Azure container listing with an EnumerationResults root and BlobService metadata.",
+  "limitations": "One response body. The rule reports the listing document; it does not download a blob and cannot show what the blobs contain.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<?xml version=\"1.0\" encoding=\"utf-8\"?><EnumerationResults ServiceEndpoint=\"https://acct.blob.core.windows.net/\" ContainerName=\"backups\"><Blobs><Blob><Name>db-2026-10-01.dump</Name></Blob></Blobs><NextMarker/></EnumerationResults><!-- BlobService -->"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<?xml version=\"1.0\"?><EnumerationResults ContainerName=\"assets\"><Blobs><Blob><Name>logo.png</Name></Blob></Blobs></EnumerationResults><!-- BlobService version=2021-08-06 -->"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<?xml version=\"1.0\" encoding=\"utf-8\"?> ServiceEndpoint=\"https://acct.blob.core.windows.net/\" ContainerName=\"backups\"><Blobs><Blob><Name>db-2026-10-01.dump</Name></Blob></Blobs><NextMarker/></EnumerationResults><!--  -->"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A container deliberately configured for public read is still reported; the finding is that anonymous listing is enabled, not that the data is sensitive.",
+  "linkedRules": [
+    "DPK-DAST-173"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:body-kubernetes-azure-blob-listing:kubernetes-azure-blob-listing",
+  "validationStatus": "VALIDATED"
+}

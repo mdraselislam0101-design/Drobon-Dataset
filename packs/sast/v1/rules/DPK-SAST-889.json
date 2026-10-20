@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-889",
+  "title": "OS command executed from a runtime string in clojure — review required",
+  "description": "clojure.java.shell/sh with :cmd and a raw string passes the command to the system shell. Request data inside that string becomes shell syntax, so a single semicolon appends another command. The rule flags the call; whether the string is externally influenced is a review decision.",
+  "severity": "HIGH",
+  "cwe": "CWE-78",
+  "category": "command-injection",
+  "remediation": "Call sh with a vector of separate arguments and no shell, and validate each argument against an allowlist.",
+  "limitation": "Lexical: matches sh calls with a :cmd key; argument-vector calls are not reported.",
+  "languages": [
+    "clojure"
+  ],
+  "patterns": [
+    {
+      "source": "\\(\\s*sh\\s+[^\\n]*:cmd\\b"
+    }
+  ],
+  "tests": [
+    {
+      "line": "(sh :cmd (str \"convert \" user-file))",
+      "match": true
+    },
+    {
+      "line": "# audit: (sh :cmd (str \"convert \" user-file)) present",
+      "match": true
+    },
+    {
+      "line": "(sh \"convert\" user-file)",
+      "match": false
+    },
+    {
+      "line": "# verified: (sh \"convert\" user-file)",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1072"
+  ]
+}

@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-136",
+  "title": "Spring Actuator environment endpoint disclosed in a response",
+  "description": "The response body is a Spring Boot Actuator environment document: it contains a propertySources array and an activeProfiles field. The endpoint publishes the resolved application configuration, which normally includes datasource credentials, API keys and internal hostnames.",
+  "severity": "HIGH",
+  "cwe": "CWE-200",
+  "category": "debug-exposure",
+  "remediation": "Disable the actuator env endpoint or require authentication and a management port that is not publicly routed. Rotate any credential that appeared in the response.",
+  "limitation": "Two body markers. A page that echoes one of the two field names without the rest of the document is not reported.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*\"propertySources\")(?=[\\s\\S]*\"activeProfiles\")"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/actuator/env",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"activeProfiles\":[\"prod\"],\"propertySources\":[{\"name\":\"systemEnvironment\",\"properties\":{\"DB_PASSWORD\":{\"value\":\"******\"}}}]}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/actuator/env/db.url",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"propertySources\":[{\"name\":\"applicationConfig\"}],\"activeProfiles\":[]}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/docs/actuator",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<h1>Actuator</h1><p>The env endpoint lists property sources.</p>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body>Welcome</body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1205"
+  ]
+}

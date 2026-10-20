@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-835",
+  "title": "Remote artifact added without integrity check in dockerfile — review required",
+  "description": "ADD with a URL downloads the artifact during the build. The download is not verified by a checksum unless the Dockerfile says so, so a compromised host serves different bytes into the image. COPY from a verified build stage, or download and check a digest explicitly.",
+  "severity": "HIGH",
+  "cwe": "CWE-494",
+  "category": "container-security",
+  "remediation": "Fetch the artifact in a builder stage, verify a pinned checksum or signature, then COPY the verified file into the final image.",
+  "limitation": "Lexical: matches ADD with an http(s) URL; checksum verification elsewhere in the file is out of scope.",
+  "languages": [
+    "dockerfile"
+  ],
+  "patterns": [
+    {
+      "source": "\\bADD\\s+https?://\\S+"
+    }
+  ],
+  "tests": [
+    {
+      "line": "ADD http://example.com/tool.tar.gz /opt/",
+      "match": true
+    },
+    {
+      "line": "# audit: ADD http://example.com/tool.tar.gz /opt/ present",
+      "match": true
+    },
+    {
+      "line": "COPY tool.tar.gz /opt/",
+      "match": false
+    },
+    {
+      "line": "# verified: COPY tool.tar.gz /opt/",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1013"
+  ]
+}

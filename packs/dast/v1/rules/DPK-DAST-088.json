@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-088",
+  "title": "Go panic with goroutine dump disclosed in a response",
+  "description": "The response body contains a Go runtime panic followed by a goroutine dump. The dump lists the call stack of every active goroutine with function names, source file paths and argument words, so a single failing request maps the service internals. The check reports the disclosed dump; it does not claim the panic is reachable on demand.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-209",
+  "category": "debug-exposure",
+  "remediation": "Recover panics at the HTTP boundary (a middleware with recover()) and return a generic error response with a correlation id.",
+  "limitation": "Observation-level: requires the 'goroutine N [running]:' header that the Go runtime prints. A panic message without the dump header is not reported.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "goroutine \\d+ \\[running\\]:"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://api.example/orders/42",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/plain; charset=utf-8"
+        },
+        "body": "panic: runtime error: index out of range [3] with length 2\n\ngoroutine 1 [running]:\nmain.handler(0x0, 0x0)"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://api.example/reports",
+        "status": 500,
+        "headers": {},
+        "body": "goroutine 18 [running]:\nnet/http.(*conn).serve.func1(0xc0001b4000)"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://api.example/orders/42",
+        "status": 500,
+        "headers": {},
+        "body": "Request failed. Reference 7c1a90."
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://api.example/health",
+        "status": 200,
+        "headers": {},
+        "body": "{\"status\":\"ok\"}"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1157"
+  ]
+}

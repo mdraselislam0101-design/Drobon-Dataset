@@ -1,0 +1,81 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-268",
+  "title": "Content-Security-Policy script-src trusts every subdomain of an origin",
+  "description": "The Content-Security-Policy script-src directive allows a `*.example.com` host wildcard. That form trusts every current and future subdomain of the domain, and any subdomain an attacker can influence — a dangling DNS record, a user-content host, an abandoned service — becomes a script origin for the main site.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-693",
+  "category": "csp-weakness",
+  "remediation": "Replace the subdomain wildcard with the exact hostnames that must serve scripts, and keep an inventory of those hosts. If a wildcard is unavoidable, monitor certificate transparency and DNS for new subdomains.",
+  "limitation": "One header value and one directive. The rule reports the wildcard form; it cannot tell which subdomains exist or whether any of them is presently attacker-influenced.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Content-Security-Policy",
+    "valuePattern": "(?:^|;)\\s*script-src\\s[^;]*(?<=[\\s/])\\*\\.[\\w.-]+(?=[\\s;]|$)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' *.example.com"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; script-src https://*.cdn.example.com"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'self' https://cdn.example.com"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'self'; img-src *.example.com"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'self' *"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'self' https://*.example.com https://cdn.example.com"
+        }
+      },
+      "match": true
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1337"
+  ]
+}

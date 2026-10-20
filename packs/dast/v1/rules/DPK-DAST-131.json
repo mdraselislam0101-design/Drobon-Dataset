@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-131",
+  "title": "Go pprof profiling index disclosed in a response",
+  "description": "The response is the net/http/pprof index page: its title is the /debug/pprof/ path and it lists heap, goroutine and CPU profile links. The profiles expose memory contents, live goroutine stacks and execution traces, which frequently include credentials and internal request data.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "debug-exposure",
+  "remediation": "Remove the net/http/pprof handler from the public mux (import it only on an internal listener), or require authentication and a private network path.",
+  "limitation": "One body marker. The title string is specific to the pprof handler; a page that merely mentions /debug/pprof is not matched unless it reproduces the title.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*<title>\\s*/debug/pprof/)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/debug/pprof/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>/debug/pprof/</title></head><body>profiles:</body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/debug/pprof",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title> /debug/pprof/ </title></head></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/debug",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body>The profiler lives at /debug/pprof/ on the internal port.</body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Home</title></head></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1200"
+  ]
+}

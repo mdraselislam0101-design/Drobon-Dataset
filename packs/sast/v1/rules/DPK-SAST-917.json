@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-917",
+  "title": "Cookie written from script without the Secure attribute in javascript — review required",
+  "description": "document.cookie assignments bypass the server-side cookie API, so the Secure and HttpOnly attributes are whatever the script writes. A cookie set without Secure travels over plaintext HTTP and cannot carry HttpOnly at all, which means script injection can read it. The rule flags the assignment; whether the value is sensitive is a review decision.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-614",
+  "category": "cookie-flags",
+  "remediation": "Set cookies from the server with Secure and HttpOnly, or use the Cookie Store API with the attributes spelled out.",
+  "limitation": "Lexical: matches a document.cookie assignment on one line without the Secure attribute; multi-statement builds are out of scope.",
+  "languages": [
+    "javascript"
+  ],
+  "patterns": [
+    {
+      "source": "\\b(?:document\\.cookie\\s*=(?![^\\n]*Secure))"
+    }
+  ],
+  "tests": [
+    {
+      "line": "document.cookie = \"theme=dark; path=/\";",
+      "match": true
+    },
+    {
+      "line": "# audit: document.cookie = \"theme=dark; path=/\"; present",
+      "match": true
+    },
+    {
+      "line": "document.cookie = \"theme=dark; path=/; Secure; SameSite=Lax\";",
+      "match": false
+    },
+    {
+      "line": "# verified: document.cookie = \"theme=dark; path=/; Secure; SameSite=Lax\";",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1100"
+  ]
+}

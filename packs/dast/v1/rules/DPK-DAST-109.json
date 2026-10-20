@@ -1,0 +1,66 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-109",
+  "title": "Laravel Whoops error page disclosed",
+  "description": "The response is the Whoops error handler page that Laravel ships in debug mode. It prints the exception message, the file and line that raised it, and often a stack of application frames - a map of the codebase for anyone who can trigger an error.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-209",
+  "category": "debug-exposure",
+  "remediation": "Set APP_DEBUG=false in production and render a generic error view. Keep the detailed handler for local development only.",
+  "limitation": "Body marker check on one response. A custom page that reproduces the marker can be reported; the rule cannot prove that the stack is readable.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "Whoops, looks like something went wrong"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/missing",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8"
+        },
+        "body": "<html><head><title>Whoops, looks like something went wrong.</title></head><body>ErrorException in HomeController.php line 42</body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {},
+        "body": "<p>Something went wrong. Please try again later.</p>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 500,
+        "headers": {},
+        "body": "{\"message\":\"Server Error\"}"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 500,
+        "headers": {},
+        "body": "Whoops"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 500,
+        "headers": {}
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1178"
+  ]
+}

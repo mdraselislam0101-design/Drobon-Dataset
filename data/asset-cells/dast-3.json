@@ -1,937 +1,1232 @@
 [
-  {
-    "class": "cache-no-store",
-    "kind": "dast",
-    "category": "cache-control",
-    "cwe": "CWE-524",
-    "severity": "LOW",
-    "framing": "custom",
-    "title": "Cache-Control lacks the {name} directive",
-    "description": "The response does not carry the {name} directive. Shared and browser caches may keep a copy of a page that contains personal or session data. This check reads the single Cache-Control header and confirms whether no-store is present.",
-    "remediation": "Send Cache-Control with no-store on responses that carry personal or session data ({safe}).",
-    "limitation": "Header check on every observed response: a page with no sensitive data fails it, and so does a response with no Cache-Control header at all. The scanner cannot tell which pages are sensitive.",
-    "scopeT": "Single response header: confirm no-store appears in Cache-Control.",
-    "fp": "Public static assets that are safe to cache are the common false positive.",
-    "recordDesc": "A response without {name} can be stored by a cache. Stored copies of sensitive pages can be read by later users of that cache. The remedy is {safe}.",
-    "applicability": "HTTP responses; the header matters most on authenticated or personal pages.",
-    "risk": "Sensitive page copies kept in shared or browser caches; LOW severity.",
-    "why": "The response does not carry the {name} directive.",
-    "fix": [
-      "Set Cache-Control to no-store on authenticated and personal responses."
-    ],
-    "verifyT": "Rescan observes no-store on sensitive responses.",
-    "cells": [
-      {
-        "suffix": "no-store",
-        "lang": "http",
-        "name": "no-store",
-        "safe": "Cache-Control: no-store, max-age=0",
-        "check": {
-          "type": "response-header-missing-directive",
-          "header": "Cache-Control",
-          "directive": "no-store"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Content-Type": "text/html"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Cache-Control": "public, max-age=3600"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Cache-Control": "no-store, max-age=0"
-              }
-            },
-            "match": false
-          }
-        ]
-      }
-    ],
-    "cweDef": {
-      "name": "Use of Cache Containing Sensitive Information",
-      "summary": "Responses with personal or session data that a shared or browser cache keeps can be read by later users of that cache."
-    }
-  },
-  {
-    "class": "cors-null-origin",
-    "kind": "dast",
-    "category": "cors",
-    "cwe": "CWE-942",
-    "severity": "MEDIUM",
-    "framing": "custom",
-    "title": "CORS policy trusts {name}",
-    "description": "The response sets Access-Control-Allow-Origin to {name}. Sandboxed iframes and some redirects send the null origin, so trusting it lets hostile content read the response.",
-    "remediation": "Remove null from the CORS allowlist and use {safe}.",
-    "limitation": "Header value check: it cannot confirm that credentials or sensitive data travel with the response.",
-    "scopeT": "Single response header value: Access-Control-Allow-Origin equals null.",
-    "fp": "Responses meant for local tooling that intentionally accepts null are the accepted case.",
-    "recordDesc": "Trusting the null origin lets sandboxed or redirected content read responses. The remedy is {safe}.",
-    "applicability": "HTTP responses that send CORS headers.",
-    "risk": "Cross-origin reads from sandboxed content; MEDIUM severity.",
-    "why": "CORS trusts the {name} origin.",
-    "fix": [
-      "Allowlist only explicit origins, never null."
-    ],
-    "verifyT": "Rescan observes explicit origins only.",
-    "cells": [
-      {
-        "suffix": "null",
-        "lang": "http",
-        "name": "the null origin",
-        "safe": "an explicit origin allowlist",
-        "check": {
-          "type": "response-header-matches",
-          "header": "Access-Control-Allow-Origin",
-          "valuePattern": "^null$"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Access-Control-Allow-Origin": "null"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Access-Control-Allow-Origin": "https://app.example"
-              }
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {}
-            },
-            "match": false
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "class": "csp-unsafe-eval",
-    "kind": "dast",
-    "category": "csp-weakness",
-    "cwe": "CWE-693",
-    "severity": "LOW",
-    "framing": "custom",
-    "title": "Weak Content-Security-Policy (unsafe-eval)",
-    "description": "The Content-Security-Policy header allows string-to-code evaluation through the {name} source expression. Injected text can then call eval-style APIs even when inline scripts are blocked.",
-    "remediation": "Remove unsafe-eval from script-src and move dynamic code to static functions ({safe}).",
-    "limitation": "Header value check on the token. Policies that also set a nonce for every script still list unsafe-eval, and this check flags them.",
-    "scopeT": "Single Content-Security-Policy header value: unsafe-eval appears in any directive.",
-    "fp": "Legacy applications that need eval until a rewrite are the accepted exception.",
-    "recordDesc": "A policy that keeps {name} lets injected text run through eval-style APIs. The remedy is {safe}.",
-    "applicability": "HTML responses that send a Content-Security-Policy header.",
-    "risk": "Reduced XSS protection through eval-style code execution; LOW severity.",
-    "why": "The policy permits {name}.",
-    "fix": [
-      "Remove unsafe-eval from script-src."
-    ],
-    "verifyT": "Rescan shows no unsafe-eval in the policy.",
-    "cells": [
-      {
-        "suffix": "unsafe-eval",
-        "lang": "http",
-        "name": "'unsafe-eval'",
-        "safe": "a policy without 'unsafe-eval'",
-        "check": {
-          "type": "response-header-matches",
-          "header": "Content-Security-Policy",
-          "valuePattern": "'unsafe-eval'"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Content-Security-Policy": "script-src 'self' 'unsafe-eval'"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Content-Security-Policy": "script-src 'self'"
-              }
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {}
-            },
-            "match": false
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "class": "csp-directive-gap",
-    "kind": "dast",
-    "category": "csp-weakness",
-    "cwe": "CWE-693",
-    "severity": "LOW",
-    "framing": "custom",
-    "title": "Content-Security-Policy without {name}",
-    "description": "The Content-Security-Policy header does not restrict {name}. This directive has no default-src fallback in CSP, so the restriction must be stated on its own to take effect.",
-    "remediation": "Add {name} to the policy with a restrictive source list ({safe}).",
-    "limitation": "Header check: it also fires when no Content-Security-Policy header is sent. DPK-DAST-002 reports that case. The check cannot see a policy delivered by a meta element.",
-    "scopeT": "Single Content-Security-Policy header value: the named directive is absent.",
-    "fp": "Pages with no base elements or forms make the gap low-impact; the common false positive.",
-    "recordDesc": "Without {name} a policy does not restrict that element. Injected markup can use the gap. The remedy is {safe}.",
-    "applicability": "HTML responses that send a Content-Security-Policy header.",
-    "risk": "Injected markup redirects relative URLs or form targets; LOW severity.",
-    "why": "The policy does not restrict {name}.",
-    "fix": [
-      "Add the directive with a restrictive value."
-    ],
-    "verifyT": "Rescan observes the directive present.",
-    "cells": [
-      {
-        "suffix": "base-uri",
-        "lang": "http",
-        "name": "base-uri",
-        "safe": "base-uri 'none' or base-uri 'self'",
-        "check": {
-          "type": "response-header-missing-directive",
-          "header": "Content-Security-Policy",
-          "directive": "base-uri"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Content-Security-Policy": "default-src 'self'"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Content-Security-Policy": "default-src 'self'; base-uri 'none'"
-              }
-            },
-            "match": false
-          }
-        ]
+ {
+  "class": "cache-no-store",
+  "kind": "dast",
+  "category": "cache-control",
+  "cwe": "CWE-524",
+  "severity": "LOW",
+  "framing": "custom",
+  "title": "Cache-Control lacks the {name} directive",
+  "description": "The response does not carry the {name} directive. Shared and browser caches may keep a copy of a page that contains personal or session data. This check reads the single Cache-Control header and confirms whether no-store is present.",
+  "remediation": "Immediate: send `Cache-Control: no-store` on responses that carry personal, session or token data, and make sure the value is not overwritten by a CDN or framework default further down the stack. Durable: classify routes as cacheable or non-cacheable in one place and derive the header from that classification, so a new endpoint cannot ship without a policy. Trade-off: no-store prevents browser and intermediary caching, which costs bandwidth on pages that could otherwise be reused; scope it to the responses that actually carry the data.",
+  "limitation": "Header check on every observed response: a page with no sensitive data fails it, and so does a response with no Cache-Control header at all. The scanner cannot tell which pages are sensitive.",
+  "scopeT": "Single response header: confirm no-store appears in Cache-Control.",
+  "fp": "Public static assets that are safe to cache are the common false positive.",
+  "recordDesc": "A response without {name} can be stored by a cache. Stored copies of sensitive pages can be read by later users of that cache. The remedy is {safe}.",
+  "applicability": "HTTP responses; the header matters most on authenticated or personal pages.",
+  "risk": "Sensitive page copies kept in shared or browser caches; LOW severity.",
+  "why": "The response does not carry the {name} directive.",
+  "fix": [
+   "Send `Cache-Control: no-store` on responses carrying personal or session data.",
+   "Check that CDN and framework defaults do not overwrite it.",
+   "Derive the header from a route cacheability classification."
+  ],
+  "verifyT": "Re-request the response and confirm `Cache-Control: no-store` is present and unchanged through the CDN; repeat after a deploy that rebuilds the CDN configuration.",
+  "cells": [
+   {
+    "suffix": "no-store",
+    "lang": "http",
+    "name": "no-store",
+    "safe": "Cache-Control: no-store, max-age=0",
+    "check": {
+     "type": "response-header-missing-directive",
+     "header": "Cache-Control",
+     "directive": "no-store"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       }
       },
-      {
-        "suffix": "form-action",
-        "lang": "http",
-        "name": "form-action",
-        "safe": "form-action 'self'",
-        "check": {
-          "type": "response-header-missing-directive",
-          "header": "Content-Security-Policy",
-          "directive": "form-action"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Content-Security-Policy": "default-src 'self'"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Content-Security-Policy": "default-src 'self'; form-action 'self'"
-              }
-            },
-            "match": false
-          }
-        ]
-      }
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Cache-Control": "public, max-age=3600"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Cache-Control": "no-store, max-age=0"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Cache-Control": "public, x-no-store"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Cache-Control": "NO-STORE"
+       }
+      },
+      "match": false
+     }
     ]
-  },
-  {
-    "class": "referrer-unsafe-url",
-    "kind": "dast",
-    "category": "information-disclosure",
-    "cwe": "CWE-200",
-    "severity": "LOW",
-    "framing": "custom",
-    "title": "Referrer-Policy sends full URLs ({name})",
-    "description": "The Referrer-Policy header is {name}. Browsers then send the full page URL, including its query string, to every destination, which can carry tokens or identifiers to third parties.",
-    "remediation": "Use {safe} so cross-origin requests carry only the origin.",
-    "limitation": "Header value check: it cannot see which URLs carry sensitive query strings.",
-    "scopeT": "Single Referrer-Policy header value: the unsafe-url token appears.",
-    "fp": "Pages with no sensitive query strings are the common false positive.",
-    "recordDesc": "{name} in Referrer-Policy sends full URLs cross-origin. Tokens in query strings can leak. The remedy is {safe}.",
-    "applicability": "HTML responses that send a Referrer-Policy header.",
-    "risk": "Query-string tokens or identifiers leaked to third parties; LOW severity.",
-    "why": "The policy sends the full URL ({name}).",
-    "fix": [
-      "Set Referrer-Policy to strict-origin-when-cross-origin."
-    ],
-    "verifyT": "Rescan observes a policy that does not send full URLs.",
-    "cells": [
-      {
-        "suffix": "unsafe-url",
-        "lang": "http",
-        "name": "unsafe-url",
-        "safe": "strict-origin-when-cross-origin",
-        "check": {
-          "type": "response-header-matches",
-          "header": "Referrer-Policy",
-          "valuePattern": "(?:^|[,\\s])unsafe-url(?:$|[,\\s])"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Referrer-Policy": "unsafe-url"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Referrer-Policy": "no-referrer, unsafe-url"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Referrer-Policy": "strict-origin-when-cross-origin"
-              }
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {}
-            },
-            "match": false
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "class": "db-error-disclosed",
-    "kind": "dast",
-    "category": "information-disclosure",
-    "cwe": "CWE-209",
-    "severity": "MEDIUM",
-    "framing": "custom",
-    "title": "Database error text disclosed in a response",
-    "description": "The response body contains a database driver error ({name}). Driver messages reveal table names, query shape, and engine type, which help an attacker refine injection attempts.",
-    "remediation": "Catch database errors server-side and return a generic message with a correlation ID ({safe}).",
-    "limitation": "Marker text on one body: a quoted driver message in documentation or a support article can match.",
-    "scopeT": "Single response body: confirm no database driver error text is returned.",
-    "fp": "Pages that quote SQL errors in documentation are the common false positive.",
-    "recordDesc": "Database driver text in a response exposes query and schema detail. The remedy is {safe}.",
-    "applicability": "HTTP responses from applications backed by SQL databases.",
-    "risk": "Schema and query detail that helps injection; MEDIUM severity.",
-    "why": "The response body carries a database error ({name}).",
-    "fix": [
-      "Log driver errors server-side only.",
-      "Return a generic error with a correlation ID."
-    ],
-    "verifyT": "Rescan shows no driver error text in responses.",
-    "cells": [
-      {
-        "suffix": "sql-error",
-        "lang": "http",
-        "name": "a SQL driver error",
-        "safe": "a generic error page with a correlation ID",
-        "check": {
-          "type": "response-body-matches",
-          "valuePattern": "You have an error in your SQL syntax|SQLSTATE\\[|\\bORA-\\d{5}|Unclosed quotation mark after the character string|PG::SyntaxError|ERROR:\\s+syntax error at or near"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 500,
-              "headers": {
-                "content-type": "text/html"
-              },
-              "body": "Error: You have an error in your SQL syntax; check the manual near '' at line 1"
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 500,
-              "headers": {
-                "content-type": "text/html"
-              },
-              "body": "SQLSTATE[42000]: Syntax error or access violation"
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 500,
-              "headers": {
-                "content-type": "text/html"
-              },
-              "body": "ORA-00933: SQL command not properly ended"
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "content-type": "text/html"
-              },
-              "body": "Order received. Thank you."
-            },
-            "match": false
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "class": "node-stack-frame",
-    "kind": "dast",
-    "category": "debug-exposure",
-    "cwe": "CWE-209",
-    "severity": "MEDIUM",
-    "framing": "custom",
-    "title": "Node.js stack frame disclosed in a response",
-    "description": "The response body carries a {name}. Node.js stack frames expose file paths, line numbers, and internal module names to any client that can trigger the error.",
-    "remediation": "Disable stack output in production and return a generic error page ({safe}).",
-    "limitation": "Pattern on one body: a Node.js trace quoted in a help article can match. Development output and production exposure look the same.",
-    "scopeT": "Single response body: confirm no Node.js stack frame with a file, line, and column is returned.",
-    "fp": "Quoted traces in documentation are the common false positive.",
-    "recordDesc": "A Node.js stack frame in a response shows server paths and line numbers. The remedy is {safe}.",
-    "applicability": "HTTP responses from Node.js applications and frameworks.",
-    "risk": "Server paths and internal layout disclosed to any client; MEDIUM severity.",
-    "why": "The response body carries a {name}.",
-    "fix": [
-      "Set NODE_ENV to production.",
-      "Return a generic error with a correlation ID."
-    ],
-    "verifyT": "Rescan shows no stack frames in responses.",
-    "cells": [
-      {
-        "suffix": "frame",
-        "lang": "http",
-        "name": "Node.js stack frame",
-        "safe": "a generic error page with a correlation ID",
-        "check": {
-          "type": "response-body-matches",
-          "valuePattern": "\\bat [^\\n]{0,120}\\.(?:js|mjs|cjs):\\d+:\\d+"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 500,
-              "headers": {
-                "content-type": "text/plain"
-              },
-              "body": "Error: boom\n    at Object.<anonymous> (/srv/app/server.js:12:5)"
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 500,
-              "headers": {
-                "content-type": "text/plain"
-              },
-              "body": "Error handled; see the server log for details."
-            },
-            "match": false
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "class": "php-error-path",
-    "kind": "dast",
-    "category": "debug-exposure",
-    "cwe": "CWE-209",
-    "severity": "MEDIUM",
-    "framing": "custom",
-    "title": "PHP error with a source path disclosed",
-    "description": "The response body carries a {name}. PHP display_errors prints the message with the file path and line number, which reveals server layout.",
-    "remediation": "Set display_errors to Off in production and log errors instead ({safe}).",
-    "limitation": "Pattern on one body: a PHP message quoted in a bug report can match.",
-    "scopeT": "Single response body: confirm no PHP notice, warning, or fatal error with a file and line is returned.",
-    "fp": "Quoted messages in documentation are the common false positive.",
-    "recordDesc": "PHP messages printed to responses include file paths and line numbers. The remedy is {safe}.",
-    "applicability": "HTTP responses from PHP applications.",
-    "risk": "Server paths and line numbers disclosed to clients; MEDIUM severity.",
-    "why": "The response body carries a PHP {name}.",
-    "fix": [
-      "Turn display_errors off in production.",
-      "Log errors to a file outside the web root."
-    ],
-    "verifyT": "Rescan shows no PHP messages with paths in responses.",
-    "cells": [
-      {
-        "suffix": "display-errors",
-        "lang": "http",
-        "name": "error",
-        "safe": "display_errors = Off with log_errors = On",
-        "check": {
-          "type": "response-body-matches",
-          "valuePattern": "(?:Fatal error|Warning|Notice|Parse error): [^\\n]{0,200}\\.php on line \\d+"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "content-type": "text/html"
-              },
-              "body": "Warning: Undefined variable $cart in /var/www/html/shop.php on line 14"
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "content-type": "text/html"
-              },
-              "body": "Warning: your cart is empty."
-            },
-            "match": false
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "class": "filesystem-path-disclosed",
-    "kind": "dast",
-    "category": "information-disclosure",
-    "cwe": "CWE-209",
-    "severity": "LOW",
-    "framing": "custom",
-    "title": "Server file path disclosed in a response",
-    "description": "The response body contains a server-side source path ({name}). Absolute paths reveal the deployment layout and framework, which narrows the search for file-based flaws.",
-    "remediation": "Strip absolute paths from error text and return relative names only ({safe}).",
-    "limitation": "Pattern on one body: a Windows or Unix path in a download link or log excerpt can match.",
-    "scopeT": "Single response body: confirm no absolute server path to a source file appears.",
-    "fp": "Paths that the page displays on purpose, such as a download location, are the common false positive.",
-    "recordDesc": "An absolute server path in a response reveals the deployment layout. The remedy is {safe}.",
-    "applicability": "HTTP responses that include error or diagnostic text.",
-    "risk": "Deployment layout disclosed to clients; LOW severity.",
-    "why": "The response body includes a {name}.",
-    "fix": [
-      "Return relative names in user-visible messages."
-    ],
-    "verifyT": "Rescan shows no absolute source paths in responses.",
-    "cells": [
-      {
-        "suffix": "source-path",
-        "lang": "http",
-        "name": "an absolute source path",
-        "safe": "relative names in user-visible messages",
-        "check": {
-          "type": "response-body-matches",
-          "valuePattern": "(?:[A-Za-z]:\\\\(?:inetpub|Windows|Users)\\\\|/(?:var/www|home/[\\w.-]+|srv|opt)/[\\w./-]+\\.(?:php|py|rb|js|java|cs|go)\\b)"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 500,
-              "headers": {
-                "content-type": "text/html"
-              },
-              "body": "Failed to load C:\\inetpub\\wwwroot\\app.aspx"
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 500,
-              "headers": {
-                "content-type": "text/html"
-              },
-              "body": "Failed at /home/deploy/app/server.py line 9"
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "content-type": "text/html"
-              },
-              "body": "Download the file from /home/deploy/README.md"
-            },
-            "match": false
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "class": "directory-listing",
-    "kind": "dast",
-    "category": "information-disclosure",
-    "cwe": "CWE-548",
-    "severity": "MEDIUM",
-    "framing": "custom",
-    "title": "Directory listing enabled",
-    "description": "The response is an automatic index page ({name}). Anyone can browse file names in that directory, which can expose backups, source, or unlinked files.",
-    "remediation": "Disable automatic indexes ({safe}) and remove stray backup or source files from the web root.",
-    "limitation": "Title marker on one body: a page that quotes an index title can match.",
-    "scopeT": "Single response body: confirm no automatic directory index is returned.",
-    "fp": "Public download folders that are meant to be browsed are the accepted case.",
-    "recordDesc": "An automatic index page lists file names in a directory. The remedy is {safe}.",
-    "applicability": "Web servers that serve directories (Apache and nginx autoindex).",
-    "risk": "File names and unlinked content exposed to any client; MEDIUM severity.",
-    "why": "The server returns a {name} for a directory.",
-    "fix": [
-      "Turn autoindex or Options Indexes off.",
-      "Remove backup and source files from the web root."
-    ],
-    "verifyT": "Rescan shows no automatic index in responses.",
-    "cells": [
-      {
-        "suffix": "index-of",
-        "lang": "http",
-        "name": "an automatic index page",
-        "safe": "autoindex off (nginx) or Options -Indexes (Apache)",
-        "check": {
-          "type": "response-body-matches",
-          "valuePattern": "<title>Index of /"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "content-type": "text/html"
-              },
-              "body": "<html><head><title>Index of /backup</title></head><body>"
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "content-type": "text/html"
-              },
-              "body": "<html><head><title>Backup policy</title></head>"
-            },
-            "match": false
-          }
-        ]
-      }
-    ],
-    "cweDef": {
-      "name": "Exposure of Information Through Directory Listing",
-      "summary": "An automatic index page lists directory contents, which exposes file names, backups, and unlinked resources to any client."
-    }
-  },
-  {
-    "class": "sourcemap-reference",
-    "kind": "dast",
-    "category": "information-disclosure",
-    "cwe": "CWE-540",
-    "severity": "LOW",
-    "framing": "custom",
-    "title": "Source map reference in a served script",
-    "description": "The served script ends with {name}. Browsers and attackers can fetch the map and recover original source, comments, and internal paths.",
-    "remediation": "Do not publish source maps for production bundles, or restrict them to authenticated tooling ({safe}).",
-    "limitation": "Marker on one body: it only applies to script bodies the scanner captured. It does not prove the map is reachable.",
-    "scopeT": "Single script body: confirm no sourceMappingURL comment is returned.",
-    "fp": "Internal builds that publish maps behind access control are the accepted case.",
-    "recordDesc": "A sourceMappingURL comment points to a map that can restore original source. The remedy is {safe}.",
-    "applicability": "JavaScript responses from web applications with build pipelines.",
-    "risk": "Original source and internal comments recovered by anyone; LOW severity.",
-    "why": "The served script carries a {name}.",
-    "fix": [
-      "Remove the sourceMappingURL comment from production bundles."
-    ],
-    "verifyT": "Rescan shows no sourceMappingURL in production scripts.",
-    "cells": [
-      {
-        "suffix": "source-map",
-        "lang": "http",
-        "name": "a sourceMappingURL comment",
-        "safe": "maps kept off the public origin",
-        "check": {
-          "type": "response-body-matches",
-          "valuePattern": "//# sourceMappingURL="
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "content-type": "application/javascript"
-              },
-              "body": "console.log(1);\n//# sourceMappingURL=app.js.map"
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "content-type": "application/javascript"
-              },
-              "body": "console.log(1);"
-            },
-            "match": false
-          }
-        ]
-      }
-    ],
-    "cweDef": {
-      "name": "Inclusion of Sensitive Information in Source Code",
-      "summary": "Source maps and comments shipped with production scripts let anyone recover original source and internal detail."
-    }
-  },
-  {
-    "class": "debug-token-header",
-    "kind": "dast",
-    "category": "debug-exposure",
-    "cwe": "CWE-215",
-    "severity": "MEDIUM",
-    "framing": "custom",
-    "title": "Debug profiler header exposed",
-    "description": "The response carries the {name} header. Profiler tooling then exposes request timing, configuration, and internal state to anyone who holds the token.",
-    "remediation": "Disable the profiler outside development ({safe}).",
-    "limitation": "Header presence check: the profiler may be protected by a firewall that the scanner cannot see.",
-    "scopeT": "Single response header: confirm no debug token header is returned.",
-    "fp": "Development and staging hosts that run the profiler on purpose are the accepted case.",
-    "recordDesc": "A debug token header links responses to an open profiler. The remedy is {safe}.",
-    "applicability": "HTTP responses from PHP Symfony and similar frameworks with a profiler.",
-    "risk": "Internal request and configuration detail reachable through the profiler; MEDIUM severity.",
-    "why": "The response carries the {name} header.",
-    "fix": [
-      "Disable the profiler in production builds."
-    ],
-    "verifyT": "Rescan shows no debug token header on production responses.",
-    "cells": [
-      {
-        "suffix": "x-debug-token",
-        "lang": "http",
-        "name": "X-Debug-Token",
-        "safe": "a production build with the profiler disabled",
-        "check": {
-          "type": "response-header-matches",
-          "header": "X-Debug-Token",
-          "valuePattern": "\\S"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "X-Debug-Token": "a1b2c3"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Content-Type": "text/html"
-              }
-            },
-            "match": false
-          }
-        ]
-      }
-    ],
-    "cweDef": {
-      "name": "Insertion of Sensitive Information Into Debugging Code",
-      "summary": "Debug and profiler tooling left enabled in production exposes request and configuration detail to clients that hold its token."
-    }
-  },
-  {
-    "class": "header-weak-script",
-    "kind": "dast",
-    "category": "security-headers",
-    "cwe": "CWE-693",
-    "severity": "MEDIUM",
-    "framing": "custom",
-    "title": "Weak {name} header value",
-    "description": "The response carries {name}, which lets any host supply script. A wildcard script source lets an injected script run, because the policy does not block it. This check matches the wildcard directly.",
-    "remediation": "Strengthen the value ({safe}).",
-    "limitation": "Value check: a host wildcard such as *.example.com is out of scope. It cannot confirm the deployment context.",
-    "scopeT": "Single response header value: script-src only.",
-    "fp": "Transitional deployments are the common accepted case.",
-    "recordDesc": "{name} with a wildcard source lets any host supply script. The policy then stops injected scripts only partly.",
-    "applicability": "HTTP responses carrying the header.",
-    "risk": "Script execution from any host; MEDIUM severity.",
-    "why": "{name} allows script from any host.",
-    "fix": [
-      "Strengthen to {safe}."
-    ],
-    "verifyT": "Rescan observes explicit script sources.",
-    "cells": [
-      {
-        "suffix": "script-wildcard",
-        "lang": "http",
-        "name": "Content-Security-Policy script-src wildcard",
-        "safe": "explicit script source lists",
-        "check": {
-          "type": "response-header-matches",
-          "header": "Content-Security-Policy",
-          "valuePattern": "script-src(?=\\s)[^;*]*?(?<=\\s)\\*(?=\\s*(?:;|$))"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Content-Security-Policy": "script-src *"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Content-Security-Policy": "script-src 'self' *"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Content-Security-Policy": "default-src 'self'; script-src *"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Content-Security-Policy": "script-src 'self' https://cdn.example.com"
-              }
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Content-Security-Policy": "script-src *.example.com"
-              }
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Content-Security-Policy": "default-src *"
-              }
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Content-Security-Policy": "script-src-elem *"
-              }
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {}
-            },
-            "match": false
-          }
-        ]
-      }
-    ]
+   }
+  ],
+  "cweDef": {
+   "name": "Use of Cache Containing Sensitive Information",
+   "summary": "Responses with personal or session data that a shared or browser cache keeps can be read by later users of that cache."
   }
+ },
+ {
+  "class": "cors-null-origin",
+  "kind": "dast",
+  "category": "cors",
+  "cwe": "CWE-942",
+  "severity": "MEDIUM",
+  "framing": "custom",
+  "title": "CORS policy trusts {name}",
+  "description": "The response sets Access-Control-Allow-Origin to {name}. Sandboxed iframes and some redirects send the null origin, so trusting it lets hostile content read the response.",
+  "remediation": "Immediate: remove `null` from the allowlist. `null` is sent by sandboxed iframes, `file://` documents and some redirect chains, so any page that can be framed or opened locally can reach the endpoint with that origin. Durable: keep an explicit allowlist of real origins in configuration and echo only an exact match, with `Vary: Origin`; never treat a missing or opaque origin as trusted. Trade-off: clients that legitimately run from `file://` or a sandboxed frame must move to a real origin.",
+  "limitation": "Header value check: it cannot confirm that credentials or sensitive data travel with the response.",
+  "scopeT": "Single response header value: Access-Control-Allow-Origin equals null.",
+  "fp": "Responses meant for local tooling that intentionally accepts null are the accepted case.",
+  "recordDesc": "Trusting the null origin lets sandboxed or redirected content read responses. The remedy is {safe}.",
+  "applicability": "HTTP responses that send CORS headers.",
+  "risk": "Cross-origin reads from sandboxed content; MEDIUM severity.",
+  "why": "CORS trusts the {name} origin.",
+  "fix": [
+   "Remove `null` from the CORS allowlist.",
+   "Echo only an exact match from an explicit origin list.",
+   "Treat a missing or opaque origin as untrusted."
+  ],
+  "verifyT": "Send `Origin: null` and confirm no `Access-Control-Allow-Origin` is returned; send a listed origin and confirm it is echoed with `Vary: Origin`.",
+  "cells": [
+   {
+    "suffix": "null",
+    "lang": "http",
+    "name": "the null origin",
+    "safe": "an explicit origin allowlist",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Access-Control-Allow-Origin",
+     "valuePattern": "^null$"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Access-Control-Allow-Origin": "null"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Access-Control-Allow-Origin": "https://app.example"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {}
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Access-Control-Allow-Origin": "https://null.example"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Access-Control-Allow-Origin": " NULL "
+       }
+      },
+      "match": true
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "class": "csp-unsafe-eval",
+  "kind": "dast",
+  "category": "csp-weakness",
+  "cwe": "CWE-693",
+  "severity": "LOW",
+  "framing": "custom",
+  "title": "Weak Content-Security-Policy (unsafe-eval)",
+  "description": "The Content-Security-Policy header allows string-to-code evaluation through the {name} source expression. Injected text can then call eval-style APIs even when inline scripts are blocked.",
+  "remediation": "Immediate: remove `'unsafe-eval'` and replace `eval`, `new Function` and string-argument timers with static code. Durable: keep the policy in `Content-Security-Policy` (not report-only) and add a report endpoint so a reintroduced `eval` is visible before release. Trade-off: some template engines and charting libraries compile expressions at runtime; those need a build-time rewrite or an isolated, nonce-based script rather than an exception in the policy.",
+  "limitation": "Directive-scoped value check: only script-src, script-src-elem and the default-src fallback are read, because 'unsafe-eval' has no meaning in another directive. A nonce does not neutralise 'unsafe-eval' (only 'unsafe-inline' is neutralised), so policies that nonce every script are still reported.",
+  "scopeT": "Single Content-Security-Policy header value: unsafe-eval appears in any directive.",
+  "fp": "Legacy applications that need eval until a rewrite are the accepted exception.",
+  "recordDesc": "A policy that keeps {name} lets injected text run through eval-style APIs. The remedy is {safe}.",
+  "applicability": "HTML responses that send a Content-Security-Policy header.",
+  "risk": "Reduced XSS protection through eval-style code execution; LOW severity.",
+  "why": "The policy permits {name}.",
+  "fix": [
+   "Remove `'unsafe-eval'` from `script-src`.",
+   "Replace `eval`, `new Function` and string timers with static code.",
+   "Keep the policy enforcing and monitor reports for reintroduction."
+  ],
+  "verifyT": "Load the application with the policy enforced and confirm the console shows no `eval`-related CSP violation; search the bundle for `eval(` and `new Function`.",
+  "cells": [
+   {
+    "suffix": "unsafe-eval",
+    "lang": "http",
+    "name": "'unsafe-eval'",
+    "safe": "a policy without 'unsafe-eval'",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Content-Security-Policy",
+     "valuePattern": "(?:^|;)\\s*script-src(?=[\\s;]|$)[^;]*'unsafe-eval'|^(?!.*(?:^|;)\\s*script-src(?=[\\s;]|$)).*(?:^|;)\\s*default-src(?=[\\s;]|$)[^;]*'unsafe-eval'"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "script-src 'self' 'unsafe-eval'"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "default-src 'unsafe-eval'"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "img-src 'self'; script-src 'unsafe-eval'"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "style-src 'unsafe-eval'"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "script-src-attr 'unsafe-eval'"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "script-src 'self'"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {}
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "default-src 'unsafe-eval'; script-src 'self'"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "script-src 'self'; default-src 'unsafe-eval'"
+       }
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "class": "csp-directive-gap",
+  "kind": "dast",
+  "category": "csp-weakness",
+  "cwe": "CWE-693",
+  "severity": "LOW",
+  "framing": "custom",
+  "title": "Content-Security-Policy without {name}",
+  "description": "The Content-Security-Policy header does not restrict {name}. This directive has no default-src fallback in CSP, so the restriction must be stated on its own to take effect.",
+  "remediation": "Immediate: add the missing directive with a restrictive source list \u2014 `'none'` or `'self'` unless the application demonstrably needs another origin. Durable: build the policy from a per-directive template in configuration so a new template cannot omit a directive, and add a regression check that fails when a required directive is absent. Trade-off: a strict `frame-ancestors` or `form-action` value can break an embedding partner or a third-party checkout redirect, so inventory those flows before narrowing.",
+  "limitation": "Header check: it also fires when no Content-Security-Policy header is sent. DPK-DAST-002 reports that case. The check cannot see a policy delivered by a meta element.",
+  "scopeT": "Single Content-Security-Policy header value: the named directive is absent.",
+  "fp": "Pages with no base elements or forms make the gap low-impact; the common false positive.",
+  "recordDesc": "Without {name} a policy does not restrict that element. Injected markup can use the gap. The remedy is {safe}.",
+  "applicability": "HTML responses that send a Content-Security-Policy header.",
+  "risk": "Injected markup redirects relative URLs or form targets; LOW severity.",
+  "why": "The policy does not restrict {name}.",
+  "fix": [
+   "Add the missing directive with `'none'` or `'self'`.",
+   "Build the policy from a per-directive template so nothing is omitted.",
+   "Add a regression check that fails when a required directive is absent."
+  ],
+  "verifyT": "Re-request the page and confirm the directive is present with the intended value; exercise the flow it constrains (framing or form submission) and confirm it still works.",
+  "cells": [
+   {
+    "suffix": "base-uri",
+    "lang": "http",
+    "name": "base-uri",
+    "safe": "base-uri 'none' or base-uri 'self'",
+    "check": {
+     "type": "response-header-missing-directive",
+     "header": "Content-Security-Policy",
+     "directive": "base-uri"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "default-src 'self'"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "default-src 'self'; base-uri 'none'"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "default-src 'self'; frame-ancestors 'none'"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "base-uri 'self'"
+       }
+      },
+      "match": false
+     }
+    ]
+   },
+   {
+    "suffix": "form-action",
+    "lang": "http",
+    "name": "form-action",
+    "safe": "form-action 'self'",
+    "check": {
+     "type": "response-header-missing-directive",
+     "header": "Content-Security-Policy",
+     "directive": "form-action"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "default-src 'self'"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "default-src 'self'; form-action 'self'"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "default-src 'self'; base-uri 'self'"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "form-action 'self'"
+       }
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "class": "referrer-unsafe-url",
+  "kind": "dast",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "LOW",
+  "framing": "custom",
+  "title": "Referrer-Policy sends full URLs ({name})",
+  "description": "The Referrer-Policy header is {name}. Browsers then send the full page URL, including its query string, to every destination, which can carry tokens or identifiers to third parties.",
+  "remediation": "Immediate: send `Referrer-Policy: strict-origin-when-cross-origin` (or a stricter value) instead of a policy that forwards full URLs. Durable: set the policy once for the whole origin and remove per-page overrides, since a single page that lowers it affects every link a user follows from there. Trade-off: analytics and affiliate flows that read the full referrer stop receiving the path; use an explicit query parameter where a partner needs that attribution.",
+  "limitation": "Header value check: it cannot see which URLs carry sensitive query strings.",
+  "scopeT": "Single Referrer-Policy header value: the unsafe-url token appears.",
+  "fp": "Pages with no sensitive query strings are the common false positive.",
+  "recordDesc": "{name} in Referrer-Policy sends full URLs cross-origin. Tokens in query strings can leak. The remedy is {safe}.",
+  "applicability": "HTML responses that send a Referrer-Policy header.",
+  "risk": "Query-string tokens or identifiers leaked to third parties; LOW severity.",
+  "why": "The policy sends the full URL ({name}).",
+  "fix": [
+   "Send `strict-origin-when-cross-origin` or stricter.",
+   "Set the policy once for the whole origin and remove overrides.",
+   "Use an explicit parameter where a partner needs attribution."
+  ],
+  "verifyT": "Follow a link to another origin and confirm the `Referer` carries only the scheme and host; check that the partner flow still attributes correctly.",
+  "cells": [
+   {
+    "suffix": "unsafe-url",
+    "lang": "http",
+    "name": "unsafe-url",
+    "safe": "strict-origin-when-cross-origin",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Referrer-Policy",
+     "valuePattern": "(?:^|[,\\s])unsafe-url(?:$|[,\\s])"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Referrer-Policy": "unsafe-url"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Referrer-Policy": "no-referrer, unsafe-url"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Referrer-Policy": "strict-origin-when-cross-origin"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {}
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "class": "db-error-disclosed",
+  "kind": "dast",
+  "category": "information-disclosure",
+  "cwe": "CWE-209",
+  "severity": "MEDIUM",
+  "framing": "custom",
+  "title": "Database error text disclosed in a response",
+  "description": "The response body contains a database driver error ({name}). Driver messages reveal table names, query shape, and engine type, which help an attacker refine injection attempts.",
+  "remediation": "Catch database errors server-side and return a generic message with a correlation ID ({safe}).",
+  "limitation": "Marker text on one body: a quoted driver message in documentation or a support article can match.",
+  "scopeT": "Single response body: confirm no database driver error text is returned.",
+  "fp": "Pages that quote SQL errors in documentation are the common false positive.",
+  "recordDesc": "Database driver text in a response exposes query and schema detail. The remedy is {safe}.",
+  "applicability": "HTTP responses from applications backed by SQL databases.",
+  "risk": "Schema and query detail that helps injection; MEDIUM severity.",
+  "why": "The response body carries a database error ({name}).",
+  "fix": [
+   "Log driver errors server-side only.",
+   "Return a generic error with a correlation ID."
+  ],
+  "verifyT": "Rescan shows no driver error text in responses.",
+  "cells": [
+   {
+    "suffix": "sql-error",
+    "lang": "http",
+    "name": "a SQL driver error",
+    "safe": "a generic error page with a correlation ID",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "You have an error in your SQL syntax|SQLSTATE\\[|\\bORA-\\d{5}|Unclosed quotation mark after the character string|PG::SyntaxError|ERROR:\\s+syntax error at or near"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 500,
+       "headers": {
+        "content-type": "text/html"
+       },
+       "body": "Error: You have an error in your SQL syntax; check the manual near '' at line 1"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 500,
+       "headers": {
+        "content-type": "text/html"
+       },
+       "body": "SQLSTATE[42000]: Syntax error or access violation"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 500,
+       "headers": {
+        "content-type": "text/html"
+       },
+       "body": "ORA-00933: SQL command not properly ended"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "content-type": "text/html"
+       },
+       "body": "Order received. Thank you."
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "class": "node-stack-frame",
+  "kind": "dast",
+  "category": "debug-exposure",
+  "cwe": "CWE-209",
+  "severity": "MEDIUM",
+  "framing": "custom",
+  "title": "Node.js stack frame disclosed in a response",
+  "description": "The response body carries a {name}. Node.js stack frames expose file paths, line numbers, and internal module names to any client that can trigger the error.",
+  "remediation": "Disable stack output in production and return a generic error page ({safe}).",
+  "limitation": "Pattern on one body: a Node.js trace quoted in a help article can match. Development output and production exposure look the same.",
+  "scopeT": "Single response body: confirm no Node.js stack frame with a file, line, and column is returned.",
+  "fp": "Quoted traces in documentation are the common false positive.",
+  "recordDesc": "A Node.js stack frame in a response shows server paths and line numbers. The remedy is {safe}.",
+  "applicability": "HTTP responses from Node.js applications and frameworks.",
+  "risk": "Server paths and internal layout disclosed to any client; MEDIUM severity.",
+  "why": "The response body carries a {name}.",
+  "fix": [
+   "Set NODE_ENV to production.",
+   "Return a generic error with a correlation ID."
+  ],
+  "verifyT": "Rescan shows no stack frames in responses.",
+  "cells": [
+   {
+    "suffix": "frame",
+    "lang": "http",
+    "name": "Node.js stack frame",
+    "safe": "a generic error page with a correlation ID",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "\\bat [^\\n]{0,120}\\.(?:js|mjs|cjs):\\d+:\\d+"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 500,
+       "headers": {
+        "content-type": "text/plain"
+       },
+       "body": "Error: boom\n    at Object.<anonymous> (/srv/app/server.js:12:5)"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 500,
+       "headers": {
+        "content-type": "text/plain"
+       },
+       "body": "Error handled; see the server log for details."
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/boom",
+       "status": 500,
+       "headers": {},
+       "body": "at Object.<anonymous> (/srv/app/index.js:10:15)"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/boom",
+       "status": 500,
+       "headers": {},
+       "body": "at Object.<anonymous> (/srv/app/index.js)"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "class": "php-error-path",
+  "kind": "dast",
+  "category": "debug-exposure",
+  "cwe": "CWE-209",
+  "severity": "MEDIUM",
+  "framing": "custom",
+  "title": "PHP error with a source path disclosed",
+  "description": "The response body carries a {name}. PHP display_errors prints the message with the file path and line number, which reveals server layout.",
+  "remediation": "Set display_errors to Off in production and log errors instead ({safe}).",
+  "limitation": "Pattern on one body: a PHP message quoted in a bug report can match.",
+  "scopeT": "Single response body: confirm no PHP notice, warning, or fatal error with a file and line is returned.",
+  "fp": "Quoted messages in documentation are the common false positive.",
+  "recordDesc": "PHP messages printed to responses include file paths and line numbers. The remedy is {safe}.",
+  "applicability": "HTTP responses from PHP applications.",
+  "risk": "Server paths and line numbers disclosed to clients; MEDIUM severity.",
+  "why": "The response body carries a PHP {name}.",
+  "fix": [
+   "Turn display_errors off in production.",
+   "Log errors to a file outside the web root."
+  ],
+  "verifyT": "Rescan shows no PHP messages with paths in responses.",
+  "cells": [
+   {
+    "suffix": "display-errors",
+    "lang": "http",
+    "name": "error",
+    "safe": "display_errors = Off with log_errors = On",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?:Fatal error|Warning|Notice|Parse error): [^\\n]{0,200}\\.php on line \\d+"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "content-type": "text/html"
+       },
+       "body": "Warning: Undefined variable $cart in /var/www/html/shop.php on line 14"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "content-type": "text/html"
+       },
+       "body": "Warning: your cart is empty."
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/boom",
+       "status": 500,
+       "headers": {},
+       "body": "Fatal error: Uncaught Exception in /var/www/app/index.php on line 12"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/boom",
+       "status": 500,
+       "headers": {},
+       "body": "Warning: deprecation notice"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "class": "filesystem-path-disclosed",
+  "kind": "dast",
+  "category": "information-disclosure",
+  "cwe": "CWE-209",
+  "severity": "LOW",
+  "framing": "custom",
+  "title": "Server file path disclosed in a response",
+  "description": "The response body contains a server-side source path ({name}). Absolute paths reveal the deployment layout and framework, which narrows the search for file-based flaws.",
+  "remediation": "Immediate: stop returning absolute paths in error text; log the full path server-side and return a relative name and a correlation id to the client. Durable: centralise error rendering so every handler uses the same sanitiser, and add a test that greps error responses for the deployment root. Trade-off: a correlation id is less convenient for a developer reading a bug report, but the full path stays available in the log entry the id points at.",
+  "limitation": "Pattern on one body: a Windows or Unix path in a download link or log excerpt can match.",
+  "scopeT": "Single response body: confirm no absolute server path to a source file appears.",
+  "fp": "Paths that the page displays on purpose, such as a download location, are the common false positive.",
+  "recordDesc": "An absolute server path in a response reveals the deployment layout. The remedy is {safe}.",
+  "applicability": "HTTP responses that include error or diagnostic text.",
+  "risk": "Deployment layout disclosed to clients; LOW severity.",
+  "why": "The response body includes a {name}.",
+  "fix": [
+   "Remove absolute paths from error text.",
+   "Log the full path server-side and return a correlation id.",
+   "Centralise error rendering so every handler uses the same sanitiser."
+  ],
+  "verifyT": "Trigger the error again and confirm the response carries no absolute path; confirm the log entry still records the full path under the correlation id.",
+  "cells": [
+   {
+    "suffix": "source-path",
+    "lang": "http",
+    "name": "an absolute source path",
+    "safe": "relative names in user-visible messages",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?:[A-Za-z]:\\\\(?:inetpub|Windows|Users)\\\\|/(?:var/www|home/[\\w.-]+|srv|opt)/[\\w./-]+\\.(?:php|py|rb|js|java|cs|go)\\b)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 500,
+       "headers": {
+        "content-type": "text/html"
+       },
+       "body": "Failed to load C:\\inetpub\\wwwroot\\app.aspx"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 500,
+       "headers": {
+        "content-type": "text/html"
+       },
+       "body": "Failed at /home/deploy/app/server.py line 9"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "content-type": "text/html"
+       },
+       "body": "Download the file from /home/deploy/README.md"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "content-type": "text/html"
+       },
+       "body": "Loaded /var/www/app/config.php"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "content-type": "text/html"
+       },
+       "body": "Download /home/user/notes.txt"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "class": "directory-listing",
+  "kind": "dast",
+  "category": "information-disclosure",
+  "cwe": "CWE-548",
+  "severity": "MEDIUM",
+  "framing": "custom",
+  "title": "Directory listing enabled",
+  "description": "The response is an automatic index page ({name}). Anyone can browse file names in that directory, which can expose backups, source, or unlinked files.",
+  "remediation": "Disable automatic indexes ({safe}) and remove stray backup or source files from the web root.",
+  "limitation": "Title marker on one body: a page that quotes an index title can match.",
+  "scopeT": "Single response body: confirm no automatic directory index is returned.",
+  "fp": "Public download folders that are meant to be browsed are the accepted case.",
+  "recordDesc": "An automatic index page lists file names in a directory. The remedy is {safe}.",
+  "applicability": "Web servers that serve directories (Apache and nginx autoindex).",
+  "risk": "File names and unlinked content exposed to any client; MEDIUM severity.",
+  "why": "The server returns a {name} for a directory.",
+  "fix": [
+   "Turn autoindex or Options Indexes off.",
+   "Remove backup and source files from the web root."
+  ],
+  "verifyT": "Rescan shows no automatic index in responses.",
+  "cells": [
+   {
+    "suffix": "index-of",
+    "lang": "http",
+    "name": "an automatic index page",
+    "safe": "autoindex off (nginx) or Options -Indexes (Apache)",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "<title>Index of /"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "content-type": "text/html"
+       },
+       "body": "<html><head><title>Index of /backup</title></head><body>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "content-type": "text/html"
+       },
+       "body": "<html><head><title>Backup policy</title></head>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/backup/",
+       "status": 200,
+       "headers": {},
+       "body": "<title>Index of /backup</title>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/toc",
+       "status": 200,
+       "headers": {},
+       "body": "<title>Index of contents</title>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ],
+  "cweDef": {
+   "name": "Exposure of Information Through Directory Listing",
+   "summary": "An automatic index page lists directory contents, which exposes file names, backups, and unlinked resources to any client."
+  }
+ },
+ {
+  "class": "sourcemap-reference",
+  "kind": "dast",
+  "category": "information-disclosure",
+  "cwe": "CWE-540",
+  "severity": "LOW",
+  "framing": "custom",
+  "title": "Source map reference in a served script",
+  "description": "The served script ends with {name}. Browsers and attackers can fetch the map and recover original source, comments, and internal paths.",
+  "remediation": "Immediate: stop publishing source maps for production bundles, or restrict them to authenticated tooling. Durable: emit maps only in the build profile used for debugging, and serve them from a path the public edge does not route. Trade-off: error monitoring loses readable stack traces unless the maps are uploaded to the monitoring service instead of being served publicly.",
+  "limitation": "Marker on one body: it only applies to script bodies the scanner captured. It does not prove the map is reachable.",
+  "scopeT": "Single script body: confirm no sourceMappingURL comment is returned.",
+  "fp": "Internal builds that publish maps behind access control are the accepted case.",
+  "recordDesc": "A sourceMappingURL comment points to a map that can restore original source. The remedy is {safe}.",
+  "applicability": "JavaScript responses from web applications with build pipelines.",
+  "risk": "Original source and internal comments recovered by anyone; LOW severity.",
+  "why": "The served script carries a {name}.",
+  "fix": [
+   "Stop publishing source maps for production bundles.",
+   "Emit maps only in the debugging build profile.",
+   "Upload maps to the error monitor instead of serving them publicly."
+  ],
+  "verifyT": "Request the `.map` path from the public edge and confirm it is not served; confirm the error monitor still resolves the uploaded map.",
+  "cells": [
+   {
+    "suffix": "source-map",
+    "lang": "http",
+    "name": "a sourceMappingURL comment",
+    "safe": "maps kept off the public origin",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "//# sourceMappingURL="
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "content-type": "application/javascript"
+       },
+       "body": "console.log(1);\n//# sourceMappingURL=app.js.map"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "content-type": "application/javascript"
+       },
+       "body": "console.log(1);"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/app.js",
+       "status": 200,
+       "headers": {},
+       "body": "//# sourceMappingURL=app.js.map"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/app.js",
+       "status": 200,
+       "headers": {},
+       "body": "// sourceMappingURL=app.js.map"
+      },
+      "match": false
+     }
+    ]
+   }
+  ],
+  "cweDef": {
+   "name": "Inclusion of Sensitive Information in Source Code",
+   "summary": "Source maps and comments shipped with production scripts let anyone recover original source and internal detail."
+  }
+ },
+ {
+  "class": "debug-token-header",
+  "kind": "dast",
+  "category": "debug-exposure",
+  "cwe": "CWE-215",
+  "severity": "MEDIUM",
+  "framing": "custom",
+  "title": "Debug profiler header exposed",
+  "description": "The response carries the {name} header. Profiler tooling then exposes request timing, configuration, and internal state to anyone who holds the token.",
+  "remediation": "Immediate: turn the profiler off outside development. In Symfony this is `web_profiler` disabled with `collect: false` in the production configuration; other frameworks have an equivalent environment switch. Durable: gate the profiler behind an environment check rather than a URL parameter, and add a deployment test that fails when the token header appears in a production response. Trade-off: you lose profiler data from staging-like environments, so keep a dedicated profiling environment instead of enabling it broadly.",
+  "limitation": "Header presence check: the profiler may be protected by a firewall that the scanner cannot see.",
+  "scopeT": "Single response header: confirm no debug token header is returned.",
+  "fp": "Development and staging hosts that run the profiler on purpose are the accepted case.",
+  "recordDesc": "A debug token header links responses to an open profiler. The remedy is {safe}.",
+  "applicability": "HTTP responses from PHP Symfony and similar frameworks with a profiler.",
+  "risk": "Internal request and configuration detail reachable through the profiler; MEDIUM severity.",
+  "why": "The response carries the {name} header.",
+  "fix": [
+   "Disable the profiler outside development.",
+   "Gate it behind an environment check, not a request parameter.",
+   "Add a deployment test that fails when the token header appears."
+  ],
+  "verifyT": "Request the page in the production configuration and confirm the profiler header is absent; confirm the profiler still starts in the development environment.",
+  "cells": [
+   {
+    "suffix": "x-debug-token",
+    "lang": "http",
+    "name": "X-Debug-Token",
+    "safe": "a production build with the profiler disabled",
+    "check": {
+     "type": "response-header-matches",
+     "header": "X-Debug-Token",
+     "valuePattern": "\\S"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-Debug-Token": "a1b2c3"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-Debug-Token": ""
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-Debug-Token": "   "
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-Debug-Token": [
+         "",
+         "a1b2c3"
+        ]
+       }
+      },
+      "match": true
+     }
+    ]
+   }
+  ],
+  "cweDef": {
+   "name": "Insertion of Sensitive Information Into Debugging Code",
+   "summary": "Debug and profiler tooling left enabled in production exposes request and configuration detail to clients that hold its token."
+  }
+ },
+ {
+  "class": "header-weak-script",
+  "kind": "dast",
+  "category": "security-headers",
+  "cwe": "CWE-693",
+  "severity": "MEDIUM",
+  "framing": "custom",
+  "title": "Weak {name} header value",
+  "description": "The response carries {name}, which lets any host supply script. A wildcard script source lets an injected script run, because the policy does not block it. This check matches the wildcard directly.",
+  "remediation": "Immediate: replace `*` in `script-src` with the exact script origins, or move to nonces or hashes with `'strict-dynamic'` where the markup allows. Durable: generate the source list from the assets the application actually serves, and keep `default-src` restrictive so an omitted directive cannot fall back to a wildcard. Trade-off: third-party widgets need explicit origins, and narrowing will break any that relied on the wildcard.",
+  "limitation": "Value check: a host wildcard such as *.example.com is out of scope. It cannot confirm the deployment context.",
+  "scopeT": "Single response header value: script-src only.",
+  "fp": "Transitional deployments are the common accepted case.",
+  "recordDesc": "{name} with a wildcard source lets any host supply script. The policy then stops injected scripts only partly.",
+  "applicability": "HTTP responses carrying the header.",
+  "risk": "Script execution from any host; MEDIUM severity.",
+  "why": "{name} allows script from any host.",
+  "fix": [
+   "Replace `*` in `script-src` with exact origins.",
+   "Prefer nonces or hashes with `'strict-dynamic'` where the markup allows.",
+   "Keep `default-src` restrictive as the fallback."
+  ],
+  "verifyT": "Re-request the page and confirm `script-src` lists exact origins or a nonce; load the page in a browser and check the console for blocked scripts before shipping.",
+  "cells": [
+   {
+    "suffix": "script-wildcard",
+    "lang": "http",
+    "name": "Content-Security-Policy script-src wildcard",
+    "safe": "explicit script source lists",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Content-Security-Policy",
+     "valuePattern": "^(?:(?!script-src(?=[\\s;]|$))[^;]*;\\s*)*script-src(?=[\\s;]|$)[^;]*?(?<=\\s)(?:\\*|(?:https?|wss?)://\\*)(?=\\s|;|$)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "script-src *"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "script-src 'self' * 'unsafe-inline'"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "default-src 'self'; script-src *"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "script-src 'self'; script-src *"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "script-src https://*.cdn.example"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "default-src *; script-src 'self'"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {}
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "script-src https://*"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "script-src http://* 'self'"
+       }
+      },
+      "match": true
+     }
+    ]
+   }
+  ]
+ }
 ]

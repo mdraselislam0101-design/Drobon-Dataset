@@ -1,0 +1,60 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-074",
+  "title": "Content-Type header missing from the response",
+  "description": "The response carries no Content-Type header at all. Browsers then infer the type from the bytes, which lets an uploaded or reflected payload be reinterpreted as HTML or script when the browser guesses wrong. The check reports the absent header on one observation; it does not claim exploitability.",
+  "severity": "LOW",
+  "cwe": "CWE-693",
+  "category": "security-headers",
+  "remediation": "Send an explicit Content-Type on every response, including error responses, and pair it with X-Content-Type-Options: nosniff (text/html; charset=utf-8).",
+  "limitation": "Single-response observation: the check does not test how a specific browser would sniff the body.",
+  "check": {
+    "type": "missing-response-header",
+    "header": "Content-Type"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/profile",
+        "status": 200,
+        "headers": {
+          "Cache-Control": "no-store"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/upload",
+        "status": 201,
+        "headers": {
+          "X-Content-Type-Options": "nosniff"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/profile",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/profile",
+        "status": 200,
+        "headers": {
+          "Content-Type": ""
+        }
+      },
+      "match": true
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1033"
+  ]
+}
