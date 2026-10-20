@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-829",
+  "title": "Pickle-backed store opened via shelve.open (python) — review required",
+  "description": "shelve is a dbm front end that serializes every stored value with pickle. Opening a shelf whose path or contents another principal can influence means crafted bytes are unpickled on read, and pickle reconstructs arbitrary objects during that step. This lexical rule flags the open call in python; it does not inspect what the database contains.",
+  "severity": "HIGH",
+  "cwe": "CWE-502",
+  "category": "unsafe-deserialization",
+  "remediation": "Use a data-only store (JSON, or SQLite with typed columns) for any path or content outside the service account’s control. If a shelf is unavoidable, keep it in a directory only the service can write and never copy one from an upload or shared location.",
+  "limitation": "Lexical call match on shelve.open; the provenance of the database file is out of scope.",
+  "languages": [
+    "python"
+  ],
+  "patterns": [
+    {
+      "source": "\\b(?:shelve\\.open)\\s*\\("
+    }
+  ],
+  "tests": [
+    {
+      "line": "shelve.open(payload)",
+      "match": true
+    },
+    {
+      "line": "out = shelve.open(data)",
+      "match": true
+    },
+    {
+      "line": "myshelveopen(x)",
+      "match": false
+    },
+    {
+      "line": "shelve.open_safe()",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1007"
+  ]
+}

@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-243",
+  "title": "Database dump with schema statements served",
+  "description": "The response is a database dump: the dump tool banner and a CREATE TABLE statement are the header and body of an exported schema with rows. A web server that serves it hands over the schema and the data in the same response.",
+  "severity": "HIGH",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Remove the dump from the web root and move exports to a private store with access control. Treat the data as disclosed and assess notification duties for the rows it contained.",
+  "limitation": "One response body. The rule reports the dump banner and a CREATE TABLE statement; it cannot count the rows or tell which tables the export covers.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*-- (?:MySQL|MariaDB|PostgreSQL)[^\\n]*dump)(?=[\\s\\S]*CREATE TABLE)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "-- MySQL dump 10.13  Distrib 8.0.35, for Linux (x86_64)\n--\n-- Host: db.internal    Database: shop\n-- ------------------------------------------------------\nDROP TABLE IF EXISTS `customers`;\nCREATE TABLE `customers` (`id` int NOT NULL, `email` varchar(255));\nINSERT INTO `customers` VALUES (1,\"a@example.com\");"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "-- PostgreSQL database dump\n-- Dumped from database version 15.4\nCREATE TABLE public.orders (id integer, total numeric);\nCOPY public.orders (id, total) FROM stdin;"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": " 10.13  Distrib 8.0.35, for Linux (x86_64)\n--\n-- Host: db.internal    Database: shop\n-- ------------------------------------------------------\nDROP TABLE IF EXISTS `customers`;\n `customers` (`id` int NOT NULL, `email` varchar(255));\nINSERT INTO `customers` VALUES (1,\"a@example.com\");"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1312"
+  ]
+}

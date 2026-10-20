@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-908",
+  "title": "Contract destruction call present in solidity — review required",
+  "description": "selfdestruct removes the contract code and forwards its balance to a caller-supplied address. If the guard around it can be bypassed, the contract becomes unusable and its funds move. The rule flags the call; whether the guard is sound and whether the contract must outlive the deployment is a review decision.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-284",
+  "category": "code-injection",
+  "remediation": "Remove selfdestruct, or gate it behind a multi-signature with a timelock and a documented migration procedure.",
+  "limitation": "Lexical: matches selfdestruct and suicide calls; the guard condition is not evaluated.",
+  "languages": [
+    "solidity"
+  ],
+  "patterns": [
+    {
+      "source": "\\b(?:selfdestruct|suicide)\\s*\\("
+    }
+  ],
+  "tests": [
+    {
+      "line": "function close() public onlyOwner { selfdestruct(payable(owner)); }",
+      "match": true
+    },
+    {
+      "line": "# audit: function close() public onlyOwner { selfdestruct(payable(owner)); } present",
+      "match": true
+    },
+    {
+      "line": "function close() public onlyOwner { paused = true; }",
+      "match": false
+    },
+    {
+      "line": "# verified: function close() public onlyOwner { paused = true; }",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1091"
+  ]
+}

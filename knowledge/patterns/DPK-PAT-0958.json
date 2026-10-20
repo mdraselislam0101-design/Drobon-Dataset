@@ -10,11 +10,11 @@
     "check": {
       "type": "response-header-matches",
       "header": "Content-Security-Policy",
-      "valuePattern": "'unsafe-eval'"
+      "valuePattern": "(?:^|;)\\s*script-src(?=[\\s;]|$)[^;]*'unsafe-eval'|^(?!.*(?:^|;)\\s*script-src(?=[\\s;]|$)).*(?:^|;)\\s*default-src(?=[\\s;]|$)[^;]*'unsafe-eval'"
     }
   },
   "scope": "Single Content-Security-Policy header value: unsafe-eval appears in any directive.",
-  "limitations": "Header value check on the token. Policies that also set a nonce for every script still list unsafe-eval, and this check flags them.",
+  "limitations": "Directive-scoped value check: only script-src, script-src-elem and the default-src fallback are read, because 'unsafe-eval' has no meaning in another directive. A nonce does not neutralise 'unsafe-eval' (only 'unsafe-inline' is neutralised), so policies that nonce every script are still reported.",
   "examples": [
     {
       "observation": {
@@ -31,6 +31,46 @@
         "url": "https://app.example/",
         "status": 200,
         "headers": {
+          "Content-Security-Policy": "default-src 'unsafe-eval'"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "img-src 'self'; script-src 'unsafe-eval'"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "style-src 'unsafe-eval'"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src-attr 'unsafe-eval'"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
           "Content-Security-Policy": "script-src 'self'"
         }
       },
@@ -41,6 +81,26 @@
         "url": "https://app.example/",
         "status": 200,
         "headers": {}
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src 'unsafe-eval'; script-src 'self'"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'self'; default-src 'unsafe-eval'"
+        }
       },
       "match": false
     }

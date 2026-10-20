@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-845",
+  "title": "Stack trace returned to the client in javascript — review required",
+  "description": "The error handler serializes err.stack into the HTTP response. A stack trace names internal files, functions, dependencies and sometimes query fragments or configuration values, which shortens an attacker’s path to a working exploit. The rule matches the response sink; whether the branch is reachable in production is a review decision.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-209",
+  "category": "information-disclosure",
+  "remediation": "Return a generic error body with a correlation id, log the stack server-side, and expose details only behind an authenticated diagnostics route.",
+  "limitation": "Lexical: matches .send/.json carrying err.stack on one line; custom error serializers are out of scope.",
+  "languages": [
+    "javascript"
+  ],
+  "patterns": [
+    {
+      "source": "\\.(?:send|json)\\([^)\\n]*\\b(?:err|error)\\.stack\\b"
+    }
+  ],
+  "tests": [
+    {
+      "line": "res.status(500).send(err.stack)",
+      "match": true
+    },
+    {
+      "line": "# audit: res.status(500).send(err.stack) present",
+      "match": true
+    },
+    {
+      "line": "res.status(500).send({ message: \"Internal error\" })",
+      "match": false
+    },
+    {
+      "line": "# verified: res.status(500).send({ message: \"Internal error\" })",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1026"
+  ]
+}

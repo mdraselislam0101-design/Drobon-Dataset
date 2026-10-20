@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-928",
+  "title": "WKWebView loads a computed URL request in swift — review required",
+  "description": "WKWebView.load receives a URLRequest assembled at runtime. A deep link, universal link or message body can steer the embedded browser to an attacker origin that then sees injected scripts, cookies and any message handlers the app registered. The rule flags the non-literal load; whether the URL is validated is a review decision.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-749",
+  "category": "mobile-security",
+  "remediation": "Allowlist https hosts before building the request and reject file:, javascript: and data: schemes.",
+  "limitation": "Lexical: matches load(URLRequest(...)) calls whose argument is not a literal host.",
+  "languages": [
+    "swift"
+  ],
+  "patterns": [
+    {
+      "source": "\\.load\\s*\\(\\s*URLRequest\\s*\\(\\s*url\\s*:\\s*URL\\s*\\(\\s*string\\s*:\\s*(?![\"'])\\w"
+    }
+  ],
+  "tests": [
+    {
+      "line": "webView.load(URLRequest(url: URL(string: deepLink)!))",
+      "match": true
+    },
+    {
+      "line": "# audit: webView.load(URLRequest(url: URL(string: deepLink)!)) present",
+      "match": true
+    },
+    {
+      "line": "webView.load(URLRequest(url: URL(string: \"https://app.example/help\")!))",
+      "match": false
+    },
+    {
+      "line": "# verified: webView.load(URLRequest(url: URL(string: \"https://app.example/help\")!))",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1111"
+  ]
+}

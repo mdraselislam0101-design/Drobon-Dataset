@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-140",
+  "title": "Oracle WebLogic error page disclosed in a response",
+  "description": "The response is the WebLogic Server error page: it names the application server and reports Error 500 with the servlet context. The page confirms the container version family and the deployed context path, and in some versions prints a stack trace.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-209",
+  "category": "debug-exposure",
+  "remediation": "Configure custom error pages at the application level so WebLogic does not render its own error page, and keep the container version out of responses.",
+  "limitation": "Two body markers. A page that discusses WebLogic in documentation is not matched; the server error page must be rendered.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*WebLogic)(?=[\\s\\S]*Error 500)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/boom",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<title>Error 500--Internal Server Error</title><h2>WebLogic Server 14.1.1.0</h2>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/app/boom",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<h1>Error 500--Internal Server Error</h1><p>From RFC 2068 WebLogic Server</p>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body>Home</body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/docs",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<p>WebLogic Server deployments should override the error page.</p>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1209"
+  ]
+}

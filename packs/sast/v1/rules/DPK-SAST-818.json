@@ -1,0 +1,41 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-818",
+  "title": "Legacy cipher with openssl enc -des3 -in backup.tar -out backup.enc (shell) — review required",
+  "description": "The command openssl enc -des3 -in backup.tar -out backup.enc encrypts with the single DES family, whose 56-bit keys are exhaustible and whose block size is far below modern guidance. The cipher is broken regardless of the passphrase. Use an authenticated cipher with a real KDF (a modern authenticated cipher). This lexical rule flags the cipher flag.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-327",
+  "category": "weak-cryptography",
+  "remediation": "Re-encrypt with an authenticated cipher and a modern KDF (a modern authenticated cipher).",
+  "limitation": "Lexical, line-based: matches the cipher flag; data already encrypted under the old scheme needs a migration plan.",
+  "languages": [
+    "shell",
+    "bash"
+  ],
+  "patterns": [
+    {
+      "source": "\\b(?:openssl\\s+enc\\b[^\\n]*\\s-des(?:3|-ede3)?\\b)"
+    }
+  ],
+  "tests": [
+    {
+      "line": "openssl enc -des3 -in backup.tar -out backup.enc",
+      "match": true
+    },
+    {
+      "line": "# audit: openssl enc -des3 -in backup.tar -out backup.enc present",
+      "match": true
+    },
+    {
+      "line": "openssl enc -aes-256-cbc -pbkdf2 -in backup.tar -out backup.enc",
+      "match": false
+    },
+    {
+      "line": "# verified: openssl enc -aes-256-cbc -pbkdf2 -in backup.tar -out backup.enc",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-0996"
+  ]
+}

@@ -1,0 +1,99 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-075",
+  "title": "Content-Security-Policy without object-src or default-src",
+  "description": "The policy neither sets object-src nor supplies a default-src fallback, so object, embed and applet loading is unconstrained. object-src is a fetch directive: when it is absent the browser applies default-src, which is why a policy that sets default-src is not reported here.",
+  "severity": "LOW",
+  "cwe": "CWE-693",
+  "category": "security-headers",
+  "remediation": "Add object-src 'none' (or rely on a restrictive default-src) so plugins and embedded objects cannot load from arbitrary origins.",
+  "limitation": "Fallback-aware directive check: a policy that sets default-src constrains object loading through the fallback and is not reported. A policy that sets object-src explicitly is out of scope for this check, and a policy delivered by a meta element cannot be seen. Because the check requires both object-src and default-src to be absent, every case it reports is also reported by DPK-DAST-087 (missing default-src); this rule adds the object-loading explanation, not a second condition.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Content-Security-Policy",
+    "valuePattern": "^(?![^\\n]*(?:^|[;,])\\s*(?:object-src|default-src)(?=[\\s;,]|$))[^\\n]*$"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'self'; frame-ancestors 'self'"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "form-action 'self'; base-uri 'none'"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "upgrade-insecure-requests"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src 'self'; script-src 'self'"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src 'none'"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "object-src 'none'"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "object-src 'none'; default-src 'self'"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {}
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1034"
+  ]
+}

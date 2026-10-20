@@ -1,20 +1,20 @@
 {
   "schemaVersion": "drobon.knowledge.pattern/v1",
   "id": "DPK-PAT-0571",
-  "title": "Signal: Weak response control (COEP without require-corp)",
+  "title": "Signal: Cross-Origin-Embedder-Policy explicitly disables cross-origin isolation",
   "targets": [
     "http"
   ],
   "signal": {
     "kind": "check",
     "check": {
-      "type": "response-header-missing-directive",
+      "type": "response-header-matches",
       "header": "Cross-Origin-Embedder-Policy",
-      "directive": "require-corp"
+      "valuePattern": "^unsafe-none$"
     }
   },
-  "scope": "Single response header value.",
-  "limitations": "Header check: it cannot confirm exploitability.",
+  "scope": "One response: Cross-Origin-Embedder-Policy is exactly unsafe-none.",
+  "limitations": "Value check: flags the explicit unsafe-none value only. A missing header is a separate finding (DPK-DAST-012); credentialless is a valid isolation mode and is not reported.",
   "examples": [
     {
       "observation": {
@@ -31,10 +31,20 @@
         "url": "https://app.example/",
         "status": 200,
         "headers": {
-          "Cross-Origin-Embedder-Policy": "credentialless"
+          "Cross-Origin-Embedder-Policy": "UNSAFE-NONE"
         }
       },
       "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Cross-Origin-Embedder-Policy": "credentialless"
+        }
+      },
+      "match": false
     },
     {
       "observation": {
@@ -48,16 +58,14 @@
     },
     {
       "observation": {
-        "url": "http://app.example/",
+        "url": "https://app.example/",
         "status": 200,
-        "headers": {
-          "Cross-Origin-Embedder-Policy": "require-corp"
-        }
+        "headers": {}
       },
       "match": false
     }
   ],
-  "fpNotes": "CDN behaviors are the common accepted case.",
+  "fpNotes": "An application that intentionally opts out of isolation is reported by design; the exposure is the opt-out itself.",
   "linkedRules": [
     "DPK-DAST-046"
   ],

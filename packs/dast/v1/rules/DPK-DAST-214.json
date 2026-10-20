@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-214",
+  "title": "Adminer database console disclosed",
+  "description": "The response is the Adminer login page: the Adminer product name together with the driver selector and the Log in control identifies the single-file database console. The form names the database engines the deployment supports.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "debug-exposure",
+  "remediation": "Remove Adminer from production, or restrict it to the management network behind an authenticating proxy. Never leave the login page on the application ingress.",
+  "limitation": "One response body. The rule reports the login page; it does not attempt a login and cannot show which database privileges would follow.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*Adminer)(?=[\\s\\S]*Log\\ in)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Login - Adminer</title></head><body><form method=\"post\"><select name=\"auth[driver]\"><option>MySQL</option></select><input name=\"auth[username]\"><input type=\"submit\" value=\"Log in\"></form><p>Adminer 4.8.1</p></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<!doctype html><html><body><h1>Adminer</h1><form><select name=\"auth[driver]\"><option>PostgreSQL</option></select><button>Log in</button></form></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Login - </title></head><body><form method=\"post\"><select name=\"auth[driver]\"><option>MySQL</option></select><input name=\"auth[username]\"><input type=\"submit\" value=\"\"></form><p> 4.8.1</p></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1283"
+  ]
+}

@@ -1,0 +1,1186 @@
+[
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "csp-style-src-wildcard",
+    "category": "csp-weakness",
+    "cwe": "CWE-693",
+    "severity": "MEDIUM",
+    "title": "Content-Security-Policy style-src allows every origin",
+    "description": "The policy lets a stylesheet load from any origin (style-src wildcard or scheme wildcard). Loaded CSS is not inert: attribute selectors can read input values back out through background requests, and a foreign stylesheet can hide or reposition interface elements. The directive is read from its first declaration only, because later duplicates are ignored by browsers.",
+    "remediation": "List the stylesheet origins, for example style-src 'self' https://cdn.example. If inline style is required, use a nonce or hash instead of 'unsafe-inline'.",
+    "limitation": "One header value, first declaration of the directive only. It reports the wildcard permission, not whether an attacker can influence the style sources a page loads.",
+    "scopeT": "One Content-Security-Policy value whose first style-src declaration contains the wildcard or a scheme wildcard host.",
+    "fp": "Pages that intentionally load styles from a content delivery network on every request can be reported; the observation cannot tell a curated list from an open one.",
+    "recordDesc": "The policy allowed a stylesheet from any origin. CSS can select on attribute values, so a hostile stylesheet can turn typed text into URL fragments and read them back out, and it can also mask controls the user believes they are clicking. The finding is the unbounded style origin list.",
+    "applicability": "HTML responses that carry a Content-Security-Policy.",
+    "risk": "CSS-driven data exfiltration and interface tampering; MEDIUM severity.",
+    "why": "The first style-src declaration contains a source that matches every origin.",
+    "fix": [
+      "Name the stylesheet origins explicitly.",
+      "Move inline styles to nonce or hash sources."
+    ],
+    "verifyT": "Load a stylesheet from a foreign origin in a test page and confirm the browser blocks it.",
+    "cells": [
+      {
+        "suffix": "style-src",
+        "lang": "http",
+        "safe": "style-src 'self'",
+        "check": {
+          "type": "response-header-matches",
+          "header": "Content-Security-Policy",
+          "valuePattern": "^(?:(?!style-src(?=[\\s;]|$))[^;]*;\\s*)*style-src(?=[\\s;]|$)[^;]*?(?<=\\s)(?:\\*|(?:https?|wss?)://\\*)(?=\\s|;|$)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "style-src *"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "default-src 'self'; style-src 'self' https://*"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "style-src 'self'"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "style-src https://*.example.com"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "default-src *"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "style-src 'self'; style-src *"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {}
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "csp-frame-src-wildcard",
+    "category": "csp-weakness",
+    "cwe": "CWE-693",
+    "severity": "MEDIUM",
+    "title": "Content-Security-Policy frame-src allows every origin",
+    "description": "The policy lets a frame embed content from any origin (frame-src wildcard). Embedded third-party content runs with its own privileges inside the page, can phish the user in place of the application, and can drive the top-level navigation of a page that trusts what it frames. The directive is read from its first declaration only.",
+    "remediation": "Name the embeddable origins, for example frame-src 'self' https://player.example. Cross-origin frames that need to run script should be isolated with sandbox attributes and a matching Cross-Origin-Opener-Policy.",
+    "limitation": "One header value, first declaration of the directive only. The rule cannot see which frames a page actually contains.",
+    "scopeT": "One Content-Security-Policy value whose first frame-src declaration contains the wildcard or a scheme wildcard host.",
+    "fp": "A page that legitimately embeds arbitrary user-supplied sites (a preview tool) can be reported; the observation cannot distinguish it from an accidental wildcard.",
+    "recordDesc": "The policy allowed any origin to be framed. A framed document is still the attacker's code, drawn inside a page the user trusts; it can imitate the interface, request permissions in context, and redirect the top-level document when the frame is allowed to navigate. The finding is the unbounded frame origin list.",
+    "applicability": "HTML responses that carry a Content-Security-Policy.",
+    "risk": "In-page phishing and forced navigation through embedded content; MEDIUM severity.",
+    "why": "The first frame-src declaration contains a source that matches every origin.",
+    "fix": [
+      "List the embeddable origins.",
+      "Prefer same-origin frames or a sandboxed player."
+    ],
+    "verifyT": "Embed a foreign origin in a test page and confirm the browser blocks it.",
+    "cells": [
+      {
+        "suffix": "frame-src",
+        "lang": "http",
+        "safe": "frame-src 'self'",
+        "check": {
+          "type": "response-header-matches",
+          "header": "Content-Security-Policy",
+          "valuePattern": "^(?:(?!frame-src(?=[\\s;]|$))[^;]*;\\s*)*frame-src(?=[\\s;]|$)[^;]*?(?<=\\s)(?:\\*|(?:https?|wss?)://\\*)(?=\\s|;|$)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "frame-src *"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "default-src 'self'; frame-src 'self' https://*"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "frame-src 'self'"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "frame-src https://*.example.com"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "default-src *"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "frame-src 'self'; frame-src *"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {}
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "csp-worker-src-wildcard",
+    "category": "csp-weakness",
+    "cwe": "CWE-693",
+    "severity": "MEDIUM",
+    "title": "Content-Security-Policy worker-src allows every origin",
+    "description": "The policy lets a Worker or SharedWorker script load from any origin (worker-src wildcard). A worker runs script outside the document, keeps the origin of the page that created it, and can outlive the view, so a foreign worker source is a script-execution path that survives navigation. The directive is read from its first declaration only.",
+    "remediation": "Name the worker script origins, for example worker-src 'self'. Serve worker scripts from the same origin as the page that creates them.",
+    "limitation": "One header value, first declaration of the directive only. worker-src falls back to child-src and script-src when absent, so this rule judges explicit declarations only.",
+    "scopeT": "One Content-Security-Policy value whose first worker-src declaration contains the wildcard or a scheme wildcard host.",
+    "fp": "Applications that legitimately load workers from a CDN can be reported; the observation cannot show which origins are intended.",
+    "recordDesc": "The policy allowed a worker script from any origin. A worker is script execution with the page origin, no DOM, and a lifetime that can exceed the page, which makes it a durable foothold for data collection. The finding is the unbounded worker origin list.",
+    "applicability": "HTML responses that carry a Content-Security-Policy.",
+    "risk": "Foreign script execution inside the page origin; MEDIUM severity.",
+    "why": "The first worker-src declaration contains a source that matches every origin.",
+    "fix": [
+      "Restrict worker-src to the application origin.",
+      "Serve worker scripts from the same host as the page."
+    ],
+    "verifyT": "Create a worker from a foreign origin in a test page and confirm the browser refuses it.",
+    "cells": [
+      {
+        "suffix": "worker-src",
+        "lang": "http",
+        "safe": "worker-src 'self'",
+        "check": {
+          "type": "response-header-matches",
+          "header": "Content-Security-Policy",
+          "valuePattern": "^(?:(?!worker-src(?=[\\s;]|$))[^;]*;\\s*)*worker-src(?=[\\s;]|$)[^;]*?(?<=\\s)(?:\\*|(?:https?|wss?)://\\*)(?=\\s|;|$)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "worker-src *"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "default-src 'self'; worker-src 'self' https://*"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "worker-src 'self'"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "worker-src https://*.example.com"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "default-src *"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "worker-src 'self'; worker-src *"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {}
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "csp-object-src-wildcard",
+    "category": "csp-weakness",
+    "cwe": "CWE-693",
+    "severity": "MEDIUM",
+    "title": "Content-Security-Policy object-src allows every origin",
+    "description": "The policy explicitly permits plugin content from any origin (object-src wildcard or scheme wildcard) while the rest of the policy is narrow. An object element loads its content with plugin semantics that modern browsers no longer sandbox consistently, so the restriction the policy otherwise imposes does not apply to it. The directive is read from its first declaration only.",
+    "remediation": "Set object-src 'none'. Object and embed elements are legacy plugin surfaces; an application that still needs one should name its single origin explicitly.",
+    "limitation": "One header value, first declaration of the directive only. It reports the wildcard permission, not whether an object element exists on the page.",
+    "scopeT": "One Content-Security-Policy value whose first object-src declaration contains the wildcard or a scheme wildcard host.",
+    "fp": "A legacy page that still embeds a same-origin plugin through a wildcard can be reported; the observation cannot tell which object content is intended.",
+    "recordDesc": "The policy let an object element load from anywhere. Object content is not ordinary markup: it is handed to a plugin or a nested browsing context with different isolation rules, and that is exactly the surface modern browsers have been retiring. The finding is the unbounded object origin list, in contrast to the rule that reports the directive being absent.",
+    "applicability": "HTML responses that carry a Content-Security-Policy.",
+    "risk": "Legacy plugin and object content from an untrusted origin; MEDIUM severity.",
+    "why": "The first object-src declaration contains a source that matches every origin.",
+    "fix": [
+      "Set object-src 'none'.",
+      "Remove object and embed elements that are no longer needed."
+    ],
+    "verifyT": "Add an object element pointing at a foreign origin and confirm the browser blocks it.",
+    "cells": [
+      {
+        "suffix": "object-src",
+        "lang": "http",
+        "safe": "object-src 'none'",
+        "check": {
+          "type": "response-header-matches",
+          "header": "Content-Security-Policy",
+          "valuePattern": "^(?:(?!object-src(?=[\\s;]|$))[^;]*;\\s*)*object-src(?=[\\s;]|$)[^;]*?(?<=\\s)(?:\\*|(?:https?|wss?)://\\*)(?=\\s|;|$)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "object-src *"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "default-src 'self'; object-src 'self' https://*"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "object-src 'self'"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "object-src https://*.example.com"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "default-src *"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "object-src 'self'; object-src *"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {}
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "csp-connect-src-plaintext",
+    "category": "transport-security",
+    "cwe": "CWE-319",
+    "severity": "MEDIUM",
+    "title": "Content-Security-Policy connect-src allows plaintext HTTP origins",
+    "description": "The policy permits the page to open fetch, XMLHttpRequest or WebSocket connections to plaintext http origins. Everything those connections carry - tokens, identifiers, personal data - is readable and modifiable on the path, and the page cannot tell that the answer was altered. The directive is read from its first declaration only.",
+    "remediation": "Permit only https: and wss: sources in connect-src, for example connect-src 'self' https://api.example wss://api.example. Redirect plaintext API hosts to TLS before changing the policy.",
+    "limitation": "One header value, first declaration of the directive only. The rule reads the declared source list; it cannot see which endpoints the page actually contacts.",
+    "scopeT": "One Content-Security-Policy value whose first connect-src declaration contains http: or an http:// host source.",
+    "fp": "A page that must talk to a same-host plaintext service during a migration can be reported; the observation cannot show whether that host is reachable only over the local network.",
+    "recordDesc": "The policy allowed a plaintext connection to a named origin. Unlike a missing header, this is an explicit permission: the application told the browser that cleartext data channels are acceptable. The finding is the permission, not a demonstrated interception.",
+    "applicability": "HTML responses that carry a Content-Security-Policy.",
+    "risk": "Credentials and response data readable on the path; MEDIUM severity.",
+    "why": "The first connect-src declaration contains http: or an http:// host source.",
+    "fix": [
+      "Replace http: with https: and ws: with wss:.",
+      "Keep an allow-list of the API hosts the page needs."
+    ],
+    "verifyT": "Open a test page and confirm a fetch to an http origin is blocked by the policy.",
+    "cells": [
+      {
+        "suffix": "connect-src",
+        "lang": "http",
+        "safe": "connect-src 'self' https://api.example",
+        "check": {
+          "type": "response-header-matches",
+          "header": "Content-Security-Policy",
+          "valuePattern": "^(?:(?!connect-src(?=[\\s;]|$))[^;]*;\\s*)*connect-src(?=[\\s;]|$)[^;]*?(?<=\\s)(?:http:|http://[^\\s;]+)(?=\\s|;|$)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "connect-src http:"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "default-src 'self'; connect-src 'self' http://api.example"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "connect-src 'self' https://api.example wss://api.example"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "connect-src 'self'"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "default-src http:"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "connect-src https://api.example; connect-src http:"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {}
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "csp-form-action-plaintext",
+    "category": "transport-security",
+    "cwe": "CWE-319",
+    "severity": "MEDIUM",
+    "title": "Content-Security-Policy form-action allows plaintext HTTP submissions",
+    "description": "The policy permits a form to submit to a plaintext http origin. Form posts are where credentials and personal data usually leave the page, and a cleartext destination publishes that payload to every intermediary on the path. The directive is read from its first declaration only.",
+    "remediation": "Permit only https: destinations in form-action, for example form-action 'self' https://pay.example. Serve the receiving endpoint over TLS before narrowing the policy.",
+    "limitation": "One header value, first declaration of the directive only. The rule cannot see which forms exist or what they submit.",
+    "scopeT": "One Content-Security-Policy value whose first form-action declaration contains http: or an http:// host source.",
+    "fp": "A form that intentionally posts to a plaintext host on a private network can be reported; the observation has no network-context evidence.",
+    "recordDesc": "The policy allowed a form submission to a plaintext origin. A form post is a deliberate transfer of user input; allowing it over cleartext means the application accepts that the transfer is readable. The finding is the permission.",
+    "applicability": "HTML responses that carry a Content-Security-Policy.",
+    "risk": "Credential and personal-data exposure on form submission; MEDIUM severity.",
+    "why": "The first form-action declaration contains http: or an http:// host source.",
+    "fix": [
+      "Restrict form-action to https: destinations.",
+      "Terminate TLS at the receiving endpoint."
+    ],
+    "verifyT": "Submit a test form to an http origin and confirm the browser blocks it.",
+    "cells": [
+      {
+        "suffix": "form-action",
+        "lang": "http",
+        "safe": "form-action 'self' https://pay.example",
+        "check": {
+          "type": "response-header-matches",
+          "header": "Content-Security-Policy",
+          "valuePattern": "^(?:(?!form-action(?=[\\s;]|$))[^;]*;\\s*)*form-action(?=[\\s;]|$)[^;]*?(?<=\\s)(?:http:|http://[^\\s;]+)(?=\\s|;|$)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "form-action http:"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "default-src 'self'; form-action 'self' http://api.example"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "form-action 'self' https://api.example wss://api.example"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "form-action 'self'"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "default-src http:"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "form-action https://api.example; form-action http:"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {}
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "csp-sandbox-escape",
+    "category": "csp-weakness",
+    "cwe": "CWE-693",
+    "severity": "MEDIUM",
+    "title": "Content-Security-Policy sandbox can remove itself",
+    "description": "The policy applies sandbox with both allow-scripts and allow-same-origin. A sandboxed document that can run script and is treated as same-origin with the embedding page can reach its own sandbox attribute and remove it, so the isolation the directive was meant to create does not hold. The directive is read from its first declaration only.",
+    "remediation": "Drop allow-same-origin from the sandbox token list, or serve the sandboxed content from a different origin. A document that needs both tokens should not be sandboxed at all, because the sandbox provides no boundary.",
+    "limitation": "One header value, first declaration of the directive only. The rule reports the token combination; it does not model what the framed document does with the escape.",
+    "scopeT": "One Content-Security-Policy value whose sandbox directive carries both allow-scripts and allow-same-origin in any order.",
+    "fp": "A page that sandboxes only its own static markup can be reported; the combination is still unsafe as a boundary between untrusted content and the origin.",
+    "recordDesc": "The policy sandboxed content while granting it script and same-origin treatment. Together those tokens let the framed document reach its own sandbox attribute and clear it, so the boundary exists only until the content chooses otherwise.",
+    "applicability": "HTML responses that carry a Content-Security-Policy with a sandbox directive.",
+    "risk": "Sandbox escape into the embedding origin; MEDIUM severity.",
+    "why": "The sandbox directive grants both allow-scripts and allow-same-origin.",
+    "fix": [
+      "Remove allow-same-origin from the token list.",
+      "Host sandboxed content on a separate origin."
+    ],
+    "verifyT": "Frame a test document with both tokens and confirm it can remove its own sandbox attribute.",
+    "cells": [
+      {
+        "suffix": "sandbox",
+        "lang": "http",
+        "safe": "sandbox allow-scripts",
+        "check": {
+          "type": "response-header-matches",
+          "header": "Content-Security-Policy",
+          "valuePattern": "(?:^|;)\\s*sandbox(?=[\\s;]|$)[^;]*?\\ballow-scripts\\b[^;]*?\\ballow-same-origin\\b|(?:^|;)\\s*sandbox(?=[\\s;]|$)[^;]*?\\ballow-same-origin\\b[^;]*?\\ballow-scripts\\b"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "sandbox allow-scripts allow-same-origin"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "default-src 'self'; sandbox allow-same-origin allow-scripts"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "sandbox allow-scripts"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "sandbox allow-same-origin"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "sandbox allow-forms allow-scripts"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "sandbox allow-scripts; sandbox allow-same-origin"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {}
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "xfo-invalid-value",
+    "category": "security-headers",
+    "cwe": "CWE-693",
+    "severity": "MEDIUM",
+    "title": "X-Frame-Options value is ignored by browsers",
+    "description": "The response carries X-Frame-Options with a value that is not DENY, SAMEORIGIN or ALLOW-FROM with a URI. Browsers discard an unrecognised value, so the framing protection the header appears to provide is absent and the page can be framed unless Content-Security-Policy frame-ancestors covers it.",
+    "remediation": "Send exactly DENY or SAMEORIGIN, and prefer Content-Security-Policy frame-ancestors for new deployments. Remove the header when frame-ancestors is already present and correct.",
+    "limitation": "One header value. The rule reports the ignored value; it does not read frame-ancestors, so a page that is protected by CSP is still reported here.",
+    "scopeT": "One X-Frame-Options value that is non-empty and does not match a defined value.",
+    "fp": "A page protected by a correct frame-ancestors policy is reported; the finding is the misleading header, not a demonstrated framing.",
+    "recordDesc": "The framing header carried a value browsers do not recognise. A header that looks like protection but parses to nothing is worse than an absent one, because review stops at its presence.",
+    "applicability": "Responses that set X-Frame-Options.",
+    "risk": "Clickjacking where the invalid header is the only framing control; MEDIUM severity.",
+    "why": "The value is not one of the defined X-Frame-Options values.",
+    "fix": [
+      "Use DENY or SAMEORIGIN exactly.",
+      "Prefer frame-ancestors and remove the legacy header."
+    ],
+    "verifyT": "Frame the response in a test page and confirm the browser allows it despite the header.",
+    "cells": [
+      {
+        "suffix": "xfo",
+        "lang": "http",
+        "safe": "DENY",
+        "check": {
+          "type": "response-header-matches",
+          "header": "X-Frame-Options",
+          "valuePattern": "^(?!\\s*$)(?!(?:deny|sameorigin)\\s*$)(?!allow-from\\s+\\S+\\s*$).+$"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "X-Frame-Options": "ALLOWALL"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "X-Frame-Options": "DENY, SAMEORIGIN"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "X-Frame-Options": "sameorigin "
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "X-Frame-Options": "ALLOW-FROM https://partner.example"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "X-Frame-Options": ""
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {}
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "refresh-plaintext",
+    "category": "transport-security",
+    "cwe": "CWE-319",
+    "severity": "MEDIUM",
+    "title": "Refresh header redirects to a plaintext URL",
+    "description": "The response instructs the browser to navigate to an http URL after a delay. The navigation is a fresh cleartext request, so anything the target carries - query tokens, cookies scoped to that host - is exposed on the path even though the current response was protected.",
+    "remediation": "Point the Refresh target at https, or replace Refresh with a 3xx redirect to an https URL. Prefer the Location header: it is the standard mechanism and this header is not required for compatibility.",
+    "limitation": "One Refresh value. The rule does not follow the navigation and cannot tell what the target serves.",
+    "scopeT": "One Refresh value whose url parameter begins with http://.",
+    "fp": "A deliberate navigation to a plaintext internal host is reported; the observation has no network-context evidence.",
+    "recordDesc": "A Refresh header sent the browser to a plaintext URL. The delay does not add protection: the second request is ordinary cleartext HTTP, and the first response being protected does not extend to it.",
+    "applicability": "Responses that use the Refresh header for navigation.",
+    "risk": "Second-hop credential and token exposure; MEDIUM severity.",
+    "why": "The Refresh url parameter begins with http://.",
+    "fix": [
+      "Change the target to https.",
+      "Use a 302 with a Location header instead."
+    ],
+    "verifyT": "Request the endpoint and confirm the Refresh target keeps the https scheme.",
+    "cells": [
+      {
+        "suffix": "refresh-http",
+        "lang": "http",
+        "safe": "0; url=https://app.example/home",
+        "check": {
+          "type": "response-header-matches",
+          "header": "Refresh",
+          "valuePattern": "\\burl\\s*=\\s*['\"]?http://"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Refresh": "0; url=http://app.example/home"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Refresh": "5; URL='http://app.example/home'"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Refresh": "0; url=https://app.example/home"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Refresh": "30"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Refresh": "0; url=/home"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {}
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "cors-plaintext-origin",
+    "category": "cors",
+    "cwe": "CWE-942",
+    "severity": "LOW",
+    "title": "CORS allows a plaintext HTTP origin",
+    "description": "Access-Control-Allow-Origin names a plaintext http origin. The policy admits a page that itself travels unencrypted, so anyone on the path can substitute script on that origin and read the response this policy shares with it. The rule reports the explicit plaintext origin, not a wildcard.",
+    "remediation": "Serve the calling application over HTTPS and list its https origin. If the http origin exists only to redirect, remove it from the CORS allow-list.",
+    "limitation": "One header value. The rule reads the origin in this response; it cannot tell whether the browser actually admits the caller.",
+    "scopeT": "One Access-Control-Allow-Origin value beginning with http://.",
+    "fp": "A policy that deliberately serves a plaintext intranet application is reported; the observation cannot establish network boundaries.",
+    "recordDesc": "A CORS policy named a plaintext origin. CORS decides which foreign pages may read this response; naming an http origin means the page that reads it can be modified in transit, and the read permission travels with it.",
+    "applicability": "APIs that answer cross-origin requests.",
+    "risk": "Cross-origin read permission granted to a transit-modifiable origin; LOW severity.",
+    "why": "The allowed origin begins with http://.",
+    "fix": [
+      "Move the caller to HTTPS.",
+      "List only https origins in the allow-list."
+    ],
+    "verifyT": "Send an Origin: http://... request and confirm the policy no longer echoes it.",
+    "cells": [
+      {
+        "suffix": "plaintext-origin",
+        "lang": "http",
+        "safe": "https://app.example",
+        "check": {
+          "type": "response-header-matches",
+          "header": "Access-Control-Allow-Origin",
+          "valuePattern": "^http://"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://api.example/",
+              "status": 200,
+              "headers": {
+                "Access-Control-Allow-Origin": "http://app.example"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://api.example/",
+              "status": 200,
+              "headers": {
+                "Access-Control-Allow-Origin": "http://app.example:8080"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://api.example/",
+              "status": 200,
+              "headers": {
+                "Access-Control-Allow-Origin": "https://app.example"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://api.example/",
+              "status": 200,
+              "headers": {
+                "Access-Control-Allow-Origin": "*"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://api.example/",
+              "status": 200,
+              "headers": {
+                "Access-Control-Allow-Origin": "null"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://api.example/",
+              "status": 200,
+              "headers": {}
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "spring-whitelabel",
+    "category": "debug-exposure",
+    "cwe": "CWE-209",
+    "severity": "MEDIUM",
+    "title": "Spring Boot Whitelabel error page disclosed",
+    "description": "The response is the Spring Boot default error page. It confirms the framework, exposes the exception type and the request path, and tells an attacker which endpoints exist before any authentication reasoning has to happen. The marker is the page heading that the default error controller renders.",
+    "remediation": "Replace server.error.whitelabel.enabled with a custom error page that returns a generic message and a correct status code. Keep exception details in server logs, not in the response body.",
+    "limitation": "Body marker check on one response. A custom page that reuses the default heading text can be reported; the rule cannot prove that the exception details are reachable.",
+    "scopeT": "One response body containing the Spring Boot default error heading.",
+    "fp": "A documentation page that quotes the heading can be reported; the rule cannot tell a rendered error page from quoted text.",
+    "recordDesc": "The application returned the framework's default error page. That page is designed for developers: it names the exception and the path, and it confirms the stack, which is the first fact an attacker needs to choose an exploit.",
+    "applicability": "Responses rendered by a Spring Boot application.",
+    "risk": "Framework and endpoint disclosure through error pages; MEDIUM severity.",
+    "why": "The body contains the Spring Boot default error heading.",
+    "fix": [
+      "Disable the whitelabel page.",
+      "Render a generic error document with the correct status code."
+    ],
+    "verifyT": "Request a missing endpoint and confirm the response no longer contains the default heading or exception type.",
+    "cells": [
+      {
+        "suffix": "whitelabel",
+        "lang": "http",
+        "safe": "a custom error page",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "Whitelabel Error Page"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/missing",
+              "status": 404,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8"
+              },
+              "body": "<html><body><h1>Whitelabel Error Page</h1><p>There was an unexpected error (type=Not Found, status=404).</p></body></html>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/api/missing",
+              "status": 404,
+              "headers": {},
+              "body": "{\"timestamp\":\"2026-01-01T00:00:00.000+00:00\",\"status\":404,\"error\":\"Not Found\",\"path\":\"/api/missing\"}"
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 404,
+              "headers": {},
+              "body": "<html><body><h1>404</h1><p>The page you requested could not be found.</p></body></html>"
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 500,
+              "headers": {},
+              "body": "Internal Server Error"
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 500,
+              "headers": {}
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "laravel-whoops",
+    "category": "debug-exposure",
+    "cwe": "CWE-209",
+    "severity": "MEDIUM",
+    "title": "Laravel Whoops error page disclosed",
+    "description": "The response is the Whoops error handler page that Laravel ships in debug mode. It prints the exception message, the file and line that raised it, and often a stack of application frames - a map of the codebase for anyone who can trigger an error.",
+    "remediation": "Set APP_DEBUG=false in production and render a generic error view. Keep the detailed handler for local development only.",
+    "limitation": "Body marker check on one response. A custom page that reproduces the marker can be reported; the rule cannot prove that the stack is readable.",
+    "scopeT": "One response body containing the Whoops error heading.",
+    "fp": "A page that reproduces the phrase as text can be reported; the rule cannot tell a rendered handler from quoted content.",
+    "recordDesc": "The application returned the Whoops debug handler. The page is built to show the exception, the source location and the call stack, which turns any reachable error into a source-disclosure primitive.",
+    "applicability": "Responses rendered by a PHP application using Whoops (Laravel and others).",
+    "risk": "Source path and stack disclosure through debug pages; MEDIUM severity.",
+    "why": "The body contains the Whoops error heading.",
+    "fix": [
+      "Disable debug mode in production.",
+      "Route errors to a generic view and a log."
+    ],
+    "verifyT": "Trigger a handled error and confirm the response no longer contains the handler heading.",
+    "cells": [
+      {
+        "suffix": "whoops",
+        "lang": "http",
+        "safe": "a generic error view",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "Whoops, looks like something went wrong"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/missing",
+              "status": 500,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8"
+              },
+              "body": "<html><head><title>Whoops, looks like something went wrong.</title></head><body>ErrorException in HomeController.php line 42</body></html>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {},
+              "body": "<p>Something went wrong. Please try again later.</p>"
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 500,
+              "headers": {},
+              "body": "{\"message\":\"Server Error\"}"
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 500,
+              "headers": {},
+              "body": "Whoops"
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 500,
+              "headers": {}
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-918",
+  "title": "SQL executed from a concatenated string in kotlin — review required",
+  "description": "SQLiteDatabase.execSQL runs a statement string with no parameter slot. Concatenating a request value into it makes the value part of the SQL grammar, so a quote or UNION changes the statement. The rule flags the concatenation; whether the value is attacker-controlled is a review decision.",
+  "severity": "HIGH",
+  "cwe": "CWE-89",
+  "category": "sql-injection",
+  "remediation": "Use execSQL with bindArgs placeholders, or move the write behind a Room DAO with typed parameters.",
+  "limitation": "Lexical: matches execSQL calls containing + concatenation on one line.",
+  "languages": [
+    "kotlin"
+  ],
+  "patterns": [
+    {
+      "source": "\\bexecSQL\\s*\\([^)\\n]*\\+"
+    }
+  ],
+  "tests": [
+    {
+      "line": "db.execSQL(\"UPDATE users SET name = '\" + name + \"'\")",
+      "match": true
+    },
+    {
+      "line": "# audit: db.execSQL(\"UPDATE users SET name = '\" + name + \"'\") present",
+      "match": true
+    },
+    {
+      "line": "db.execSQL(\"UPDATE users SET name = ?\", arrayOf(name))",
+      "match": false
+    },
+    {
+      "line": "# verified: db.execSQL(\"UPDATE users SET name = ?\", arrayOf(name))",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1101"
+  ]
+}

@@ -1,0 +1,290 @@
+[
+  {
+    "class": "tls-env-off",
+    "kind": "sast",
+    "category": "transport-security",
+    "cwe": "CWE-295",
+    "severity": "HIGH",
+    "framing": "flag",
+    "title": "Process-wide TLS verification off via {sink} ({lang}) \u2014 review required",
+    "description": "The {lang} environment assignment {sink} turns certificate verification off for every TLS client in the process. Verification is the only defence against an active interceptor presenting its own certificate. Remove it and fix the trust store instead ({safe}). This lexical rule flags the assignment.",
+    "remediation": "Delete the process-wide override, install the private CA in the trust store, and keep {safe}.",
+    "limitation": "Lexical, line-based: matches the assignment; an override used only by a throwaway local script is reviewed case by case.",
+    "scopeT": "Single-line lexical match on the process-wide TLS override in {lang}.",
+    "fp": "Offline development scripts that never reach a network are the documented exception.",
+    "recordDesc": "In {lang}, {sink} disables certificate verification for every outbound TLS connection in the process. Any on-path attacker can then present a self-signed certificate and read or modify the traffic, including credentials and tokens. Remove the override and trust the issuing CA ({safe}).",
+    "applicability": "{lang} processes that make outbound TLS connections; lexical scope.",
+    "risk": "Credential and data interception; HIGH severity.",
+    "why": "{sink} removes certificate verification.",
+    "fix": [
+      "Remove the override.",
+      "Install the private CA in the trust store and rely on {safe}."
+    ],
+    "verifyT": "Rescan shows no override and an integration test completes a verified handshake.",
+    "sinks": {
+      "javascript": [
+        "NODE_TLS_REJECT_UNAUTHORIZED\\s*=\\s*['\\\"]?0['\\\"]?(?![0-9])",
+        "process.env.NODE_TLS_REJECT_UNAUTHORIZED = \"0\";",
+        "process.env.NODE_TLS_REJECT_UNAUTHORIZED = \"1\";",
+        "NODE_EXTRA_CA_CERTS with the private CA"
+      ]
+    }
+  },
+  {
+    "class": "dom-html-assign",
+    "kind": "sast",
+    "category": "xss",
+    "cwe": "CWE-79",
+    "severity": "MEDIUM",
+    "framing": "flag",
+    "title": "Markup assigned through {sink} ({lang}) \u2014 review required",
+    "description": "The {lang} assignment {sink} replaces the element\u2019s markup by serializing the string as HTML, so any interpolated value becomes live nodes. When the value is text, use {safe}. This lexical rule flags the assignment and leaves provenance to review.",
+    "remediation": "Assign to {safe} for text, or sanitize the markup before the assignment.",
+    "limitation": "Lexical, line-based: matches the assignment; attacker control of the right-hand side is not proven.",
+    "scopeT": "Single-line lexical match on the markup assignment in {lang}.",
+    "fp": "Building a static, constant markup fragment is the accepted case.",
+    "recordDesc": "In {lang}, {sink} rewrites an element through the HTML parser. A value built from a query parameter, stored profile or API field therefore executes as markup in the page origin. Use {safe} for text, or sanitize the fragment before assigning it.",
+    "applicability": "{lang} browser code that renders composed strings; lexical scope.",
+    "risk": "Script execution in the victim origin; MEDIUM severity.",
+    "why": "{sink} assigns through the HTML parser.",
+    "fix": [
+      "Assign text with {safe}.",
+      "Sanitize markup with a maintained sanitizer before assignment."
+    ],
+    "verifyT": "Rescan shows no bare markup assignment on a user-influenced path.",
+    "sinks": {
+      "javascript": [
+        "\\.outerHTML\\s*=",
+        "panel.outerHTML = markup",
+        "panel.textContent = text",
+        "textContent assignment"
+      ]
+    }
+  },
+  {
+    "class": "android-webview",
+    "kind": "sast",
+    "category": "access-control",
+    "cwe": "CWE-749",
+    "severity": "MEDIUM",
+    "framing": "flag",
+    "title": "Permissive WebView capability enabled via {sink} ({fw}) \u2014 review required",
+    "description": "The {fw} setting {sink} widens what a WebView may do with loaded content: script execution, file access or universal access from file URLs. Combined with any navigable content these grants reach local files and native interfaces. Keep the setting disabled, or scope it to bundled assets ({safe}). This lexical rule flags the grant.",
+    "remediation": "Remove {sink}; keep the capability disabled or restrict it to bundled, non-attacker-controlled assets ({safe}).",
+    "limitation": "Lexical, line-based: matches the grant; whether the WebView ever loads untrusted content is reviewed separately.",
+    "scopeT": "Single-line lexical match on the WebView setting in {fw} source.",
+    "fp": "A WebView that only shows bundled offline help pages is the narrow accepted case.",
+    "recordDesc": "In {fw}, {sink} grants the WebView a capability that crosses a security boundary. JavaScript enabled over navigable content reaches native bridges, file access exposes local storage, and universal file-URL access removes the same-origin limit between a local page and the filesystem. Keep the grant disabled unless the content is bundled ({safe}).",
+    "applicability": "{fw} application code that configures WebView instances; lexical scope.",
+    "risk": "Local file disclosure and native bridge abuse; MEDIUM severity.",
+    "why": "{sink} widens the WebView boundary.",
+    "fix": [
+      "Remove {sink}.",
+      "If bundled content needs it, restrict navigation and keep {safe}."
+    ],
+    "verifyT": "Rescan shows the capability disabled or narrowly scoped.",
+    "sinks": {
+      "java": [
+        "setJavaScriptEnabled\\s*\\(\\s*true\\s*\\)",
+        "settings.setJavaScriptEnabled(true)",
+        "settings.setJavaScriptEnabled(false)",
+        "JavaScript disabled for navigable content"
+      ],
+      "java:file": [
+        "setAllowFileAccess\\s*\\(\\s*true\\s*\\)",
+        "settings.setAllowFileAccess(true)",
+        "settings.setAllowFileAccess(false)",
+        "file access disabled"
+      ],
+      "java:universal": [
+        "setAllowUniversalAccessFromFileURLs\\s*\\(\\s*true\\s*\\)",
+        "settings.setAllowUniversalAccessFromFileURLs(true)",
+        "settings.setAllowUniversalAccessFromFileURLs(false)",
+        "universal file access disabled"
+      ],
+      "kotlin": [
+        "javaScriptEnabled\\s*=\\s*true",
+        "webView.settings.javaScriptEnabled = true",
+        "webView.settings.javaScriptEnabled = false",
+        "JavaScript disabled for navigable content"
+      ]
+    }
+  },
+  {
+    "class": "gha-expression-injection",
+    "kind": "sast",
+    "category": "code-injection",
+    "cwe": "CWE-94",
+    "severity": "HIGH",
+    "framing": "flag",
+    "title": "Event data in a workflow expression via {sink} ({fw}) \u2014 review required",
+    "description": "The {fw} expression {sink} splices event fields into the workflow. Event fields are attacker-controlled text (issue titles, PR bodies, branch names), and an interpolated field is evaluated as part of the shell or action input, so a crafted title can inject commands. Pass the value through an environment variable instead ({safe}). This lexical rule flags the expression.",
+    "remediation": "Pass event data through env: and reference the variable in the script ({safe}); never interpolate event fields directly.",
+    "limitation": "Lexical, line-based: matches the expression wherever it appears, including non-shell inputs such as env: values, which are the safe pattern.",
+    "scopeT": "Single-line lexical match on an event-data expression in {fw} workflow files.",
+    "fp": "An expression assigned into env: (rather than a run: body) is the safe usage and the common accepted case.",
+    "recordDesc": "In {fw}, {sink} injects event fields into the workflow text. Values such as issue titles and branch names are controlled by whoever opens the issue or pull request, and the runner expands the expression before the shell sees it, so quoting does not help. Route the value through an environment variable ({safe}).",
+    "applicability": "{fw} workflow files under .github/workflows; single-line lexical scope.",
+    "risk": "Command execution on the runner with its token; HIGH severity.",
+    "why": "{sink} splices attacker-controlled event data into executable workflow text.",
+    "fix": [
+      "Move the field into env: and read the environment variable in the script ({safe}).",
+      "Restrict which events trigger privileged workflows."
+    ],
+    "verifyT": "Rescan shows no event-data expression on a run: line.",
+    "sinks": {
+      "yaml:github-actions": [
+        "\\$\\{\\{\\s*github\\.event\\.",
+        "run: echo \"${{ github.event.issue.title }}\"",
+        "run: echo \"${{ matrix.target }}\"",
+        "env: TITLE: ${{ github.event.issue.title }}",
+        [
+          {
+            "line": "run: echo \"${{ secrets.DEPLOY_TOKEN }}\"",
+            "match": false
+          },
+          {
+            "line": "env: TITLE: ${{ github.event.pull_request.title }}",
+            "match": true
+          }
+        ]
+      ]
+    }
+  },
+  {
+    "class": "k8s-sa-token",
+    "kind": "sast",
+    "category": "container-security",
+    "cwe": "CWE-284",
+    "severity": "MEDIUM",
+    "framing": "flag",
+    "title": "Service account token auto-mounted via {sink} ({fw}) \u2014 review required",
+    "description": "The Kubernetes setting {sink} mounts a service account token into every pod that uses the account. Any process in the container, including injected code, can then call the API server with that identity. Disable the mount unless the pod calls the API, and use a projected token with a short audience ({safe}). This lexical rule flags the setting.",
+    "remediation": "Set {sink} to false, or mount a projected token with a restricted audience and short expiry ({safe}).",
+    "limitation": "Lexical, line-based: matches the explicit true; an absent field inherits the namespace default and is not flagged.",
+    "scopeT": "Single-line lexical match on the pod or service account manifest.",
+    "fp": "Controllers that genuinely call the API server need a token and are the accepted case when scoped.",
+    "recordDesc": "With {sink} in effect, every container in the pod receives a bearer token for the service account. A dependency compromise or command injection therefore gains the account\u2019s RBAC rights without any further step. Disable the mount when the pod does not call the API, and prefer a projected token with a narrow audience ({safe}).",
+    "applicability": "Kubernetes pod, deployment and service account manifests; lexical scope.",
+    "risk": "API privilege escalation from a compromised container; MEDIUM severity.",
+    "why": "{sink} places a service account token in the container.",
+    "fix": [
+      "Disable automounting ({safe}).",
+      "Grant least privilege RBAC and project tokens only where needed."
+    ],
+    "verifyT": "Rescan shows automount disabled or a projected token.",
+    "sinks": {
+      "yaml:k8s": [
+        "automountServiceAccountToken\\s*:\\s*true",
+        "automountServiceAccountToken: true",
+        "automountServiceAccountToken: false",
+        "a projected token with a restricted audience"
+      ]
+    }
+  },
+  {
+    "class": "docker-arg-secret",
+    "kind": "sast",
+    "category": "container-security",
+    "cwe": "CWE-798",
+    "severity": "MEDIUM",
+    "framing": "flag",
+    "title": "Secret passed as a build argument via {sink} ({fw}) \u2014 review required",
+    "description": "The Dockerfile declaration {sink} accepts a credential-shaped value at build time. Build arguments are visible in the build history, in intermediate layers when expanded, and to anyone who can rebuild the image. Use BuildKit secret mounts instead ({safe}). This lexical rule flags the declaration.",
+    "remediation": "Remove {sink} and pass the value with a BuildKit secret mount ({safe}).",
+    "limitation": "Lexical, line-based: matches a credential-shaped argument name; whether a value is ever supplied is out of scope.",
+    "scopeT": "Single-line lexical match on ARG declarations in Dockerfiles.",
+    "fp": "A documented placeholder argument that is always overridden and never expanded is the accepted case.",
+    "recordDesc": "In a Dockerfile, {sink} declares a build argument whose name marks it as a credential. Values supplied to build arguments appear in image build metadata and can persist in cached layers, and any user who can trigger a rebuild can read them. Use a BuildKit secret mount and keep the value out of layers ({safe}).",
+    "applicability": "Dockerfiles and container build definitions; lexical scope.",
+    "risk": "Credential disclosure through image metadata and caches; MEDIUM severity.",
+    "why": "{sink} accepts a credential at build time.",
+    "fix": [
+      "Remove the credential argument.",
+      "Use a BuildKit secret mount ({safe}) and avoid expanding secrets into layers."
+    ],
+    "verifyT": "Rescan shows no credential-shaped ARG, and the build uses a secret mount.",
+    "sinks": {
+      "dockerfile": [
+        "ARG\\s+\\w*(?:PASSWORD|SECRET|TOKEN|KEY|CREDENTIAL|PASSPHRASE)",
+        "ARG DB_PASSWORD",
+        "ARG APP_VERSION",
+        "a BuildKit secret mount"
+      ]
+    }
+  },
+  {
+    "class": "openssl-legacy-cipher",
+    "kind": "sast",
+    "category": "weak-cryptography",
+    "cwe": "CWE-327",
+    "severity": "MEDIUM",
+    "framing": "flag",
+    "title": "Legacy cipher with {sink} ({fw}) \u2014 review required",
+    "description": "The command {sink} encrypts with the single DES family, whose 56-bit keys are exhaustible and whose block size is far below modern guidance. The cipher is broken regardless of the passphrase. Use an authenticated cipher with a real KDF ({safe}). This lexical rule flags the cipher flag.",
+    "remediation": "Re-encrypt with an authenticated cipher and a modern KDF ({safe}).",
+    "limitation": "Lexical, line-based: matches the cipher flag; data already encrypted under the old scheme needs a migration plan.",
+    "scopeT": "Single-line lexical match on an openssl enc invocation.",
+    "fp": "A command that only decrypts archived data during a one-off migration is the documented exception.",
+    "recordDesc": "In {fw} build or script text, {sink} selects a single DES family cipher. DES keys are short enough to brute force and the mode provides no integrity, so protected data is recoverable and tampering is silent. Re-encrypt with an authenticated cipher and passphrase KDF ({safe}).",
+    "applicability": "Dockerfiles and shell scripts that run openssl enc; lexical scope.",
+    "risk": "Recoverable ciphertext and undetected modification; MEDIUM severity.",
+    "why": "{sink} selects a broken cipher.",
+    "fix": [
+      "Replace the cipher with an AEAD choice ({safe}).",
+      "Re-encrypt existing artifacts and rotate the passphrase."
+    ],
+    "verifyT": "Rescan shows no DES-family flag and the new command decrypts in a test.",
+    "sinks": {
+      "dockerfile": [
+        "openssl\\s+enc\\b[^\\n]*\\s-des(?:3|-ede3)?\\b",
+        "RUN openssl enc -des -in app.tar -out app.enc",
+        "RUN openssl enc -aes-256-gcm -in app.tar -out app.enc",
+        "a modern authenticated cipher"
+      ],
+      "shell": [
+        "openssl\\s+enc\\b[^\\n]*\\s-des(?:3|-ede3)?\\b",
+        "openssl enc -des3 -in backup.tar -out backup.enc",
+        "openssl enc -aes-256-cbc -pbkdf2 -in backup.tar -out backup.enc",
+        "a modern authenticated cipher"
+      ]
+    }
+  },
+  {
+    "class": "java-random-ctor",
+    "kind": "sast",
+    "category": "weak-cryptography",
+    "cwe": "CWE-330",
+    "severity": "MEDIUM",
+    "framing": "flag",
+    "title": "Predictable generator via {sink} ({fw}) \u2014 review required",
+    "description": "The {fw} constructor {sink} builds a linear congruential generator seeded from the clock. Its output is predictable from a handful of observed values, so tokens, reset codes and salts drawn from it can be reproduced. Use a cryptographic generator ({safe}). This lexical rule flags the constructor.",
+    "remediation": "Use a cryptographic generator ({safe}) for every security value.",
+    "limitation": "Lexical, line-based: matches the constructor; statistical and simulation uses are reviewed case by case.",
+    "scopeT": "Single-line lexical match on the generator constructor in {fw} source.",
+    "fp": "Simulation, sampling and test data are the accepted false positives.",
+    "recordDesc": "In {fw}, {sink} creates a general-purpose generator seeded from the clock. The sequence is deterministic once the seed or a few outputs are known, so passwords, session identifiers and one-time codes derived from it can be predicted. Draw security values from {safe}.",
+    "applicability": "{fw} code that mints tokens, codes or salts; lexical scope.",
+    "risk": "Guessable security values; MEDIUM severity.",
+    "why": "{sink} is a predictable generator.",
+    "fix": [
+      "Replace {sink} with a cryptographic generator ({safe}).",
+      "Keep the general-purpose generator for non-security sampling only."
+    ],
+    "verifyT": "Rescan shows no predictable generator on a security path.",
+    "sinks": {
+      "java": [
+        "new\\s+Random\\s*\\(",
+        "new Random()",
+        "new SecureRandom()",
+        "SecureRandom"
+      ],
+      "kotlin": [
+        "\\bRandom\\s*\\(\\s*\\)",
+        "val rng = Random()",
+        "val rng = SecureRandom()",
+        "SecureRandom"
+      ]
+    }
+  }
+]

@@ -1,0 +1,95 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1171",
+  "title": "Signal: Content-Security-Policy connect-src allows plaintext HTTP origins",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-header-matches",
+      "header": "Content-Security-Policy",
+      "valuePattern": "^(?:(?!connect-src(?=[\\s;]|$))[^;]*;\\s*)*connect-src(?=[\\s;]|$)[^;]*?(?<=\\s)(?:http:|http://[^\\s;]+)(?=\\s|;|$)"
+    }
+  },
+  "scope": "One Content-Security-Policy value whose first connect-src declaration contains http: or an http:// host source.",
+  "limitations": "One header value, first declaration of the directive only. The rule reads the declared source list; it cannot see which endpoints the page actually contacts.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "connect-src http:"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src 'self'; connect-src 'self' http://api.example"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "connect-src 'self' https://api.example wss://api.example"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "connect-src 'self'"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src http:"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "connect-src https://api.example; connect-src http:"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {}
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A page that must talk to a same-host plaintext service during a migration can be reported; the observation cannot show whether that host is reachable only over the local network.",
+  "linkedRules": [
+    "DPK-DAST-102"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:csp-connect-src-plaintext:connect-src",
+  "validationStatus": "VALIDATED"
+}

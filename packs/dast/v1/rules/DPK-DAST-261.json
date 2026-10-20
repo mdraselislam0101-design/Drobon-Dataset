@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-261",
+  "title": "WordPress wp-config.php served",
+  "description": "The response is a WordPress configuration file: the database credential definitions together with the wp-settings.php bootstrap are the shape of wp-config.php. It holds the database password and the authentication salts in clear text.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Refuse requests for .php files that are not entry points, remove the file from any served directory, and rotate the database password and salts, because a served configuration must be treated as disclosed.",
+  "limitation": "One response body. The rule reports the configuration shape; it does not enumerate the values and cannot tell whether the credentials are still valid.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*DB_PASSWORD)(?=[\\s\\S]*wp\\-settings\\.php)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<?php define('DB_NAME','shop'); define('DB_USER','shop'); define('DB_PASSWORD','redacted-for-fixture'); define('DB_HOST','db'); require_once ABSPATH . 'wp-settings.php';"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<?php define('DB_PASSWORD', 'redacted-for-fixture'); $table_prefix = 'wp_'; require_once ABSPATH . 'wp-settings.php';"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<?php define('DB_NAME','shop'); define('DB_USER','shop'); define('','redacted-for-fixture'); define('DB_HOST','db'); require_once ABSPATH . '';"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<p>A guide: define( 'DB_PASSWORD', ... ) is read by wp-config.php.</p>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "<?php define( 'DB_PASSWORD',  'redacted-for-fixture' ); require_once ABSPATH . 'wp-settings.php';"
+      },
+      "match": true
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1330"
+  ]
+}

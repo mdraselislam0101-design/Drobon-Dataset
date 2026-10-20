@@ -1,0 +1,83 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1149",
+  "title": "Signal: Form submits to a plaintext HTTP action on an HTTPS page",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-body-matches",
+      "valuePattern": "<form\\b[^>]*\\saction\\s*=\\s*[\"']?\\s*http://",
+      "requireScheme": "https"
+    }
+  },
+  "scope": "One HTTPS response body: confirm a form action with a plaintext scheme.",
+  "limitations": "Observation-level: only observations fetched over HTTPS are judged. Subresource downloads are covered by the separate mixed-content rule.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://shop.example/checkout",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8"
+        },
+        "body": "<form action=\"http://pay.example/charge\" method=\"post\"><input name=\"card\"></form>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://shop.example/login",
+        "status": 200,
+        "headers": {},
+        "body": "<FORM METHOD=\"POST\" ACTION='HTTP://auth.example/session'>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://shop.example/checkout",
+        "status": 200,
+        "headers": {},
+        "body": "<form action=\"https://pay.example/charge\" method=\"post\"></form>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "http://shop.example/checkout",
+        "status": 200,
+        "headers": {},
+        "body": "<form action=\"http://pay.example/charge\" method=\"post\"></form>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://shop.example/checkout",
+        "status": 200,
+        "headers": {},
+        "body": "<form action=http://pay.example/charge method=post></form>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://shop.example/checkout",
+        "status": 200,
+        "headers": {},
+        "body": "<form action=https://pay.example/charge method=post></form>"
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A form posted to a plaintext endpoint that carries no sensitive fields is reported by design; the header-level check cannot classify field content.",
+  "linkedRules": [
+    "DPK-DAST-080"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:mixed-content-form:form-action",
+  "validationStatus": "VALIDATED"
+}

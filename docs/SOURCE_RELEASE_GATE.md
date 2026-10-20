@@ -82,8 +82,8 @@ directory).
 | GHSA seed (100 files) | YES | NO (lay review only) | 0 | BLOCKED (BLK-002, GATE-1/2/3) |
 | OSV | n/a (no records) | NO | 0 | BLOCKED |
 | NVD | n/a | NO | 0 | BLOCKED |
-| CWE knowledge (61) | YES | link-pinned | n/a | acknowledgment open |
-| Original (953 rules etc.) | YES | NO (no LICENSE) | n/a | BLOCKED (BLK-001) |
+| CWE knowledge (63) | YES | link-pinned | n/a | acknowledgment open |
+| Original (1,310 rules etc.) | YES | NO (no LICENSE) | n/a | BLOCKED (BLK-001) |
 
 No production corpus may be downloaded, normalized, published, or promoted
 until every applicable row above carries an explicit owner decision with

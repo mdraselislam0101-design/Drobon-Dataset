@@ -1,0 +1,467 @@
+[
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "python-asyncio-subprocess-shell",
+    "category": "command-injection",
+    "cwe": "CWE-78",
+    "severity": "HIGH",
+    "title": "Async subprocess started through a shell in {lang} — review required",
+    "description": "asyncio.create_subprocess_shell always runs its command through the shell. A value interpolated into the command string is parsed as shell syntax, so a semicolon or backtick appends commands. The rule flags the API; the exec variant is the argument-vector counterpart.",
+    "remediation": "Use asyncio.create_subprocess_exec with separate arguments and validate dynamic values.",
+    "limitation": "Lexical: matches create_subprocess_shell calls; the exec variant is not reported.",
+    "scopeT": "Single-line match on the shell subprocess API in {lang}.",
+    "fp": "A constant command with no interpolation is the accepted false positive.",
+    "recordDesc": "In {lang}, the shell variant of the async subprocess API is used. The name of the function states the property that makes it dangerous: the command is handed to a shell. Async code often builds the string from a request payload in the same coroutine that awaits the result.",
+    "applicability": "{lang} async services that call external programs.",
+    "risk": "Shell injection with service privileges; HIGH severity.",
+    "why": "The subprocess API is explicitly shell-based.",
+    "fix": [
+      "Use create_subprocess_exec.",
+      "Pass arguments separately."
+    ],
+    "verifyT": "A payload containing a pipe is treated as literal argument text.",
+    "sinks": {
+      "python": [
+        "\\basyncio\\.create_subprocess_shell\\s*\\(",
+        "proc = await asyncio.create_subprocess_shell(user_cmd)",
+        "proc = await asyncio.create_subprocess_exec(\"ls\", user_dir)",
+        "create_subprocess_exec with an argument list"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "swift-urlcredential-trust",
+    "category": "transport-security",
+    "cwe": "CWE-295",
+    "severity": "HIGH",
+    "title": "Server trust accepted from the challenge without evaluation in {lang} — review required",
+    "description": "A URLSession authentication challenge is answered with a credential built directly from challenge.serverTrust. The trust object has not been evaluated by the app, so any certificate chain is accepted, including one an on-path attacker generated. The rule flags the credential construction; whether a separate evaluation precedes it is a review decision.",
+    "remediation": "Evaluate the trust with SecTrustEvaluateWithError and complete the challenge only when the result is trusted.",
+    "limitation": "Lexical: matches the credential construction; a prior explicit evaluation in the same method is not linked.",
+    "scopeT": "Single-line match on trust-based credentials in {lang}.",
+    "fp": "A delegate that evaluates the trust immediately before this line is the accepted, reviewed exception.",
+    "recordDesc": "In {lang}, server trust is wrapped into a credential and handed back to the session. TLS certificate validation is an active step: the chain must be evaluated against a policy before the connection is accepted. Skipping that step keeps encryption but removes authentication.",
+    "applicability": "{lang} iOS apps with custom URLSession delegates.",
+    "risk": "Certificate substitution and traffic interception; HIGH severity.",
+    "why": "The peer chain is accepted without an evaluation result.",
+    "fix": [
+      "Evaluate with SecTrustEvaluateWithError.",
+      "Complete the challenge only when trusted."
+    ],
+    "verifyT": "A self-signed test server fails the challenge.",
+    "sinks": {
+      "swift": [
+        "URLCredential\\s*\\(\\s*trust\\s*:\\s*challenge\\.serverTrust",
+        "let credential = URLCredential(trust: challenge.serverTrust!)",
+        "guard SecTrustEvaluateWithError(challenge.serverTrust!, nil) else { completionHandler(.cancelAuthenticationChallenge, nil); return }",
+        "a trust evaluation before the credential"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "elixir-os-cmd",
+    "category": "command-injection",
+    "cwe": "CWE-78",
+    "severity": "HIGH",
+    "title": "Operating-system command executed through :os.cmd in {lang} — review required",
+    "description": ":os.cmd passes its charlist or string to the system shell. A value interpolated into it is parsed as shell syntax, so metacharacters append commands running with the BEAM node identity. The rule flags the call; whether the value is externally influenced is a review decision.",
+    "remediation": "Use System.cmd/3 with an argument list and validate dynamic values, or a port with an explicit executable.",
+    "limitation": "Lexical: matches :os.cmd calls; System.cmd with separate arguments is out of scope and is the safer form.",
+    "scopeT": "Single-line match on :os.cmd in {lang}.",
+    "fp": "Constant commands in release tooling are the accepted false positives.",
+    "recordDesc": "In {lang}, the Erlang shell helper is called directly. It always involves a shell, unlike System.cmd which accepts an argument list. Mixing the two in one codebase makes the risk profile inconsistent, and the shell form is the one that carries injection exposure.",
+    "applicability": "{lang} services and release scripts.",
+    "risk": "Shell injection with node privileges; HIGH severity.",
+    "why": "A command string is handed to the shell.",
+    "fix": [
+      "Use System.cmd with an argument list.",
+      "Allowlist dynamic values."
+    ],
+    "verifyT": "A payload with a semicolon is passed as literal argument text.",
+    "sinks": {
+      "elixir": [
+        ":os\\.cmd\\s*\\(",
+        "result = :os.cmd(~c\"convert #{file} out.png\")",
+        "result = System.cmd(\"convert\", [file, \"out.png\"])",
+        "System.cmd with an argument list"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "haskell-callcommand",
+    "category": "command-injection",
+    "cwe": "CWE-78",
+    "severity": "HIGH",
+    "title": "Shell command executed through callCommand or callShell in {lang} — review required",
+    "description": "System.Process.callCommand and callShell run a command through the system shell. A value concatenated into the string becomes shell syntax, so a separator appends commands running with the process identity. The rule flags the call; whether the string is externally influenced is a review decision.",
+    "remediation": "Use proc or callProcess with separate arguments so no shell is involved.",
+    "limitation": "Lexical: matches callCommand and callShell; callProcess is out of scope and is the safer form.",
+    "scopeT": "Single-line match on shell-based process calls in {lang}.",
+    "fp": "Constant commands in build tooling are the accepted false positives.",
+    "recordDesc": "In {lang}, a shell-based process helper is used. The Haskell process API distinguishes shell helpers from argument-based ones by name, which makes this pattern a precise signal. Once a request value reaches the string, the shell decides where commands begin.",
+    "applicability": "{lang} tooling and services that call external programs.",
+    "risk": "Shell injection with process privileges; HIGH severity.",
+    "why": "A command string reaches the shell.",
+    "fix": [
+      "Use proc with an argument list.",
+      "Allowlist dynamic values."
+    ],
+    "verifyT": "A metacharacter payload is passed as one literal argument.",
+    "sinks": {
+      "haskell": [
+        "\\bcall(?:Command|Shell)\\s*\\(",
+        "callCommand (\"convert \" ++ userFile ++ \" out.png\")",
+        "callProcess \"convert\" [userFile, \"out.png\"]",
+        "callProcess with separate arguments"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "zig-child-process-null-stdio",
+    "category": "command-injection",
+    "cwe": "CWE-78",
+    "severity": "MEDIUM",
+    "title": "Child process executed with a shell-free API but unvalidated program path in {lang} — review required",
+    "description": "std.process.Child is the language-native way to run a program. The API does not involve a shell, so the risk shifts to the program path and argument values: a path taken from input can select a different executable, and arguments are passed to whatever program is chosen. The rule flags the launch; whether any component is externally influenced is a review decision.",
+    "remediation": "Resolve the executable to an absolute path inside the application and validate every argument against an allowlist.",
+    "limitation": "Lexical: matches Child initialisation; whether the executable path is constant is a review question.",
+    "scopeT": "Single-line match on a child process launch in {lang}.",
+    "fp": "A fixed absolute path with constant arguments is the accepted false positive.",
+    "recordDesc": "In {lang}, a child process is prepared. Because no shell is involved, quoting is not the issue; instead the executable selection and the argument contents are. A program path built from configuration or input allows an attacker to choose what runs even without shell metacharacters.",
+    "applicability": "{lang} services and CLI tools that call external programs.",
+    "risk": "Execution of an unintended program or argument set; MEDIUM severity.",
+    "why": "A child process is launched from runtime values.",
+    "fix": [
+      "Use an absolute executable path.",
+      "Allowlist arguments."
+    ],
+    "verifyT": "A modified path fails the allowlist check before the spawn.",
+    "sinks": {
+      "zig": [
+        "\\bstd\\.process\\.Child\\b",
+        "var child = std.process.Child.init(argv, allocator);",
+        "const exe = \"/usr/bin/convert\"; try std.process.run(allocator, &.{exe, \"in.png\"});",
+        "an absolute executable with allowlisted arguments"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "v-os-exec",
+    "category": "command-injection",
+    "cwe": "CWE-78",
+    "severity": "HIGH",
+    "title": "Operating-system command executed from a runtime string in {lang} — review required",
+    "description": "os.exec and os.command run a command string through the shell. A value concatenated into the string is parsed as shell syntax and can append commands. The rule flags the call; whether the string is externally influenced is a review decision.",
+    "remediation": "Use os.exec with a fixed program and validated arguments, and never concatenate request text into the command.",
+    "limitation": "Lexical: matches os.exec calls; a constant command in tooling is still reported.",
+    "scopeT": "Single-line match on os.exec in {lang}.",
+    "fp": "Constant commands in build scripts are the accepted false positives.",
+    "recordDesc": "In {lang}, a shell command is executed. The standard library offers no automatic escaping, so the caller owns quoting and the shell owns parsing. String concatenation in V uses + and is easy to apply to a request value without noticing the boundary.",
+    "applicability": "{lang} services and tooling.",
+    "risk": "Shell injection with process privileges; HIGH severity.",
+    "why": "A command string is executed.",
+    "fix": [
+      "Use a fixed program path.",
+      "Validate arguments."
+    ],
+    "verifyT": "A semicolon payload is treated as literal text.",
+    "sinks": {
+      "v": [
+        "\\bos\\.exec\\s*\\(",
+        "os.exec(\"convert ${user_file} out.png\")",
+        "run_validated(\"convert\", [user_file, \"out.png\"])",
+        "a fixed program with validated arguments"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "cobol-call-system",
+    "category": "command-injection",
+    "cwe": "CWE-78",
+    "severity": "HIGH",
+    "title": "Operating-system command executed through CALL SYSTEM in {lang} — review required",
+    "description": "CALL \"SYSTEM\" hands a command line to the runtime shell. In batch programs the command line is often assembled from input files, so a crafted record can append commands executed with the job identity. The rule flags the call; whether the command text is externally influenced is a review decision.",
+    "remediation": "Replace the shell call with a native API or a fixed utility invoked with validated parameters.",
+    "limitation": "Lexical: matches CALL \"SYSTEM\" and CALL \"CBL_SYSTEM\"; the called command text is not evaluated.",
+    "scopeT": "Single-line match on CALL SYSTEM in {lang}.",
+    "fp": "A constant command in a one-off migration program is the accepted false positive.",
+    "recordDesc": "In {lang}, the program calls the runtime shell interface. Legacy batch code frequently builds the command from a record field, which means an attacker who controls an input record controls the command. These programs often run under a service identity with broad filesystem access.",
+    "applicability": "{lang} batch and migration programs.",
+    "risk": "Command execution with the job identity; HIGH severity.",
+    "why": "The program invokes the shell interface.",
+    "fix": [
+      "Use a native API.",
+      "Invoke a fixed utility with validated parameters."
+    ],
+    "verifyT": "A crafted input record cannot alter the executed command.",
+    "sinks": {
+      "cobol": [
+        "CALL\\s+['\"]CBL_SYSTEM['\"]|CALL\\s+['\"]SYSTEM['\"]",
+        "CALL 'SYSTEM' USING WS-COMMAND.",
+        "CALL 'CBL_OPEN_FILE' USING WS-FILE.",
+        "no shell interface call in the program"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "fortran-call-system",
+    "category": "command-injection",
+    "cwe": "CWE-78",
+    "severity": "HIGH",
+    "title": "Operating-system command executed through CALL SYSTEM in {lang} — review required",
+    "description": "CALL SYSTEM executes its character argument through the platform shell. A command assembled from input data therefore inherits shell parsing, and a separator in the data appends commands. The rule flags the call; whether the command text is externally influenced is a review decision.",
+    "remediation": "Use EXECUTE_COMMAND_LINE with wait and explicit arguments where available, or move the work into a controlled helper with validated parameters.",
+    "limitation": "Lexical: matches CALL SYSTEM; EXECUTE_COMMAND_LINE is out of scope.",
+    "scopeT": "Single-line match on CALL SYSTEM in {lang}.",
+    "fp": "A constant command in a build script is the accepted false positive.",
+    "recordDesc": "In {lang}, the program calls the shell. Scientific code often processes filenames from datasets, so the command string can contain text the author did not type. The shell interprets it, and the program usually runs with the analyst or service identity.",
+    "applicability": "{lang} analysis and simulation pipelines.",
+    "risk": "Command execution with the process identity; HIGH severity.",
+    "why": "A command string is passed to the shell.",
+    "fix": [
+      "Validate and quote every value.",
+      "Isolate shell work in a helper."
+    ],
+    "verifyT": "A filename containing a separator is handled as one literal path.",
+    "sinks": {
+      "fortran": [
+        "\\bCALL\\s+SYSTEM\\s*\\(",
+        "CALL SYSTEM(\"convert \" // TRIM(user_file) // \" out.png\")",
+        "CALL EXECUTE_COMMAND_LINE(\"convert in.png out.png\", WAIT=.TRUE.)",
+        "a validated command with no concatenated input"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "nginx-unlimited-body",
+    "category": "denial-of-service",
+    "cwe": "CWE-400",
+    "severity": "LOW",
+    "title": "Request body size limit disabled in the server configuration in {lang} — review required",
+    "description": "client_max_body_size 0 removes the request body limit. A single client can then stream an arbitrarily large upload until disk or memory is exhausted, and upstream timeouts are the only remaining bound. The rule flags the directive; whether the endpoint is authenticated is a review decision.",
+    "remediation": "Set a limit that matches the largest legitimate upload, and enforce it again at the application layer.",
+    "limitation": "Lexical: matches the literal 0; a limit inherited from a parent block is out of scope.",
+    "scopeT": "Single-line match on client_max_body_size 0 in {lang}.",
+    "fp": "A dedicated upload endpoint behind authentication and rate limiting is the accepted exception.",
+    "recordDesc": "In {lang}, the body limit is removed. nginx buffers or streams the body before the application sees it, so the limit is the first line of defence against oversized uploads. Setting it to zero is often a quick fix for a large file test and remains in the deployed configuration.",
+    "applicability": "{lang} web servers that accept uploads.",
+    "risk": "Resource exhaustion through oversized requests; LOW severity.",
+    "why": "The server accepts bodies of unbounded size.",
+    "fix": [
+      "Set a bounded client_max_body_size.",
+      "Enforce the limit in the application too."
+    ],
+    "verifyT": "An oversized upload is rejected with 413.",
+    "sinks": {
+      "nginx": [
+        "\\bclient_max_body_size\\s+0\\s*;",
+        "client_max_body_size 0;",
+        "client_max_body_size 10m;",
+        "a bounded body size"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "postgres-hba-any-address",
+    "category": "access-control",
+    "cwe": "CWE-284",
+    "severity": "MEDIUM",
+    "title": "Host-based authentication allows every address in {lang} — review required",
+    "description": "A pg_hba.conf entry with 0.0.0.0/0 accepts connections from any address, not just the application subnet. Combined with password authentication, that exposes the database to credential stuffing from the whole internet. The rule flags the entry; whether a firewall restricts reachability is a review decision.",
+    "remediation": "Restrict host entries to the exact application and administrator subnets, and require scram-sha-256 or certificate authentication.",
+    "limitation": "Lexical: matches one pg_hba line; actual reachability depends on network controls that the file cannot show.",
+    "scopeT": "Single-line match on an any-address host entry in {lang}.",
+    "fp": "A database reachable only through a private network with a documented topology is the accepted exception.",
+    "recordDesc": "In {lang}, authentication is offered to every address. pg_hba is the database-side gate, and 0.0.0.0/0 delegates the decision to whatever network path exists. The entry is usually added during a migration and never narrowed once the application subnet is known.",
+    "applicability": "{lang} clusters whose access rules are managed as configuration.",
+    "risk": "Database exposure to untrusted networks; MEDIUM severity.",
+    "why": "The authentication rule accepts any source address.",
+    "fix": [
+      "Restrict the entry to known subnets.",
+      "Require scram-sha-256 or client certificates."
+    ],
+    "verifyT": "A connection from an unlisted address is rejected before authentication.",
+    "sinks": {
+      "postgres": [
+        "\\bhost(?:ssl|nossl)?\\s+\\S+\\s+\\S+\\s+0\\.0\\.0\\.0/0",
+        "host    all             all             0.0.0.0/0               scram-sha-256",
+        "host    all             all             10.20.0.0/16            scram-sha-256",
+        "subnet-scoped host entries"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "postgres-ssl-off",
+    "category": "cleartext-transmission",
+    "cwe": "CWE-319",
+    "severity": "MEDIUM",
+    "title": "TLS disabled for client connections in {lang} — review required",
+    "description": "ssl = off makes the server refuse TLS, so client credentials and query results cross the network in clear text. Even inside a private network, that exposes traffic to any host on the same segment. The rule flags the setting; whether the network is trusted is a review decision.",
+    "remediation": "Set ssl = on with a valid certificate and require hostssl entries in pg_hba.conf.",
+    "limitation": "Lexical: matches the server setting; a client-side sslmode preference is out of scope.",
+    "scopeT": "Single-line match on ssl = off in {lang}.",
+    "fp": "A single-host development cluster bound to loopback is the accepted exception.",
+    "recordDesc": "In {lang}, TLS is disabled on the server. The setting overrides client requests, so even a client configured with sslmode=require fails or downgrades. Passwords sent during authentication are then visible to anything that can observe the connection.",
+    "applicability": "{lang} clusters configured through postgresql.conf.",
+    "risk": "Credential and data disclosure on the network path; MEDIUM severity.",
+    "why": "The server refuses encrypted connections.",
+    "fix": [
+      "Enable ssl with a valid certificate.",
+      "Require hostssl in pg_hba.conf."
+    ],
+    "verifyT": "A client connecting with sslmode=require succeeds and traffic is encrypted.",
+    "sinks": {
+      "postgres": [
+        "\\bssl\\s*=\\s*off\\b",
+        "ssl = off",
+        "ssl = on",
+        "ssl on with hostssl entries"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "sql-create-user-literal-password",
+    "category": "hardcoded-credential",
+    "cwe": "CWE-798",
+    "severity": "MEDIUM",
+    "title": "Database user created with a literal password in {lang} — review required",
+    "description": "CREATE USER or ALTER USER with an inline password literal stores a credential in the migration or bootstrap script. The value enters version control, backups and shell history, and it cannot be rotated without editing the script. The rule flags the literal; whether the account is a real login is a review decision.",
+    "remediation": "Create the account without a password, deliver the secret through an approved secret store, and rotate it out of band.",
+    "limitation": "Lexical: matches a quoted password literal; a password supplied through a variable is out of scope.",
+    "scopeT": "Single-line match on a literal user password in {lang}.",
+    "fp": "A documentation example with an obviously placeholder value in a comment is the accepted false positive.",
+    "recordDesc": "In {lang}, an account is created with a literal password. Credentials in DDL persist in migration history and are replicated to every environment where the script runs. Rotating them requires a code change and a deployment, which is exactly the friction that keeps compromised values alive.",
+    "applicability": "{lang} migrations and bootstrap scripts.",
+    "risk": "Long-lived credential exposure across environments; MEDIUM severity.",
+    "why": "A password is embedded in a schema statement.",
+    "fix": [
+      "Create the role without a password.",
+      "Set the secret through a secret manager."
+    ],
+    "verifyT": "The script contains no literal secret and the role authenticates with a rotated credential.",
+    "sinks": {
+      "sql": [
+        "\\b(?:CREATE|ALTER)\\s+USER\\b[^\\n;]*\\b(?:IDENTIFIED\\s+BY|PASSWORD)\\s+['\"]",
+        "CREATE USER app_user IDENTIFIED BY 'changeme';",
+        "CREATE USER app_user IDENTIFIED BY :secret;",
+        "a secret-manager-supplied password"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "html-script-mixed-content",
+    "category": "cleartext-transmission",
+    "cwe": "CWE-319",
+    "severity": "MEDIUM",
+    "title": "Script loaded over plaintext HTTP in {lang} — review required",
+    "description": "A script element points at an http:// URL. The browser fetches executable code over a channel an attacker can modify, and modern browsers block the load on an HTTPS page, which turns the tag into a broken dependency rather than a silent risk. The rule flags the literal URL; whether the page is served over HTTPS is a review decision.",
+    "remediation": "Load the script over https:// from the same origin or a pinned CDN, and add Subresource Integrity so the bytes are verified.",
+    "limitation": "Lexical: matches a literal http script source; script tags injected by JavaScript are out of scope.",
+    "scopeT": "Single-line match on an http script source in {lang}.",
+    "fp": "A local development page loading from localhost is the accepted exception.",
+    "recordDesc": "In {lang}, executable code is requested over plaintext. Script has full access to the document, so an injected response can read tokens, rewrite the page and exfiltrate data. Mixed-content blocking helps on HTTPS pages, but the tag still fails closed and older or non-browser consumers do not block it.",
+    "applicability": "{lang} templates that include third-party scripts.",
+    "risk": "Script substitution during transit; MEDIUM severity.",
+    "why": "A script is loaded over a cleartext scheme.",
+    "fix": [
+      "Use https for the script source.",
+      "Add Subresource Integrity."
+    ],
+    "verifyT": "The page loads the script over https with an integrity attribute that matches.",
+    "sinks": {
+      "html": [
+        "<script[^>]*\\bsrc\\s*=\\s*[\"']http://",
+        "<script src=\"http://cdn.example/lib.js\"></script>",
+        "<script src=\"https://cdn.example/lib.js\" integrity=\"sha384-abc\"></script>",
+        "https with Subresource Integrity"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "xml-doctype-external",
+    "category": "xml-external-entity",
+    "cwe": "CWE-611",
+    "severity": "MEDIUM",
+    "title": "XML document declares an external DTD in {lang} — review required",
+    "description": "A DOCTYPE with a SYSTEM identifier pointing at a remote URL makes any parser that resolves external subsets fetch that URL. The declaration is the XXE surface: it can pull internal addresses or load a DTD that defines further entities. The rule flags the declaration; whether the parser resolves it is a review decision.",
+    "remediation": "Remove external DTD references, or configure the parser to prohibit DTDs and external entities.",
+    "limitation": "Lexical: matches a literal http SYSTEM identifier; a file:// or relative SYSTEM id is out of scope.",
+    "scopeT": "Single-line match on a remote external DTD in {lang}.",
+    "fp": "A test fixture that documents the XXE shape is the accepted false positive.",
+    "recordDesc": "In {lang}, the document names a remote DTD. Parsers that resolve external subsets issue a request to the named URL, which is server-side request forgery driven by document content. Entity definitions inside the fetched DTD can then expand into local file contents.",
+    "applicability": "{lang} documents and templates parsed by services.",
+    "risk": "Server-side request and entity expansion during parsing; MEDIUM severity.",
+    "why": "The document requires an external resource to parse.",
+    "fix": [
+      "Remove the DOCTYPE.",
+      "Prohibit DTDs in the parser."
+    ],
+    "verifyT": "The parser rejects the document without making any network request.",
+    "sinks": {
+      "xml": [
+        "<!DOCTYPE[^>\\n]*SYSTEM\\s+[\"']https?://",
+        "<!DOCTYPE note SYSTEM \"http://example.internal/note.dtd\">",
+        "<!DOCTYPE note SYSTEM \"note.dtd\">",
+        "no external DTD and DTDs prohibited"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "js-cors-credentials",
+    "category": "access-control",
+    "cwe": "CWE-942",
+    "severity": "MEDIUM",
+    "title": "Cross-origin credentials enabled in {lang} — review required",
+    "description": "Access-Control-Allow-Credentials: true tells browsers that a cross-origin response may be read with cookies attached. It is safe only when the allowed origin is a fixed, trusted value; paired with a reflected or wildcard origin it exposes authenticated data. The rule flags the header value; whether the origin is fixed is a review decision.",
+    "remediation": "Send the header only for an explicit allowlist of origins, and never combine it with a wildcard.",
+    "limitation": "Lexical: matches the literal header value; the origin decision in another middleware is out of scope.",
+    "scopeT": "Single-line match on credentials-enabled CORS in {lang}.",
+    "fp": "An API that deliberately serves a fixed first-party frontend is the accepted exception.",
+    "recordDesc": "In {lang}, credentials are enabled for cross-origin responses. The browser will attach cookies and read the response, so the boundary between origins is now governed entirely by the allow-origin value. Middleware that reflects the request origin turns this into cross-site data theft.",
+    "applicability": "{lang} APIs consumed by browser clients.",
+    "risk": "Authenticated cross-origin data exposure; MEDIUM severity.",
+    "why": "The response permits credentialed cross-origin reads.",
+    "fix": [
+      "Allow only fixed origins.",
+      "Never reflect the request origin when credentials are enabled."
+    ],
+    "verifyT": "A request from an unlisted origin receives no allow-origin header.",
+    "sinks": {
+      "javascript": [
+        "Access-Control-Allow-Credentials['\"]?\\s*,\\s*['\"]true['\"]",
+        "res.setHeader('Access-Control-Allow-Credentials', 'true');",
+        "res.setHeader('Access-Control-Allow-Credentials', 'false');",
+        "a fixed origin allowlist with credentials"
+      ]
+    }
+  }
+]

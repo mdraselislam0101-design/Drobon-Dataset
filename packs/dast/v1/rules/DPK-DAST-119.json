@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-119",
+  "title": "Report-To names a plaintext endpoint",
+  "description": "The Report-To header is JSON that names reporting endpoints. One endpoint URL begins with http://, so CSP, NEL, deprecation and crash reports for this origin are posted in cleartext. DPK-DAST-043 reports a missing Report-To header; this rule reports a present header whose endpoint is unencrypted.",
+  "severity": "LOW",
+  "cwe": "CWE-319",
+  "category": "transport-security",
+  "remediation": "Serve every reporting endpoint over HTTPS and update the Report-To JSON. If the collector is internal, terminate TLS in front of it rather than posting across a plaintext hop.",
+  "limitation": "One header value, matched on the endpoint URL form. The rule does not parse the JSON, so it cannot rank groups or max_age, and it does not cover the Reporting-Endpoints header syntax.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Report-To",
+    "valuePattern": "\"url\"\\s*:\\s*\"http://"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Report-To": "{\"group\":\"default\",\"max_age\":60,\"endpoints\":[{\"url\":\"http://collector.example/r\"}]}"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Report-To": "{\"group\":\"default\",\"endpoints\":[{\"url\":\"HTTP://collector.example/r\"}]}"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Report-To": "{\"group\":\"default\",\"endpoints\":[{\"url\":\"https://collector.example/r\"}]}"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Report-To": "{\"group\":\"default\",\"max_age\":60}"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Reporting-Endpoints": "default=\"http://collector.example/r\""
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {}
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1188"
+  ]
+}

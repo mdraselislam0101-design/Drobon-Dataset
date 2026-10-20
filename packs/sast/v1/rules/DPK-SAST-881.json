@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-881",
+  "title": "Legacy cipher selected by name in ruby — review required",
+  "description": "OpenSSL::Cipher.new selects the cipher from a string. DES, 3DES, RC4, Blowfish and CAST5 are deprecated primitives with small keys or known structural weaknesses, and selecting one makes every message protected by it weaker regardless of key length. The rule flags the selection; whether the data is sensitive is a review decision.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-327",
+  "category": "weak-cryptography",
+  "remediation": "Select AES-256-GCM or ChaCha20-Poly1305 through the same API and rotate any data protected with a legacy cipher.",
+  "limitation": "Lexical: matches literal cipher names at the call site; names resolved from configuration are out of scope.",
+  "languages": [
+    "ruby"
+  ],
+  "patterns": [
+    {
+      "source": "\\b(?:OpenSSL::Cipher\\.new\\s*\\(\\s*[\"'](?:des|des3|rc4|bf|cast5))"
+    }
+  ],
+  "tests": [
+    {
+      "line": "cipher = OpenSSL::Cipher.new(\"des-cbc\")",
+      "match": true
+    },
+    {
+      "line": "# audit: cipher = OpenSSL::Cipher.new(\"des-cbc\") present",
+      "match": true
+    },
+    {
+      "line": "cipher = OpenSSL::Cipher.new(\"aes-256-gcm\")",
+      "match": false
+    },
+    {
+      "line": "# verified: cipher = OpenSSL::Cipher.new(\"aes-256-gcm\")",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1064"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-937",
+  "title": "Host-based authentication allows every address in postgres — review required",
+  "description": "A pg_hba.conf entry with 0.0.0.0/0 accepts connections from any address, not just the application subnet. Combined with password authentication, that exposes the database to credential stuffing from the whole internet. The rule flags the entry; whether a firewall restricts reachability is a review decision.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-284",
+  "category": "access-control",
+  "remediation": "Restrict host entries to the exact application and administrator subnets, and require scram-sha-256 or certificate authentication.",
+  "limitation": "Lexical: matches one pg_hba line; actual reachability depends on network controls that the file cannot show.",
+  "languages": [
+    "postgres"
+  ],
+  "patterns": [
+    {
+      "source": "\\bhost(?:ssl|nossl)?\\s+\\S+\\s+\\S+\\s+0\\.0\\.0\\.0/0"
+    }
+  ],
+  "tests": [
+    {
+      "line": "host    all             all             0.0.0.0/0               scram-sha-256",
+      "match": true
+    },
+    {
+      "line": "# audit: host    all             all             0.0.0.0/0               scram-sha-256 present",
+      "match": true
+    },
+    {
+      "line": "host    all             all             10.20.0.0/16            scram-sha-256",
+      "match": false
+    },
+    {
+      "line": "# verified: host    all             all             10.20.0.0/16            scram-sha-256",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1122"
+  ]
+}

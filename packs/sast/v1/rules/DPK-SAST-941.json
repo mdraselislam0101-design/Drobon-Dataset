@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-941",
+  "title": "Server trust accepted from the challenge without evaluation in swift — review required",
+  "description": "A URLSession authentication challenge is answered with a credential built directly from challenge.serverTrust. The trust object has not been evaluated by the app, so any certificate chain is accepted, including one an on-path attacker generated. The rule flags the credential construction; whether a separate evaluation precedes it is a review decision.",
+  "severity": "HIGH",
+  "cwe": "CWE-295",
+  "category": "transport-security",
+  "remediation": "Evaluate the trust with SecTrustEvaluateWithError and complete the challenge only when the result is trusted.",
+  "limitation": "Lexical: matches the credential construction; a prior explicit evaluation in the same method is not linked.",
+  "languages": [
+    "swift"
+  ],
+  "patterns": [
+    {
+      "source": "\\b(?:URLCredential\\s*\\(\\s*trust\\s*:\\s*challenge\\.serverTrust)"
+    }
+  ],
+  "tests": [
+    {
+      "line": "let credential = URLCredential(trust: challenge.serverTrust!)",
+      "match": true
+    },
+    {
+      "line": "# audit: let credential = URLCredential(trust: challenge.serverTrust!) present",
+      "match": true
+    },
+    {
+      "line": "guard SecTrustEvaluateWithError(challenge.serverTrust!, nil) else { completionHandler(.cancelAuthenticationChallenge, nil); return }",
+      "match": false
+    },
+    {
+      "line": "# verified: guard SecTrustEvaluateWithError(challenge.serverTrust!, nil) else { completionHandler(.cancelAuthenticationChallenge, nil); return }",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1126"
+  ]
+}

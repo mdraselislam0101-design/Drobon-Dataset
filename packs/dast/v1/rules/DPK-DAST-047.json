@@ -1,17 +1,17 @@
 {
   "schemaVersion": "drobon.pack.dast/v1",
   "id": "DPK-DAST-047",
-  "title": "Weak response control (COOP without same-origin)",
-  "description": "The response weakens a control: COOP without same-origin. Protocol-relative redirects, wildcard timing origins, and charset-less content types widen attacks. This check matches the weakness directly.",
+  "title": "Cross-Origin-Opener-Policy value without cross-origin isolation",
+  "description": "The response declares a Cross-Origin-Opener-Policy value that does not isolate the browsing context from its opener: `unsafe-none` (the default) or `same-origin-allow-popups` both keep opener access for some navigation, so a cross-origin page can retain a reference to this window.",
   "severity": "MEDIUM",
   "cwe": "CWE-693",
   "category": "security-headers",
-  "remediation": "Strengthen the control (same-origin).",
-  "limitation": "Header check: it cannot confirm exploitability.",
+  "remediation": "Immediate: send `Cross-Origin-Opener-Policy: same-origin` on application documents so a cross-origin opener cannot retain a handle to the window. Durable: set the header once for the whole application and review OAuth and payment popups, which need `same-origin-allow-popups` instead. Trade-off: `same-origin` severs the `window.opener` relationship some sign-in and checkout flows rely on, so choose the stricter value per route rather than globally.",
+  "limitation": "Value check on the COOP token. `same-origin` and `noopener-allow-popups` are isolation modes and are not reported; an empty value is not reported here because a missing or empty header is DPK-DAST-012. The explicit `unsafe-none` token is also reported by DPK-DAST-076, which asks the narrower question \"is the default opt-out spelled out?\"; both fire on that value by design, so read them together. The rule reads one response and cannot confirm that an opener relationship exists.",
   "check": {
-    "type": "response-header-missing-directive",
+    "type": "response-header-matches",
     "header": "Cross-Origin-Opener-Policy",
-    "directive": "same-origin"
+    "valuePattern": "^(?=.*\\S)(?![\\s\\S]*?(?:^|[\\s,;])(?:same-origin|noopener-allow-popups)(?=[\\s,;]|$))[\\s\\S]*$"
   },
   "tests": [
     {
@@ -53,6 +53,36 @@
         }
       },
       "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Cross-Origin-Opener-Policy": "noopener-allow-popups"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Cross-Origin-Opener-Policy": ""
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Cross-Origin-Opener-Policy": "bogus-value"
+        }
+      },
+      "match": true
     }
   ],
   "patternRefs": [

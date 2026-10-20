@@ -1,0 +1,81 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-266",
+  "title": "Content-Security-Policy declares a directive more than once",
+  "description": "The Content-Security-Policy value declares the same directive name twice, for example two `script-src` tokens. A browser applies the first occurrence and ignores the later one, so the list an author added second — often the tightened one — has no effect, and the effective policy is not the policy a reader sees.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-16",
+  "category": "csp-weakness",
+  "remediation": "Emit each directive once. Where a framework concatenates policies, build one directive per name and assert the result before shipping; a duplicate is a merge bug, not a policy choice.",
+  "limitation": "One header value. The rule reports a repeated directive name; it does not compute which of the two lists the browser applies, because that depends on the user agent and on the surrounding policy text.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Content-Security-Policy",
+    "valuePattern": "(?:^|;)\\s*(script-src|default-src|object-src|frame-ancestors|base-uri|form-action|connect-src|img-src|style-src|worker-src|frame-src|font-src|media-src|manifest-src)\\s(?=[\\s\\S]*;\\s*\\1\\s[^;]*)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self'; img-src 'self'; script-src 'none'"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src 'self'; default-src https:"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'self'; img-src 'self'"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'self'; style-src 'self'"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src 'self'; report-uri /csp?d=script-src; script-src 'self'"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src 'self'; script-src 'self'; connect-src 'self'"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1335"
+  ]
+}

@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1288",
+  "title": "Signal: Docker client configuration served",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-body-matches",
+      "valuePattern": "(?=[\\s\\S]*\"auths\"\\s*:)(?=[\\s\\S]*\"auth\"\\s*:)"
+    }
+  },
+  "scope": "One response whose body is a Docker client configuration with an auths object and a registry URL.",
+  "limitations": "One response body. The rule reports the configuration shape; it does not decode the auth values and cannot tell which registries are writable.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "{\"auths\":{\"https://index.docker.io/v1/\":{\"auth\":\"dXNlcjpwYXNzd29yZA==\",\"email\":\"ops@example.com\"}},\"credsStore\":\"desktop\"}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "{\"auths\":{\"registry.example.com\":{\"auth\":\"c2VydmljZTp0b2tlbg==\"}},\"HttpHeaders\":{\"User-Agent\":\"Docker-Client/24.0.7\"}}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "{{\"https://index.docker.io/v1/\":{\"dXNlcjpwYXNzd29yZA==\",\"email\":\"ops@example.com\"}},\"credsStore\":\"desktop\"}"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A JSON document that names the auths key without registry URLs is not reported; the registry URL is required.",
+  "linkedRules": [
+    "DPK-DAST-219"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:body-docker-config-json:docker-config-json",
+  "validationStatus": "VALIDATED"
+}

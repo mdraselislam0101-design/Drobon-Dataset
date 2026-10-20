@@ -1,17 +1,17 @@
 {
   "schemaVersion": "drobon.pack.dast/v1",
   "id": "DPK-DAST-046",
-  "title": "Weak response control (COEP without require-corp)",
-  "description": "The response weakens a control: COEP without require-corp. Protocol-relative redirects, wildcard timing origins, and charset-less content types widen attacks. This check matches the weakness directly.",
+  "title": "Cross-Origin-Embedder-Policy explicitly disables cross-origin isolation",
+  "description": "The response sets Cross-Origin-Embedder-Policy to unsafe-none, the value that disables cross-origin isolation. The rule reports the explicit opt-out only: credentialless is a valid isolation mode and is not reported, and a missing header is reported separately by DPK-DAST-012.",
   "severity": "MEDIUM",
   "cwe": "CWE-693",
   "category": "security-headers",
-  "remediation": "Strengthen the control (require-corp).",
-  "limitation": "Header check: it cannot confirm exploitability.",
+  "remediation": "Immediate: send `Cross-Origin-Embedder-Policy: require-corp` on documents that need cross-origin isolation, or `credentialless` where subresources cannot carry CORP headers. Durable: set it together with `Cross-Origin-Opener-Policy: same-origin`, and keep an inventory of every embedded origin so a new third-party widget is checked before it ships. Trade-off: cross-origin images, scripts and frames that do not opt in stop loading, which will break third-party embeds until they add CORP or CORS headers.",
+  "limitation": "Value check: flags the explicit unsafe-none value only. A missing header is a separate finding (DPK-DAST-012); credentialless is a valid isolation mode and is not reported.",
   "check": {
-    "type": "response-header-missing-directive",
+    "type": "response-header-matches",
     "header": "Cross-Origin-Embedder-Policy",
-    "directive": "require-corp"
+    "valuePattern": "^unsafe-none$"
   },
   "tests": [
     {
@@ -29,10 +29,20 @@
         "url": "https://app.example/",
         "status": 200,
         "headers": {
-          "Cross-Origin-Embedder-Policy": "credentialless"
+          "Cross-Origin-Embedder-Policy": "UNSAFE-NONE"
         }
       },
       "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Cross-Origin-Embedder-Policy": "credentialless"
+        }
+      },
+      "match": false
     },
     {
       "observation": {
@@ -46,11 +56,9 @@
     },
     {
       "observation": {
-        "url": "http://app.example/",
+        "url": "https://app.example/",
         "status": 200,
-        "headers": {
-          "Cross-Origin-Embedder-Policy": "require-corp"
-        }
+        "headers": {}
       },
       "match": false
     }

@@ -1,7 +1,8 @@
 # SEMANTIC_ANALYSIS_ASSESSMENT.md — Phase 6 Work C (2026-10-17)
 
 Scope: honest assessment of semantic-analysis capabilities for the DROBON
-Dataset workstream. This document is an assessment plus a dependency
+Dataset workstream. Inventory row counts refreshed 2026-10-18; the capability
+verdicts (no parser/AST/flow engine) are unchanged. This document is an assessment plus a dependency
 specification — it is **not** a claim that semantic analysis exists. All
 statements are backed by the current repository tree and its test suites.
 
@@ -9,10 +10,11 @@ statements are backed by the current repository tree and its test suites.
 
 | Layer | State | Evidence |
 |---|---|---|
-| Lexical detectors | **Implemented + verified** | 953 rules (`packs/*/v1/rules`) with executable pos/neg tests; `test-packs` 3,978/3,978 |
-| Line/observation evaluation | **Implemented + verified** (Phase 6) | `scripts/eval-foundation.mjs` + `data/eval-cases` (11 synthetic cases); `test-eval` 25/25 |
-| Evidence source-mapping | **Implemented + verified** (Phase 6, small milestone) | `scripts/finding-evidence.mjs` `extractEvidence` (line-range/excerpt/context computed from actual text); `test-finding-evidence` 24/24 |
+| Lexical detectors | **Implemented + verified** | 1310 rules (`packs/*/v1/rules`) with executable pos/neg tests; `test-packs` 5,422/5,422 (2026-10-20) |
+| Line/observation evaluation | **Implemented + verified** (Phase 6; breadth extended 2026-10-19) | `scripts/eval-foundation.mjs` + `data/eval-cases` (1,390 synthetic cases, 1,192 distinct rules in positive detections: 942 SAST / 97 secrets / 153 DAST); `test-eval` 43/43; breadth report `npm run eval:coverage` |
+| Evidence source-mapping | **Implemented + verified** (Phase 6, small milestone) | `scripts/finding-evidence.mjs` `extractEvidence` (line-range/excerpt/context computed from actual text); `test-finding-evidence` 31/31 |
 | Parser / AST | **NOT IMPLEMENTED** | no parser, grammar, or AST code anywhere in `scripts/`; no tests |
+| Header semantic models | **Implemented + verified** (2026-10-19) | `scripts/lib/csp.mjs` (policies/directives/source lists, fallback chain, first-wins duplicates) and `scripts/lib/set-cookie.mjs` (RFC 6265 attribute model, flag and SameSite resolution, and a storage decision that excludes refused cookies); differential gates `scripts/test-csp-semantics.mjs` 4,538/4,538 (incl. the multi-policy, keyword-case and duplicate-header limitation pins) and `scripts/test-cookie-semantics.mjs` 1,666/1,666 (incl. a cross-rule duplicate-finding suite) |
 | Control-flow graph | **NOT IMPLEMENTED** | no CFG code or tests |
 | Data-flow / taint tracking | **NOT IMPLEMENTED** | no taint code or tests; eval case EVAL-SAST-004 is explicitly `UNASSESSED` because of this |
 | Source/sink/sanitizer models | **NOT IMPLEMENTED** | rule pack is shape-level; sanitizers are not modelled (see FP/FN boundaries per rule `limitation` fields) |
@@ -62,7 +64,7 @@ for the Dataset workstream.
   shape match only; the rules' `limitation` fields already say so.
 
 ### 1.4 Source, sink and sanitizer models — SHAPES ONLY
-Sink vocabulary exists as rule titles/patterns (953 rules). Sanitizers are
+Sink vocabulary exists as rule titles/patterns (1200 rules). Sanitizers are
 not modeled; parameterized-query use is a documented negative fixture family
 (EVAL-SAST-002). Smallest milestone: a sanitizer declaration schema
 (`knowledge/sanitizers/`) + engine wiring — specified for the App workstream.

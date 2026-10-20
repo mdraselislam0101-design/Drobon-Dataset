@@ -1,0 +1,95 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1184",
+  "title": "Signal: Content-Security-Policy report-uri uses a plaintext endpoint",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-header-matches",
+      "header": "Content-Security-Policy",
+      "valuePattern": "^(?:(?!report-uri(?=[\\s;]|$))[^;]*;\\s*)*report-uri(?=[\\s;]|$)[^;]*?\\shttp://[^\\s;]+"
+    }
+  },
+  "scope": "One Content-Security-Policy value whose first report-uri declaration contains an http:// endpoint.",
+  "limitations": "First report-uri declaration only, matching the specification rule that later duplicates are ignored. It does not verify the endpoint is reachable, and it cannot see whether reports are actually sent.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src 'self'; report-uri http://collector.example/r"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "report-uri https://collector.example/r http://backup.example/r"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "report-uri https://collector.example/r"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "report-uri /local-collector"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "report-to http://collector.example"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "report-uri https://a.example; report-uri http://b.example"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {}
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A collector on a loopback or private address that is deliberately plaintext is reported; the observation cannot judge where the report travels.",
+  "linkedRules": [
+    "DPK-DAST-115"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:csp-report-uri-plaintext:report-uri",
+  "validationStatus": "VALIDATED"
+}

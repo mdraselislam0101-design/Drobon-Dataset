@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-082",
+  "title": "Ruby or Rails stack frame disclosed in a response",
+  "description": "The response body contains a Ruby backtrace line of the form path/file.rb:LINE:in. A framework that renders an unhandled exception in production hands an attacker the file layout, method names and library versions of the application. The check reports the disclosed frame; it does not claim the exception itself is exploitable.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-209",
+  "category": "debug-exposure",
+  "remediation": "Disable detailed exception rendering in production (config.consider_all_requests_local = false for Rails, or an equivalent handler) and return a generic error page with a correlation id.",
+  "limitation": "Observation-level: matches one Ruby backtrace frame in the captured body. A custom error page that echoes a single file path without the :in marker is not reported.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "\\b[\\w./-]+\\.rb:\\d+:in\\s"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/orders/42",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8"
+        },
+        "body": "<h1>We're sorry, but something went wrong.</h1><pre>app/controllers/orders_controller.rb:42:in `show'</pre>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/reports",
+        "status": 500,
+        "headers": {},
+        "body": "vendor/bundle/ruby/3.2.0/gems/actionpack-7.0.4/lib/action_controller/metal.rb:12:in `dispatch'"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/orders/42",
+        "status": 500,
+        "headers": {},
+        "body": "<p>Request failed. Reference 8f2c1a. Contact support.</p>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/health",
+        "status": 200,
+        "headers": {},
+        "body": "orders.rb loaded successfully"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1151"
+  ]
+}

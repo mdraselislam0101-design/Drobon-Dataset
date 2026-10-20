@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-101",
+  "title": "CORS allows a plaintext HTTP origin",
+  "description": "Access-Control-Allow-Origin names a plaintext http origin. The policy admits a page that itself travels unencrypted, so anyone on the path can substitute script on that origin and read the response this policy shares with it. The rule reports the explicit plaintext origin, not a wildcard.",
+  "severity": "LOW",
+  "cwe": "CWE-942",
+  "category": "cors",
+  "remediation": "Serve the calling application over HTTPS and list its https origin. If the http origin exists only to redirect, remove it from the CORS allow-list.",
+  "limitation": "One header value. The rule reads the origin in this response; it cannot tell whether the browser actually admits the caller.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Access-Control-Allow-Origin",
+    "valuePattern": "^http://"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://api.example/",
+        "status": 200,
+        "headers": {
+          "Access-Control-Allow-Origin": "http://app.example"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://api.example/",
+        "status": 200,
+        "headers": {
+          "Access-Control-Allow-Origin": "http://app.example:8080"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://api.example/",
+        "status": 200,
+        "headers": {
+          "Access-Control-Allow-Origin": "https://app.example"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://api.example/",
+        "status": 200,
+        "headers": {
+          "Access-Control-Allow-Origin": "*"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://api.example/",
+        "status": 200,
+        "headers": {
+          "Access-Control-Allow-Origin": "null"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://api.example/",
+        "status": 200,
+        "headers": {}
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1170"
+  ]
+}

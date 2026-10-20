@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-112",
+  "title": "X-Frame-Options value is ignored by browsers",
+  "description": "The response carries X-Frame-Options with a value that is not DENY, SAMEORIGIN or ALLOW-FROM with a URI. Browsers discard an unrecognised value, so the framing protection the header appears to provide is absent and the page can be framed unless Content-Security-Policy frame-ancestors covers it.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-693",
+  "category": "security-headers",
+  "remediation": "Send exactly DENY or SAMEORIGIN, and prefer Content-Security-Policy frame-ancestors for new deployments. Remove the header when frame-ancestors is already present and correct.",
+  "limitation": "One header value. The rule reports the ignored value; it does not read frame-ancestors, so a page that is protected by CSP is still reported here.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "X-Frame-Options",
+    "valuePattern": "^(?!\\s*$)(?!(?:deny|sameorigin)\\s*$)(?!allow-from\\s+\\S+\\s*$).+$"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "X-Frame-Options": "ALLOWALL"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "X-Frame-Options": "DENY, SAMEORIGIN"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "X-Frame-Options": "sameorigin "
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "X-Frame-Options": "ALLOW-FROM https://partner.example"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "X-Frame-Options": ""
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {}
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1181"
+  ]
+}

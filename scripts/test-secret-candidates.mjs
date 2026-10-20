@@ -256,7 +256,7 @@ assert(results.find((r) => r.id === 'SYN-CAND-012').result.reason === 'low-entro
   const noCtx = CASES.find((c) => c.id === 'SYN-CAND-013');
   const noCtxEval = evaluateSecretCandidate(noCtx.make(noCtx.value));
   assert(promoteCandidate(noCtx.make(noCtx.value), noCtxEval, { method: 'independent-rule-evidence', ruleId: 'DPK-SEC-106', evidencePath: 'a.py', evidenceLineNo: 1, matchedText: 'DB_', evidenceExcerpt: assignmentEvidence('…') }).findingState === 'UNRESOLVED',
-    'promotion: UNASSSED evaluation (no context) never reaches VERIFIED');
+    'promotion: UNASSESSED evaluation (no context) never reaches VERIFIED');
   // Determinism + leakage on failure paths and serialization.
   const a1 = JSON.stringify(R({ method: 'model-assertion' }));
   const a2 = JSON.stringify(R({ method: 'model-assertion' }));

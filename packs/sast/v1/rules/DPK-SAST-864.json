@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-864",
+  "title": "SQL statement executed through sqlite3_exec in c — review required",
+  "description": "sqlite3_exec compiles and runs a complete SQL string immediately. When that string is built with sprintf or strcat from request data, the value becomes SQL and can change the query or append another statement. The rule flags the call; whether the statement is assembled from input is a review decision.",
+  "severity": "HIGH",
+  "cwe": "CWE-89",
+  "category": "sql-injection",
+  "remediation": "Use sqlite3_prepare_v2 with ? placeholders and bind values with sqlite3_bind_*, and never format SQL with sprintf.",
+  "limitation": "Lexical: matches sqlite3_exec calls; statements passed in from another translation unit are out of scope.",
+  "languages": [
+    "c"
+  ],
+  "patterns": [
+    {
+      "source": "\\bsqlite3_exec\\s*\\("
+    }
+  ],
+  "tests": [
+    {
+      "line": "sqlite3_exec(db, sql, callback, NULL, &err);",
+      "match": true
+    },
+    {
+      "line": "# audit: sqlite3_exec(db, sql, callback, NULL, &err); present",
+      "match": true
+    },
+    {
+      "line": "sqlite3_prepare_v2(db, \"SELECT 1\", -1, &stmt, NULL);",
+      "match": false
+    },
+    {
+      "line": "# verified: sqlite3_prepare_v2(db, \"SELECT 1\", -1, &stmt, NULL);",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1047"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-866",
+  "title": "TLS verification disabled for a download during the image build in dockerfile — review required",
+  "description": "A RUN step invokes curl with -k or --insecure, so the build accepts any certificate for the downloaded content. The resulting image bakes in whatever the network returned, and no signature or checksum step is implied by the command. The rule flags the option; whether the URL is internal is a review decision.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-295",
+  "category": "transport-security",
+  "remediation": "Remove the verification bypass and validate a published checksum or signature for the downloaded artifact.",
+  "limitation": "Lexical: matches curl options on the RUN line; downloads performed by other tools are out of scope.",
+  "languages": [
+    "dockerfile"
+  ],
+  "patterns": [
+    {
+      "source": "\\bcurl\\s+(?:-[a-zA-Z]*k\\b|--insecure\\b)"
+    }
+  ],
+  "tests": [
+    {
+      "line": "RUN curl -k https://example.internal/install.sh | sh",
+      "match": true
+    },
+    {
+      "line": "# audit: RUN curl -k https://example.internal/install.sh | sh present",
+      "match": true
+    },
+    {
+      "line": "RUN curl -fsS https://example.internal/install.sh -o /tmp/install.sh",
+      "match": false
+    },
+    {
+      "line": "# verified: RUN curl -fsS https://example.internal/install.sh -o /tmp/install.sh",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1049"
+  ]
+}

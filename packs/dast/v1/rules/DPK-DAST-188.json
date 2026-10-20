@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-188",
+  "title": "Set-Cookie Max-Age is not a valid integer",
+  "description": "The Set-Cookie header carries a Max-Age attribute whose value is not a run of digits, so a user agent ignores the attribute entirely. The cookie then falls back to the Expires attribute or to session lifetime, which is rarely what the deployment intended and silently changes how long the credential survives.",
+  "severity": "LOW",
+  "cwe": "CWE-613",
+  "category": "cookie-flags",
+  "remediation": "Write Max-Age as a decimal number of seconds. If both Max-Age and Expires are sent, make them agree so no user agent has to choose between them.",
+  "limitation": "One header value. The rule validates the attribute token and never decides whether the cookie is a session cookie; a browser that ignores the attribute applies its own fallback, which the observation cannot show.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Set-Cookie",
+    "valuePattern": ";\\s*max-age\\s*=\\s*(?![0-9]+\\s*(?:;|$))[^;]*"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=one-hour"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age="
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=3600"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Path=/; Secure; HttpOnly; SameSite=Lax"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1257"
+  ]
+}

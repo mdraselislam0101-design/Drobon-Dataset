@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-230",
+  "title": "Kubernetes kubeconfig served",
+  "description": "The response is a Kubernetes kubeconfig: the clusters list with certificate-authority-data, and usually a user credential, is the document kubectl reads. A served kubeconfig carries both the API server address and the credential that authenticates to it.",
+  "severity": "HIGH",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Remove the file from the web root, revoke the embedded credential (delete the token secret or the client certificate), and issue short-lived credentials through a workload identity instead of a kubeconfig file.",
+  "limitation": "One response body. The rule reports the kubeconfig shape; it does not use the credential and cannot determine the role bound to it.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*certificate-authority-data)(?=[\\s\\S]*\"?clusters\"?\\s*:)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "apiVersion: v1\nkind: Config\nclusters:\n- cluster:\n    certificate-authority-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0t\n    server: https://k8s.internal:6443\n  name: prod\nusers:\n- name: deployer\n  user:\n    token: eyJhbGciOiJSUzI1NiIsImtpZCI6ImFiYw"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "{\"apiVersion\":\"v1\",\"kind\":\"Config\",\"clusters\":[{\"name\":\"staging\",\"cluster\":{\"server\":\"https://10.0.0.5:6443\",\"certificate-authority-data\":\"LS0tLS1CRUdJTi\"}}],\"users\":[{\"name\":\"ci\",\"user\":{\"client-certificate-data\":\"LS0tLS1CRUdJTi\"}}]}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "apiVersion: v1\nkind: Config\n\n- cluster:\n    : LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0t\n    server: https://k8s.internal:6443\n  name: prod\nusers:\n- name: deployer\n  user:\n    token: eyJhbGciOiJSUzI1NiIsImtpZCI6ImFiYw"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1299"
+  ]
+}

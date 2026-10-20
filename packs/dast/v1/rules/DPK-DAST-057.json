@@ -6,7 +6,7 @@
   "severity": "LOW",
   "cwe": "CWE-524",
   "category": "cache-control",
-  "remediation": "Send Cache-Control with no-store on responses that carry personal or session data (Cache-Control: no-store, max-age=0).",
+  "remediation": "Immediate: send `Cache-Control: no-store` on responses that carry personal, session or token data, and make sure the value is not overwritten by a CDN or framework default further down the stack. Durable: classify routes as cacheable or non-cacheable in one place and derive the header from that classification, so a new endpoint cannot ship without a policy. Trade-off: no-store prevents browser and intermediary caching, which costs bandwidth on pages that could otherwise be reused; scope it to the responses that actually carry the data.",
   "limitation": "Header check on every observed response: a page with no sensitive data fails it, and so does a response with no Cache-Control header at all. The scanner cannot tell which pages are sensitive.",
   "check": {
     "type": "response-header-missing-directive",
@@ -40,6 +40,26 @@
         "status": 200,
         "headers": {
           "Cache-Control": "no-store, max-age=0"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Cache-Control": "public, x-no-store"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Cache-Control": "NO-STORE"
         }
       },
       "match": false

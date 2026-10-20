@@ -10,13 +10,13 @@
     },
     "severity": "HIGH",
     "framing": "call",
-    "title": "Unbounded buffer call {sink} ({lang}) \u2014 review required",
+    "title": "Unbounded buffer call {sink} ({lang}) — review required",
     "description": "The {lang} call {sink} copies or allocates without a destination bound. Oversized input overflows into adjacent memory. This lexical rule flags the call; the reviewer confirms bounded use or replaces it with {safe}.",
     "remediation": "Replace with {safe}.",
     "limitation": "Lexical, line-based: any {sink} call matches.",
     "scopeT": "Single-line lexical match on the {sink} call in {lang} code.",
     "fp": "Fixed small inputs are the common false positive.",
-    "recordDesc": "In {lang}, {sink} trusts input size. The remedy is {safe}.",
+    "recordDesc": "In {lang}, {sink} copies or formats into a destination without a size bound, so input longer than that destination overwrites adjacent memory. The remedy is a bounded variant ({safe}) plus an explicit length check.",
     "applicability": "{lang} native code; single-line lexical scope.",
     "risk": "Memory corruption; HIGH severity.",
     "why": "{sink} copies without bounds in {lang}.",
@@ -46,7 +46,8 @@
         "mktemp",
         "mkstemp"
       ]
-    }
+    },
+    "sinkOverrides": {}
   },
   {
     "class": "buffer-flag",
@@ -55,13 +56,13 @@
     "cwe": "CWE-120",
     "severity": "HIGH",
     "framing": "flag",
-    "title": "Unbounded scanf conversion ({lang}) \u2014 review required",
+    "title": "Unbounded scanf conversion ({lang}) — review required",
     "description": "A {lang} scan uses an unbounded string conversion: {sink}. Input longer than the buffer overflows it. This lexical rule flags the conversion; the reviewer bounds it via {safe}.",
     "remediation": "Bound with {safe}.",
     "limitation": "Lexical, line-based: matches the conversion.",
     "scopeT": "Single-line lexical match on scanf conversions in {lang} code.",
     "fp": "Fixed-format input is the common false positive.",
-    "recordDesc": "In {lang}, {sink} scans without a width. The remedy is {safe}.",
+    "recordDesc": "In {lang}, {sink} reads a string without a width limit, so a long token overruns the destination buffer. The remedy is a conversion that carries a width ({safe}) and a check on the input length.",
     "applicability": "{lang} native code; single-line lexical scope.",
     "risk": "Stack or heap overflow; HIGH severity.",
     "why": "{lang} scans strings without width ({sink}).",
@@ -76,7 +77,8 @@
         "sscanf(b, \"%99s\", o)",
         "a %N width"
       ]
-    }
+    },
+    "sinkOverrides": {}
   },
   {
     "class": "priv-call",
@@ -89,7 +91,7 @@
     },
     "severity": "MEDIUM",
     "framing": "call",
-    "title": "Privilege or root change via {sink} ({lang}) \u2014 review required",
+    "title": "Privilege or root change via {sink} ({lang}) — review required",
     "description": "The {lang} call {sink} changes privilege or filesystem root. Mistakes lock in excessive power or an escapable jail. This lexical rule flags the call; the reviewer confirms the drop order and confinement via {safe}.",
     "remediation": "Confirm {safe}.",
     "limitation": "Lexical, line-based: any {sink} call matches.",
@@ -119,7 +121,8 @@
         "chroot",
         "chdir plus closed descriptors after chroot"
       ]
-    }
+    },
+    "sinkOverrides": {}
   },
   {
     "class": "umask-zero",
@@ -128,7 +131,7 @@
     "cwe": "CWE-732",
     "severity": "MEDIUM",
     "framing": "flag",
-    "title": "Umask cleared to zero ({lang}) \u2014 review required",
+    "title": "Umask cleared to zero ({lang}) — review required",
     "description": "The process clears its umask: {sink}. New files then keep group and world permissions. This lexical rule flags the clearing; the reviewer restores {safe}.",
     "remediation": "Restore {safe}.",
     "limitation": "Lexical, line-based: matches the clearing.",
@@ -173,7 +176,8 @@
         "umask 022",
         "a 022 or tighter mask"
       ]
-    }
+    },
+    "sinkOverrides": {}
   },
   {
     "class": "toctou",
@@ -186,7 +190,7 @@
     },
     "severity": "MEDIUM",
     "framing": "call",
-    "title": "Pre-check file access via {sink} ({lang}) \u2014 review required",
+    "title": "Pre-check file access via {sink} ({lang}) — review required",
     "description": "The {lang} call {sink} checks a file before use. An attacker swaps the file between check and use. This lexical rule flags the check; the reviewer opens atomically via {safe}.",
     "remediation": "Open atomically with {safe}.",
     "limitation": "Lexical, line-based: any {sink} call matches.",
@@ -211,7 +215,8 @@
         "os.access",
         "try-open plus handle errors"
       ]
-    }
+    },
+    "sinkOverrides": {}
   },
   {
     "class": "java-inject-call",
@@ -220,13 +225,13 @@
     "cwe": "CWE-95",
     "severity": "HIGH",
     "framing": "call",
-    "title": "Expression evaluation via {sink} ({lang}) \u2014 review required",
+    "title": "Expression evaluation via {sink} ({lang}) — review required",
     "description": "The {lang} call {sink} evaluates expressions. Untrusted input becomes code execution. This lexical rule flags the call; the reviewer confirms trust or removes it via {safe}.",
     "remediation": "Remove evaluation or use {safe}.",
     "limitation": "Lexical, line-based: any {sink} call matches.",
     "scopeT": "Single-line lexical match on the {sink} call in {lang} code.",
     "fp": "Fixed expressions are the common false positive.",
-    "recordDesc": "In {lang}, {sink} evaluates expressions. The remedy is {safe}.",
+    "recordDesc": "In {lang}, {sink} evaluates an expression supplied at runtime, which turns untrusted text into executable code inside the application process. The remedy is to remove evaluation and call the intended operation directly ({safe}).",
     "applicability": "{lang} expression evaluation; single-line lexical scope.",
     "risk": "Remote code execution; HIGH severity.",
     "why": "{sink} evaluates expressions in {lang}.",
@@ -245,7 +250,8 @@
         "MVEL.eval",
         "fixed expressions"
       ]
-    }
+    },
+    "sinkOverrides": {}
   },
   {
     "class": "java-inject-flag",
@@ -254,13 +260,13 @@
     "cwe": "CWE-95",
     "severity": "HIGH",
     "framing": "flag",
-    "title": "Script evaluation ({fw}) \u2014 review required",
+    "title": "Script evaluation ({fw}) — review required",
     "description": "A {fw} engine evaluates a string: {sink}. Untrusted input becomes code execution. This lexical rule flags the evaluation; the reviewer confirms trust or removes it via {safe}.",
     "remediation": "Remove evaluation or use {safe}.",
     "limitation": "Lexical, line-based: matches the evaluation.",
     "scopeT": "Single-line lexical match on script evaluation ({fw}).",
     "fp": "Fixed scripts are the common false positive.",
-    "recordDesc": "In {fw}, {sink} evaluates strings. The remedy is {safe}.",
+    "recordDesc": "In {fw}, {sink} evaluates a string as a script, so any value the attacker can place in that string runs with the application's privileges. The remedy is to eliminate string evaluation and dispatch on a fixed set of operations ({safe}).",
     "applicability": "{fw} scripting; single-line lexical scope.",
     "risk": "Remote code execution; HIGH severity.",
     "why": "{fw} evaluates strings ({sink}).",
@@ -287,7 +293,8 @@
         "engine.get(expr)",
         "fixed scripts"
       ]
-    }
+    },
+    "sinkOverrides": {}
   },
   {
     "class": "java-deser-more",
@@ -296,13 +303,13 @@
     "cwe": "CWE-502",
     "severity": "HIGH",
     "framing": "call",
-    "title": "Unsafe decoding via {sink} ({lang}) \u2014 review required",
+    "title": "Unsafe decoding via {sink} ({lang}) — review required",
     "description": "The {lang} call {sink} rebuilds objects from bytes. Hostile input instantiates gadget chains. This lexical rule flags the call; the reviewer confirms trust or hardens via {safe}.",
     "remediation": "Harden with {safe}.",
     "limitation": "Lexical, line-based: any {sink} call matches.",
     "scopeT": "Single-line lexical match on the {sink} call in {lang} code.",
     "fp": "Trusted local data is the common false positive.",
-    "recordDesc": "In {lang}, {sink} decodes objects. The remedy is {safe}.",
+    "recordDesc": "In {lang}, {sink} rebuilds objects from a byte stream, so a crafted stream can instantiate classes the author never intended to expose. The remedy is to accept only a constrained format with an allowlist ({safe}).",
     "applicability": "{lang} decoding; single-line lexical scope.",
     "risk": "Deserialization gadgets; HIGH severity.",
     "why": "{sink} decodes objects in {lang}.",
@@ -331,7 +338,8 @@
         "SchemaFactory.newInstance",
         "secure processing plus no external access"
       ]
-    }
+    },
+    "sinkOverrides": {}
   },
   {
     "class": "java-deser-flag",
@@ -340,7 +348,7 @@
     "cwe": "CWE-502",
     "severity": "HIGH",
     "framing": "flag",
-    "title": "SnakeYAML unsafe load ({lang}) \u2014 review required",
+    "title": "SnakeYAML unsafe load ({lang}) — review required",
     "description": "SnakeYAML loads untrusted documents: {sink}. Unsafe constructors instantiate arbitrary classes. This lexical rule flags the load; the reviewer confirms trust or uses {safe}.",
     "remediation": "Use {safe}.",
     "limitation": "Lexical, line-based: matches the load.",
@@ -361,7 +369,8 @@
         "new Yaml(safe).load(doc)",
         "SafeConstructor"
       ]
-    }
+    },
+    "sinkOverrides": {}
   },
   {
     "class": "java-tls-more",
@@ -370,7 +379,7 @@
     "cwe": "CWE-295",
     "severity": "HIGH",
     "framing": "flag",
-    "title": "TLS trust weakened ({fw}) \u2014 review required",
+    "title": "TLS trust weakened ({fw}) — review required",
     "description": "TLS trust is weakened: {sink} ({fw}). Disabled checks and fixed secrets let attackers impersonate servers or authenticate. This lexical rule flags the weakness; the reviewer restores {safe}.",
     "remediation": "Restore {safe}.",
     "limitation": "Lexical, line-based: matches the weakness.",
@@ -392,7 +401,7 @@
         "real chain validation"
       ],
       "java:rmi": [
-        "RMIClassLoader",
+        "\\b(?:RMIClassLoader)",
         "RMIClassLoader.loadClass(url, name)",
         "Class.forName(name)",
         "disabled codebase downloading"
@@ -421,7 +430,8 @@
         "ks.load(in, pw)",
         "a managed password"
       ]
-    }
+    },
+    "sinkOverrides": {}
   },
   {
     "class": "python-net-plain",
@@ -430,13 +440,13 @@
     "cwe": "CWE-319",
     "severity": "MEDIUM",
     "framing": "flag",
-    "title": "Cleartext protocol client ({fw}) \u2014 review required",
+    "title": "Cleartext protocol client ({fw}) — review required",
     "description": "Code uses a cleartext client: {sink} ({fw}). Credentials and data travel unencrypted. This lexical rule flags the client; the reviewer migrates to {safe}.",
     "remediation": "Migrate to {safe}.",
     "limitation": "Lexical, line-based: matches the client.",
     "scopeT": "Single-line lexical match on cleartext clients ({fw}).",
     "fp": "Loopback use is the common accepted case.",
-    "recordDesc": "With {sink}, {fw} sends data unencrypted. The remedy is {safe}.",
+    "recordDesc": "With {sink}, {fw} opens a cleartext connection, so credentials and payloads cross the network readable to anyone on the path. The remedy is a TLS-wrapped client ({safe}) with certificate verification enabled.",
     "applicability": "{fw} clients; single-line lexical scope.",
     "risk": "Credential and data theft; MEDIUM severity.",
     "why": "{fw} uses cleartext ({sink}).",
@@ -487,7 +497,8 @@
         "ServerProxy(\"https://h/x\")",
         "https endpoints"
       ]
-    }
+    },
+    "sinkOverrides": {}
   },
   {
     "class": "python-dyn-more",
@@ -496,13 +507,13 @@
     "cwe": "CWE-95",
     "severity": "HIGH",
     "framing": "call",
-    "title": "Dynamic execution via {sink} ({lang}) \u2014 review required",
+    "title": "Dynamic execution via {sink} ({lang}) — review required",
     "description": "The {lang} call {sink} runs commands, code, or native libraries. Untrusted input becomes execution. This lexical rule flags the call; the reviewer confirms trust or replaces it with {safe}.",
     "remediation": "Replace with {safe}.",
     "limitation": "Lexical, line-based: any {sink} call matches.",
     "scopeT": "Single-line lexical match on the {sink} call in {lang} code.",
     "fp": "Trusted tooling is the common false positive.",
-    "recordDesc": "In {lang}, {sink} executes dynamically. The remedy is {safe}.",
+    "recordDesc": "In {lang}, {sink} executes a command, expression or native library chosen at runtime, so a value reaching it becomes code in the process. The remedy is a fixed call path with argument passing ({safe}).",
     "applicability": "{lang} dynamic execution; single-line lexical scope.",
     "risk": "Command or code execution; HIGH severity.",
     "why": "{sink} executes dynamically in {lang}.",
@@ -522,7 +533,7 @@
         "subprocess with an args list"
       ],
       "python:compile": [
-        "compile",
+        "(?<!\\.)\\bcompile",
         "compile",
         "fixed code paths"
       ],
@@ -546,7 +557,8 @@
         "os.popen",
         "subprocess with an args list"
       ]
-    }
+    },
+    "sinkOverrides": {}
   },
   {
     "class": "php-call",
@@ -555,13 +567,13 @@
     "cwe": "CWE-95",
     "severity": "HIGH",
     "framing": "call",
-    "title": "Dangerous function {sink} ({lang}) \u2014 review required",
+    "title": "Dangerous function {sink} ({lang}) — review required",
     "description": "The {lang} call {sink} evaluates code, invokes by name, or uses a removed database extension. Untrusted input becomes execution or failure. This lexical rule flags the call; the reviewer removes it via {safe}.",
     "remediation": "Remove or use {safe}.",
     "limitation": "Lexical, line-based: any {sink} call matches.",
     "scopeT": "Single-line lexical match on the {sink} call in {lang} code.",
     "fp": "Legacy shims are the common false positive.",
-    "recordDesc": "In {lang}, {sink} is dangerous or removed. The remedy is {safe}.",
+    "recordDesc": "In {lang}, {sink} evaluates code, dispatches by name or depends on a removed extension, so a runtime value decides what executes. The remedy is to delete the dynamic evaluation and call the concrete function ({safe}).",
     "applicability": "{lang} code; single-line lexical scope.",
     "risk": "Code execution or breakage; HIGH severity.",
     "why": "{sink} is dangerous in {lang}.",
@@ -590,7 +602,8 @@
         "mcrypt_encrypt",
         "openssl with an AEAD mode"
       ]
-    }
+    },
+    "sinkOverrides": {}
   },
   {
     "class": "php-flag",
@@ -599,7 +612,7 @@
     "cwe": "CWE-95",
     "severity": "HIGH",
     "framing": "flag",
-    "title": "Dangerous PHP construct ({fw}) \u2014 review required",
+    "title": "Dangerous PHP construct ({fw}) — review required",
     "description": "PHP evaluates or includes dynamically: {sink} ({fw}). Backticks run shells, variable includes load attacker paths, extract and parse_str overwrite variables, and /e evaluates replacements. This lexical rule flags the construct; the reviewer removes it via {safe}.",
     "remediation": "Remove or use {safe}.",
     "limitation": "Lexical, line-based: matches the construct.",
@@ -650,7 +663,8 @@
         "assert($x == 1)",
         "boolean assertions"
       ]
-    }
+    },
+    "sinkOverrides": {}
   },
   {
     "class": "php-misc",
@@ -659,7 +673,7 @@
     "cwe": "CWE-327",
     "severity": "MEDIUM",
     "framing": "flag",
-    "title": "Weak PHP crypto or diagnostics ({fw}) \u2014 review required",
+    "title": "Weak PHP crypto or diagnostics ({fw}) — review required",
     "description": "PHP weakens crypto or diagnostics: {sink} ({fw}). ECB leaks patterns, low bcrypt cost speeds guessing, silenced errors hide attacks, and register_globals resurrects variable injection. This lexical rule flags the setting; the reviewer hardens via {safe}.",
     "remediation": "Harden with {safe}.",
     "limitation": "Lexical, line-based: matches the setting.",
@@ -704,6 +718,28 @@
         "$pdo->query($fixed)",
         "prepared statements"
       ]
+    },
+    "sinkOverrides": {
+      "php:ecb": {
+        "recordDesc": "AES in ECB mode encrypts identical plaintext blocks into identical ciphertext blocks and adds no integrity check.",
+        "risk": "A reader of the ciphertext sees repetition and block structure, and can splice blocks without detection; MEDIUM because the attacker first needs the stored data."
+      },
+      "php:cost": {
+        "recordDesc": "bcrypt with a cost parameter of 4 runs the key-derivation function 256 times, which a GPU exhausts quickly.",
+        "risk": "A stolen hash dump is cracked at billions of guesses per second, so the dump becomes plaintext passwords; MEDIUM because it needs prior disclosure of the hashes."
+      },
+      "php:erroff": {
+        "recordDesc": "error_reporting(0) suppresses notices, warnings and fatals before they reach the error log.",
+        "risk": "Failures and hostile requests leave no record, so incident review loses the only trace of what the application did; MEDIUM because the setting itself exposes nothing."
+      },
+      "php:regglobals": {
+        "recordDesc": "register_globals = On turns request parameters into PHP variables in every script scope.",
+        "risk": "A request can overwrite variables the script never meant to expose, which turns a query string into control flow; MEDIUM."
+      },
+      "php:pdo": {
+        "recordDesc": "$pdo->query interpolates the statement string instead of binding parameters, so the value becomes SQL syntax.",
+        "risk": "A request value that reaches the interpolated fragment reads other rows or drops tables; MEDIUM because exploitation depends on where the string is built."
+      }
     }
   },
   {
@@ -713,13 +749,13 @@
     "cwe": "CWE-95",
     "severity": "HIGH",
     "framing": "call",
-    "title": "Dynamic evaluation via {sink} ({lang}) \u2014 review required",
+    "title": "Dynamic evaluation via {sink} ({lang}) — review required",
     "description": "The {lang} call {sink} resolves, renders, or loads dynamically. Untrusted input becomes code execution or unsafe output. This lexical rule flags the call; the reviewer confirms trust or replaces it with {safe}.",
     "remediation": "Replace with {safe}.",
     "limitation": "Lexical, line-based: any {sink} call matches.",
     "scopeT": "Single-line lexical match on the {sink} call in {lang} code.",
     "fp": "Trusted templates are the common false positive.",
-    "recordDesc": "In {lang}, {sink} acts dynamically. The remedy is {safe}.",
+    "recordDesc": "In {lang}, {sink} resolves, renders or loads at runtime, so a value that reaches it selects the code path or markup that is produced. The remedy is an explicit branch over known operations with escaping ({safe}).",
     "applicability": "{lang} dynamic calls; single-line lexical scope.",
     "risk": "Code execution or XSS; HIGH severity.",
     "why": "{sink} acts dynamically in {lang}.",
@@ -758,7 +794,8 @@
         "DRb.start_service",
         "no DRb or local-only ACL"
       ]
-    }
+    },
+    "sinkOverrides": {}
   },
   {
     "class": "ruby-flag",
@@ -767,7 +804,7 @@
     "cwe": "CWE-89",
     "severity": "HIGH",
     "framing": "flag",
-    "title": "ActiveRecord SQL from input ({fw}) \u2014 review required",
+    "title": "ActiveRecord SQL from input ({fw}) — review required",
     "description": "Rails builds SQL from input: {sink} ({fw}). Interpolated fragments rewrite the statement. This lexical rule flags the assembly; the reviewer parameterizes via {safe}.",
     "remediation": "Use {safe}.",
     "limitation": "Lexical, line-based: any assembled query matches.",
@@ -806,7 +843,8 @@
         "render :show",
         "fixed templates"
       ]
-    }
+    },
+    "sinkOverrides": {}
   },
   {
     "class": "js-call",
@@ -815,7 +853,7 @@
     "cwe": "CWE-95",
     "severity": "HIGH",
     "framing": "call",
-    "title": "Sandbox escape via {sink} ({lang}) \u2014 review required",
+    "title": "Sandbox escape via {sink} ({lang}) — review required",
     "description": "The {lang} call {sink} runs code inside a context. Contexts are not security boundaries, so untrusted input becomes execution. This lexical rule flags the call; the reviewer confirms trust or removes it via {safe}.",
     "remediation": "Remove or use {safe}.",
     "limitation": "Lexical, line-based: any {sink} call matches.",
@@ -835,7 +873,8 @@
         "runInContext",
         "isolated workers or no eval"
       ]
-    }
+    },
+    "sinkOverrides": {}
   },
   {
     "class": "js-flag",
@@ -844,7 +883,7 @@
     "cwe": "CWE-95",
     "severity": "HIGH",
     "framing": "flag",
-    "title": "Dangerous JS construct ({fw}) \u2014 review required",
+    "title": "Dangerous JS construct ({fw}) — review required",
     "description": "JavaScript evaluates or trusts dynamically: {sink} ({fw}). String timers and Function compile code, shell spawn runs commands, variable require loads paths, __proto__ assignment pollutes prototypes, and bypassSecurityTrustHtml drops sanitization. This lexical rule flags the construct; the reviewer removes it via {safe}.",
     "remediation": "Remove or use {safe}.",
     "limitation": "Lexical, line-based: matches the construct.",
@@ -884,24 +923,25 @@
         "function references"
       ],
       "javascript:require": [
-        "require\\s*\\([^)\"']",
+        "\\brequire\\s*\\([^)\"']",
         "require(name)",
         "require(\"./x\")",
         "static requires"
       ],
       "javascript:proto": [
-        "__proto__",
+        "\\b(?:__proto__)",
         "a.__proto__ = b",
         "a.prototype = b",
         "Object.create(null) maps"
       ],
       "javascript:bypass": [
-        "bypassSecurityTrustHtml",
+        "\\b(?:bypassSecurityTrustHtml)",
         "sanitizer.bypassSecurityTrustHtml(v)",
         "sanitizer.sanitize(v)",
         "kept sanitization"
       ]
-    }
+    },
+    "sinkOverrides": {}
   },
   {
     "class": "js-browser",
@@ -914,7 +954,7 @@
     },
     "severity": "MEDIUM",
     "framing": "flag",
-    "title": "Overly broad browser channel ({fw}) \u2014 review required",
+    "title": "Overly broad browser channel ({fw}) — review required",
     "description": "Browser code broadcasts or fetches broadly: {sink} ({fw}). postMessage to any origin leaks data to hostile frames, and ws:// sockets expose traffic. This lexical rule flags the channel; the reviewer narrows it via {safe}.",
     "remediation": "Narrow with {safe}.",
     "limitation": "Lexical, line-based: matches the channel.",
@@ -941,7 +981,8 @@
         "new WebSocket(\"wss://h/s\")",
         "wss URLs"
       ]
-    }
+    },
+    "sinkOverrides": {}
   },
   {
     "class": "go-call",
@@ -950,13 +991,13 @@
     "cwe": "CWE-95",
     "severity": "HIGH",
     "framing": "call",
-    "title": "Dynamic load via {sink} ({lang}) \u2014 review required",
+    "title": "Dynamic load via {sink} ({lang}) — review required",
     "description": "The {lang} call {sink} loads plugins, replaces the process image, or marks strings as safe HTML. Untrusted input becomes code or script. This lexical rule flags the call; the reviewer confirms trust or replaces it with {safe}.",
     "remediation": "Replace with {safe}.",
     "limitation": "Lexical, line-based: any {sink} call matches.",
     "scopeT": "Single-line lexical match on the {sink} call in {lang} code.",
     "fp": "Trusted plugins are the common false positive.",
-    "recordDesc": "In {lang}, {sink} loads dynamically. The remedy is {safe}.",
+    "recordDesc": "In {lang}, {sink} loads a plugin, replaces the process image or marks a string as trusted HTML, so the value decides what code runs or what the browser renders. The remedy is a fixed, reviewed call ({safe}).",
     "applicability": "{lang} dynamic loading; single-line lexical scope.",
     "risk": "Code execution or XSS; HIGH severity.",
     "why": "{sink} loads dynamically in {lang}.",
@@ -980,7 +1021,8 @@
         "syscall.Exec",
         "exec with an args list"
       ]
-    }
+    },
+    "sinkOverrides": {}
   },
   {
     "class": "go-flag",
@@ -989,13 +1031,13 @@
     "cwe": "CWE-89",
     "severity": "HIGH",
     "framing": "flag",
-    "title": "Go Exec built by concatenation ({lang}) \u2014 review required",
+    "title": "Go Exec built by concatenation ({lang}) — review required",
     "description": "A {lang} Exec call assembles SQL: {sink}. Untrusted parts rewrite the statement. This lexical rule flags the assembly; the reviewer parameterizes via {safe}.",
     "remediation": "Parameterize with {safe}.",
     "limitation": "Lexical, line-based: any assembled statement matches.",
     "scopeT": "Single-line lexical match on assembled SQL in {lang} code.",
     "fp": "Fixed fragments are the common false positive.",
-    "recordDesc": "In {lang}, {sink} mixes SQL with values. The remedy is {safe}.",
+    "recordDesc": "In {lang}, {sink} assembles SQL by concatenation, so a value in the string can rewrite the statement's structure. The remedy is a parameterized query ({safe}), never string formatting of values.",
     "applicability": "{lang} data calls; single-line lexical scope.",
     "risk": "Full database compromise; HIGH severity.",
     "why": "{lang} Exec assembles SQL ({sink}).",
@@ -1010,7 +1052,8 @@
         "db.Exec(FIXED)",
         "$1 parameters"
       ]
-    }
+    },
+    "sinkOverrides": {}
   },
   {
     "class": "csharp-call",
@@ -1019,13 +1062,13 @@
     "cwe": "CWE-502",
     "severity": "HIGH",
     "framing": "call",
-    "title": "Unsafe .NET call {sink} ({lang}) \u2014 review required",
+    "title": "Unsafe .NET call {sink} ({lang}) — review required",
     "description": "The {lang} call {sink} deserializes, parses XML, or writes raw HTML. Hostile input becomes gadgets or script. This lexical rule flags the call; the reviewer confirms trust or replaces it with {safe}.",
     "remediation": "Replace with {safe}.",
     "limitation": "Lexical, line-based: any {sink} call matches.",
     "scopeT": "Single-line lexical match on the {sink} call in {lang} code.",
     "fp": "Trusted local data is the common false positive.",
-    "recordDesc": "In {lang}, {sink} handles bytes unsafely. The remedy is {safe}.",
+    "recordDesc": "In {lang}, {sink} deserializes bytes, parses XML with a resolver or writes raw HTML, so the input decides which types instantiate or what the browser executes. The remedy is a hardened, typed API ({safe}).",
     "applicability": "{lang} deserialization; single-line lexical scope.",
     "risk": "Gadgets or XSS; HIGH severity.",
     "why": "{sink} handles bytes unsafely in {lang}.",
@@ -1064,7 +1107,8 @@
         "Html.Raw",
         "encoded output"
       ]
-    }
+    },
+    "sinkOverrides": {}
   },
   {
     "class": "csharp-flag",
@@ -1073,13 +1117,13 @@
     "cwe": "CWE-95",
     "severity": "HIGH",
     "framing": "flag",
-    "title": "Dangerous .NET construct ({fw}) \u2014 review required",
+    "title": "Dangerous .NET construct ({fw}) — review required",
     "description": ".NET weakens a control: {sink} ({fw}). Polymorphic typing enables gadgets, XSLT scripts execute, certificate callbacks accept all, plaintext mail and HTTP leak data, and validation opt-outs invite script. This lexical rule flags the construct; the reviewer hardens via {safe}.",
     "remediation": "Harden with {safe}.",
     "limitation": "Lexical, line-based: matches the construct.",
     "scopeT": "Single-line lexical match on .NET constructs ({fw}).",
     "fp": "Trusted local use is the common false positive.",
-    "recordDesc": "With {sink}, {fw} weakens a control. The remedy is {safe}.",
+    "recordDesc": "With {sink}, {fw} relaxes a security control such as polymorphic binding, certificate validation or output encoding, so the weakened path accepts data it should reject. The remedy is to restore the strict setting ({safe}).",
     "applicability": "{fw} code; single-line lexical scope.",
     "risk": "Varies by control; HIGH severity.",
     "why": "{fw} weakens a control ({sink}).",
@@ -1143,7 +1187,7 @@
         "kept input validation"
       ],
       "csharp:allowhtml": [
-        "AllowHtml",
+        "\\b(?:AllowHtml)",
         "[AllowHtml]",
         "[Required]",
         "encoded output"
@@ -1178,6 +1222,83 @@
         "<compilation debug=\"false\"",
         "release builds"
       ]
+    },
+    "sinkOverrides": {
+      "csharp:typenames": {
+        "cwe": "CWE-502",
+        "recordDesc": "TypeNameHandling.All makes Json.NET read the .NET type name out of the payload and instantiate that type, so the document decides which class is constructed.",
+        "risk": "A crafted payload picks its own type and can reach gadget chains already loaded in the process, which turns document deserialisation into code execution; HIGH severity."
+      },
+      "csharp:xslscript": {
+        "cwe": "CWE-94",
+        "recordDesc": "EnableScript = true lets an XSLT transform run embedded script while it processes the source document.",
+        "risk": "A transform fed attacker-influenced XML executes that script inside the application process, so the boundary between data and code no longer exists; HIGH severity."
+      },
+      "csharp:certcb": {
+        "cwe": "CWE-295",
+        "recordDesc": "ServerCertificateValidationCallback that returns true accepts every server certificate, including self-signed, expired and mismatched ones.",
+        "risk": "Any on-path attacker can present their own certificate and impersonate the endpoint, reading and rewriting the traffic on that connection; HIGH severity."
+      },
+      "csharp:webclient": {
+        "cwe": "CWE-319",
+        "recordDesc": "WebClient.DownloadString over a plain http:// URL fetches content with no transport protection.",
+        "risk": "The fetched body is readable and replaceable in transit, so configuration, scripts or payloads pulled this way cannot be trusted; HIGH severity."
+      },
+      "csharp:smtp": {
+        "cwe": "CWE-319",
+        "recordDesc": "EnableSsl = false makes SmtpClient open the session in cleartext instead of starting TLS.",
+        "risk": "Credentials and message bodies cross the network unencrypted, so a network observer captures them; HIGH severity."
+      },
+      "csharp:sqlinterp": {
+        "cwe": "CWE-89",
+        "recordDesc": "An interpolated string is handed straight to SqlCommand, so the statement text is assembled from runtime values.",
+        "risk": "An interpolated value becomes SQL syntax, which gives an injectable path to reading and modifying the database; HIGH severity."
+      },
+      "csharp:sqlconcat": {
+        "cwe": "CWE-89",
+        "recordDesc": "The SqlCommand text is built by string concatenation, so the statement is assembled from runtime values.",
+        "risk": "A quote in a concatenated value changes the statement that executes, which is the classic SQL injection shape; HIGH severity."
+      },
+      "csharp:validatereq": {
+        "cwe": "CWE-79",
+        "recordDesc": "ValidateRequest=\"false\" disables ASP.NET request validation for the page, the check that rejects markup in submitted values before the action runs.",
+        "risk": "Submitted markup reaches the response unless every consumer encodes it, which is how reflected and stored XSS begins; HIGH severity."
+      },
+      "csharp:validateinput": {
+        "cwe": "CWE-79",
+        "recordDesc": "[ValidateInput(false)] disables ASP.NET request validation for one action or controller.",
+        "risk": "The action accepts markup in its inputs, so any view that renders those values without encoding becomes an XSS sink; HIGH severity."
+      },
+      "csharp:allowhtml": {
+        "cwe": "CWE-79",
+        "recordDesc": "[AllowHtml] exempts one model property from request validation, so the property reaches views with its markup intact.",
+        "risk": "An unencoded property that skips validation is a stored or reflected XSS path in every view that renders it; HIGH severity."
+      },
+      "csharp:machineval": {
+        "cwe": "CWE-798",
+        "recordDesc": "validationKey is set to a literal value in configuration, so the key that signs forms-authentication tickets is stored in the repository.",
+        "risk": "Anyone who can read the repository can forge authentication tickets for that application; HIGH severity."
+      },
+      "csharp:machinedec": {
+        "cwe": "CWE-798",
+        "recordDesc": "decryptionKey is set to a literal value in configuration, so the key protecting encrypted configuration sections is stored in the repository.",
+        "risk": "A reader of the repository can decrypt protected sections such as connection strings; HIGH severity."
+      },
+      "csharp:customerrors": {
+        "cwe": "CWE-209",
+        "recordDesc": "customErrors mode=\"Off\" makes ASP.NET return the detailed exception page to the client instead of a generic error.",
+        "risk": "Stack traces and configuration fragments disclose framework versions, paths and query shape to any unauthenticated request that provokes an error; HIGH severity."
+      },
+      "csharp:trace": {
+        "cwe": "CWE-532",
+        "recordDesc": "trace enabled=\"true\" writes request diagnostics, including headers and submitted values, into the trace output.",
+        "risk": "Request diagnostics reach a page or file that may be readable, exposing session identifiers and submitted data; HIGH severity because the trace surface is reachable wherever the build runs."
+      },
+      "csharp:debug": {
+        "cwe": "CWE-489",
+        "recordDesc": "compilation debug=\"true\" ships a build with debug symbols and the developer exception page enabled.",
+        "risk": "Debug output and source fragments are exposed wherever that build runs, and the build no longer behaves like the release build; HIGH severity."
+      }
     }
   },
   {
@@ -1187,7 +1308,7 @@
     "cwe": "CWE-78",
     "severity": "HIGH",
     "framing": "flag",
-    "title": "Shell expansion of a variable ({fw}) \u2014 review required",
+    "title": "Shell expansion of a variable ({fw}) — review required",
     "description": "A shell runs a variable's content: {sink} ({fw}). Variable content becomes command text. This lexical rule flags the expansion; the reviewer confirms trust or restructures via {safe}.",
     "remediation": "Restructure with {safe}.",
     "limitation": "Lexical, line-based: matches the expansion.",
@@ -1214,7 +1335,8 @@
         "bash -c \"ls\"",
         "fixed command lines"
       ]
-    }
+    },
+    "sinkOverrides": {}
   },
   {
     "class": "reflection-call",
@@ -1227,7 +1349,7 @@
     },
     "severity": "MEDIUM",
     "framing": "call",
-    "title": "Reflective invocation via {sink} ({lang}) \u2014 review required",
+    "title": "Reflective invocation via {sink} ({lang}) — review required",
     "description": "The {lang} call {sink} selects a class, method, or module at runtime by name. If the name comes from untrusted input, the caller chooses which code runs. This lexical rule flags the call; the reviewer confirms the name is fixed or replaces it with {safe}.",
     "remediation": "Resolve names only from a fixed allow-list, or replace with {safe}.",
     "limitation": "Lexical, line-based: any {sink} call matches whether or not the name is user-controlled. Regex cannot prove data flow; a constant name is a false positive.",
@@ -1283,6 +1405,7 @@
         "Type.forName",
         "a fixed allowlist of class names"
       ]
-    }
+    },
+    "sinkOverrides": {}
   }
 ]

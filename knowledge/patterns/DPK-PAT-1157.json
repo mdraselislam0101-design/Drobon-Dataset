@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1157",
+  "title": "Signal: Go panic with goroutine dump disclosed in a response",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-body-matches",
+      "valuePattern": "goroutine \\d+ \\[running\\]:"
+    }
+  },
+  "scope": "One response body: confirm a Go goroutine dump.",
+  "limitations": "Observation-level: requires the 'goroutine N [running]:' header that the Go runtime prints. A panic message without the dump header is not reported.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://api.example/orders/42",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/plain; charset=utf-8"
+        },
+        "body": "panic: runtime error: index out of range [3] with length 2\n\ngoroutine 1 [running]:\nmain.handler(0x0, 0x0)"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://api.example/reports",
+        "status": 500,
+        "headers": {},
+        "body": "goroutine 18 [running]:\nnet/http.(*conn).serve.func1(0xc0001b4000)"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://api.example/orders/42",
+        "status": 500,
+        "headers": {},
+        "body": "Request failed. Reference 7c1a90."
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://api.example/health",
+        "status": 200,
+        "headers": {},
+        "body": "{\"status\":\"ok\"}"
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A deliberately published crash report or a chaos-test endpoint is reported by design.",
+  "linkedRules": [
+    "DPK-DAST-088"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:go-panic-dump:goroutine",
+  "validationStatus": "VALIDATED"
+}

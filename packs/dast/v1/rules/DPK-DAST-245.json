@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-245",
+  "title": "Terraform state file served",
+  "description": "The response is a Terraform state document: the terraform_version and resources fields are the schema of the state file, which records every managed resource and, for many resource types, the attribute values that were applied.",
+  "severity": "HIGH",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Move the state to an encrypted remote backend with access control, treat this copy as disclosed, and rotate every credential the state contains. Add the state path to the deny list at the web server.",
+  "limitation": "One response body. The rule reports the state schema; it does not parse the stored attributes and cannot enumerate which secrets a particular state holds.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*\"terraform_version\")(?=[\\s\\S]*\"resources\")"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "{\"version\":4,\"terraform_version\":\"1.6.4\",\"serial\":12,\"lineage\":\"abc-123\",\"outputs\":{\"db_password\":{\"value\":\"hunter2\",\"type\":\"string\"}},\"resources\":[{\"mode\":\"managed\",\"type\":\"aws_db_instance\",\"name\":\"main\",\"instances\":[{\"attributes\":{\"password\":\"hunter2\"}}]}]}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "{\"version\":4,\"terraform_version\":\"1.5.7\",\"serial\":3,\"resources\":[{\"mode\":\"managed\",\"type\":\"aws_s3_bucket\",\"name\":\"assets\"}],\"terraform_version_note\":\"legacy\"}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "{\"version\":4,:\"1.6.4\",\"serial\":12,\"lineage\":\"abc-123\",\"outputs\":{\"db_password\":{\"value\":\"hunter2\",\"type\":\"string\"}},:[{\"mode\":\"managed\",\"type\":\"aws_db_instance\",\"name\":\"main\",\"instances\":[{\"attributes\":{\"password\":\"hunter2\"}}]}]}"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1314"
+  ]
+}

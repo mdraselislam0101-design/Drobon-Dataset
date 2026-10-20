@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1244",
+  "title": "Signal: Kubelet pod list disclosed",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-body-matches",
+      "valuePattern": "(?=[\\s\\S]*\"kind\"\\s*:\\s*\"PodList)(?=[\\s\\S]*\"apiVersion\")"
+    }
+  },
+  "scope": "One response whose body is a PodList document with apiVersion and items fields.",
+  "limitations": "One response body. The rule reports the pod list the kubelet returned; it does not attempt any other kubelet endpoint and cannot show whether exec or logs are reachable.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "{\"kind\":\"PodList\",\"apiVersion\":\"v1\",\"metadata\":{\"resourceVersion\":\"12345\"},\"items\":[{\"metadata\":{\"name\":\"api-7d9f\",\"namespace\":\"prod\"},\"spec\":{\"nodeName\":\"node-1\"}}]}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "{\"kind\":\"PodList\",\"apiVersion\":\"v1\",\"items\":[{\"metadata\":{\"name\":\"worker-1\",\"namespace\":\"default\"}}]}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "{\",:\"v1\",\"metadata\":{\"resourceVersion\":\"12345\"},\"items\":[{\"metadata\":{\"name\":\"api-7d9f\",\"namespace\":\"prod\"},\"spec\":{\"nodeName\":\"node-1\"}}]}"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A cluster that deliberately serves the pod list to a monitoring system on a trusted network is still reported; the finding is the reachable endpoint.",
+  "linkedRules": [
+    "DPK-DAST-175"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:body-kubernetes-kubelet-podlist:kubernetes-kubelet-podlist",
+  "validationStatus": "VALIDATED"
+}

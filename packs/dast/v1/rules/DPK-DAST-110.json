@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-110",
+  "title": "Refresh header redirects to a plaintext URL",
+  "description": "The response instructs the browser to navigate to an http URL after a delay. The navigation is a fresh cleartext request, so anything the target carries - query tokens, cookies scoped to that host - is exposed on the path even though the current response was protected.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-319",
+  "category": "transport-security",
+  "remediation": "Point the Refresh target at https, or replace Refresh with a 3xx redirect to an https URL. Prefer the Location header: it is the standard mechanism and this header is not required for compatibility.",
+  "limitation": "One Refresh value. The rule does not follow the navigation and cannot tell what the target serves.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Refresh",
+    "valuePattern": "\\burl\\s*=\\s*['\"]?http://"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Refresh": "0; url=http://app.example/home"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Refresh": "5; URL='http://app.example/home'"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Refresh": "0; url=https://app.example/home"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Refresh": "30"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Refresh": "0; url=/home"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {}
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1179"
+  ]
+}

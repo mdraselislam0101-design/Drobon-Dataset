@@ -1,0 +1,447 @@
+[
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "redirect-to-plaintext",
+    "category": "transport-security",
+    "cwe": "CWE-319",
+    "severity": "MEDIUM",
+    "title": "HTTPS response redirects to a plaintext URL",
+    "description": "The response is delivered over https and its Location header names an http URL. The browser follows it, so everything the next request carries - cookies, form fields, bearer tokens - crosses the network in cleartext. The check is scoped to https observations: a redirect from an already-plaintext response does not downgrade anything that was protected, and DPK-DAST-001 reports that response itself.",
+    "remediation": "Redirect to an https URL, or to a path-relative target that keeps the current scheme. If a legacy plaintext host is unavoidable, keep the hop free of credentials and have that host redirect straight back to https.",
+    "limitation": "One Location value on one https observation. It does not follow the redirect chain, so it cannot tell whether the plaintext target redirects back to https before any credential is sent, and it does not grade the target's certificate or availability.",
+    "scopeT": "One https response whose Location target begins with http://.",
+    "fp": "A deliberate redirect to a separate plaintext host (a captive portal or an internal appliance) is reported; the observation cannot show what is sent there.",
+    "recordDesc": "An https response sent the client to a plaintext URL. The redirect itself is not the exposure: the exposure is that the follow-up request, with whatever credentials or session state the browser attaches to that host, is readable and modifiable on the path. TLS on the first hop does not extend to the second.",
+    "applicability": "HTTPS responses that issue a redirect to a browser or API client.",
+    "risk": "Session material and credentials exposed on the second hop; MEDIUM severity.",
+    "why": "The observation is https and the Location value begins with http://.",
+    "fix": [
+      "Point the Location at an https URL, or make it path-relative so it inherits the current scheme.",
+      "Serve the legacy target over TLS instead of downgrading."
+    ],
+    "verifyT": "Request the same endpoint over https and confirm the Location value keeps the https scheme.",
+    "cells": [
+      {
+        "suffix": "location-http",
+        "lang": "http",
+        "name": "https redirect to a plaintext URL",
+        "safe": "https redirect that keeps the https scheme",
+        "check": {
+          "type": "response-header-matches",
+          "header": "Location",
+          "valuePattern": "^http://",
+          "requireScheme": "https"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/start",
+              "status": 302,
+              "headers": {
+                "Location": "http://app.example/home"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/start",
+              "status": 301,
+              "headers": {
+                "Location": "HTTP://APP.EXAMPLE/home"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/start",
+              "status": 302,
+              "headers": {
+                "Location": "http://user:pass@app.example/home"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/start",
+              "status": 302,
+              "headers": {
+                "Location": "https://app.example/home"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/start",
+              "status": 302,
+              "headers": {
+                "Location": "/home"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/start",
+              "status": 302,
+              "headers": {
+                "Location": "//app.example/home"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "http://app.example/start",
+              "status": 302,
+              "headers": {
+                "Location": "http://app.example/home"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/start",
+              "status": 200,
+              "headers": {}
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "cors-allow-headers-wildcard",
+    "category": "cors",
+    "cwe": "CWE-942",
+    "severity": "LOW",
+    "title": "CORS allows every request header",
+    "description": "The preflight response accepts any request header (Access-Control-Allow-Headers: *). Every origin the policy also allows can then send arbitrary custom headers without the server ever naming what it expects - including headers that an application trusts for routing, tenancy or authentication decisions. This is a permissive configuration; the rule does not show that any origin actually uses it.",
+    "remediation": "List the request headers the API consumes, for example Access-Control-Allow-Headers: Content-Type, Authorization. Make sure no header used for a tenancy or authorization decision can be chosen by a cross-origin caller.",
+    "limitation": "One header value. The rule does not read Access-Control-Allow-Origin, so it reports the permissive allow-list without showing which origins may use it, and it cannot tell a credentialed from a non-credentialed policy.",
+    "scopeT": "One Access-Control-Allow-Headers value whose entire entry is the wildcard.",
+    "fp": "A deliberately open, unauthenticated API can answer every origin and header by design; the observation cannot show whether any decision rides on a request header.",
+    "recordDesc": "A preflight response accepted every request header. A wildcard allow-list removes the server's chance to reject a header it never expected, so any header the application reads for routing or trust becomes caller-controlled for origins the policy admits. The finding is the missing restriction, not a demonstrated cross-origin read.",
+    "applicability": "APIs that answer CORS preflight requests.",
+    "risk": "Caller-controlled headers on admitted origins; LOW severity.",
+    "why": "Access-Control-Allow-Headers is exactly the wildcard.",
+    "fix": [
+      "Replace the wildcard with the explicit header names the API reads.",
+      "Audit any header used for tenancy, routing or authorization against cross-origin control."
+    ],
+    "verifyT": "Send an OPTIONS preflight with a custom header and confirm the response lists only the expected names.",
+    "cells": [
+      {
+        "suffix": "any-header",
+        "lang": "http",
+        "name": "Access-Control-Allow-Headers wildcard",
+        "safe": "explicit request-header allow-list",
+        "check": {
+          "type": "response-header-matches",
+          "header": "Access-Control-Allow-Headers",
+          "valuePattern": "^\\s*\\*\\s*$"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://api.example/",
+              "status": 204,
+              "headers": {
+                "Access-Control-Allow-Headers": "*"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://api.example/",
+              "status": 204,
+              "headers": {
+                "Access-Control-Allow-Headers": "   *   "
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://api.example/",
+              "status": 204,
+              "headers": {
+                "Access-Control-Allow-Headers": "Content-Type, Authorization"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://api.example/",
+              "status": 204,
+              "headers": {
+                "Access-Control-Allow-Headers": "X-*"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://api.example/",
+              "status": 204,
+              "headers": {
+                "Access-Control-Allow-Headers": ""
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://api.example/",
+              "status": 204,
+              "headers": {}
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "csp-base-uri-wildcard",
+    "category": "csp-weakness",
+    "cwe": "CWE-693",
+    "severity": "MEDIUM",
+    "title": "Content-Security-Policy base-uri allows every origin",
+    "description": "The policy permits any origin as the document base URL (base-uri * or a scheme wildcard). An injected base element then rewrites every relative script, style, form and link target to another origin, which defeats the relative-URL assumptions the rest of the policy depends on. The directive is read from its first declaration only, because later duplicates are ignored by browsers.",
+    "remediation": "Set base-uri 'none' unless the application genuinely needs a base element, in which case set base-uri 'self'. Do not rely on default-src: base-uri has no fallback.",
+    "limitation": "One header value, first declaration of the directive only. It reports the wildcard permission, not whether a base element can actually be injected into any page.",
+    "scopeT": "One Content-Security-Policy value whose first base-uri declaration contains the wildcard or a scheme wildcard host.",
+    "fp": "Pages that never contain a base element can still carry this permission; the finding is the permission, not a demonstrated injection.",
+    "recordDesc": "The policy allowed any origin as the document base. A base element changes how every relative URL in the page resolves, so a single injection point - a comment, a stored name, a template parameter - can redirect script, style and form targets to another origin while the page's own markup stays unchanged.",
+    "applicability": "HTML responses that carry a Content-Security-Policy.",
+    "risk": "Relative-URL hijacking that bypasses other directives; MEDIUM severity.",
+    "why": "The first base-uri declaration contains a source that matches every origin.",
+    "fix": [
+      "Set base-uri 'none' or base-uri 'self'.",
+      "Remove the base element if the application does not need one."
+    ],
+    "verifyT": "Add a relative script tag to a test page and confirm a base element from another origin is refused by the browser.",
+    "cells": [
+      {
+        "suffix": "base-uri",
+        "lang": "http",
+        "name": "base-uri wildcard",
+        "safe": "base-uri 'self'",
+        "check": {
+          "type": "response-header-matches",
+          "header": "Content-Security-Policy",
+          "valuePattern": "^(?:(?!base-uri(?=[\\s;]|$))[^;]*;\\s*)*base-uri(?=[\\s;]|$)[^;]*?(?<=\\s)(?:\\*|(?:https?|wss?)://\\*)(?=\\s|;|$)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "base-uri *"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self' *"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "base-uri https://*"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "base-uri 'self'"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "base-uri 'none'"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "default-src *"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "base-uri 'self'; base-uri *"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {}
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "csp-form-action-wildcard",
+    "category": "csp-weakness",
+    "cwe": "CWE-693",
+    "severity": "MEDIUM",
+    "title": "Content-Security-Policy form-action allows every origin",
+    "description": "The policy allows a form to submit to any origin (form-action * or a scheme wildcard). An injected or edited form can therefore post the user's input, including credentials, to another host even when script execution is blocked. The directive is read from its first declaration only, because later duplicates are ignored by browsers.",
+    "remediation": "Set form-action to the origins that actually receive submissions, for example form-action 'self' https://pay.example. Unlike fetch directives it does not inherit from default-src, so the value must be present on its own.",
+    "limitation": "One header value, first declaration of the directive only. It reports the wildcard permission, not whether a form on the page can be modified by an attacker.",
+    "scopeT": "One Content-Security-Policy value whose first form-action declaration contains the wildcard or a scheme wildcard host.",
+    "fp": "A page whose forms legitimately submit to many origins can still be reported; the policy cannot express a bounded set the observation could check.",
+    "recordDesc": "The policy let a form post anywhere. Form submission does not need script execution, so a single markup injection turns the page into a delivery mechanism for whatever the user types next, including passwords, to any host. The finding is the unbounded destination list.",
+    "applicability": "HTML responses that carry a Content-Security-Policy.",
+    "risk": "Credential and data exfiltration through form submission; MEDIUM severity.",
+    "why": "The first form-action declaration contains a source that matches every origin.",
+    "fix": [
+      "List the receiving origins explicitly, starting from 'self'.",
+      "Keep the authorization endpoint out of the wildcard; identity providers change rarely."
+    ],
+    "verifyT": "Submit a test form to a foreign origin and confirm the browser blocks it under the policy.",
+    "cells": [
+      {
+        "suffix": "form-action",
+        "lang": "http",
+        "name": "form-action wildcard",
+        "safe": "form-action 'self'",
+        "check": {
+          "type": "response-header-matches",
+          "header": "Content-Security-Policy",
+          "valuePattern": "^(?:(?!form-action(?=[\\s;]|$))[^;]*;\\s*)*form-action(?=[\\s;]|$)[^;]*?(?<=\\s)(?:\\*|(?:https?|wss?)://\\*)(?=\\s|;|$)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/login",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "form-action *"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/login",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "default-src 'self'; form-action 'self' *"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/login",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "form-action http://*"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/login",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "form-action 'self'"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/login",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "form-action 'none'"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/login",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "default-src *"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/login",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "form-action 'self'; form-action *"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/login",
+              "status": 200,
+              "headers": {}
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  }
+]

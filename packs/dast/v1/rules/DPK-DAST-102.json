@@ -1,0 +1,89 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-102",
+  "title": "Content-Security-Policy connect-src allows plaintext HTTP origins",
+  "description": "The policy permits the page to open fetch, XMLHttpRequest or WebSocket connections to plaintext http origins. Everything those connections carry - tokens, identifiers, personal data - is readable and modifiable on the path, and the page cannot tell that the answer was altered. The directive is read from its first declaration only.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-319",
+  "category": "transport-security",
+  "remediation": "Permit only https: and wss: sources in connect-src, for example connect-src 'self' https://api.example wss://api.example. Redirect plaintext API hosts to TLS before changing the policy.",
+  "limitation": "One header value, first declaration of the directive only. The rule reads the declared source list; it cannot see which endpoints the page actually contacts.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Content-Security-Policy",
+    "valuePattern": "^(?:(?!connect-src(?=[\\s;]|$))[^;]*;\\s*)*connect-src(?=[\\s;]|$)[^;]*?(?<=\\s)(?:http:|http://[^\\s;]+)(?=\\s|;|$)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "connect-src http:"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src 'self'; connect-src 'self' http://api.example"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "connect-src 'self' https://api.example wss://api.example"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "connect-src 'self'"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src http:"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "connect-src https://api.example; connect-src http:"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {}
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1171"
+  ]
+}

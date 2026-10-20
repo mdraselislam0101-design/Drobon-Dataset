@@ -1,0 +1,3341 @@
+[
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "csp-imgsrc-wildcard",
+    "category": "csp-weakness",
+    "cwe": "CWE-693",
+    "severity": "MEDIUM",
+    "title": "Content-Security-Policy img-src allows a wildcard source",
+    "description": "The Content-Security-Policy img-src directive allows a bare wildcard source: the token `*` or a scheme wildcard such as `https://*` appears inside that directive's source list. The policy therefore permits the browser to load the affected resource type from any origin, which is the opposite of what a restrictive policy is meant to express. Images can be loaded from any origin, so injected markup or a third-party script can beacon page-derived data out in image requests that need no script execution and no cors grant.",
+    "remediation": "Replace the wildcard in img-src with the explicit origins that must be reachable, and use 'none' or 'self' where no third-party origin is needed. If the wildcard was added to unblock a single vendor, name that vendor's origin instead so the policy keeps recording intent.",
+    "limitation": "One header value and one directive. The rule judges img-src only when it is written in the policy; when the directive is absent, the default-src or child-src fallback decides the behaviour and other rules report that case. Values are matched lexically, so an origin wildcard such as *.example.com is not treated as a bare wildcard.",
+    "scopeT": "One response whose Content-Security-Policy carries an explicit img-src directive whose source list contains `*` or a scheme wildcard.",
+    "fp": "A policy that deliberately allows a wide CDN pool can still be flagged; the finding is the wildcard, not proof that a third-party origin is reachable in the deployment.",
+    "recordDesc": "The Content-Security-Policy img-src directive contains a bare wildcard, so image subresources may come from any origin. Image requests are the cheapest exfiltration channel available to injected markup: a crafted URL carries the data in the path and the browser sends it without a script execution or a CORS preflight.",
+    "applicability": "HTTPS responses that send Content-Security-Policy with an explicit img-src directive.",
+    "risk": "Page data can leave through image requests to attacker-chosen hosts; MEDIUM severity because the channel needs an injection point to start from.",
+    "why": "The img-src directive contains the token `*` or a scheme wildcard rather than an explicit origin list.",
+    "fix": [
+      "List the concrete origins in img-src.",
+      "Re-fetch the endpoint and confirm the directive no longer contains `*`."
+    ],
+    "verifyT": "Request the endpoint and read the img-src directive; the wildcard token must be gone and the remaining origins must be ones you operate or trust.",
+    "cells": [
+      {
+        "suffix": "wildcard",
+        "lang": "http",
+        "name": "img-src allows a wildcard source",
+        "safe": "policy lists explicit origins",
+        "check": {
+          "type": "response-header-matches",
+          "header": "Content-Security-Policy",
+          "valuePattern": "(?:^|;)\\s*img-src\\s[^;]*(?<=\\s)(?:\\*|(?:https?|wss?)://\\*)(?=[\\s;]|$)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "img-src *"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "img-src 'self' *"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "default-src 'self'; img-src https://cdn.example.com *; frame-ancestors 'none'"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "img-src 'self'"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "img-src *.example.com"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "img-src https://*.example.com"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "default-src *"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "img-src 'self'; img-src https://cdn.example.com"
+              }
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "csp-fontsrc-wildcard",
+    "category": "csp-weakness",
+    "cwe": "CWE-693",
+    "severity": "LOW",
+    "title": "Content-Security-Policy font-src allows a wildcard source",
+    "description": "The Content-Security-Policy font-src directive allows a bare wildcard source: the token `*` or a scheme wildcard such as `https://*` appears inside that directive's source list. The policy therefore permits the browser to load the affected resource type from any origin, which is the opposite of what a restrictive policy is meant to express. Fonts can be loaded from any origin, so a page can render attacker-chosen faces and leak short text through which glyphs the browser requests.",
+    "remediation": "Replace the wildcard in font-src with the explicit origins that must be reachable, and use 'none' or 'self' where no third-party origin is needed. If the wildcard was added to unblock a single vendor, name that vendor's origin instead so the policy keeps recording intent.",
+    "limitation": "One header value and one directive. The rule judges font-src only when it is written in the policy; when the directive is absent, the default-src or child-src fallback decides the behaviour and other rules report that case. Values are matched lexically, so an origin wildcard such as *.example.com is not treated as a bare wildcard.",
+    "scopeT": "One response whose Content-Security-Policy carries an explicit font-src directive whose source list contains `*` or a scheme wildcard.",
+    "fp": "A policy that deliberately allows a wide CDN pool can still be flagged; the finding is the wildcard, not proof that a third-party origin is reachable in the deployment.",
+    "recordDesc": "The Content-Security-Policy font-src directive contains a bare wildcard, so webfonts may come from any origin. A face chosen by an attacker can make rendered text observable through the glyph requests the browser makes, which is a slow but script-free leak channel.",
+    "applicability": "HTTPS responses that send Content-Security-Policy with an explicit font-src directive.",
+    "risk": "Rendered text can be inferred through attacker-chosen fonts; LOW severity because the leak is slow and needs both an injection point and a readable page.",
+    "why": "The font-src directive contains the token `*` or a scheme wildcard rather than an explicit origin list.",
+    "fix": [
+      "List the concrete origins in font-src.",
+      "Re-fetch the endpoint and confirm the directive no longer contains `*`."
+    ],
+    "verifyT": "Request the endpoint and read the font-src directive; the wildcard token must be gone and the remaining origins must be ones you operate or trust.",
+    "cells": [
+      {
+        "suffix": "wildcard",
+        "lang": "http",
+        "name": "font-src allows a wildcard source",
+        "safe": "policy lists explicit origins",
+        "check": {
+          "type": "response-header-matches",
+          "header": "Content-Security-Policy",
+          "valuePattern": "(?:^|;)\\s*font-src\\s[^;]*(?<=\\s)(?:\\*|(?:https?|wss?)://\\*)(?=[\\s;]|$)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "font-src *"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "font-src 'self' *"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "default-src 'self'; font-src https://cdn.example.com *; frame-ancestors 'none'"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "font-src 'self'"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "font-src *.example.com"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "font-src https://*.example.com"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "default-src *"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "font-src 'self'; font-src https://cdn.example.com"
+              }
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "csp-mediasrc-wildcard",
+    "category": "csp-weakness",
+    "cwe": "CWE-693",
+    "severity": "LOW",
+    "title": "Content-Security-Policy media-src allows a wildcard source",
+    "description": "The Content-Security-Policy media-src directive allows a bare wildcard source: the token `*` or a scheme wildcard such as `https://*` appears inside that directive's source list. The policy therefore permits the browser to load the affected resource type from any origin, which is the opposite of what a restrictive policy is meant to express. Audio and video can be loaded from any origin, so media can be streamed from an attacker host and playback behaviour observed there.",
+    "remediation": "Replace the wildcard in media-src with the explicit origins that must be reachable, and use 'none' or 'self' where no third-party origin is needed. If the wildcard was added to unblock a single vendor, name that vendor's origin instead so the policy keeps recording intent.",
+    "limitation": "One header value and one directive. The rule judges media-src only when it is written in the policy; when the directive is absent, the default-src or child-src fallback decides the behaviour and other rules report that case. Values are matched lexically, so an origin wildcard such as *.example.com is not treated as a bare wildcard.",
+    "scopeT": "One response whose Content-Security-Policy carries an explicit media-src directive whose source list contains `*` or a scheme wildcard.",
+    "fp": "A policy that deliberately allows a wide CDN pool can still be flagged; the finding is the wildcard, not proof that a third-party origin is reachable in the deployment.",
+    "recordDesc": "The Content-Security-Policy media-src directive contains a bare wildcard, so audio and video subresources may come from any origin. An attacker host that serves the media sees the request timing and any range requests, and can substitute content the page did not author.",
+    "applicability": "HTTPS responses that send Content-Security-Policy with an explicit media-src directive.",
+    "risk": "Media content and its consumption pattern are visible to any origin; LOW severity because the impact is disclosure rather than code execution.",
+    "why": "The media-src directive contains the token `*` or a scheme wildcard rather than an explicit origin list.",
+    "fix": [
+      "List the concrete origins in media-src.",
+      "Re-fetch the endpoint and confirm the directive no longer contains `*`."
+    ],
+    "verifyT": "Request the endpoint and read the media-src directive; the wildcard token must be gone and the remaining origins must be ones you operate or trust.",
+    "cells": [
+      {
+        "suffix": "wildcard",
+        "lang": "http",
+        "name": "media-src allows a wildcard source",
+        "safe": "policy lists explicit origins",
+        "check": {
+          "type": "response-header-matches",
+          "header": "Content-Security-Policy",
+          "valuePattern": "(?:^|;)\\s*media-src\\s[^;]*(?<=\\s)(?:\\*|(?:https?|wss?)://\\*)(?=[\\s;]|$)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "media-src *"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "media-src 'self' *"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "default-src 'self'; media-src https://cdn.example.com *; frame-ancestors 'none'"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "media-src 'self'"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "media-src *.example.com"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "media-src https://*.example.com"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "default-src *"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "media-src 'self'; media-src https://cdn.example.com"
+              }
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "csp-manifestsrc-wildcard",
+    "category": "csp-weakness",
+    "cwe": "CWE-693",
+    "severity": "LOW",
+    "title": "Content-Security-Policy manifest-src allows a wildcard source",
+    "description": "The Content-Security-Policy manifest-src directive allows a bare wildcard source: the token `*` or a scheme wildcard such as `https://*` appears inside that directive's source list. The policy therefore permits the browser to load the affected resource type from any origin, which is the opposite of what a restrictive policy is meant to express. A web app manifest can be loaded from any origin, so an attacker-controlled manifest can change the installed application name, icons or start url.",
+    "remediation": "Replace the wildcard in manifest-src with the explicit origins that must be reachable, and use 'none' or 'self' where no third-party origin is needed. If the wildcard was added to unblock a single vendor, name that vendor's origin instead so the policy keeps recording intent.",
+    "limitation": "One header value and one directive. The rule judges manifest-src only when it is written in the policy; when the directive is absent, the default-src or child-src fallback decides the behaviour and other rules report that case. Values are matched lexically, so an origin wildcard such as *.example.com is not treated as a bare wildcard.",
+    "scopeT": "One response whose Content-Security-Policy carries an explicit manifest-src directive whose source list contains `*` or a scheme wildcard.",
+    "fp": "A policy that deliberately allows a wide CDN pool can still be flagged; the finding is the wildcard, not proof that a third-party origin is reachable in the deployment.",
+    "recordDesc": "The Content-Security-Policy manifest-src directive contains a bare wildcard, so a web app manifest may come from any origin. The manifest decides the installed application identity, its icons and the start URL, which turns a document-level injection into a persistent client-side change.",
+    "applicability": "HTTPS responses that send Content-Security-Policy with an explicit manifest-src directive.",
+    "risk": "Installed application identity can be altered by a third-party manifest; LOW severity because it needs a document injection and a user install step.",
+    "why": "The manifest-src directive contains the token `*` or a scheme wildcard rather than an explicit origin list.",
+    "fix": [
+      "List the concrete origins in manifest-src.",
+      "Re-fetch the endpoint and confirm the directive no longer contains `*`."
+    ],
+    "verifyT": "Request the endpoint and read the manifest-src directive; the wildcard token must be gone and the remaining origins must be ones you operate or trust.",
+    "cells": [
+      {
+        "suffix": "wildcard",
+        "lang": "http",
+        "name": "manifest-src allows a wildcard source",
+        "safe": "policy lists explicit origins",
+        "check": {
+          "type": "response-header-matches",
+          "header": "Content-Security-Policy",
+          "valuePattern": "(?:^|;)\\s*manifest-src\\s[^;]*(?<=\\s)(?:\\*|(?:https?|wss?)://\\*)(?=[\\s;]|$)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "manifest-src *"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "manifest-src 'self' *"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "default-src 'self'; manifest-src https://cdn.example.com *; frame-ancestors 'none'"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "manifest-src 'self'"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "manifest-src *.example.com"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "manifest-src https://*.example.com"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "default-src *"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "manifest-src 'self'; manifest-src https://cdn.example.com"
+              }
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "csp-childsrc-wildcard",
+    "category": "csp-weakness",
+    "cwe": "CWE-693",
+    "severity": "LOW",
+    "title": "Content-Security-Policy child-src allows a wildcard source",
+    "description": "The Content-Security-Policy child-src directive allows a bare wildcard source: the token `*` or a scheme wildcard such as `https://*` appears inside that directive's source list. The policy therefore permits the browser to load the affected resource type from any origin, which is the opposite of what a restrictive policy is meant to express. Nested browsing contexts and workers can come from any origin whenever frame-src or worker-src are absent, which is exactly the case child-src governs.",
+    "remediation": "Replace the wildcard in child-src with the explicit origins that must be reachable, and use 'none' or 'self' where no third-party origin is needed. If the wildcard was added to unblock a single vendor, name that vendor's origin instead so the policy keeps recording intent.",
+    "limitation": "One header value and one directive. The rule judges child-src only when it is written in the policy; when the directive is absent, the default-src or child-src fallback decides the behaviour and other rules report that case. Values are matched lexically, so an origin wildcard such as *.example.com is not treated as a bare wildcard.",
+    "scopeT": "One response whose Content-Security-Policy carries an explicit child-src directive whose source list contains `*` or a scheme wildcard.",
+    "fp": "A policy that deliberately allows a wide CDN pool can still be flagged; the finding is the wildcard, not proof that a third-party origin is reachable in the deployment.",
+    "recordDesc": "The Content-Security-Policy child-src directive contains a bare wildcard. child-src is the fallback for frame-src and worker-src, so on policies that do not set those two directives it decides which origins may be framed or started as workers.",
+    "applicability": "HTTPS responses that send Content-Security-Policy with an explicit child-src directive.",
+    "risk": "Frames and workers may be loaded from any origin on policies that rely on child-src; LOW severity because explicit frame-src or worker-src rules take precedence.",
+    "why": "The child-src directive contains the token `*` or a scheme wildcard rather than an explicit origin list.",
+    "fix": [
+      "List the concrete origins in child-src.",
+      "Re-fetch the endpoint and confirm the directive no longer contains `*`."
+    ],
+    "verifyT": "Request the endpoint and read the child-src directive; the wildcard token must be gone and the remaining origins must be ones you operate or trust.",
+    "cells": [
+      {
+        "suffix": "wildcard",
+        "lang": "http",
+        "name": "child-src allows a wildcard source",
+        "safe": "policy lists explicit origins",
+        "check": {
+          "type": "response-header-matches",
+          "header": "Content-Security-Policy",
+          "valuePattern": "(?:^|;)\\s*child-src\\s[^;]*(?<=\\s)(?:\\*|(?:https?|wss?)://\\*)(?=[\\s;]|$)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "child-src *"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "child-src 'self' *"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "default-src 'self'; frame-src 'self'; child-src https://cdn.example.com *; frame-ancestors 'none'"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "child-src 'self'"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "child-src *.example.com"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "child-src https://*.example.com"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "default-src *"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "child-src 'self'; child-src https://cdn.example.com"
+              }
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "csp-scriptsrcelem-wildcard",
+    "category": "csp-weakness",
+    "cwe": "CWE-693",
+    "severity": "MEDIUM",
+    "title": "Content-Security-Policy script-src-elem allows a wildcard source",
+    "description": "The Content-Security-Policy script-src-elem directive allows a bare wildcard source: the token `*` or a scheme wildcard such as `https://*` appears inside that directive's source list. The policy therefore permits the browser to load the affected resource type from any origin, which is the opposite of what a restrictive policy is meant to express. Script elements can be loaded from any origin, and script-src-elem overrides script-src for those elements, so a strict script-src in the same policy does not constrain them.",
+    "remediation": "Replace the wildcard in script-src-elem with the explicit origins that must be reachable, and use 'none' or 'self' where no third-party origin is needed. If the wildcard was added to unblock a single vendor, name that vendor's origin instead so the policy keeps recording intent.",
+    "limitation": "One header value and one directive. The rule judges script-src-elem only when it is written in the policy; when the directive is absent, the default-src or child-src fallback decides the behaviour and other rules report that case. Values are matched lexically, so an origin wildcard such as *.example.com is not treated as a bare wildcard.",
+    "scopeT": "One response whose Content-Security-Policy carries an explicit script-src-elem directive whose source list contains `*` or a scheme wildcard.",
+    "fp": "A policy that deliberately allows a wide CDN pool can still be flagged; the finding is the wildcard, not proof that a third-party origin is reachable in the deployment.",
+    "recordDesc": "The Content-Security-Policy script-src-elem directive contains a bare wildcard. script-src-elem takes precedence over script-src for script elements, so a policy that looks strict at the script-src level still accepts a script element from any origin.",
+    "applicability": "HTTPS responses that send Content-Security-Policy with an explicit script-src-elem directive.",
+    "risk": "Arbitrary script origins are allowed despite an apparently strict script-src; MEDIUM severity because the override defeats the directive reviewers usually read.",
+    "why": "The script-src-elem directive contains the token `*` or a scheme wildcard rather than an explicit origin list.",
+    "fix": [
+      "List the concrete origins in script-src-elem.",
+      "Re-fetch the endpoint and confirm the directive no longer contains `*`."
+    ],
+    "verifyT": "Request the endpoint and read the script-src-elem directive; the wildcard token must be gone and the remaining origins must be ones you operate or trust.",
+    "cells": [
+      {
+        "suffix": "wildcard",
+        "lang": "http",
+        "name": "script-src-elem allows a wildcard source",
+        "safe": "policy lists explicit origins",
+        "check": {
+          "type": "response-header-matches",
+          "header": "Content-Security-Policy",
+          "valuePattern": "(?:^|;)\\s*script-src-elem\\s[^;]*(?<=\\s)(?:\\*|(?:https?|wss?)://\\*)(?=[\\s;]|$)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "script-src-elem *"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "script-src-elem 'self' *"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "default-src 'self'; script-src-elem https://cdn.example.com *; frame-ancestors 'none'"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "script-src-elem 'self'"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "script-src-elem *.example.com"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "script-src-elem https://*.example.com"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "default-src *"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "script-src-elem 'self'; script-src-elem https://cdn.example.com"
+              }
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "csp-strict-dynamic-without-nonce",
+    "category": "csp-weakness",
+    "cwe": "CWE-693",
+    "severity": "LOW",
+    "title": "Content-Security-Policy strict-dynamic without a nonce or hash",
+    "description": "The Content-Security-Policy script-src directive lists 'strict-dynamic' but carries no nonce or hash source. A browser that implements strict-dynamic ignores host and scheme sources in that directive only when a nonce or hash is present to bootstrap the trust chain; without one the keyword does not establish the delegation the policy author expected.",
+    "remediation": "Add a per-response nonce (or a hash of the allowed inline script) to script-src alongside 'strict-dynamic', and template the nonce into the script tags the page emits. Keep the host allowlist only for browsers that do not support strict-dynamic.",
+    "limitation": "One header value. The rule reports the keyword combination the policy states; it does not test browser behaviour and cannot see whether the application intended a nonce that failed to render.",
+    "scopeT": "One response whose Content-Security-Policy script-src directive contains 'strict-dynamic' and no nonce or hash source.",
+    "fp": "A policy staged for a browser-support rollout may carry strict-dynamic before the nonce wiring lands; the combination is still the reportable fact.",
+    "recordDesc": "The Content-Security-Policy script-src directive uses 'strict-dynamic' without a nonce or hash. In browsers that support the keyword, the delegation model starts from a trusted nonce or hash, so a policy without one keeps falling back to the host allowlist the author meant to retire.",
+    "applicability": "HTTPS responses that send Content-Security-Policy with a script-src directive.",
+    "risk": "The policy gives the appearance of strict script delegation without the bootstrap it needs; LOW severity because host sources still apply.",
+    "why": "script-src contains 'strict-dynamic' and no 'nonce-, 'sha256-, 'sha384- or 'sha512- source.",
+    "fix": [
+      "Add a per-response nonce to script-src.",
+      "Template the nonce into every script tag the page emits."
+    ],
+    "verifyT": "Fetch the response twice: script-src must list 'strict-dynamic' together with a fresh 'nonce- value each time.",
+    "cells": [
+      {
+        "suffix": "no-nonce",
+        "lang": "http",
+        "name": "strict-dynamic without a nonce or hash",
+        "safe": "strict-dynamic is paired with a fresh nonce",
+        "check": {
+          "type": "response-header-matches",
+          "header": "Content-Security-Policy",
+          "valuePattern": "^(?=[\\s\\S]*?(?:^|;)\\s*script-src\\s[^;]*'strict-dynamic')(?![\\s\\S]*'nonce-)(?![\\s\\S]*'sha256-)(?![\\s\\S]*'sha384-)(?![\\s\\S]*'sha512-)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "script-src 'strict-dynamic'"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "script-src 'self' 'strict-dynamic'; object-src 'none'"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "script-src 'nonce-r4nd0m' 'strict-dynamic'"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "script-src 'sha256-abc=' 'strict-dynamic'"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "script-src 'self'"
+              }
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "csp-sandbox-scripts-same-origin",
+    "category": "csp-weakness",
+    "cwe": "CWE-693",
+    "severity": "MEDIUM",
+    "title": "Content-Security-Policy sandbox grants both allow-scripts and allow-same-origin",
+    "description": "The Content-Security-Policy sandbox directive lists both allow-scripts and allow-same-origin. Together they let sandboxed content run script and keep the origin of the embedding document, which is the documented way to remove the sandbox's protection: the framed document can reach the same-origin DOM and storage it was supposed to be isolated from.",
+    "remediation": "Drop one of the two tokens. A frame that must run script should not keep its origin (allow-scripts alone), and a frame that must keep its origin should not run script. Serve untrusted content from a separate origin instead of weakening the sandbox.",
+    "limitation": "One header value. The rule reports the token combination in the sandbox directive; it cannot tell which content the policy applies to or whether the frame is same-origin in practice.",
+    "scopeT": "One response whose Content-Security-Policy sandbox directive contains both allow-scripts and allow-same-origin.",
+    "fp": "A sandbox that deliberately frames same-origin application code is reported; the token pair still removes the isolation the directive exists to give.",
+    "recordDesc": "The Content-Security-Policy sandbox directive grants allow-scripts and allow-same-origin at the same time. Content framed under that policy keeps the embedding origin, so script inside the frame can reach the parent document's DOM, cookies and storage, and the sandbox stops being a boundary.",
+    "applicability": "HTTPS responses that send Content-Security-Policy with a sandbox directive.",
+    "risk": "The sandbox no longer isolates framed content from the embedding origin; MEDIUM severity because the frame escapes the intended boundary.",
+    "why": "The sandbox directive lists both allow-scripts and allow-same-origin.",
+    "fix": [
+      "Remove allow-same-origin from sandboxed frames that run script.",
+      "Serve untrusted content from a separate origin."
+    ],
+    "verifyT": "Fetch the response and confirm the sandbox directive no longer lists both tokens together.",
+    "cells": [
+      {
+        "suffix": "escape-combo",
+        "lang": "http",
+        "name": "sandbox grants allow-scripts and allow-same-origin",
+        "safe": "sandbox keeps at most one of the two tokens",
+        "check": {
+          "type": "response-header-matches",
+          "header": "Content-Security-Policy",
+          "valuePattern": "(?:^|;)\\s*sandbox\\s(?=[^;]*allow-scripts)(?=[^;]*allow-same-origin)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "sandbox allow-scripts allow-same-origin"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "default-src 'self'; sandbox allow-same-origin allow-scripts allow-forms"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "sandbox allow-scripts"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "sandbox allow-same-origin"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "sandbox allow-scripts allow-popups"
+              }
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "csp-obsolete-directive",
+    "category": "csp-weakness",
+    "cwe": "CWE-693",
+    "severity": "LOW",
+    "title": "Content-Security-Policy carries an obsolete or removed directive",
+    "description": "The Content-Security-Policy value contains a directive that browsers no longer implement (plugin-types, reflected-xss, referrer or disown-opener). The directive looks like a control in review, but no browser acts on it, so the policy records an intent that is not enforced.",
+    "remediation": "Remove the obsolete directive and express the same intent with a control that is still implemented: frame-ancestors or the Cross-Origin-Opener-Policy header instead of disown-opener, Referrer-Policy instead of the referrer directive, and object-src 'none' instead of plugin-types.",
+    "limitation": "One header value. The rule matches the directive names that are documented as removed or non-implemented; it does not evaluate whether the policy still achieves the intended control through another directive.",
+    "scopeT": "One response whose Content-Security-Policy contains a removed directive name.",
+    "fp": "Policies generated by older frameworks often carry these tokens; the finding is that the control is inert, not that the site is unprotected overall.",
+    "recordDesc": "The Content-Security-Policy contains a directive that current browsers do not implement. Reviewers reading the policy count the directive as a control, while the browser ignores it, so the policy overstates what it enforces and the replacement control may never have been configured.",
+    "applicability": "HTTPS responses that send Content-Security-Policy.",
+    "risk": "The policy appears to enforce a control that no browser applies; LOW severity because the missing protection is a gap, not an active weakness.",
+    "why": "The policy lists plugin-types, reflected-xss, referrer or disown-opener.",
+    "fix": [
+      "Remove the removed directive.",
+      "Express the intent with frame-ancestors, Referrer-Policy or object-src instead."
+    ],
+    "verifyT": "Fetch the response and confirm the policy no longer lists the removed directive, and that the replacement control is present.",
+    "cells": [
+      {
+        "suffix": "obsolete-directive",
+        "lang": "http",
+        "name": "obsolete directive present",
+        "safe": "policy uses only implemented directives",
+        "check": {
+          "type": "response-header-matches",
+          "header": "Content-Security-Policy",
+          "valuePattern": "(?:^|;)\\s*(?:plugin-types|reflected-xss|referrer|disown-opener)\\s*(?:[;]|\\s|$)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "default-src 'self'; plugin-types application/pdf"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "reflected-xss block; default-src 'self'"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "default-src 'self'; referrer no-referrer"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "default-src 'self'; disown-opener"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "default-src 'self'; referrer-policy no-referrer"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "default-src 'self'; script-src 'nonce-abc'"
+              }
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "hsts-over-plaintext",
+    "category": "transport-security",
+    "cwe": "CWE-319",
+    "severity": "MEDIUM",
+    "title": "Strict-Transport-Security delivered over plaintext HTTP",
+    "description": "The response carrying Strict-Transport-Security was fetched over http://. User agents ignore the header on a non-secure response, so the policy is not installed even though every configuration review sees an HSTS header. The site keeps its first-visit downgrade window while appearing to have closed it.",
+    "remediation": "Serve HSTS only from the HTTPS listener, and make the HTTP listener answer with a redirect to HTTPS that does not pretend to set the policy. Check the proxy configuration for an add_header rule that is applied to both listeners.",
+    "limitation": "One response and its scheme. The rule judges the secured-ness of the response that carried the header; it cannot see whether the HTTPS listener sets the header correctly.",
+    "scopeT": "One response fetched over http:// that carries a non-empty Strict-Transport-Security header.",
+    "fp": "A test listener that mirrors production headers over plaintext is reported; browsers ignore the header there, which is the finding.",
+    "recordDesc": "The Strict-Transport-Security header arrived on a response fetched over plaintext HTTP. Browsers only accept HSTS from a secure transport, so the policy is discarded, the connection stays downgradable, and the presence of the header gives reviewers a false assurance that the policy is installed.",
+    "applicability": "Responses fetched over http:// that carry Strict-Transport-Security.",
+    "risk": "HSTS is never installed despite the header being present; MEDIUM severity because the downgrade path stays open on every plaintext visit.",
+    "why": "The observation URL scheme is http: and the response carries a non-empty Strict-Transport-Security header.",
+    "fix": [
+      "Remove the header from the HTTP listener.",
+      "Set it on the HTTPS listener only, behind a permanent redirect."
+    ],
+    "verifyT": "Request the http:// endpoint and confirm no Strict-Transport-Security header is returned, then request https:// and confirm the header is present.",
+    "cells": [
+      {
+        "suffix": "plaintext",
+        "lang": "http",
+        "name": "HSTS sent over plaintext HTTP",
+        "safe": "HSTS is served only over HTTPS",
+        "check": {
+          "type": "response-header-matches",
+          "header": "Strict-Transport-Security",
+          "valuePattern": "^\\s*\\S",
+          "requireScheme": "http"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "http://app.example/",
+              "status": 200,
+              "headers": {
+                "Strict-Transport-Security": "max-age=31536000; includeSubDomains"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "http://app.example/login",
+              "status": 301,
+              "headers": {
+                "Strict-Transport-Security": "max-age=63072000"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Strict-Transport-Security": "max-age=31536000"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "http://app.example/",
+              "status": 200,
+              "headers": {
+                "Strict-Transport-Security": "   "
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "http://app.example/",
+              "status": 200,
+              "headers": {}
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "set-cookie-invalid-samesite",
+    "category": "cookie-flags",
+    "cwe": "CWE-1275",
+    "severity": "LOW",
+    "title": "Set-Cookie carries an unrecognised SameSite value",
+    "description": "A Set-Cookie header names SameSite with a value that is not Strict, Lax or None, or names the attribute with no value at all. A user agent cannot interpret the attribute, so it falls back to its own default policy: the site does not get the cross-site behaviour it declared, and the cookie may be sent on cross-site requests the author meant to block.",
+    "remediation": "Send one of the three defined values, spelled exactly: SameSite=Strict, SameSite=Lax or SameSite=None together with Secure. Fix the template or framework setting that produced the misspelling so the attribute cannot regress.",
+    "limitation": "One header value. The rule validates the attribute token as written and never infers the browser's fallback for a particular version; a cookie the browser discards is also reported, because the header is still wrong.",
+    "scopeT": "One response whose Set-Cookie header names SameSite with an undefined value or with no value.",
+    "fp": "A value from a newer specification revision than the scanner knows would be reported; the three values above are the ones browsers implement.",
+    "recordDesc": "A Set-Cookie header carries a SameSite attribute whose value is not one of Strict, Lax or None, or carries the attribute without a value. Browsers discard an uninterpretable value and apply their default cross-site policy, so the cookie's cross-site behaviour is not the one the response declares.",
+    "applicability": "Responses that set cookies.",
+    "risk": "The cookie is sent under the browser default policy rather than the declared one; LOW severity because the outcome depends on the browser default.",
+    "why": "The SameSite attribute value is not strict, lax or none (case-insensitive), or the attribute has no value.",
+    "fix": [
+      "Correct the SameSite value to Strict, Lax or None.",
+      "Add Secure whenever SameSite=None is used."
+    ],
+    "verifyT": "Fetch the response and confirm every SameSite attribute carries one of the three defined values.",
+    "cells": [
+      {
+        "suffix": "invalid-value",
+        "lang": "http",
+        "name": "SameSite value is not recognised",
+        "safe": "SameSite is Strict, Lax or None",
+        "check": {
+          "type": "response-header-matches",
+          "header": "Set-Cookie",
+          "valuePattern": ";\\s*samesite\\s*(?:;|$)|;\\s*samesite\\s*=\\s*(?!(?:strict|lax|none)(?:\\s*;|\\s*$))[^;]*"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Set-Cookie": "sid=abc; Path=/; Secure; HttpOnly; SameSite=Strictt"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Set-Cookie": "sid=abc; Path=/; Secure; HttpOnly; SameSite="
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Set-Cookie": "sid=abc; Path=/; Secure; HttpOnly; SameSite"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Set-Cookie": "sid=abc; Path=/; SameSite=Lax"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Set-Cookie": "sid=abc; Path=/; SameSite=Strict; Secure"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Set-Cookie": "sid=abc; Path=/; SameSite=None; Secure"
+              }
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "cors-origin-wildcard-in-host",
+    "category": "cors",
+    "cwe": "CWE-942",
+    "severity": "LOW",
+    "title": "Access-Control-Allow-Origin uses a wildcard inside an origin",
+    "description": "The Access-Control-Allow-Origin value is a scheme plus a host pattern that contains a wildcard character. CORS does not define wildcard hosts: the value must be either the literal * or one exact origin, so a browser matches this header against no origin and the credentialed request the developer intended to permit fails. A proxy or framework that rewrites origins may also be reflecting attacker input into this header.",
+    "remediation": "Return one exact origin, echoed from a server-side allowlist after comparing the request's Origin header, or return the literal * when the response is not credentialed. Remove host-pattern support from the CORS helper that produced the value.",
+    "limitation": "One header value. The rule judges the declared origin pattern; it cannot see the request's Origin header and therefore cannot tell whether the value was reflected from attacker input.",
+    "scopeT": "One response whose Access-Control-Allow-Origin value contains a wildcard inside a scheme-and-host form.",
+    "fp": "A deployment that relies on a proxy expanding the pattern is reported; the header as observed is not a valid CORS origin.",
+    "recordDesc": "Access-Control-Allow-Origin carries a scheme and host pattern with a wildcard character in it. The CORS protocol only permits the literal * or one exact origin, so the browser matches nothing, credentialed cross-origin reads fail, and the policy records an origin-sharing intent it does not implement.",
+    "applicability": "Responses that send Access-Control-Allow-Origin.",
+    "risk": "The CORS policy silently fails or reflects too widely, depending on how the value is generated; LOW severity because the common outcome is a broken grant.",
+    "why": "The value starts with http:// or https:// and contains * before the path separator.",
+    "fix": [
+      "Echo one exact origin from a server-side allowlist.",
+      "Use the literal * only for non-credentialed responses."
+    ],
+    "verifyT": "Send a request with an Origin header and confirm Access-Control-Allow-Origin returns exactly that origin or the literal *.",
+    "cells": [
+      {
+        "suffix": "wildcard-host",
+        "lang": "http",
+        "name": "origin pattern contains a wildcard",
+        "safe": "a single exact origin is returned",
+        "check": {
+          "type": "response-header-matches",
+          "header": "Access-Control-Allow-Origin",
+          "valuePattern": "^\\s*https?://[^\\s/]*\\*"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Access-Control-Allow-Origin": "https://*.example.com"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Access-Control-Allow-Origin": "https://api.*.example.com"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Access-Control-Allow-Origin": "*"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Access-Control-Allow-Origin": "https://example.com"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Access-Control-Allow-Origin": "null"
+              }
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "cors-origin-with-path",
+    "category": "cors",
+    "cwe": "CWE-942",
+    "severity": "LOW",
+    "title": "Access-Control-Allow-Origin is not a bare origin",
+    "description": "The Access-Control-Allow-Origin value carries a path or a trailing slash after the host. An origin, by definition, has no path component, so a browser never matches this value; the cross-origin read the configuration intended to allow is blocked, and the misconfiguration usually points at a CORS helper that concatenates configuration strings instead of parsing origins.",
+    "remediation": "Compare the request Origin against an allowlist and echo the origin exactly, with no path, no trailing slash and no query. Fix the helper so configuration values are parsed as URLs and reduced to scheme, host and port.",
+    "limitation": "One header value. The rule reports the shape of the declared origin and cannot observe whether the browser rejected the response.",
+    "scopeT": "One response whose Access-Control-Allow-Origin value has a path component or trailing slash.",
+    "fp": "A policy file kept in source control that is not served on the wire is out of scope; the finding is the header the browser receives.",
+    "recordDesc": "Access-Control-Allow-Origin contains a path or a trailing slash after the host. A browser compares the value against the requesting origin, which never carries a path, so the match fails and the response is denied to the site the operator meant to trust.",
+    "applicability": "Responses that send Access-Control-Allow-Origin.",
+    "risk": "Cross-origin access is denied for the intended site while the configuration looks correct; LOW severity because it is a functional break, not an exposure.",
+    "why": "The value begins with a scheme and host followed by a path separator.",
+    "fix": [
+      "Echo the origin with no path component.",
+      "Parse configured origins as URLs before echoing them."
+    ],
+    "verifyT": "Send a request with an Origin header and confirm the response value equals the origin exactly, with no trailing slash.",
+    "cells": [
+      {
+        "suffix": "with-path",
+        "lang": "http",
+        "name": "origin carries a path",
+        "safe": "a bare origin is returned",
+        "check": {
+          "type": "response-header-matches",
+          "header": "Access-Control-Allow-Origin",
+          "valuePattern": "^\\s*https?://[^\\s/]+/"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Access-Control-Allow-Origin": "https://example.com/"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Access-Control-Allow-Origin": "https://example.com/app"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Access-Control-Allow-Origin": "https://example.com"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Access-Control-Allow-Origin": "https://example.com:8443"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Access-Control-Allow-Origin": "*"
+              }
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "referrer-policy-unrecognised-token",
+    "category": "information-disclosure",
+    "cwe": "CWE-200",
+    "severity": "LOW",
+    "title": "Referrer-Policy names no policy a browser recognises",
+    "description": "The Referrer-Policy header is present but none of its comma-separated tokens is a policy a browser implements. Browsers skip unknown tokens, so with no recognised token left the header has no effect and the default policy applies: full URLs are sent to same-scheme destinations, which leaks paths and query strings that the header was meant to trim.",
+    "remediation": "Use one of the defined policy tokens, spelled exactly (no-referrer, same-origin, strict-origin-when-cross-origin and the other five). Add a test that fails when the configured value is not in the allowed list, because a misspelled token fails silently in the browser.",
+    "limitation": "One header value. The rule reports that no token is recognised; it does not evaluate which default the deployed browser then applies, and a header with at least one recognised token is left to the value rules.",
+    "scopeT": "One response whose Referrer-Policy header contains tokens but none of them is a defined policy.",
+    "fp": "A future policy token would be reported until the rule list is updated; the eight tokens above are the ones the specification defines.",
+    "recordDesc": "The Referrer-Policy header carries only tokens that are not defined policies. Browsers ignore unknown tokens and fall back to the default policy, so the site sends full referrer URLs to same-scheme destinations while its configuration reads as if referrer trimming were enabled.",
+    "applicability": "Responses that send Referrer-Policy.",
+    "risk": "Referrer URLs leak despite an explicit policy header; LOW severity because the leak is confined to same-scheme destinations.",
+    "why": "No comma-separated token in the header is one of the eight defined Referrer-Policy values.",
+    "fix": [
+      "Correct the token to a defined policy.",
+      "Add a configuration test that rejects unknown tokens."
+    ],
+    "verifyT": "Fetch the response and confirm the header value is one of the eight defined tokens.",
+    "cells": [
+      {
+        "suffix": "unrecognised-token",
+        "lang": "http",
+        "name": "no recognised Referrer-Policy token",
+        "safe": "the header names a defined policy",
+        "check": {
+          "type": "response-header-matches",
+          "header": "Referrer-Policy",
+          "valuePattern": "^(?!\\s*(?:no-referrer|no-referrer-when-downgrade|origin|origin-when-cross-origin|same-origin|strict-origin|strict-origin-when-cross-origin|unsafe-url)\\s*(?:,|$))(?![\\s\\S]*,\\s*(?:no-referrer|no-referrer-when-downgrade|origin|origin-when-cross-origin|same-origin|strict-origin|strict-origin-when-cross-origin|unsafe-url)\\s*(?:,|$))\\s*\\S"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Referrer-Policy": "same-orign"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Referrer-Policy": "no-referrer, bogus"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Referrer-Policy": "bogus, no-referrer"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Referrer-Policy": "strict-origin-when-cross-origin"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Referrer-Policy": "   "
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {}
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "refresh-script-scheme",
+    "category": "open-redirect",
+    "cwe": "CWE-601",
+    "severity": "MEDIUM",
+    "title": "Refresh header targets a script scheme",
+    "description": "The Refresh header carries a url= target whose scheme is javascript: or vbscript:. The header exists to send the browser to another document, so a script scheme turns a redirect control into an inline script sink: wherever the value is derived from request data, an attacker can place markup that executes in the page origin.",
+    "remediation": "Build the Refresh target from a fixed allowlist of paths, not from request data, and never emit a script scheme. Prefer an HTTP 3xx redirect, which cannot carry a script scheme, and treat any existing javascript: target in configuration as a defect to remove.",
+    "limitation": "One header value. The rule reports the scheme the header names; it cannot prove the value is attacker-influenced, and some browsers block Refresh navigation to script schemes outright, so impact depends on the client.",
+    "scopeT": "One response whose Refresh header names a javascript: or vbscript: URL.",
+    "fp": "A static page that deliberately uses a script-scheme refresh is reported; the construct is unsafe wherever the value can change.",
+    "recordDesc": "The Refresh header points at a javascript: or vbscript: URL. Meta-refresh navigation is normally a redirect control, but a script scheme makes it execute code in the current origin, so a value that reaches this header from request data becomes a script-injection sink.",
+    "applicability": "Responses that send a Refresh header.",
+    "risk": "A redirect control is turned into script execution in the page origin; MEDIUM severity because impact depends on whether the target is attacker-influenced.",
+    "why": "The Refresh value names url=javascript: or url=vbscript:.",
+    "fix": [
+      "Remove the script-scheme target.",
+      "Replace the refresh with an HTTP 3xx redirect to an allowlisted path."
+    ],
+    "verifyT": "Fetch the response and confirm the Refresh target is a path or an https URL you operate, never a script scheme.",
+    "cells": [
+      {
+        "suffix": "script-scheme",
+        "lang": "http",
+        "name": "Refresh targets a script scheme",
+        "safe": "Refresh targets an allowlisted path",
+        "check": {
+          "type": "response-header-matches",
+          "header": "Refresh",
+          "valuePattern": "^\\s*[0-9]*\\s*;?\\s*url\\s*=\\s*[\"\\']?\\s*(?:javascript|vbscript)\\s*:"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Refresh": "0; url=javascript:alert(document.cookie)"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Refresh": "5;URL=\"vbscript:msgbox(1)\""
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Refresh": "0; url=https://example.com/"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Refresh": "0; url=//example.com/"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Refresh": "30"
+              }
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "x-dns-prefetch-control-on",
+    "category": "security-headers",
+    "cwe": "CWE-693",
+    "severity": "LOW",
+    "title": "X-DNS-Prefetch-Control explicitly enables DNS prefetching",
+    "description": "The response sets X-DNS-Prefetch-Control to on. That value tells the browser it may resolve hostnames for links before the user follows them, which turns page content into outbound DNS queries. On pages that render user-supplied links or private hostnames this discloses browsing intent and can confirm which records a visitor viewed.",
+    "remediation": "Send X-DNS-Prefetch-Control: off on authenticated and administrative pages, or omit the header and rely on the browser default for the pages where prefetching is useful.",
+    "limitation": "One header value. The rule reports the explicit enablement; it cannot see whether the page actually contains links to hosts worth prefetching.",
+    "scopeT": "One response whose X-DNS-Prefetch-Control value is on.",
+    "fp": "A public marketing site that wants prefetching for speed is reported; the value is still an explicit choice to resolve hostnames early.",
+    "recordDesc": "The response sets X-DNS-Prefetch-Control to on, so the browser may resolve hostnames found in page links before a visitor follows them. Content that renders user-supplied links therefore produces outbound DNS lookups that reveal which hosts a visitor was shown.",
+    "applicability": "Responses that send X-DNS-Prefetch-Control.",
+    "risk": "Rendered links produce outbound DNS traffic that discloses browsing intent; LOW severity because the disclosure is limited to hostname resolution.",
+    "why": "The X-DNS-Prefetch-Control value is on (case-insensitive).",
+    "fix": [
+      "Send X-DNS-Prefetch-Control: off on sensitive pages.",
+      "Omit the header where prefetching is wanted."
+    ],
+    "verifyT": "Fetch the response and confirm the header is absent or set to off on authenticated pages.",
+    "cells": [
+      {
+        "suffix": "on",
+        "lang": "http",
+        "name": "DNS prefetching is enabled",
+        "safe": "the header is off or absent",
+        "check": {
+          "type": "response-header-matches",
+          "header": "X-DNS-Prefetch-Control",
+          "valuePattern": "^\\s*on\\s*$"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "X-DNS-Prefetch-Control": "on"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "X-DNS-Prefetch-Control": "On"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "X-DNS-Prefetch-Control": "off"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "X-DNS-Prefetch-Control": ""
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {}
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "origin-agent-cluster-disabled",
+    "category": "security-headers",
+    "cwe": "CWE-693",
+    "severity": "LOW",
+    "title": "Origin-Agent-Cluster explicitly disables origin-keyed agent clustering",
+    "description": "The response sets Origin-Agent-Cluster to ?0, which opts the document out of origin-keyed agent clustering. Documents that share a site but not an origin then run in the same agent cluster, so a compromised or hostile same-site document has a shorter path to the application's rendering process.",
+    "remediation": "Send Origin-Agent-Cluster: ?1, or omit the header on browsers whose default is already origin-keyed. Keep ?0 only where a document genuinely depends on sharing an agent cluster with another origin, and record that dependency.",
+    "limitation": "One header value. The rule reports the explicit opt-out; it cannot determine whether any same-site document actually shares the cluster in a deployment.",
+    "scopeT": "One response whose Origin-Agent-Cluster value is ?0.",
+    "fp": "A deployment that needs agent-cluster sharing for a documented reason is reported; the opt-out is still the observable fact.",
+    "recordDesc": "The response sets Origin-Agent-Cluster to ?0, opting out of origin-keyed agent clustering. Same-site documents that would otherwise be isolated then share an agent cluster, so a weaker same-site origin runs alongside the application rather than in its own process boundary.",
+    "applicability": "Responses that send Origin-Agent-Cluster.",
+    "risk": "Same-site documents share an agent cluster with the application; LOW severity because the isolation loss only matters once another same-site origin is compromised.",
+    "why": "The Origin-Agent-Cluster value is ?0.",
+    "fix": [
+      "Send Origin-Agent-Cluster: ?1.",
+      "Remove the opt-out unless a documented dependency requires it."
+    ],
+    "verifyT": "Fetch the response and confirm the header is ?1 or absent.",
+    "cells": [
+      {
+        "suffix": "disabled",
+        "lang": "http",
+        "name": "agent clustering is disabled",
+        "safe": "the header is ?1 or absent",
+        "check": {
+          "type": "response-header-matches",
+          "header": "Origin-Agent-Cluster",
+          "valuePattern": "^\\s*\\?0\\s*$"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Origin-Agent-Cluster": "?0"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Origin-Agent-Cluster": "?0 "
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Origin-Agent-Cluster": "?1"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Origin-Agent-Cluster": ""
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {}
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "banner-x-backend-server",
+    "category": "information-disclosure",
+    "cwe": "CWE-200",
+    "severity": "LOW",
+    "title": "Internal backend hostname disclosed (X-Backend-Server header)",
+    "description": "The response carries an X-Backend-Server header naming the internal host that served it. The value is usually an internal DNS name or a datacentre identifier that is not meant to be reachable from outside, and it maps the public endpoint onto internal infrastructure.",
+    "remediation": "Strip the header at the edge, or rename the value to an opaque request identifier. If the application sets it for correlation, send that correlation value to the log sink instead of the client.",
+    "limitation": "One header value. The rule reports the header content; it cannot tell whether the named host is reachable from the internet or what runs on it.",
+    "scopeT": "One response that carries a non-empty X-Backend-Server header.",
+    "fp": "A load balancer that deliberately publishes a pool name is reported; the value still describes internal topology.",
+    "recordDesc": "The X-Backend-Server header names the internal host behind the public endpoint. That value tells a reader which backend served the request and gives a hostname to test for reachability, which shortens the path from a public URL to internal infrastructure.",
+    "applicability": "Responses that send X-Backend-Server.",
+    "risk": "Internal hostnames and topology are exposed to any client; LOW severity because the disclosure alone grants no access.",
+    "why": "The response carries a non-empty X-Backend-Server header.",
+    "fix": [
+      "Strip X-Backend-Server at the edge.",
+      "Log the backend identity server-side instead."
+    ],
+    "verifyT": "Fetch the response and confirm no X-Backend-Server header is returned, and that correlation still works from the request id.",
+    "cells": [
+      {
+        "suffix": "x-backend-server",
+        "lang": "http",
+        "name": "backend hostname disclosed",
+        "safe": "the header is stripped at the edge",
+        "check": {
+          "type": "response-header-matches",
+          "header": "X-Backend-Server",
+          "valuePattern": "^\\s*\\S"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "X-Backend-Server": "app-prod-07.internal"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 502,
+              "headers": {
+                "X-Backend-Server": "app-prod-07"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "X-Backend-Server": "   "
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "X-Powered-By": "Express"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {}
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "banner-aspnetmvc-version",
+    "category": "information-disclosure",
+    "cwe": "CWE-200",
+    "severity": "LOW",
+    "title": "Framework version disclosed (X-AspNetMvc-Version header)",
+    "description": "The response advertises the ASP.NET MVC version in X-AspNetMvc-Version. The header is emitted by default in older framework versions and turns a generic endpoint into a version-specific target for exploit selection.",
+    "remediation": "Remove the header in the application configuration (MvcHandler.DisableMvcResponseHeader) or at the reverse proxy. Keep version information in server-side inventory rather than in responses.",
+    "limitation": "One header value. The rule reports the advertised version; it does not claim the version is vulnerable.",
+    "scopeT": "One response that carries a non-empty X-AspNetMvc-Version header.",
+    "fp": "An internal staging host with the same defaults is reported; the version is still disclosed on every response.",
+    "recordDesc": "The X-AspNetMvc-Version response header advertises the framework version that rendered the page. Attackers use the version to choose which public issues to try against the deployment, so the header removes a step from reconnaissance even when nothing is exploitable.",
+    "applicability": "Responses rendered by ASP.NET MVC.",
+    "risk": "Framework version is disclosed on every response; LOW severity because it is reconnaissance aid rather than an access path.",
+    "why": "The response carries X-AspNetMvc-Version.",
+    "fix": [
+      "Disable the MVC response header.",
+      "Strip it at the reverse proxy as a second layer."
+    ],
+    "verifyT": "Fetch the response and confirm the X-AspNetMvc-Version header is absent.",
+    "cells": [
+      {
+        "suffix": "aspnetmvc-version",
+        "lang": "http",
+        "name": "MVC version disclosed",
+        "safe": "the header is disabled",
+        "check": {
+          "type": "response-header-matches",
+          "header": "X-AspNetMvc-Version",
+          "valuePattern": "^\\s*\\d"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "X-AspNetMvc-Version": "5.2"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 500,
+              "headers": {
+                "X-AspNetMvc-Version": "4.0"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "X-AspNetMvc-Version": ""
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "X-AspNet-Version": "4.0.30319"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {}
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "banner-x-debug-token-link",
+    "category": "information-disclosure",
+    "cwe": "CWE-215",
+    "severity": "MEDIUM",
+    "title": "Profiler link exposed (X-Debug-Token-Link header)",
+    "description": "The response carries X-Debug-Token-Link, which is the Symfony profiler endpoint for the request that produced the page. The link is a token, so anyone who received the response can open the profiler and read collected request data: configuration, SQL, cache keys and, depending on the panels installed, credentials.",
+    "remediation": "Run the profiler only in development, and strip X-Debug-Token and X-Debug-Token-Link in production. If the profiler must run, restrict it to a trusted network and rotate the debug token store.",
+    "limitation": "One header value. The rule reports the profiler link; it cannot tell whether the profiler endpoint still accepts the token or which panels are enabled.",
+    "scopeT": "One response that carries a non-empty X-Debug-Token-Link header.",
+    "fp": "A staging host that deliberately exposes the profiler to a trusted network is reported; the link is still readable by anyone with the response.",
+    "recordDesc": "The X-Debug-Token-Link header publishes the Symfony profiler URL for the request. The profiler keeps the collected request data behind a debug token, so the header hands out a working read path to configuration, queries and session context.",
+    "applicability": "Responses produced with the Symfony profiler enabled.",
+    "risk": "A profiler endpoint addressable by any client exposes per-request internals; MEDIUM severity because the panels routinely include secrets.",
+    "why": "The response carries X-Debug-Token-Link.",
+    "fix": [
+      "Disable the profiler in production.",
+      "Strip X-Debug-Token and X-Debug-Token-Link at the edge."
+    ],
+    "verifyT": "Fetch the response and confirm both X-Debug-Token and X-Debug-Token-Link are absent, and that the profiler path returns 404.",
+    "cells": [
+      {
+        "suffix": "x-debug-token-link",
+        "lang": "http",
+        "name": "profiler link disclosed",
+        "safe": "the profiler is not reachable from the response",
+        "check": {
+          "type": "response-header-matches",
+          "header": "X-Debug-Token-Link",
+          "valuePattern": "^\\s*\\S"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "X-Debug-Token-Link": "/_profiler/8f2c1a"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "X-Debug-Token-Link": "https://app.example/_profiler/8f2c1a"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "X-Debug-Token-Link": ""
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "X-Debug-Token": "8f2c1a"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {}
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "banner-docker-registry-version",
+    "category": "information-disclosure",
+    "cwe": "CWE-200",
+    "severity": "LOW",
+    "title": "Registry API version disclosed (Docker-Distribution-Api-Version header)",
+    "description": "The response advertises the Docker registry API version in Docker-Distribution-Api-Version. The header confirms that a registry endpoint is publicly reachable and tells a reader which API surface to expect, which is the first step in enumerating images and tags.",
+    "remediation": "Keep the registry behind authentication and network policy rather than on a public host, and strip the version header at the edge when the registry must face the internet.",
+    "limitation": "One header value. The rule reports the advertised registry version; it does not test whether the registry allows anonymous pulls.",
+    "scopeT": "One response that carries a non-empty Docker-Distribution-Api-Version header.",
+    "fp": "A public registry mirror intended for anonymous pulls is reported; the API surface is still advertised.",
+    "recordDesc": "The Docker-Distribution-Api-Version header marks the response as coming from a container registry and states which API version it serves. A public registry endpoint invites anonymous enumeration of repositories and tags, which often reveals internal naming and unpublished images.",
+    "applicability": "Responses served by a Docker registry.",
+    "risk": "A container registry is publicly identifiable and its API version is disclosed; LOW severity because access still depends on registry policy.",
+    "why": "The response carries Docker-Distribution-Api-Version.",
+    "fix": [
+      "Restrict registry access by network policy and authentication.",
+      "Strip the header at the edge where possible."
+    ],
+    "verifyT": "Request the registry root and confirm it is not anonymously reachable, or that the version header is stripped.",
+    "cells": [
+      {
+        "suffix": "docker-registry-version",
+        "lang": "http",
+        "name": "registry API version disclosed",
+        "safe": "the registry is not publicly identifiable",
+        "check": {
+          "type": "response-header-matches",
+          "header": "Docker-Distribution-Api-Version",
+          "valuePattern": "^\\s*\\S"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://registry.example/v2/",
+              "status": 200,
+              "headers": {
+                "Docker-Distribution-Api-Version": "registry/2.0"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://registry.example/v2/",
+              "status": 401,
+              "headers": {
+                "Docker-Distribution-Api-Version": "registry/2.0"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://registry.example/v2/",
+              "status": 200,
+              "headers": {
+                "Docker-Distribution-Api-Version": ""
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Server": "nginx"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {}
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-spring-actuator-env",
+    "category": "debug-exposure",
+    "cwe": "CWE-200",
+    "severity": "HIGH",
+    "title": "Spring Actuator environment endpoint disclosed in a response",
+    "description": "The response body is a Spring Boot Actuator environment document: it contains a propertySources array and an activeProfiles field. The endpoint publishes the resolved application configuration, which normally includes datasource credentials, API keys and internal hostnames.",
+    "remediation": "Disable the actuator env endpoint or require authentication and a management port that is not publicly routed. Rotate any credential that appeared in the response.",
+    "limitation": "Two body markers. A page that echoes one of the two field names without the rest of the document is not reported.",
+    "scopeT": "One response whose body contains both a propertySources array and an activeProfiles field.",
+    "fp": "A locally rendered documentation page about Actuator is reported only if it embeds both fields in the same body.",
+    "recordDesc": "The Spring Boot Actuator environment endpoint returns every resolved configuration property, including datasource passwords and third-party API keys. When the management endpoint is reachable from the same public host as the application, the response is a complete configuration dump behind no credential.",
+    "applicability": "Responses served by a Spring Boot application with the Actuator management endpoints exposed.",
+    "risk": "A full application configuration dump, including secrets, is readable; HIGH severity because credentials in it usually grant direct access.",
+    "why": "The body contains \"propertySources\" and \"activeProfiles\".",
+    "fix": [
+      "Disable management.endpoint.env or require authentication.",
+      "Move management endpoints to an internal port."
+    ],
+    "verifyT": "Request the management base path and confirm the env endpoint returns 401/403 or 404, and that no propertySources array is returned.",
+    "cells": [
+      {
+        "suffix": "body-spring-actuator-env",
+        "lang": "http",
+        "name": "Actuator environment dump",
+        "safe": "the endpoint returns a normal page",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "(?=[\\s\\S]*\"propertySources\")(?=[\\s\\S]*\"activeProfiles\")"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/actuator/env",
+              "status": 200,
+              "headers": {
+                "Content-Type": "application/json"
+              },
+              "body": "{\"activeProfiles\":[\"prod\"],\"propertySources\":[{\"name\":\"systemEnvironment\",\"properties\":{\"DB_PASSWORD\":{\"value\":\"******\"}}}]}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/actuator/env/db.url",
+              "status": 200,
+              "headers": {
+                "Content-Type": "application/json"
+              },
+              "body": "{\"propertySources\":[{\"name\":\"applicationConfig\"}],\"activeProfiles\":[]}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/docs/actuator",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html"
+              },
+              "body": "<h1>Actuator</h1><p>The env endpoint lists property sources.</p>"
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html"
+              },
+              "body": "<html><body>Welcome</body></html>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-spring-actuator-index",
+    "category": "debug-exposure",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "Spring Actuator index disclosed in a response",
+    "description": "The response is the Actuator discovery document: a JSON object with an _links map whose entries name actuator endpoints. It tells a reader which management endpoints exist, so health, metrics, env or heapdump can be requested directly instead of guessed.",
+    "remediation": "Require authentication on the management port, or disable the discovery endpoint. Review whether every endpoint the index lists is meant to be reachable.",
+    "limitation": "Two body markers. A generic JSON API response that happens to contain _links is not reported unless it also names actuator.",
+    "scopeT": "One response whose body contains both an _links map and the token actuator.",
+    "fp": "A client library page that quotes the actuator index is reported only if it reproduces both markers.",
+    "recordDesc": "The Actuator discovery document maps every management endpoint the application exposes and links to each one. Publishing that index converts a blind endpoint search into a list of live read paths for health, metrics and configuration data.",
+    "applicability": "Responses served by Spring Boot with the management endpoints enabled.",
+    "risk": "The full management surface is enumerated for the reader; MEDIUM severity because each listed endpoint may expose more sensitive data.",
+    "why": "The body contains \"_links\" and \"actuator\".",
+    "fix": [
+      "Disable the actuator index or require authentication.",
+      "Limit exposed endpoints to health and info."
+    ],
+    "verifyT": "Request the management base path and confirm the index returns 401/403 or 404.",
+    "cells": [
+      {
+        "suffix": "body-spring-actuator-index",
+        "lang": "http",
+        "name": "Actuator endpoint index",
+        "safe": "the endpoint returns a normal page",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "(?=[\\s\\S]*\"_links\")(?=[\\s\\S]*/actuator)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/actuator",
+              "status": 200,
+              "headers": {
+                "Content-Type": "application/json"
+              },
+              "body": "{\"_links\":{\"self\":{\"href\":\"http://localhost:8080/actuator\"},\"env\":{\"href\":\"http://localhost:8080/actuator/env\"}}}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/actuator/",
+              "status": 200,
+              "headers": {
+                "Content-Type": "application/hal+json"
+              },
+              "body": "{\"_links\":{\"health\":{\"href\":\"/actuator/health\"}}} <!-- actuator -->"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/api",
+              "status": 200,
+              "headers": {
+                "Content-Type": "application/json"
+              },
+              "body": "{\"_links\":{\"self\":\"/api/items\"}}"
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html"
+              },
+              "body": "<html><body>Home</body></html>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-go-pprof-index",
+    "category": "debug-exposure",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "Go pprof profiling index disclosed in a response",
+    "description": "The response is the net/http/pprof index page: its title is the /debug/pprof/ path and it lists heap, goroutine and CPU profile links. The profiles expose memory contents, live goroutine stacks and execution traces, which frequently include credentials and internal request data.",
+    "remediation": "Remove the net/http/pprof handler from the public mux (import it only on an internal listener), or require authentication and a private network path.",
+    "limitation": "One body marker. The title string is specific to the pprof handler; a page that merely mentions /debug/pprof is not matched unless it reproduces the title.",
+    "scopeT": "One response whose body contains the pprof index title.",
+    "fp": "A documentation page that shows the pprof title inside an escaped code block is not matched.",
+    "recordDesc": "The Go pprof index page lists the CPU, heap, goroutine and trace profiles the process serves. A heap profile contains live object contents, so a publicly reachable pprof handler is a memory disclosure as well as a denial-of-service lever.",
+    "applicability": "Responses served by a Go process that imports net/http/pprof on its public mux.",
+    "risk": "Memory, goroutine and execution traces are downloadable; MEDIUM severity because the heap routinely contains credentials.",
+    "why": "The body contains the pprof index title /debug/pprof/.",
+    "fix": [
+      "Serve pprof only on an internal listener.",
+      "Require authentication in front of the profile path."
+    ],
+    "verifyT": "Request /debug/pprof/ and confirm it returns 404 or requires credentials, and that no profile index is rendered.",
+    "cells": [
+      {
+        "suffix": "body-go-pprof-index",
+        "lang": "http",
+        "name": "pprof index page",
+        "safe": "the endpoint returns a normal page",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "(?=[\\s\\S]*<title>\\s*/debug/pprof/)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/debug/pprof/",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html"
+              },
+              "body": "<html><head><title>/debug/pprof/</title></head><body>profiles:</body></html>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/debug/pprof",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html"
+              },
+              "body": "<html><head><title> /debug/pprof/ </title></head></html>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/debug",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html"
+              },
+              "body": "<html><body>The profiler lives at /debug/pprof/ on the internal port.</body></html>"
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html"
+              },
+              "body": "<html><head><title>Home</title></head></html>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-apache-server-status",
+    "category": "information-disclosure",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "Apache mod_status page disclosed in a response",
+    "description": "The response is an Apache server-status page: it carries the module's status heading and the per-worker request table. It lists live requests with client addresses, URLs, virtual hosts and worker state, so it discloses active traffic and internal hostnames.",
+    "remediation": "Restrict /server-status to localhost with the mod_status Require directive, or disable the module on internet-facing virtual hosts.",
+    "limitation": "One body marker. The heading is specific to mod_status; a page that links to server-status is not matched.",
+    "scopeT": "One response whose body contains the Apache server status heading.",
+    "fp": "An operations runbook that quotes the heading is reported only if the response reproduces it as page content.",
+    "recordDesc": "The Apache mod_status page renders the running request table: client address, request line, virtual host and worker state for every in-flight connection. It is a live view of who is using the service and which internal hosts are behind it.",
+    "applicability": "Responses served by Apache httpd with mod_status enabled on a public virtual host.",
+    "risk": "Live traffic and internal hostnames are readable; MEDIUM severity because the data is current rather than historical.",
+    "why": "The body contains the mod_status heading \"Apache Server Status for\".",
+    "fix": [
+      "Restrict mod_status to localhost.",
+      "Disable the handler on public virtual hosts."
+    ],
+    "verifyT": "Request /server-status and confirm the connection is refused or the page requires local access.",
+    "cells": [
+      {
+        "suffix": "body-apache-server-status",
+        "lang": "http",
+        "name": "mod_status page",
+        "safe": "the endpoint returns a normal page",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "(?=[\\s\\S]*Apache Server Status for)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/server-status",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html"
+              },
+              "body": "<html><head><title>Apache Server Status for app.example</title></head></html>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/server-status?auto",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/plain"
+              },
+              "body": "Total Accesses: 41\n# Apache Server Status for app.example (via 10.0.0.4)"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/docs",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html"
+              },
+              "body": "<p>Enable mod_status and visit /server-status for load details.</p>"
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html"
+              },
+              "body": "<html><body>Home</body></html>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-elasticsearch-info",
+    "category": "information-disclosure",
+    "cwe": "CWE-200",
+    "severity": "HIGH",
+    "title": "Elasticsearch cluster info disclosed in a response",
+    "description": "The response is the Elasticsearch root document: it carries the product tagline and the cluster name. An unauthenticated cluster answers with its version, cluster name, node name and build hash, and the same open port usually accepts index, document and search requests.",
+    "remediation": "Put Elasticsearch behind authentication and a network policy, and never route the HTTP port to the internet. Rename the cluster so the default name is not the only barrier to cross-cluster search.",
+    "limitation": "Two body markers. A page that merely mentions Elasticsearch is not matched; the tagline and the cluster-name field must appear together.",
+    "scopeT": "One response whose body contains the Elasticsearch tagline and a cluster_name field.",
+    "fp": "A tutorial page that embeds a captured root document is reported only if both markers are present in the body.",
+    "recordDesc": "The Elasticsearch root response states the product tagline, the cluster and node names, the version and the build hash. That answer is only produced by a cluster that accepts unauthenticated requests, so the disclosure and the missing access control arrive together.",
+    "applicability": "Responses served by Elasticsearch on a reachable HTTP port.",
+    "risk": "An unauthenticated search cluster discloses its identity and usually its data; HIGH severity because the same port serves index and document APIs.",
+    "why": "The body contains the \"You Know, for Search\" tagline and a \"cluster_name\" field.",
+    "fix": [
+      "Require authentication on the Elasticsearch HTTP layer.",
+      "Keep the port on a private network."
+    ],
+    "verifyT": "Request the root path and confirm the response is a 401 or is unreachable from the public network.",
+    "cells": [
+      {
+        "suffix": "body-elasticsearch-info",
+        "lang": "http",
+        "name": "Elasticsearch root document",
+        "safe": "the endpoint returns a normal page",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "(?=[\\s\\S]*\"tagline\"\\s*:\\s*\"You Know, for Search\")(?=[\\s\\S]*\"cluster_name\")"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://search.example:9200/",
+              "status": 200,
+              "headers": {
+                "Content-Type": "application/json"
+              },
+              "body": "{\"name\":\"node-1\",\"cluster_name\":\"prod-search\",\"version\":{\"number\":\"8.11.1\",\"build_hash\":\"abc\"},\"tagline\":\"You Know, for Search\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://search.example:9200/",
+              "status": 200,
+              "headers": {
+                "Content-Type": "application/json"
+              },
+              "body": "{\"cluster_name\":\"logs\",\"tagline\" : \"You Know, for Search\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Type": "application/json"
+              },
+              "body": "{\"cluster_name\":\"frontend\",\"items\":[]}"
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html"
+              },
+              "body": "<p>We run Elasticsearch 8 behind the search box.</p>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-etcd-version",
+    "category": "information-disclosure",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "etcd version endpoint disclosed in a response",
+    "description": "The response is the etcd version document: it carries the etcdserver and etcdcluster version fields. An unauthenticated etcd endpoint is the cluster's configuration store, so the same port usually answers key reads and writes, including the keys that hold service credentials.",
+    "remediation": "Authenticate etcd, enable TLS on the client port and keep it on a private network. Rotate any secret whose key space was reachable.",
+    "limitation": "Two body markers. A generic JSON document with one version field is not reported.",
+    "scopeT": "One response whose body contains both etcdserver and etcdcluster version fields.",
+    "fp": "A monitoring dashboard that embeds the version JSON is reported only if both fields appear in the body.",
+    "recordDesc": "The etcd version document names the server and cluster versions of a distributed key-value store. That store holds cluster state and often the credentials other services read at start-up, so an open version endpoint is a sign that the key space is open too.",
+    "applicability": "Responses served by etcd on a reachable client port.",
+    "risk": "Cluster configuration and stored keys are likely readable; MEDIUM severity because reachability of the version endpoint implies the client API answers.",
+    "why": "The body contains \"etcdserver\" and \"etcdcluster\".",
+    "fix": [
+      "Enable etcd authentication and TLS.",
+      "Bind the client port to the private network only."
+    ],
+    "verifyT": "Request /version and confirm it is unreachable or requires a client certificate.",
+    "cells": [
+      {
+        "suffix": "body-etcd-version",
+        "lang": "http",
+        "name": "etcd version document",
+        "safe": "the endpoint returns a normal page",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "(?=[\\s\\S]*\"etcdserver\")(?=[\\s\\S]*\"etcdcluster\")"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://etcd.example:2379/version",
+              "status": 200,
+              "headers": {
+                "Content-Type": "application/json"
+              },
+              "body": "{\"etcdserver\":\"3.5.9\",\"etcdcluster\":\"3.5.0\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://etcd.example:2379/version",
+              "status": 200,
+              "headers": {
+                "Content-Type": "application/json"
+              },
+              "body": "{\"etcdserver\": \"3.4.27\", \"etcdcluster\": \"3.4.0\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/api/version",
+              "status": 200,
+              "headers": {
+                "Content-Type": "application/json"
+              },
+              "body": "{\"etcdserver\":\"3.5.9\"}"
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html"
+              },
+              "body": "<html><body>Home</body></html>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-prometheus-metrics",
+    "category": "information-disclosure",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "Prometheus metrics endpoint disclosed in a response",
+    "description": "The response is a Prometheus text exposition: it contains # HELP and # TYPE comment lines plus the Go runtime collector series. The metric names expose internal service topology, request paths, database names and error counters, which is reconnaissance for every other attack step.",
+    "remediation": "Require authentication on /metrics or scrape it over a private network path, and drop high-cardinality labels that carry user or path data.",
+    "limitation": "Three body markers. A page that documents the exposition format is not matched unless it reproduces the runtime series as well.",
+    "scopeT": "One response whose body contains # HELP, # TYPE and a Go runtime series.",
+    "fp": "A metrics exposition from a non-Go exporter is not reported by this rule; that endpoint has its own identity markers.",
+    "recordDesc": "The Prometheus text exposition publishes every registered metric with its labels. Internal series names, paths, dependency names and error counters map the service for a reader, and the labels frequently carry identifiers that should not leave the private network.",
+    "applicability": "Responses that serve a Prometheus text exposition on a public path.",
+    "risk": "Internal topology and error rates are readable, and the endpoint is often a scrape target for further probing; MEDIUM severity.",
+    "why": "The body contains # HELP, # TYPE and the go_gc_duration_seconds runtime series.",
+    "fix": [
+      "Require authentication on /metrics.",
+      "Scrape over the private network only."
+    ],
+    "verifyT": "Request /metrics and confirm it returns 401/403 or is unreachable from the public network.",
+    "cells": [
+      {
+        "suffix": "body-prometheus-metrics",
+        "lang": "http",
+        "name": "Prometheus exposition",
+        "safe": "the endpoint returns a normal page",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "(?=[\\s\\S]*# HELP )(?=[\\s\\S]*# TYPE )(?=[\\s\\S]*go_gc_duration_seconds)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/metrics",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/plain; version=0.0.4"
+              },
+              "body": "# HELP go_gc_duration_seconds A summary of the pause duration of garbage collection cycles.\n# TYPE go_gc_duration_seconds summary\ngo_gc_duration_seconds{quantile=\"0\"} 1e-05\n"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/metrics",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/plain"
+              },
+              "body": "# HELP process_cpu_seconds_total Total user and system CPU time spent in seconds.\n# TYPE process_cpu_seconds_total counter\ngo_gc_duration_seconds_sum 0.03\n"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/docs/metrics",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html"
+              },
+              "body": "<p># HELP and # TYPE lines start a metric family.</p>"
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html"
+              },
+              "body": "<html><body>Home</body></html>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-graphql-introspection",
+    "category": "information-disclosure",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "GraphQL introspection result disclosed in a response",
+    "description": "The response body is a GraphQL introspection result: it carries a __schema object with a queryType entry. Introspection enumerates every type, field, argument and deprecated field the schema exposes, which removes schema guessing from an attacker's work and can reveal administrative mutations.",
+    "remediation": "Disable introspection in production (or allow it only for authenticated tooling) and keep the schema in the build pipeline where it belongs.",
+    "limitation": "Two body markers. A GraphQL error response or a page that quotes a schema fragment is not reported unless both markers appear.",
+    "scopeT": "One response whose body contains a __schema object and a queryType entry.",
+    "fp": "A GraphQL client library page that reproduces an introspection payload is reported only when both markers are in the body.",
+    "recordDesc": "A GraphQL introspection response returns the schema itself: every type, field, argument and deprecation. Publishing it removes the guesswork from writing queries against the API, including mutations the documentation does not mention.",
+    "applicability": "Responses from a GraphQL endpoint that accepts introspection queries.",
+    "risk": "The complete API schema is readable; MEDIUM severity because the schema maps the attack surface rather than exposing data directly.",
+    "why": "The body contains \"__schema\" and \"queryType\".",
+    "fix": [
+      "Disable introspection in production.",
+      "Restrict it to authenticated developer tooling."
+    ],
+    "verifyT": "Send an introspection query and confirm the response is an error or empty schema, not a type listing.",
+    "cells": [
+      {
+        "suffix": "body-graphql-introspection",
+        "lang": "http",
+        "name": "GraphQL schema listing",
+        "safe": "the endpoint returns a normal page",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "(?=[\\s\\S]*\"__schema\")(?=[\\s\\S]*\"queryType\")"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/graphql",
+              "status": 200,
+              "headers": {
+                "Content-Type": "application/json"
+              },
+              "body": "{\"data\":{\"__schema\":{\"queryType\":{\"name\":\"Query\"},\"types\":[{\"name\":\"User\"}]}}}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/graphql",
+              "status": 200,
+              "headers": {
+                "Content-Type": "application/json"
+              },
+              "body": "{\"data\":{\"__schema\":{\"queryType\":{\"name\":\"RootQuery\"},\"mutationType\":{\"name\":\"Mutation\"}}}}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/graphql",
+              "status": 200,
+              "headers": {
+                "Content-Type": "application/json"
+              },
+              "body": "{\"errors\":[{\"message\":\"introspection is disabled\"}]}"
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/docs/graphql",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html"
+              },
+              "body": "<p>Use __schema to explore the API during development.</p>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-swagger-ui",
+    "category": "information-disclosure",
+    "cwe": "CWE-200",
+    "severity": "LOW",
+    "title": "Swagger UI documentation exposed in a response",
+    "description": "The response renders Swagger UI: the page contains the swagger-ui element and the SwaggerUIBundle script that loads a specification. Published API documentation names every route, parameter and model, and in many deployments the specification file itself is readable next to it.",
+    "remediation": "Serve the documentation only on an internal or authenticated path, and remove it from the production image when it is generated at build time.",
+    "limitation": "Two body markers. A page that links to a documentation site is not matched; the UI assets must be rendered in the response.",
+    "scopeT": "One response whose body contains the swagger-ui element and the SwaggerUIBundle script.",
+    "fp": "A developer portal that embeds Swagger UI on an internal host is reported; the documentation is still publicly rendered there.",
+    "recordDesc": "The Swagger UI page loads an OpenAPI document and renders every route, parameter and model. The rendered catalogue tells a reader which endpoints exist and how they are shaped, which is the reconnaissance step before targeted requests.",
+    "applicability": "Responses that render Swagger UI on a reachable path.",
+    "risk": "The full API catalogue is readable; LOW severity because the documentation names the surface without granting access.",
+    "why": "The body contains id=\"swagger-ui\" and SwaggerUIBundle.",
+    "fix": [
+      "Serve the documentation on an internal path.",
+      "Remove it from the production deployment."
+    ],
+    "verifyT": "Request the documentation path and confirm it returns 404 or requires authentication.",
+    "cells": [
+      {
+        "suffix": "body-swagger-ui",
+        "lang": "http",
+        "name": "Swagger UI page",
+        "safe": "the endpoint returns a normal page",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "(?=[\\s\\S]*id=[\"']?swagger-ui)(?=[\\s\\S]*SwaggerUIBundle)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/docs",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html"
+              },
+              "body": "<div id=\"swagger-ui\"></div><script src=\"/swagger-ui-bundle.js\"></script><script>window.ui = SwaggerUIBundle({url: \"/openapi.json\"});</script>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/api/docs",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html"
+              },
+              "body": "<div id=swagger-ui></div><script>const ui = SwaggerUIBundle({spec: {}})</script>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/docs",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html"
+              },
+              "body": "<p>Our API documentation is published at developer.example.</p>"
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html"
+              },
+              "body": "<html><body>Home</body></html>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-aspnet-dev-exception",
+    "category": "debug-exposure",
+    "cwe": "CWE-489",
+    "severity": "MEDIUM",
+    "title": "ASP.NET Core developer exception page disclosed in a response",
+    "description": "The response is the ASP.NET Core developer exception page: it carries the framework's unhandled-exception heading and references the Microsoft.AspNetCore assemblies. The page prints the exception, the stack trace, the request and, depending on configuration, the source lines around the failure.",
+    "remediation": "Run the application with the Production environment name so the developer exception page is not registered, and return a generic error page instead.",
+    "limitation": "Two body markers. A generic ASP.NET stack trace without the developer page heading is reported by the .NET stack-frame rule instead.",
+    "scopeT": "One response whose body contains the developer exception heading and a Microsoft.AspNetCore reference.",
+    "fp": "An error page rendered by a custom handler that keeps the heading for support purposes is reported; the page still exposes the exception.",
+    "recordDesc": "The ASP.NET Core developer exception page renders the unhandled exception, its stack trace, the request details and optionally the failing source lines. It is registered only in the Development environment, so seeing it means the deployment is running with development semantics in front of real traffic.",
+    "applicability": "Responses from an ASP.NET Core application running with the developer exception page enabled.",
+    "risk": "Exception details, source paths and request data reach the client; MEDIUM severity because the page is a debugging aid, not an access control bypass.",
+    "why": "The body contains the developer exception heading and Microsoft.AspNetCore.",
+    "fix": [
+      "Set ASPNETCORE_ENVIRONMENT=Production.",
+      "Verify the developer exception middleware is not registered outside development."
+    ],
+    "verifyT": "Trigger an error on the deployed endpoint and confirm the response is a generic error page with no stack trace.",
+    "cells": [
+      {
+        "suffix": "body-aspnet-dev-exception",
+        "lang": "http",
+        "name": "developer exception page",
+        "safe": "the endpoint returns a normal page",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "(?=[\\s\\S]*An unhandled exception occurred while processing the request)(?=[\\s\\S]*Microsoft\\.AspNetCore)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/boom",
+              "status": 500,
+              "headers": {
+                "Content-Type": "text/html"
+              },
+              "body": "<h1>An unhandled exception occurred while processing the request.</h1><p>InvalidOperationException: boom at Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddleware</p>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/api/boom",
+              "status": 500,
+              "headers": {
+                "Content-Type": "text/html"
+              },
+              "body": "An unhandled exception occurred while processing the request. See Microsoft.AspNetCore.Server.Kestrel output."
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html"
+              },
+              "body": "<html><body>Home</body></html>"
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/boom",
+              "status": 500,
+              "headers": {
+                "Content-Type": "application/json"
+              },
+              "body": "{\"error\":\"internal server error\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-tomcat-error-report",
+    "category": "debug-exposure",
+    "cwe": "CWE-209",
+    "severity": "MEDIUM",
+    "title": "Apache Tomcat error report disclosed in a response",
+    "description": "The response is the Tomcat error report page: it carries the server version banner and an Exception Report section with the stack trace. The banner names the exact Tomcat version, and the report prints class names, source paths and, in some configurations, the request parameters.",
+    "remediation": "Configure a custom error page for the application and suppress the Tomcat version banner (server.info), so the container does not render its own report to clients.",
+    "limitation": "Two body markers. The version banner alone is reported by the server-banner rule; this rule requires the exception report section too.",
+    "scopeT": "One response whose body contains the Tomcat version banner and an Exception Report heading.",
+    "fp": "A page that documents the Tomcat error format is reported only if it reproduces both markers as content.",
+    "recordDesc": "The Apache Tomcat error report prints the container version next to the exception stack. It names classes and source paths inside the application and confirms the exact container version, which lets a reader match public issues to the deployment.",
+    "applicability": "Responses served by a Tomcat container with the default error report.",
+    "risk": "Stack traces and the container version reach the client; MEDIUM severity because the report is diagnostic output that aids exploit selection.",
+    "why": "The body contains Apache Tomcat/ and Exception Report.",
+    "fix": [
+      "Configure a custom application error page.",
+      "Suppress the container version banner."
+    ],
+    "verifyT": "Trigger an error and confirm the response is the application error page, with no stack trace and no container banner.",
+    "cells": [
+      {
+        "suffix": "body-tomcat-error-report",
+        "lang": "http",
+        "name": "Tomcat error report",
+        "safe": "the endpoint returns a normal page",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "(?=[\\s\\S]*Apache Tomcat/)(?=[\\s\\S]*Exception Report)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/boom",
+              "status": 500,
+              "headers": {
+                "Content-Type": "text/html"
+              },
+              "body": "<h1>HTTP Status 500 - Internal Server Error</h1><hr><p><b>type</b> Exception report</p><p><b>message</b> boom</p><address>Apache Tomcat/9.0.82</address>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/api/boom",
+              "status": 500,
+              "headers": {
+                "Content-Type": "text/html"
+              },
+              "body": "Exception Report<br>java.lang.IllegalStateException at com.example.Api.handle(Api.java:41)<br>Apache Tomcat/10.1.18"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html"
+              },
+              "body": "<html><body>Home</body></html>"
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/boom",
+              "status": 500,
+              "headers": {
+                "Content-Type": "application/json"
+              },
+              "body": "{\"status\":500,\"error\":\"Internal Server Error\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-wildfly-error-report",
+    "category": "debug-exposure",
+    "cwe": "CWE-209",
+    "severity": "MEDIUM",
+    "title": "WildFly or JBoss error report disclosed in a response",
+    "description": "The response is the Undertow error report served by WildFly or JBoss: the body names the application server or its Undertow subsystem and carries an Error Report section with the exception detail.",
+    "remediation": "Deploy a custom error page and turn off the container's default error handling so the server does not render Undertow diagnostics to clients.",
+    "limitation": "Two body markers. A page that mentions WildFly in documentation is not matched; the error report section must also be present.",
+    "scopeT": "One response whose body contains a WildFly or JBoss Web marker and an Error Report heading.",
+    "fp": "An internal operations page that quotes an error report is reported only when both markers are reproduced.",
+    "recordDesc": "The Undertow error report served by WildFly and JBoss prints the exception class, the deployment name and the server build. That combination identifies the exact application server and often the deployed artefact, which is the information a reader needs to choose a matching issue.",
+    "applicability": "Responses served by WildFly, JBoss EAP or a standalone Undertow deployment.",
+    "risk": "Exception detail and the application server identity reach the client; MEDIUM severity because it is diagnostic output.",
+    "why": "The body contains WildFly or JBoss Web and an Error Report heading.",
+    "fix": [
+      "Configure a custom error page for the deployment.",
+      "Disable the container default error handler."
+    ],
+    "verifyT": "Trigger an error and confirm the response is the application error page with no Undertow report.",
+    "cells": [
+      {
+        "suffix": "body-wildfly-error-report",
+        "lang": "http",
+        "name": "WildFly error report",
+        "safe": "the endpoint returns a normal page",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "(?=[\\s\\S]*(?:WildFly|JBoss Web))(?=[\\s\\S]*Error Report)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/boom",
+              "status": 500,
+              "headers": {
+                "Content-Type": "text/html"
+              },
+              "body": "<h1>Error Report</h1><p>WildFly 31.0.1.Final (WildFly Core 23.0.2.Final)</p><p>java.lang.RuntimeException: boom</p>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/api/boom",
+              "status": 500,
+              "headers": {
+                "Content-Type": "text/html"
+              },
+              "body": "<h1>Error Report</h1><address>JBoss Web/7.0</address>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html"
+              },
+              "body": "<html><body>Home</body></html>"
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/docs",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html"
+              },
+              "body": "<p>WildFly deployments set the error page in web.xml.</p>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-weblogic-error",
+    "category": "debug-exposure",
+    "cwe": "CWE-209",
+    "severity": "MEDIUM",
+    "title": "Oracle WebLogic error page disclosed in a response",
+    "description": "The response is the WebLogic Server error page: it names the application server and reports Error 500 with the servlet context. The page confirms the container version family and the deployed context path, and in some versions prints a stack trace.",
+    "remediation": "Configure custom error pages at the application level so WebLogic does not render its own error page, and keep the container version out of responses.",
+    "limitation": "Two body markers. A page that discusses WebLogic in documentation is not matched; the server error page must be rendered.",
+    "scopeT": "One response whose body contains a WebLogic marker and an Error 500 heading.",
+    "fp": "A status page that names WebLogic and quotes the error text is reported only when both markers appear.",
+    "recordDesc": "The WebLogic error page identifies the application server and the servlet context that failed. Combined with the version family it narrows which container issues apply, and the context path maps the deployment layout.",
+    "applicability": "Responses served by Oracle WebLogic Server.",
+    "risk": "Container identity and deployment context reach the client; MEDIUM severity because the page is diagnostic output.",
+    "why": "The body contains WebLogic and Error 500.",
+    "fix": [
+      "Configure application-level error pages.",
+      "Keep the container version out of error responses."
+    ],
+    "verifyT": "Trigger an error and confirm the response is the application error page, not the WebLogic report.",
+    "cells": [
+      {
+        "suffix": "body-weblogic-error",
+        "lang": "http",
+        "name": "WebLogic error page",
+        "safe": "the endpoint returns a normal page",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "(?=[\\s\\S]*WebLogic)(?=[\\s\\S]*Error 500)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/boom",
+              "status": 500,
+              "headers": {
+                "Content-Type": "text/html"
+              },
+              "body": "<title>Error 500--Internal Server Error</title><h2>WebLogic Server 14.1.1.0</h2>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/app/boom",
+              "status": 500,
+              "headers": {
+                "Content-Type": "text/html"
+              },
+              "body": "<h1>Error 500--Internal Server Error</h1><p>From RFC 2068 WebLogic Server</p>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html"
+              },
+              "body": "<html><body>Home</body></html>"
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/docs",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html"
+              },
+              "body": "<p>WebLogic Server deployments should override the error page.</p>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-rails-better-errors",
+    "category": "debug-exposure",
+    "cwe": "CWE-489",
+    "severity": "MEDIUM",
+    "title": "better_errors debug page disclosed in a response",
+    "description": "The response is the better_errors gem page: it references the gem and renders its Better Errors heading with the exception, the stack and a live console prompt. In many configurations that prompt evaluates Ruby expressions inside the failing request.",
+    "remediation": "Remove the better_errors gem from the production bundle and keep it in the development group of the Gemfile.",
+    "limitation": "Two body markers. A generic Rails stack frame is reported by the Rails stack rule; this rule requires the gem's own page markers.",
+    "scopeT": "One response whose body references better_errors and renders the Better Errors heading.",
+    "fp": "A Gemfile snippet quoted in a page is reported only if the gem markers appear as rendered content.",
+    "recordDesc": "The better_errors page renders the exception next to a live interactive console for the failing request. The console evaluates Ruby in the application context, so the page is not just a disclosure: on a reachable deployment it is a code-execution prompt.",
+    "applicability": "Responses from a Rails application that loads the better_errors gem outside development.",
+    "risk": "A live evaluation console is exposed next to the stack trace; MEDIUM severity because the console usually requires a local request but the stack does not.",
+    "why": "The body contains better_errors and Better Errors.",
+    "fix": [
+      "Move better_errors to the Gemfile development group.",
+      "Rebuild the production bundle without the gem."
+    ],
+    "verifyT": "Trigger an error and confirm the response is a generic 500 page with no gem assets or console.",
+    "cells": [
+      {
+        "suffix": "body-rails-better-errors",
+        "lang": "http",
+        "name": "better_errors page",
+        "safe": "the endpoint returns a normal page",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "(?=[\\s\\S]*better_errors)(?=[\\s\\S]*Better Errors)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/boom",
+              "status": 500,
+              "headers": {
+                "Content-Type": "text/html"
+              },
+              "body": "<div id=\"better_errors_dialog\"><h1>Better Errors</h1><p>RuntimeError: boom</p><div class=\"console\">>> </div></div><script src=\"/assets/better_errors.js\"></script>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/api/boom",
+              "status": 500,
+              "headers": {
+                "Content-Type": "text/html"
+              },
+              "body": "<h1>Better Errors</h1> raised in better_errors/renderer.rb"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html"
+              },
+              "body": "<html><body>Home</body></html>"
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/boom",
+              "status": 500,
+              "headers": {
+                "Content-Type": "text/html"
+              },
+              "body": "<h1>We are sorry, but something went wrong.</h1>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-s3-bucket-listing",
+    "category": "information-disclosure",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "Object storage bucket listing disclosed in a response",
+    "description": "The response is an S3 ListBucketResult document: the XML root element and the S3 namespace appear together. A publicly listable bucket returns every object key, size and last-modified time, and those keys frequently name backups, exports and customer files.",
+    "remediation": "Remove the public list permission from the bucket policy and enable Block Public Access. Review the listed keys for objects that should not have been public.",
+    "limitation": "Two body markers. An S3 error document such as AccessDenied does not match, because it carries no ListBucketResult element.",
+    "scopeT": "One response whose body contains a ListBucketResult element in the S3 namespace.",
+    "fp": "A static site that serves a copy of a listing as documentation is reported only if the XML root element is reproduced.",
+    "recordDesc": "The S3 ListBucketResult document enumerates object keys with sizes and timestamps. Object keys routinely encode environment, date and owner, so a public listing turns an unpredictable key space into a downloadable inventory.",
+    "applicability": "Responses served from an S3 bucket configured for public listing.",
+    "risk": "Every object key in the bucket is readable; MEDIUM severity because the listing itself may expose sensitive names and the objects may be public too.",
+    "why": "The body contains ListBucketResult and the S3 namespace.",
+    "fix": [
+      "Remove public list permission from the bucket policy.",
+      "Enable S3 Block Public Access."
+    ],
+    "verifyT": "Request the bucket root and confirm the response is AccessDenied, and that the object list is no longer returned.",
+    "cells": [
+      {
+        "suffix": "body-s3-bucket-listing",
+        "lang": "http",
+        "name": "bucket listing",
+        "safe": "the endpoint returns a normal page",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "(?=[\\s\\S]*<ListBucketResult)(?=[\\s\\S]*xmlns=\"http://s3\\.amazonaws\\.com/doc/2006-03-01/\")"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://files.example.s3.amazonaws.com/",
+              "status": 200,
+              "headers": {
+                "Content-Type": "application/xml"
+              },
+              "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><ListBucketResult xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\"><Name>files.example</Name><Contents><Key>backup-2026-01.zip</Key></Contents></ListBucketResult>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://files.example/",
+              "status": 200,
+              "headers": {
+                "Content-Type": "application/xml"
+              },
+              "body": "<ListBucketResult xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\"><Key>db.sql.gz</Key></ListBucketResult>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://files.example/",
+              "status": 403,
+              "headers": {
+                "Content-Type": "application/xml"
+              },
+              "body": "<Error><Code>AccessDenied</Code><Message>Access Denied</Message></Error>"
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html"
+              },
+              "body": "<html><body>Home</body></html>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-dotenv-file-served",
+    "category": "information-disclosure",
+    "cwe": "CWE-200",
+    "severity": "HIGH",
+    "title": "Environment file contents disclosed in a response",
+    "description": "The response body carries environment-file assignments: an APP_KEY entry together with an APP_ENV entry. That pair identifies a framework .env file, which holds the application key, database credentials and third-party tokens in plain text.",
+    "remediation": "Stop serving dotfiles from the document root, move the environment file outside it, and rotate every secret it contained.",
+    "limitation": "Two body markers. A documentation page that shows a redacted .env example is reported only if both assignments appear unredacted in the body.",
+    "scopeT": "One response whose body contains APP_KEY and APP_ENV assignments.",
+    "fp": "A deployment that intentionally publishes a redacted sample is reported if the two assignments are present; the rule cannot judge redaction.",
+    "recordDesc": "The response served a framework environment file containing the APP_KEY and APP_ENV entries. That file holds the key that signs cookies and encrypted values plus the database and mail credentials, so reading it is equivalent to reading the deployment secrets.",
+    "applicability": "Responses that return a dotenv file from the document root.",
+    "risk": "Application secrets are readable in plain text; HIGH severity because the key material is directly usable.",
+    "why": "The body contains APP_KEY= and APP_ENV= assignments.",
+    "fix": [
+      "Block dotfiles at the web server.",
+      "Move the environment file above the document root and rotate the secrets."
+    ],
+    "verifyT": "Request the environment file path and confirm the server returns 404 or 403, and that no assignment lines are returned.",
+    "cells": [
+      {
+        "suffix": "body-dotenv-file-served",
+        "lang": "http",
+        "name": "environment file contents",
+        "safe": "the endpoint returns a normal page",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "(?=[\\s\\S]*\\bAPP_KEY\\s*=)(?=[\\s\\S]*\\bAPP_ENV\\s*=)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/.env",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/plain"
+              },
+              "body": "APP_NAME=shop\nAPP_ENV=production\nAPP_KEY=base64:Q2hhbmdlTWU=\nDB_PASSWORD=example\n"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/.env.production",
+              "status": 200,
+              "headers": {
+                "Content-Type": "application/octet-stream"
+              },
+              "body": "APP_ENV = prod\nAPP_KEY = base64:AAAA\n"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/.env",
+              "status": 403,
+              "headers": {
+                "Content-Type": "text/html"
+              },
+              "body": "<html><body>Forbidden</body></html>"
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/docs/env",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html"
+              },
+              "body": "<p>Set APP_KEY in your environment file before deploying.</p>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  }
+]

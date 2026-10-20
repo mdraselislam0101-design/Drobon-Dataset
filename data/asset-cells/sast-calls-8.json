@@ -1,0 +1,62 @@
+[
+  {
+    "kind": "sast",
+    "framing": "call",
+    "class": "shelve-open",
+    "category": "unsafe-deserialization",
+    "cwe": "CWE-502",
+    "severity": "HIGH",
+    "title": "Pickle-backed store opened via {sink} ({lang}) — review required",
+    "description": "shelve is a dbm front end that serializes every stored value with pickle. Opening a shelf whose path or contents another principal can influence means crafted bytes are unpickled on read, and pickle reconstructs arbitrary objects during that step. This lexical rule flags the open call in {lang}; it does not inspect what the database contains.",
+    "remediation": "Use a data-only store (JSON, or SQLite with typed columns) for any path or content outside the service account’s control. If a shelf is unavoidable, keep it in a directory only the service can write and never copy one from an upload or shared location.",
+    "limitation": "Lexical call match on {sink}; the provenance of the database file is out of scope.",
+    "scopeT": "Single-line lexical match on the {sink} call in {lang} code.",
+    "fp": "Shelves created and read only by the same process from a private directory are the accepted false positives.",
+    "recordDesc": "In {lang}, {sink} fronts a database with pickle for every value it stores and loads. When the file lives where another principal can write — a shared temporary directory, an upload path, a network share — the reader deserializes attacker-chosen bytes and pickle reconstructs arbitrary objects, which is code execution at load time. The open call is the point where that trust decision is made.",
+    "applicability": "{lang} services that persist objects in a shelf path they do not exclusively own.",
+    "risk": "Code execution through pickle deserialization; HIGH severity.",
+    "why": "{sink} stores and loads values through pickle.",
+    "fix": [
+      "Replace the shelf with a data-only store.",
+      "Keep any remaining shelf in a directory the service owns and verify its permissions at start-up."
+    ],
+    "verifyT": "Rescan shows no {sink} on a shared path and a round-trip test covers the replacement store.",
+    "sinks": {
+      "python": [
+        "shelve\\.open",
+        "shelve.open",
+        "dbm.open on a directory the process owns"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "call",
+    "class": "jsonpickle-decode",
+    "category": "unsafe-deserialization",
+    "cwe": "CWE-502",
+    "severity": "HIGH",
+    "title": "Object reconstruction via {sink} ({lang}) — review required",
+    "description": "jsonpickle is not a JSON parser: it honors py/object metadata and instantiates the named classes while decoding, so a valid-looking document can call constructors and setters that plain json.loads never would. This lexical rule flags {sink} in {lang}; it does not resolve whether the payload is trusted.",
+    "remediation": "Decode untrusted documents with json.loads and map the resulting primitives explicitly. When object graphs are genuinely required, restrict jsonpickle to payloads the service produced itself and authenticate them first.",
+    "limitation": "Lexical call match on {sink}; reachable classes and payload provenance are out of scope.",
+    "scopeT": "Single-line lexical match on the {sink} call in {lang} code.",
+    "fp": "Payloads produced and consumed inside one trust boundary are the accepted false positives.",
+    "recordDesc": "In {lang}, {sink} treats the document as a description of objects rather than plain data. A crafted payload can name any importable class and drive its reconstructor, so decoding alone can execute code or mutate global state. The safe boundary is a data-only parser plus an explicit mapping step.",
+    "applicability": "{lang} services that decode documents arriving from queues, uploads, or peer services.",
+    "risk": "Code execution and object-graph injection during decode; HIGH severity.",
+    "why": "{sink} rebuilds Python objects from the payload.",
+    "fix": [
+      "Decode untrusted documents with json.loads.",
+      "If a library must reconstruct objects, authenticate the payload and constrain the allowed classes."
+    ],
+    "verifyT": "Rescan shows no {sink} on an untrusted path and a decode test rejects py/object metadata.",
+    "sinks": {
+      "python": [
+        "jsonpickle\\.decode",
+        "jsonpickle.decode",
+        "json.loads for untrusted documents"
+      ]
+    }
+  }
+]

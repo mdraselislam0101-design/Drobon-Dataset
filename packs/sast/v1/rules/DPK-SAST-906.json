@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-906",
+  "title": "TLS certificate verification bypassed in rust — review required",
+  "description": "danger_accept_invalid_certs makes the HTTP client accept any certificate, including expired, self-signed or attacker-supplied ones. The connection still looks encrypted, but there is no authentication of the peer. The rule flags the builder option; whether the endpoint is public is a review decision.",
+  "severity": "HIGH",
+  "cwe": "CWE-295",
+  "category": "transport-security",
+  "remediation": "Remove the option, load the correct root store, and add pinning or mTLS where the peer identity matters.",
+  "limitation": "Lexical: matches the builder call; a rustls verifier that implements custom validation is out of scope.",
+  "languages": [
+    "rust"
+  ],
+  "patterns": [
+    {
+      "source": "\\b(?:danger_accept_invalid_certs\\s*\\(\\s*true\\s*\\))"
+    }
+  ],
+  "tests": [
+    {
+      "line": "let client = reqwest::Client::builder().danger_accept_invalid_certs(true).build()?;",
+      "match": true
+    },
+    {
+      "line": "# audit: let client = reqwest::Client::builder().danger_accept_invalid_certs(true).build()?; present",
+      "match": true
+    },
+    {
+      "line": "let client = reqwest::Client::builder().build()?;",
+      "match": false
+    },
+    {
+      "line": "# verified: let client = reqwest::Client::builder().build()?;",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1089"
+  ]
+}

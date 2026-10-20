@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-823",
+  "title": "Workflow secret interpolated into a run step in yaml — review required",
+  "description": "A run: line interpolates a GitHub Actions secret expression. The runner substitutes the secret before the shell sees the command, so the value can reach the job log, child process arguments visible to other steps, or debug output that outlives the job. The rule flags interpolation into run:; it cannot tell whether the command prints the value.",
+  "severity": "HIGH",
+  "cwe": "CWE-532",
+  "category": "sensitive-logging",
+  "remediation": "Pass secrets through env: and reference the environment variable, mask derived values, and never echo a secret. Prefer short-lived OIDC federation over stored tokens.",
+  "limitation": "Lexical: matches secrets.* inside run: lines; env: indirection and action inputs are out of scope.",
+  "languages": [
+    "yaml"
+  ],
+  "patterns": [
+    {
+      "source": "\\brun:[^\\n]*\\$\\{\\{\\s*secrets\\.[A-Z0-9_]*"
+    }
+  ],
+  "tests": [
+    {
+      "line": "run: echo \"${{ secrets.DEPLOY_TOKEN }}\"",
+      "match": true
+    },
+    {
+      "line": "# audit: run: echo \"${{ secrets.DEPLOY_TOKEN }}\" present",
+      "match": true
+    },
+    {
+      "line": "env: TOKEN: ${{ secrets.DEPLOY_TOKEN }}",
+      "match": false
+    },
+    {
+      "line": "# verified: env: TOKEN: ${{ secrets.DEPLOY_TOKEN }}",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1001"
+  ]
+}

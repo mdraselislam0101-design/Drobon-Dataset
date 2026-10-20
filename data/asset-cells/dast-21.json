@@ -1,0 +1,1090 @@
+[
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "csp-duplicate-directive",
+  "category": "csp-weakness",
+  "cwe": "CWE-16",
+  "severity": "MEDIUM",
+  "title": "Content-Security-Policy declares a directive more than once",
+  "description": "The Content-Security-Policy value declares the same directive name twice, for example two `script-src` tokens. A browser applies the first occurrence and ignores the later one, so the list an author added second \u2014 often the tightened one \u2014 has no effect, and the effective policy is not the policy a reader sees.",
+  "remediation": "Emit each directive once. Where a framework concatenates policies, build one directive per name and assert the result before shipping; a duplicate is a merge bug, not a policy choice.",
+  "limitation": "One header value. The rule reports a repeated directive name; it does not compute which of the two lists the browser applies, because that depends on the user agent and on the surrounding policy text.",
+  "scopeT": "One policy value in which a directive name appears more than once.",
+  "fp": "A policy that repeats a directive with identical lists is still reported; the finding is the duplicate, not the content.",
+  "recordDesc": "A repeated directive name in one policy means the first occurrence wins, so the second list is silently discarded and the deployed policy differs from the written one.",
+  "applicability": "Responses that send Content-Security-Policy.",
+  "risk": "The restriction the author added second does not apply, so a source the team believes it removed stays allowed; MEDIUM because the first list still governs and may be adequate.",
+  "why": "A directive name appears twice in the same policy value.",
+  "fix": [
+   "Emit each Content-Security-Policy directive once.",
+   "Assert the merged policy has unique directive names before shipping it."
+  ],
+  "verifyT": "Fetch the endpoint and confirm no directive name appears twice in the policy.",
+  "cells": [
+   {
+    "suffix": "duplicate-directive",
+    "lang": "http",
+    "name": "a directive name repeats in one policy",
+    "safe": "each directive appears once",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Content-Security-Policy",
+     "valuePattern": "(?:^|;)\\s*(script-src|default-src|object-src|frame-ancestors|base-uri|form-action|connect-src|img-src|style-src|worker-src|frame-src|font-src|media-src|manifest-src)\\s(?=[\\s\\S]*;\\s*\\1\\s[^;]*)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "default-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self'; img-src 'self'; script-src 'none'"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "default-src 'self'; default-src https:"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "script-src 'self'; img-src 'self'"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "script-src 'self'; style-src 'self'"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "default-src 'self'; report-uri /csp?d=script-src; script-src 'self'"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "default-src 'self'; script-src 'self'; connect-src 'self'"
+       }
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "csp-short-nonce",
+  "category": "csp-weakness",
+  "cwe": "CWE-330",
+  "severity": "MEDIUM",
+  "title": "Content-Security-Policy nonce is too short to be unguessable",
+  "description": "The Content-Security-Policy lists a `'nonce-...'` source whose value is shorter than sixteen characters. A nonce only protects the policy while an attacker cannot predict it; a short value can be enumerated against the application, and a guessed nonce makes the strict policy accept an injected script.",
+  "remediation": "Generate the nonce from a cryptographically secure random source with at least 128 bits of entropy, and re-issue it on every response. Sixteen base64 characters is the practical floor; most frameworks default to more.",
+  "limitation": "One header value. The rule measures the length of the nonce as written and does not test its randomness, so a long but predictable nonce is not reported here.",
+  "scopeT": "One policy whose nonce value is shorter than 16 characters.",
+  "fp": "Length is not entropy: a long nonce built from a counter is not reported by this rule and needs a separate design review.",
+  "recordDesc": "A short nonce is within reach of enumeration, and a guessed nonce lets injected markup run under a policy that otherwise looks strict.",
+  "applicability": "Responses that send a Content-Security-Policy with a nonce source.",
+  "risk": "An attacker who guesses the current nonce injects a script that the policy accepts; MEDIUM because the nonce must still be guessed before each request.",
+  "why": "The policy lists a nonce shorter than 16 characters.",
+  "fix": [
+   "Generate the nonce from a cryptographically secure random source with at least 128 bits of entropy.",
+   "Re-issue a fresh nonce on every response."
+  ],
+  "verifyT": "Fetch the page and confirm every nonce is at least 16 base64 characters and differs between responses.",
+  "cells": [
+   {
+    "suffix": "short-nonce",
+    "lang": "http",
+    "name": "a nonce carries fewer than 16 characters",
+    "safe": "nonces carry at least 16 base64 characters",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Content-Security-Policy",
+     "valuePattern": "'nonce-[A-Za-z0-9+/=_-]{1,15}'"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "default-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'nonce-abc123'"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "default-src 'self'; script-src 'nonce-0123456789abc'"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "script-src 'nonce-r4nd0mB4se64V4lue'"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "script-src 'self'"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "script-src 'nonce-abcdefghijklmno'"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "script-src 'nonce-abcdefghijklmnop'"
+       }
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "csp-scriptsrc-subdomain-wildcard",
+  "category": "csp-weakness",
+  "cwe": "CWE-693",
+  "severity": "MEDIUM",
+  "title": "Content-Security-Policy script-src trusts every subdomain of an origin",
+  "description": "The Content-Security-Policy script-src directive allows a `*.example.com` host wildcard. That form trusts every current and future subdomain of the domain, and any subdomain an attacker can influence \u2014 a dangling DNS record, a user-content host, an abandoned service \u2014 becomes a script origin for the main site.",
+  "remediation": "Replace the subdomain wildcard with the exact hostnames that must serve scripts, and keep an inventory of those hosts. If a wildcard is unavoidable, monitor certificate transparency and DNS for new subdomains.",
+  "limitation": "One header value and one directive. The rule reports the wildcard form; it cannot tell which subdomains exist or whether any of them is presently attacker-influenced.",
+  "scopeT": "One policy whose script-src carries a `*.domain` source.",
+  "fp": "A wildcard for a domain whose every subdomain is genuinely trusted is still reported; the rule reports the form, and the reviewer decides whether that trust is deliberate.",
+  "recordDesc": "A subdomain wildcard in script-src trusts every subdomain, so one takeover or one abandoned host among them is enough to serve script to this page.",
+  "applicability": "Responses that send Content-Security-Policy with an explicit script-src directive.",
+  "risk": "An attacker who controls any subdomain of the wildcard hosts a script the page loads with its own origin; MEDIUM because subdomain control is a precondition.",
+  "why": "script-src contains a source beginning with `*.`.",
+  "fix": [
+   "Replace the subdomain wildcard in script-src with the exact hostnames that serve scripts.",
+   "Monitor DNS and certificate transparency for new subdomains of any domain that remains trusted."
+  ],
+  "verifyT": "Fetch the page and confirm script-src names exact hosts rather than a *.domain wildcard.",
+  "cells": [
+   {
+    "suffix": "scriptsrc-subdomain-wildcard",
+    "lang": "http",
+    "name": "script-src carries a *.domain source",
+    "safe": "script-src names exact hosts",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Content-Security-Policy",
+     "valuePattern": "(?:^|;)\\s*script-src\\s[^;]*(?<=[\\s/])\\*\\.[\\w.-]+(?=[\\s;]|$)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "default-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' *.example.com"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "default-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; script-src https://*.cdn.example.com"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "script-src 'self' https://cdn.example.com"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "script-src 'self'; img-src *.example.com"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "script-src 'self' *"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "script-src 'self' https://*.example.com https://cdn.example.com"
+       }
+      },
+      "match": true
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "csp-manifestsrc-http",
+  "category": "csp-weakness",
+  "cwe": "CWE-319",
+  "severity": "LOW",
+  "title": "Content-Security-Policy manifest-src allows plaintext HTTP sources",
+  "description": "The Content-Security-Policy manifest-src directive permits plaintext HTTP manifest sources. A web app manifest names the application name, icons and start URL, so a manifest fetched over plaintext can be replaced in transit to change how the installed application identifies itself.",
+  "remediation": "Remove `http:` from manifest-src and serve the manifest from an HTTPS origin you control.",
+  "limitation": "One header value and one directive. The rule reports the scheme token in manifest-src only; when the directive is absent the default-src fallback decides, and other rules report that case.",
+  "scopeT": "One policy whose manifest-src source list contains the `http:` scheme token.",
+  "fp": "A legacy origin that redirects to HTTPS is still reported; the finding is the scheme in the policy.",
+  "recordDesc": "A plaintext manifest can be replaced on the wire, so the installed application metadata is chosen by whoever is on the path.",
+  "applicability": "Responses that send Content-Security-Policy with an explicit manifest-src directive.",
+  "risk": "An attacker on the path changes the manifest so the installed app points at their start URL or icons; LOW because the impact is limited to installation metadata.",
+  "why": "manifest-src carries the `http:` scheme source.",
+  "fix": [
+   "Remove the http: scheme source from manifest-src.",
+   "Serve the web app manifest from an HTTPS origin you control."
+  ],
+  "verifyT": "Fetch the page and read manifest-src; no source may carry the http: scheme.",
+  "cells": [
+   {
+    "suffix": "manifestsrc-http",
+    "lang": "http",
+    "name": "manifest-src allows the http: scheme",
+    "safe": "manifest-src lists https origins only",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Content-Security-Policy",
+     "valuePattern": "(?:^|;)\\s*manifest-src\\s[^;]*(?<=\\s)http:(?=[\\s;/]|$)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "default-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; manifest-src http:"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "default-src 'self'; manifest-src https://app.example http://legacy.example/app.webmanifest"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "manifest-src 'self' https://app.example"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "manifest-src 'self'; img-src http:"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "manifest-src http://cdn.example"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "default-src http:; manifest-src https://app.example"
+       }
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "cookie-expires-invalid",
+  "category": "cookie-flags",
+  "cwe": "CWE-613",
+  "severity": "LOW",
+  "title": "Set-Cookie Expires value is not an HTTP date",
+  "description": "The Set-Cookie header carries an Expires attribute whose value is not an HTTP date. A user agent cannot parse it, so it ignores the attribute and the cookie falls back to a session cookie \u2014 the opposite of the persistence the header appears to declare.",
+  "remediation": "Write Expires as an HTTP date in the form `Thu, 01 Jan 1970 00:00:00 GMT`, or use Max-Age and let the user agent compute the date.",
+  "limitation": "One header value. The rule validates the date shape only and does not compare it with Max-Age or with the clock, which the observation does not carry.",
+  "scopeT": "One Set-Cookie header whose Expires attribute value is not an HTTP date.",
+  "fp": "A cookie with both a valid Expires and Max-Age is not reported here; the Max-Age rules judge that pair.",
+  "recordDesc": "An unparsable cookie Expires is ignored, so a cookie meant to persist becomes a session cookie and disappears at browser close.",
+  "applicability": "Responses that set a cookie with an Expires attribute.",
+  "risk": "Users are silently signed out at browser close, and the deployment loses the persistence it documented; LOW because the failure is availability rather than exposure.",
+  "why": "Expires is present with a value that is not an HTTP date.",
+  "fix": [
+   "Write the Expires value as an HTTP date, or drop it and use Max-Age.",
+   "Confirm the cookie still persists for the period the deployment documents."
+  ],
+  "verifyT": "Re-read Set-Cookie and confirm every Expires value is an HTTP date.",
+  "cells": [
+   {
+    "suffix": "expires-invalid",
+    "lang": "http",
+    "name": "Expires carries a non-date value",
+    "safe": "Expires carries an HTTP date or is absent",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Set-Cookie",
+     "valuePattern": ";\\s*expires\\s*=\\s*(?![A-Za-z]{3}, \\d{2} [A-Za-z]{3} \\d{4} \\d{2}:\\d{2}:\\d{2} GMT)[^;]*"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Set-Cookie": "sid=abc; Expires=0; Path=/; Secure; HttpOnly; SameSite=Lax"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Set-Cookie": "sid=abc; Expires=2030-01-01; Path=/; Secure; HttpOnly; SameSite=Lax"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Set-Cookie": "sid=abc; Expires=Wed, 01 Jan 2031 00:00:00 GMT; Path=/; Secure; HttpOnly"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Set-Cookie": "sid=abc; Max-Age=3600; Path=/; Secure; HttpOnly"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Set-Cookie": "sid=abc; Expires=Wednesday; Path=/; Secure; HttpOnly"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Set-Cookie": "sid=abc; Expires=wed, 01 jan 2031 00:00:00 GMT; Path=/; Secure; HttpOnly"
+       }
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "cookie-partitioned-missing",
+  "category": "cookie-flags",
+  "cwe": "CWE-1275",
+  "severity": "LOW",
+  "title": "Set-Cookie uses SameSite=None without the Partitioned attribute",
+  "description": "The Set-Cookie header declares `SameSite=None` without `Partitioned`. The cookie is then sent in third-party contexts without a partition key, so it is shared across every embedding site rather than scoped to the top-level site that set it.",
+  "remediation": "Add `Partitioned` beside `SameSite=None` where the cookie must work in an embedded context, and confirm the top-level site supports partitioned cookies. Where embedding is not required, use `SameSite=Lax` or `Strict` instead.",
+  "limitation": "One header value and one cookie. The rule reports SameSite=None without Partitioned on a cookie the browser would store (Secure present); a cookie with no Secure attribute is discarded under SameSite=None and is reported by DPK-DAST-071 instead. The rule cannot tell whether the cookie is ever sent from an embedded context.",
+  "scopeT": "One Set-Cookie header declaring SameSite=None without Partitioned.",
+  "fp": "A cookie that is never sent in an embedded context is still reported; the finding is the attribute combination.",
+  "recordDesc": "SameSite=None without Partitioned allows a stored cookie to be replayed in any third-party embedding context, and it is shared between those contexts rather than scoped to the embedding top-level site.",
+  "applicability": "Responses that set a cookie with SameSite=None.",
+  "risk": "A third-party embedter of the site reuses the same cookie jar identity across unrelated top-level sites, which enables cross-site correlation; LOW because the cookie still needs to be sent in an embedding context.",
+  "why": "The cookie declares SameSite=None and does not declare Partitioned.",
+  "fix": [
+   "Add Partitioned beside SameSite=None wherever the cookie must work in an embedded context.",
+   "Use SameSite=Lax or Strict instead where the cookie is never sent from an embed."
+  ],
+  "verifyT": "Re-read Set-Cookie and confirm every SameSite=None cookie is either Partitioned or no longer None.",
+  "cells": [
+   {
+    "suffix": "partitioned-missing",
+    "lang": "http",
+    "name": "SameSite=None without Partitioned",
+    "safe": "SameSite=None with Partitioned, or a stricter SameSite",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Set-Cookie",
+     "valuePattern": "^(?=[\\s\\S]*;\\s*secure(?=[\\s;=]|$))(?=[\\s\\S]*;\\s*samesite\\s*=\\s*none(?:\\s*;|\\s*$))(?![^\\n]*;\\s*partitioned(?:\\s*;|\\s*=|\\s*$))"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Set-Cookie": "sid=abc; Path=/; Secure; HttpOnly; SameSite=None"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Set-Cookie": "sid=abc; Path=/; Secure; SameSite=None; HttpOnly"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Set-Cookie": "sid=abc; Path=/; Secure; HttpOnly; SameSite=None; Partitioned"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Set-Cookie": "sid=abc; Path=/; Secure; HttpOnly; SameSite=Lax"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Set-Cookie": "ch=1; SameSite=None; Secure; Partitioned=1"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Set-Cookie": "ch=1; Secure; SameSite=None; Path=/"
+       }
+      },
+      "match": true
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "permissions-policy-device-feature-wildcard",
+  "category": "security-headers",
+  "cwe": "CWE-693",
+  "severity": "MEDIUM",
+  "title": "Permissions-Policy grants a device-access feature to every origin",
+  "description": "The Permissions-Policy value grants a device-access feature \u2014 such as `usb`, `serial`, `hid`, `bluetooth`, `midi` or `nfc` \u2014 to the `*` allow-list. Any frame the page embeds, including one an attacker injected, can then ask the user for that device permission with this origin's trust behind the prompt.",
+  "remediation": "Deny device features with `feature=()` unless a specific origin needs them, and name that origin explicitly instead of `*`. Review the list whenever an embed is added.",
+  "limitation": "One header value. The rule reports the declared allow-list and cannot observe whether an embedded frame exists or whether the user would grant the prompt.",
+  "scopeT": "One response whose Permissions-Policy grants a device-access feature to *.",
+  "fp": "The camera, microphone and geolocation grant is a separate rule with its own wording.",
+  "recordDesc": "Granting a device-access feature to * lets every embedded frame request it, so an injected or third-party frame can reach hardware the page never meant to share.",
+  "applicability": "Responses that send Permissions-Policy.",
+  "risk": "An embedded frame prompts for a device permission in the trusted origin and, if granted, talks to the hardware; MEDIUM because the user still has to accept the prompt.",
+  "why": "A device-access feature is granted to the * allow-list.",
+  "fix": [
+   "Deny device-access features with feature=() unless an origin needs them.",
+   "Name that origin explicitly instead of granting the feature to *."
+  ],
+  "verifyT": "Fetch the page and confirm device features are denied or limited to an explicit origin.",
+  "cells": [
+   {
+    "suffix": "policy-device-feature-wildcard",
+    "lang": "http",
+    "name": "a device feature is granted to *",
+    "safe": "device features are denied or limited",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Permissions-Policy",
+     "valuePattern": "(?:^|[,;])\\s*(?:usb|serial|hid|bluetooth|midi|nfc|idle-detection|screen-wake-lock|display-capture)\\s*=\\s*\\(?\\s*\\*"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Permissions-Policy": "usb=*"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Permissions-Policy": "camera=(), usb=(*)"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Permissions-Policy": "usb=()"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Permissions-Policy": "camera=*"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Permissions-Policy": "usb=(self \"https://app.example\")"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Permissions-Policy": "camera=(), serial=*"
+       }
+      },
+      "match": true
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "content-type-utf7-charset",
+  "category": "response-headers",
+  "cwe": "CWE-116",
+  "severity": "MEDIUM",
+  "title": "Content-Type declares the UTF-7 charset",
+  "description": "The Content-Type names `utf-7` as its charset. UTF-7 encodes markup characters inside base64 runs, so a filter that removes `<script>` sees a benign string while a browser that honours the declared charset decodes it into an executable script. The charset is obsolete and exists only for legacy interoperability.",
+  "remediation": "Serve `utf-8` (or another modern charset) and remove any code path that can select utf-7 from a request. Declare the charset explicitly on every text response.",
+  "limitation": "One header value. The rule reports the declared charset and cannot show that a filter would pass a payload it decodes.",
+  "scopeT": "One response whose Content-Type declares the utf-7 charset.",
+  "fp": "Current browsers ignore utf-7 in most contexts; the finding is the declaration, and legacy clients are the exposure.",
+  "recordDesc": "A UTF-7 document lets an attacker smuggle script through text filters that reason about the raw bytes, because the browser decodes the payload before parsing.",
+  "applicability": "Responses that send a text Content-Type with a charset.",
+  "risk": "An injected string that a filter considers harmless is decoded into script in the page origin; MEDIUM because the browser must honour the declared charset and the injection point must exist.",
+  "why": "Content-Type declares the utf-7 charset.",
+  "fix": [
+   "Declare utf-8 (or another modern charset) explicitly on every text response.",
+   "Remove any code path that can select utf-7 from a request parameter."
+  ],
+  "verifyT": "Fetch the response and confirm the charset is utf-8 and does not depend on the request.",
+  "cells": [
+   {
+    "suffix": "type-utf7-charset",
+    "lang": "http",
+    "name": "Content-Type names the utf-7 charset",
+    "safe": "a modern charset such as utf-8",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Content-Type",
+     "valuePattern": "charset\\s*=\\s*[\"\\']?\\s*(?:utf|unicode)-?7\\b"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=utf-7"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=\"UTF-7\""
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=utf-8"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/json"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain; charset=utf7"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=utf-7x"
+       }
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "body-wpconfig-served",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "WordPress wp-config.php served",
+  "description": "The response is a WordPress configuration file: the database credential definitions together with the wp-settings.php bootstrap are the shape of wp-config.php. It holds the database password and the authentication salts in clear text.",
+  "remediation": "Refuse requests for .php files that are not entry points, remove the file from any served directory, and rotate the database password and salts, because a served configuration must be treated as disclosed.",
+  "limitation": "One response body. The rule reports the configuration shape; it does not enumerate the values and cannot tell whether the credentials are still valid.",
+  "scopeT": "One response that returns the wp-config.php returned document.",
+  "fp": "A page that documents or quotes the file without returning it is not reported.",
+  "recordDesc": "A wp-config.php file is served at this endpoint, so the database credential and the authentication salts it defines are readable by anyone who can reach the path.",
+  "applicability": "Responses served by the application whose static files include wp-config.php returned.",
+  "risk": "Anyone who reads the file reaches the WordPress database directly and can forge authentication cookies with the salts; HIGH because the values are usable without cracking.",
+  "why": "The password value is not matched; the rule keys on the definition names and the bootstrap line.",
+  "fix": [
+   "Refuse requests for configuration files in the document root.",
+   "Rotate the database password and the authentication salts, because a served file must be treated as disclosed."
+  ],
+  "verifyT": "Request the path and confirm the server does not return PHP source.",
+  "cells": [
+   {
+    "suffix": "wpconfig-served",
+    "lang": "http",
+    "name": "wp-config.php returned",
+    "safe": "management interface not exposed",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*DB_PASSWORD)(?=[\\s\\S]*wp\\-settings\\.php)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<?php define('DB_NAME','shop'); define('DB_USER','shop'); define('DB_PASSWORD','redacted-for-fixture'); define('DB_HOST','db'); require_once ABSPATH . 'wp-settings.php';"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<?php define('DB_PASSWORD', 'redacted-for-fixture'); $table_prefix = 'wp_'; require_once ABSPATH . 'wp-settings.php';"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<?php define('DB_NAME','shop'); define('DB_USER','shop'); define('','redacted-for-fixture'); define('DB_HOST','db'); require_once ABSPATH . '';"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<p>A guide: define( 'DB_PASSWORD', ... ) is read by wp-config.php.</p>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "<?php define( 'DB_PASSWORD',  'redacted-for-fixture' ); require_once ABSPATH . 'wp-settings.php';"
+      },
+      "match": true
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "body-docker-compose-served",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "Docker Compose file served",
+  "description": "The response is a Docker Compose file: the services mapping together with container image references is the document shape, and the environment blocks inside it carry connection strings and credentials.",
+  "remediation": "Remove deployment descriptors from the web root and pass secrets through the orchestrator's secret store rather than environment literals in a committed file.",
+  "limitation": "One response body. The rule reports the Compose document shape at a line start, so a page that quotes a Compose snippet inside markup is not reported; it does not parse the environment blocks or prove that a credential in them is live.",
+  "scopeT": "One response that returns the docker-compose.yml returned document.",
+  "fp": "A page that documents or quotes the file without returning it is not reported.",
+  "recordDesc": "A Compose file is served at this endpoint, so the service topology and any credentials in its environment blocks are readable by any caller that reaches the path.",
+  "applicability": "Responses served by the application whose static files include docker-compose.yml returned.",
+  "risk": "The topology names private services and ports, and an inline connection string is a directly usable credential; MEDIUM because the file may contain only image references.",
+  "why": "A Compose file with only image references is reported too; the finding is the served descriptor.",
+  "fix": [
+   "Remove deployment descriptors from the web root.",
+   "Pass secrets through the orchestrator secret store rather than environment literals in the file."
+  ],
+  "verifyT": "Request the path and confirm the descriptor is not served.",
+  "cells": [
+   {
+    "suffix": "docker-compose-served",
+    "lang": "http",
+    "name": "docker-compose.yml returned",
+    "safe": "management interface not exposed",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?:^|\\n)services\\s*:(?=[\\s\\S]*\\n[ \\t]+image\\s*:)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "services:\n  web:\n    image: shop/web:4.2.1\n    environment:\n      - DATABASE_URL=postgres://shop:redacted-for-fixture@db/shop\n  cache:\n    image: redis:7"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "version: \"3.8\"\nservices:\n  api:\n    image: shop/api:1.4.0\n    ports:\n      - \"8080:8080\""
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "\n  web:\n     shop/web:4.2.1\n    environment:\n      - DATABASE_URL=postgres://shop:redacted-for-fixture@db/shop\n  cache:\n     redis:7"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><body><pre>services:\n  web:\n    image: shop/web</pre></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "# deployment stack\nservices:\n  web:\n    image: a\n"
+      },
+      "match": true
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "cookie-host-prefix-domain",
+  "category": "cookie-flags",
+  "cwe": "CWE-1275",
+  "severity": "LOW",
+  "title": "Set-Cookie __Host- prefix is paired with a Domain attribute",
+  "description": "The Set-Cookie header names a cookie with the `__Host-` prefix and also carries a Domain attribute. The prefix exists to promise that the cookie is host-locked and cannot be written by a subdomain, and that promise requires the cookie to carry no Domain. The two cannot both hold, so on agents that enforce the prefix the cookie is dropped and on agents that ignore prefixes it is accepted with the weaker scope the Domain names.",
+  "remediation": "Drop the Domain attribute from `__Host-` cookies and keep `Path=/`; if a subdomain must share the value, use a different cookie name and accept that it is not host-locked.",
+  "limitation": "One header value and one cookie. The rule reports the contradictory pair and cannot tell which behaviour the caller's browser implements. The check compiles case-insensitively, so a cookie name that differs only in case is reported as if it carried the prefix; browsers treat the prefix as case-sensitive.",
+  "scopeT": "One Set-Cookie header whose __Host- cookie carries a Domain attribute.",
+  "fp": "A __Host- cookie missing Secure is a different prefix violation and is not reported here.",
+  "recordDesc": "A `__Host-` cookie that carries a Domain attribute cannot be host-locked: the attribute contradicts the prefix, so the promised subdomain protection is not in effect.",
+  "applicability": "Responses that set a cookie with the __Host- name prefix.",
+  "risk": "Where the prefix is enforced the cookie disappears at the next response, and where it is not enforced a sibling subdomain can overwrite the value; LOW because the failure needs either a dropped cookie or a legacy agent.",
+  "why": "A `__Host-` cookie name appears with a Domain attribute in the same Set-Cookie value.",
+  "fix": [
+   "Drop the Domain attribute from every __Host- cookie.",
+   "Keep Secure and Path=/ on those cookies so the prefix contract holds."
+  ],
+  "verifyT": "Re-read Set-Cookie and confirm every __Host- cookie carries Secure, Path=/, and no Domain.",
+  "cells": [
+   {
+    "suffix": "host-prefix-domain",
+    "lang": "http",
+    "name": "__Host- cookie carries Domain",
+    "safe": "__Host- cookies carry no Domain attribute",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Set-Cookie",
+     "valuePattern": "^(?=\\s*__Host-[^=;\\s]*=)(?=[\\s\\S]*;\\s*domain\\s*=)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Set-Cookie": "__Host-sid=abc; Path=/; Secure; HttpOnly; Domain=example.com"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Set-Cookie": "__Host-token=xyz; Domain=.example.com; Path=/; Secure"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Set-Cookie": "__Host-sid=abc; Path=/; Secure; HttpOnly; SameSite=Lax"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Set-Cookie": "sid=abc; Path=/; Secure; Domain=example.com"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Set-Cookie": "pref=__Host-x; Path=/; Secure; Domain=example.com"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Set-Cookie": "__Host-a=1; Domain=example.com"
+       }
+      },
+      "match": true
+     }
+    ]
+   }
+  ]
+ }
+]

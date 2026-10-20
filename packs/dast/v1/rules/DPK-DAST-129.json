@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-129",
+  "title": "Elasticsearch cluster info disclosed in a response",
+  "description": "The response is the Elasticsearch root document: it carries the product tagline and the cluster name. An unauthenticated cluster answers with its version, cluster name, node name and build hash, and the same open port usually accepts index, document and search requests.",
+  "severity": "HIGH",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Put Elasticsearch behind authentication and a network policy, and never route the HTTP port to the internet. Rename the cluster so the default name is not the only barrier to cross-cluster search.",
+  "limitation": "Two body markers. A page that merely mentions Elasticsearch is not matched; the tagline and the cluster-name field must appear together.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*\"tagline\"\\s*:\\s*\"You Know, for Search\")(?=[\\s\\S]*\"cluster_name\")"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://search.example:9200/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"name\":\"node-1\",\"cluster_name\":\"prod-search\",\"version\":{\"number\":\"8.11.1\",\"build_hash\":\"abc\"},\"tagline\":\"You Know, for Search\"}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://search.example:9200/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"cluster_name\":\"logs\",\"tagline\" : \"You Know, for Search\"}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"cluster_name\":\"frontend\",\"items\":[]}"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<p>We run Elasticsearch 8 behind the search box.</p>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1198"
+  ]
+}

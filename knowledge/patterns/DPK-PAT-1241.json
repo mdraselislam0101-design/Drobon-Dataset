@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1241",
+  "title": "Signal: Kubernetes API server version endpoint disclosed",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-body-matches",
+      "valuePattern": "(?=[\\s\\S]*\"gitVersion\")(?=[\\s\\S]*\"platform\")"
+    }
+  },
+  "scope": "One response whose body contains both a gitVersion field and a platform field.",
+  "limitations": "One response body. The rule reports the version document, which proves the API surface answered; it does not prove that cluster objects are readable without credentials, and the version alone is not a vulnerability.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "{\"major\":\"1\",\"minor\":\"28\",\"gitVersion\":\"v1.28.3\",\"gitCommit\":\"abc123\",\"gitTreeState\":\"clean\",\"buildDate\":\"2023-10-18T11:33:18Z\",\"goVersion\":\"go1.20.10\",\"compiler\":\"gc\",\"platform\":\"linux/amd64\"}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "{\"major\":\"1\",\"gitVersion\":\"v1.27.2+k3s1\",\"gitCommit\":\"def456\",\"platform\":\"linux/arm64\"}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "{\"major\":\"1\",\"minor\":\"28\",:\"v1.28.3\",\"gitCommit\":\"abc123\",\"gitTreeState\":\"clean\",\"buildDate\":\"2023-10-18T11:33:18Z\",\"goVersion\":\"go1.20.10\",\"compiler\":\"gc\",:\"linux/amd64\"}"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A hardened API server that returns the same document to an authenticated operator is not a finding; the rule reports reachability of the endpoint, not who may call it.",
+  "linkedRules": [
+    "DPK-DAST-172"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:body-kubernetes-apiserver-version:kubernetes-apiserver-version",
+  "validationStatus": "VALIDATED"
+}

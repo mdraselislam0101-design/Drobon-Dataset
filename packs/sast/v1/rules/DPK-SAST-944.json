@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-944",
+  "title": "Child process executed with a shell-free API but unvalidated program path in zig — review required",
+  "description": "std.process.Child is the language-native way to run a program. The API does not involve a shell, so the risk shifts to the program path and argument values: a path taken from input can select a different executable, and arguments are passed to whatever program is chosen. The rule flags the launch; whether any component is externally influenced is a review decision.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-78",
+  "category": "command-injection",
+  "remediation": "Resolve the executable to an absolute path inside the application and validate every argument against an allowlist.",
+  "limitation": "Lexical: matches Child initialisation; whether the executable path is constant is a review question.",
+  "languages": [
+    "zig"
+  ],
+  "patterns": [
+    {
+      "source": "\\bstd\\.process\\.Child\\b"
+    }
+  ],
+  "tests": [
+    {
+      "line": "var child = std.process.Child.init(argv, allocator);",
+      "match": true
+    },
+    {
+      "line": "# audit: var child = std.process.Child.init(argv, allocator); present",
+      "match": true
+    },
+    {
+      "line": "const exe = \"/usr/bin/convert\"; try std.process.run(allocator, &.{exe, \"in.png\"});",
+      "match": false
+    },
+    {
+      "line": "# verified: const exe = \"/usr/bin/convert\"; try std.process.run(allocator, &.{exe, \"in.png\"});",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1129"
+  ]
+}

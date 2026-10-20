@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-208",
+  "title": "Content-Security-Policy worker-src allows plaintext HTTP sources",
+  "description": "The Content-Security-Policy worker-src directive lists the scheme source `http:`, either alone or beside other sources, so the browser may load worker scripts over plaintext HTTP. A network attacker who can answer that request supplies the worker scripts himself, and the response that carries the policy is not the response that decides what loads.",
+  "severity": "HIGH",
+  "cwe": "CWE-319",
+  "category": "csp-weakness",
+  "remediation": "Remove `http:` from worker-src and name the exact HTTPS origins that are needed. If a legacy origin still serves over HTTP, terminate TLS in front of it and list the HTTPS name instead of relaxing the directive.",
+  "limitation": "One header value and one directive. The rule reports the scheme token in worker-src only; when worker-src is absent the default-src fallback decides, and other rules report that case. It cannot tell whether the plaintext origin is reachable from the browser that receives the policy.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Content-Security-Policy",
+    "valuePattern": "(?:^|;)\\s*worker-src\\s[^;]*(?<=\\s)http:(?=[\\s;/]|$)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "worker-src http:"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src 'self'; worker-src https://cdn.example.com http://legacy.example.com; frame-ancestors 'none'"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "worker-src https://cdn.example.com"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "worker-src worker scripts 'self'"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1277"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-872",
+  "title": "SQL built by concatenation in a rawQuery call in kotlin — review required",
+  "description": "SQLiteDatabase.rawQuery executes whatever SQL string it is given. When a request value is concatenated into that string, the value becomes SQL syntax and can widen the WHERE clause or append a second statement. Concatenation is the only signal available to a lexical rule; whether the value is attacker-controlled is a review decision.",
+  "severity": "HIGH",
+  "cwe": "CWE-89",
+  "category": "sql-injection",
+  "remediation": "Use a bound parameter (?) and pass values through the selectionArgs array, or move the statement behind a Room DAO with typed parameters.",
+  "limitation": "Lexical: matches rawQuery calls whose arguments contain a + concatenation on one line; interpolation through helper functions is out of scope.",
+  "languages": [
+    "kotlin"
+  ],
+  "patterns": [
+    {
+      "source": "\\brawQuery\\s*\\([^)\\n]*\\+"
+    }
+  ],
+  "tests": [
+    {
+      "line": "db.rawQuery(\"SELECT * FROM users WHERE id = \" + userId, null)",
+      "match": true
+    },
+    {
+      "line": "# audit: db.rawQuery(\"SELECT * FROM users WHERE id = \" + userId, null) present",
+      "match": true
+    },
+    {
+      "line": "db.rawQuery(\"SELECT * FROM users WHERE id = ?\", arrayOf(userId))",
+      "match": false
+    },
+    {
+      "line": "# verified: db.rawQuery(\"SELECT * FROM users WHERE id = ?\", arrayOf(userId))",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1055"
+  ]
+}

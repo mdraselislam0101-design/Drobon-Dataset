@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-211",
+  "title": "Permissions-Policy allow-list is not closed",
+  "description": "The Permissions-Policy value opens a feature allow-list with `(` and never closes it. The parser cannot attribute the remaining text to a feature, so the declared restrictions after the opening parenthesis are dropped and the policy is not the one the deployment wrote.",
+  "severity": "LOW",
+  "cwe": "CWE-693",
+  "category": "security-headers",
+  "remediation": "Close every allow-list and separate features with commas, for example `camera=(self), microphone=()`. Validate the header with a parser before shipping a policy change.",
+  "limitation": "One header value. The rule detects the unclosed parenthesis only; it does not evaluate which feature ends up enabled by the browser default.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Permissions-Policy",
+    "valuePattern": "=\\s*\\([^)]*$"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Permissions-Policy": "camera=(self"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Permissions-Policy": "geolocation=(self), microphone=(self"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Permissions-Policy": "camera=(self)"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Permissions-Policy": "camera=()"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1280"
+  ]
+}

@@ -1,0 +1,3701 @@
+[
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "body-private-key-block",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "HIGH",
+  "title": "Private key material served in a response",
+  "description": "The response body carries a PEM private key block: the BEGIN/END markers and the base64 MII payload that follows them are the shape of an encoded key, not of sample text. A key served by a web endpoint is readable by anyone who can request the path, whatever algorithm it encodes.",
+  "remediation": "Remove the file from the web root and rotate the key, because a served key must be treated as compromised. Store key material outside the document root and check for accidental inclusion in deployment artefacts.",
+  "limitation": "One response body. The rule reports the PEM markers and payload shape; it does not validate the key and cannot tell which service the key belongs to.",
+  "scopeT": "One response whose body contains a PEM private-key block.",
+  "fp": "A documentation page that quotes the BEGIN marker without a key body is not reported, because the base64 payload is required as well.",
+  "recordDesc": "A PEM private key block is returned by the web endpoint, so the key material that block encodes is readable by whoever can request the URL.",
+  "applicability": "Responses that serve files from a document root or an artefact store.",
+  "risk": "Anyone who reads the key can impersonate the service, decrypt what it protects or sign as it does, and the key stays valid until it is rotated; HIGH because the secret is disclosed in full.",
+  "why": "The body contains a PEM private-key BEGIN marker and a base64 MII payload.",
+  "fix": [
+   "Remove the file from the web root.",
+   "Rotate the key, because it must be treated as disclosed."
+  ],
+  "verifyT": "Request the path and confirm it no longer returns the key; confirm the replacement key lives outside the document root.",
+  "cells": [
+   {
+    "suffix": "private-key-block",
+    "lang": "http",
+    "name": "Private key block returned",
+    "safe": "management interface not exposed",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----)(?=[\\s\\S]*[A-Za-z0-9+/]{20,})"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "-----BEGIN DSA PRIVATE KEY-----\nMIIBuwIBAAKBgQDZ3fQ8kQ0m9XQ4p1r7Kk2LwYy1n2b3c4d5e6f7g8h9i0j\n1k2l3m4n5o6p7q8r9s0t1u2v3w4x5y6z7A8B9C0D1E2F3G4H5I==\n-----END DSA PRIVATE KEY-----"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "-----BEGIN DSA PRIVATE KEY-----\nMIIBugIBAAKBgQC8x7w6v5u4t3s2r1q0p9o8n7m6l5k4j3i2h1g0f9e8d7c6b5a4Z\n3Y2X1W0V9U8T7S6R5Q4P3O2N1M0L9K8J7I6H5G4F3E2D1C0B9A8==\n-----END DSA PRIVATE KEY-----"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "\n\n==\n-----END DSA PRIVATE KEY-----"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "body-terraform-state",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "HIGH",
+  "title": "Terraform state file served",
+  "description": "The response is a Terraform state document: the terraform_version and resources fields are the schema of the state file, which records every managed resource and, for many resource types, the attribute values that were applied.",
+  "remediation": "Move the state to an encrypted remote backend with access control, treat this copy as disclosed, and rotate every credential the state contains. Add the state path to the deny list at the web server.",
+  "limitation": "One response body. The rule reports the state schema; it does not parse the stored attributes and cannot enumerate which secrets a particular state holds.",
+  "scopeT": "One response whose body is a Terraform state document with terraform_version and resources fields.",
+  "fp": "A hand-written JSON document that happens to use those two field names is reported as well; the fields together are the state schema.",
+  "recordDesc": "A Terraform state file is served at this endpoint, so the applied infrastructure definition and any sensitive attribute values it stores are readable.",
+  "applicability": "Responses served from a deployment directory or artefact store.",
+  "risk": "State files commonly carry database passwords, private keys and access keys in plain text, and they map every managed resource for an attacker; HIGH because the file is a credential and architecture inventory in one.",
+  "why": "The body is a Terraform state document with terraform_version and resources fields.",
+  "fix": [
+   "Move the state to an encrypted remote backend.",
+   "Rotate every credential the state contains."
+  ],
+  "verifyT": "Request the path and confirm the state file is refused; confirm the backend is encrypted and access-controlled.",
+  "cells": [
+   {
+    "suffix": "terraform-state",
+    "lang": "http",
+    "name": "Terraform state JSON returned",
+    "safe": "management interface not exposed",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*\"terraform_version\")(?=[\\s\\S]*\"resources\")"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "{\"version\":4,\"terraform_version\":\"1.6.4\",\"serial\":12,\"lineage\":\"abc-123\",\"outputs\":{\"db_password\":{\"value\":\"hunter2\",\"type\":\"string\"}},\"resources\":[{\"mode\":\"managed\",\"type\":\"aws_db_instance\",\"name\":\"main\",\"instances\":[{\"attributes\":{\"password\":\"hunter2\"}}]}]}"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "{\"version\":4,\"terraform_version\":\"1.5.7\",\"serial\":3,\"resources\":[{\"mode\":\"managed\",\"type\":\"aws_s3_bucket\",\"name\":\"assets\"}],\"terraform_version_note\":\"legacy\"}"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "{\"version\":4,:\"1.6.4\",\"serial\":12,\"lineage\":\"abc-123\",\"outputs\":{\"db_password\":{\"value\":\"hunter2\",\"type\":\"string\"}},:[{\"mode\":\"managed\",\"type\":\"aws_db_instance\",\"name\":\"main\",\"instances\":[{\"attributes\":{\"password\":\"hunter2\"}}]}]}"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "body-sql-dump",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "HIGH",
+  "title": "Database dump with schema statements served",
+  "description": "The response is a database dump: the dump tool banner and a CREATE TABLE statement are the header and body of an exported schema with rows. A web server that serves it hands over the schema and the data in the same response.",
+  "remediation": "Remove the dump from the web root and move exports to a private store with access control. Treat the data as disclosed and assess notification duties for the rows it contained.",
+  "limitation": "One response body. The rule reports the dump banner and a CREATE TABLE statement; it cannot count the rows or tell which tables the export covers.",
+  "scopeT": "One response whose body carries a database dump banner and a CREATE TABLE statement.",
+  "fp": "A tutorial page that quotes a dump banner and a table statement is reported too; the pairing is the export shape.",
+  "recordDesc": "A database dump is served by the web endpoint, so table definitions and the rows the export contains are readable in one request.",
+  "applicability": "Responses that serve files from a document root or a backup directory.",
+  "risk": "The dump discloses table structure, column names and row data including personal and credential fields; HIGH because the export is the whole dataset rather than a sample.",
+  "why": "The body carries a dump-tool banner and a CREATE TABLE statement.",
+  "fix": [
+   "Remove the dump from the web root.",
+   "Move exports to a private store with access control."
+  ],
+  "verifyT": "Request the path and confirm the dump is refused; confirm exports live outside the document root.",
+  "cells": [
+   {
+    "suffix": "sql-dump",
+    "lang": "http",
+    "name": "SQL dump returned",
+    "safe": "management interface not exposed",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*-- (?:MySQL|MariaDB|PostgreSQL)[^\\n]*dump)(?=[\\s\\S]*CREATE TABLE)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "-- MySQL dump 10.13  Distrib 8.0.35, for Linux (x86_64)\n--\n-- Host: db.internal    Database: shop\n-- ------------------------------------------------------\nDROP TABLE IF EXISTS `customers`;\nCREATE TABLE `customers` (`id` int NOT NULL, `email` varchar(255));\nINSERT INTO `customers` VALUES (1,\"a@example.com\");"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "-- PostgreSQL database dump\n-- Dumped from database version 15.4\nCREATE TABLE public.orders (id integer, total numeric);\nCOPY public.orders (id, total) FROM stdin;"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": " 10.13  Distrib 8.0.35, for Linux (x86_64)\n--\n-- Host: db.internal    Database: shop\n-- ------------------------------------------------------\nDROP TABLE IF EXISTS `customers`;\n `customers` (`id` int NOT NULL, `email` varchar(255));\nINSERT INTO `customers` VALUES (1,\"a@example.com\");"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "body-htpasswd-file",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "Password file with hash records served",
+  "description": "The response is an Apache htpasswd file: the user names and the `$apr1$` or `$2y$` hash prefixes are the record format of that file. It is a credential store, and the hashes are the only thing between a reader and the accounts.",
+  "remediation": "Remove the file from the web root, move authentication data outside the document root, and rotate the passwords for every account listed.",
+  "limitation": "One response body. The rule reports the hash-record shape; it does not attempt to crack a hash and cannot tell which paths the file protects.",
+  "scopeT": "One response whose body contains htpasswd-style records with apr1 or bcrypt hash prefixes.",
+  "fp": "A page that documents the hash format with a single example line is reported as well; two or more record lines is the common shape.",
+  "recordDesc": "An htpasswd file is served at this endpoint, so user names and the apr1 or bcrypt hashes that protect the listed accounts are readable and can be cracked offline.",
+  "applicability": "Responses that serve files from a document root.",
+  "risk": "An attacker who reads the file cracks the weak entries offline and reuses the user names against other services; MEDIUM because the hashes must be cracked before they are usable.",
+  "why": "The body carries user records with $apr1$ or $2y$ hash prefixes.",
+  "fix": [
+   "Remove the file from the web root.",
+   "Rotate the listed passwords."
+  ],
+  "verifyT": "Request the path and confirm the file is refused; confirm authentication data lives outside the document root.",
+  "cells": [
+   {
+    "suffix": "htpasswd-file",
+    "lang": "http",
+    "name": "htpasswd file returned",
+    "safe": "management interface not exposed",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*:\\$apr1\\$)(?=[\\s\\S]*:\\$2y\\$)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "admin:$apr1$Xk9mPq2r$3sT1uVwXyZaBcDeFgHiJk0\nops:$apr1$Lm3nOp4q$7rS8tUvWxYzAbCdEfGhIj1\nlegacy:$2y$10$abcdefghijklmnopqrstuv"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "deploy:$2y$10$Q1w2e3r4t5y6u7i8o9p0aS$1b2c3d4e5f6g7h8i9j0k1l\nsvc:$apr1$Ab1Cd2Ef$9zY8xW7vU6tS5rQ4pO3nM2"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "adminXk9mPq2r$3sT1uVwXyZaBcDeFgHiJk0\nopsLm3nOp4q$7rS8tUvWxYzAbCdEfGhIj1\nlegacy10$abcdefghijklmnopqrstuv"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "body-aws-credentials-file",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "HIGH",
+  "title": "AWS credentials file served",
+  "description": "The response is an AWS shared-credentials file: the `[default]` or `[profile ...]` section header together with an aws_access_key_id key is the format the AWS CLI and SDKs read. The file pairs the access key id with its secret.",
+  "remediation": "Remove the file from the web root, deactivate the exposed access keys, and issue replacements that are delivered through an instance role or a secret manager rather than a file.",
+  "limitation": "One response body. The rule reports the credentials-file shape; it does not use the key and cannot determine the permissions attached to it.",
+  "scopeT": "One response whose body is an AWS shared-credentials file, identified by a profile section and an aws_access_key_id key.",
+  "fp": "Documentation that shows the file format with placeholder values is reported too; the section header and key name are the format markers, so a served sample must not be reachable either.",
+  "recordDesc": "An AWS shared-credentials file is served at this endpoint, so an access key id and its secret are readable together and can be used directly against the account.",
+  "applicability": "Responses that serve files from a document root or a home directory.",
+  "risk": "Anyone who reads the file uses the key pair directly against the account, with whatever permissions the key holds; HIGH because the pair is directly usable without cracking.",
+  "why": "The body carries a credentials-file section header and an aws_access_key_id key.",
+  "fix": [
+   "Remove the file from the web root.",
+   "Deactivate the exposed key pair and issue replacements."
+  ],
+  "verifyT": "Request the path and confirm the file is refused; confirm the keys are deactivated in the account.",
+  "cells": [
+   {
+    "suffix": "aws-credentials-file",
+    "lang": "http",
+    "name": "AWS credentials file returned",
+    "safe": "management interface not exposed",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*\\[(?:default|profile [^\\]]+)\\])(?=[\\s\\S]*aws_access_key_id)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "[default]\naws_access_key_id = AKIAiosfodnn7redacted\naws_secret_access_key = wJalrXUtnFEMI/K7MDENG/redacted\nregion = us-east-1\n[profile deploy]\naws_access_key_id = AKIAi44qh8dhbredacted"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "[profile ci]\naws_access_key_id=AKIAi44qh8dhbredacted\naws_secret_access_key=je7MtGbClwBF/2Zp9Utk/redacted"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "\n = AKIAiosfodnn7redacted\naws_secret_access_key = wJalrXUtnFEMI/K7MDENG/redacted\nregion = us-east-1\n\n = AKIAi44qh8dhbredacted"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "body-docker-config-json",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "HIGH",
+  "title": "Docker client configuration served",
+  "description": "The response is a Docker client configuration file: the auths object keyed by registry URLs holds base64 user:password pairs for each registry. It is the file the Docker CLI reads from its configuration directory.",
+  "remediation": "Remove the file from the web root, revoke the registry credentials it holds, and issue per-host tokens through a credential helper instead of a configuration file.",
+  "limitation": "One response body. The rule reports the configuration shape; it does not decode the auth values and cannot tell which registries are writable.",
+  "scopeT": "One response whose body is a Docker client configuration with an auths object and a registry URL.",
+  "fp": "A JSON document that names the auths key without registry URLs is not reported; the registry URL is required.",
+  "recordDesc": "A Docker client configuration file is served at this endpoint, so registry credentials encoded in the auths object are readable.",
+  "applicability": "Responses that serve files from a document root or a home directory.",
+  "risk": "The decoded auth values authenticate to the registries they name, which lets a reader pull private images and push replacements; HIGH because registry write access is a supply-chain path.",
+  "why": "The body contains an auths object with registry URLs.",
+  "fix": [
+   "Remove the file from the web root.",
+   "Revoke the registry credentials and issue per-host tokens."
+  ],
+  "verifyT": "Request the path and confirm the file is refused; confirm the old registry tokens no longer authenticate.",
+  "cells": [
+   {
+    "suffix": "docker-config-json",
+    "lang": "http",
+    "name": "Docker config.json returned",
+    "safe": "management interface not exposed",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*\"auths\"\\s*:)(?=[\\s\\S]*\"auth\"\\s*:)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "{\"auths\":{\"https://index.docker.io/v1/\":{\"auth\":\"dXNlcjpwYXNzd29yZA==\",\"email\":\"ops@example.com\"}},\"credsStore\":\"desktop\"}"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "{\"auths\":{\"registry.example.com\":{\"auth\":\"c2VydmljZTp0b2tlbg==\"}},\"HttpHeaders\":{\"User-Agent\":\"Docker-Client/24.0.7\"}}"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "{{\"https://index.docker.io/v1/\":{\"dXNlcjpwYXNzd29yZA==\",\"email\":\"ops@example.com\"}},\"credsStore\":\"desktop\"}"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "body-kubeconfig-file",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "HIGH",
+  "title": "Kubernetes kubeconfig served",
+  "description": "The response is a Kubernetes kubeconfig: the clusters list with certificate-authority-data, and usually a user credential, is the document kubectl reads. A served kubeconfig carries both the API server address and the credential that authenticates to it.",
+  "remediation": "Remove the file from the web root, revoke the embedded credential (delete the token secret or the client certificate), and issue short-lived credentials through a workload identity instead of a kubeconfig file.",
+  "limitation": "One response body. The rule reports the kubeconfig shape; it does not use the credential and cannot determine the role bound to it.",
+  "scopeT": "One response whose body is a kubeconfig document with a clusters list and certificate-authority-data.",
+  "fp": "A kubeconfig with no user credential is still reported, because the API server address and CA are disclosed as well.",
+  "recordDesc": "A kubeconfig is served at this endpoint, so the cluster API address, its certificate authority and the client credential it embeds are readable in one request.",
+  "applicability": "Responses that serve files from a document root or a CI artefact store.",
+  "risk": "The embedded token or client certificate authenticates to the cluster with the permissions of the identity it represents, which is often cluster-admin for a deployment kubeconfig; HIGH because the credential is directly usable.",
+  "why": "The body carries a clusters list with certificate-authority-data and a credential field.",
+  "fix": [
+   "Remove the file from the web root.",
+   "Revoke the embedded credential and issue short-lived credentials."
+  ],
+  "verifyT": "Request the path and confirm the file is refused; confirm the old credential no longer authenticates.",
+  "cells": [
+   {
+    "suffix": "kubeconfig-file",
+    "lang": "http",
+    "name": "kubeconfig returned",
+    "safe": "management interface not exposed",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*certificate-authority-data)(?=[\\s\\S]*\"?clusters\"?\\s*:)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "apiVersion: v1\nkind: Config\nclusters:\n- cluster:\n    certificate-authority-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0t\n    server: https://k8s.internal:6443\n  name: prod\nusers:\n- name: deployer\n  user:\n    token: eyJhbGciOiJSUzI1NiIsImtpZCI6ImFiYw"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "{\"apiVersion\":\"v1\",\"kind\":\"Config\",\"clusters\":[{\"name\":\"staging\",\"cluster\":{\"server\":\"https://10.0.0.5:6443\",\"certificate-authority-data\":\"LS0tLS1CRUdJTi\"}}],\"users\":[{\"name\":\"ci\",\"user\":{\"client-certificate-data\":\"LS0tLS1CRUdJTi\"}}]}"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "apiVersion: v1\nkind: Config\n\n- cluster:\n    : LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0t\n    server: https://k8s.internal:6443\n  name: prod\nusers:\n- name: deployer\n  user:\n    token: eyJhbGciOiJSUzI1NiIsImtpZCI6ImFiYw"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "body-npmrc-token",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "HIGH",
+  "title": "npm authentication token file served",
+  "description": "The response is an npm configuration file: the scope-qualified `_authToken` line together with a registry setting is the format npm reads for package-publishing credentials. The token is written in clear text.",
+  "remediation": "Remove the file from the web root, revoke the token at the registry, and deliver registry credentials through CI secrets or a short-lived OIDC exchange rather than a committed file.",
+  "limitation": "One response body. The rule reports the token line and registry setting; it does not use the token and cannot determine its publish scope.",
+  "scopeT": "One response whose body contains an _authToken assignment beside a registry setting.",
+  "fp": "A .npmrc that only sets registry and save-exact is not reported; the token assignment is required.",
+  "recordDesc": "An npm configuration file carrying an _authToken is served at this endpoint, so a package-registry publishing credential is readable in clear text.",
+  "applicability": "Responses that serve files from a document root or a source archive.",
+  "risk": "The token authenticates to the registry, which for a publisher scope allows publishing a package name the organisation owns; HIGH because a published package reaches every build that installs it.",
+  "why": "The body carries an _authToken assignment and a registry setting.",
+  "fix": [
+   "Remove the file from the web root.",
+   "Revoke the token at the registry."
+  ],
+  "verifyT": "Request the path and confirm the file is refused; confirm the token is revoked.",
+  "cells": [
+   {
+    "suffix": "npmrc-token",
+    "lang": "http",
+    "name": "npmrc with an auth token returned",
+    "safe": "management interface not exposed",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*_authToken)(?=[\\s\\S]*registry)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "registry=https://registry.npmjs.org/\n//registry.npmjs.org/:_authToken=npm_AbCdEfGhIjKlMnOpQrStUvWxYz0123456789\nsave-exact=true"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "//npm.pkg.github.com/:_authToken=redacted-for-fixture\nregistry=https://npm.pkg.github.com/\nlegacy-peer-deps=true"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "=https://.npmjs.org/\n//.npmjs.org/:=npm_AbCdEfGhIjKlMnOpQrStUvWxYz0123456789\nsave-exact=true"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "body-openapi-spec",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "LOW",
+  "title": "OpenAPI specification served",
+  "description": "The response is an OpenAPI document: the openapi version field and the paths object list every documented operation, including any administrative or internal route the author left in.",
+  "remediation": "Publish the description only to authenticated developers, and remove internal or administrative routes from the published subset. Where a public description is required, generate it without the internal operations.",
+  "limitation": "One response body. The rule reports the description document; it does not call the routes it lists and cannot show which of them authorize correctly.",
+  "scopeT": "One response whose body is an OpenAPI 3 document with a paths object.",
+  "fp": "An API that deliberately publishes its description is still reported; the finding is that internal operations are listed, which the reviewer must confirm.",
+  "recordDesc": "The API description document is served at this endpoint, so the operation inventory is readable and maps endpoints that the rest of the site does not link.",
+  "applicability": "Responses served by an API gateway or application server.",
+  "risk": "The document names internal and administrative routes, parameter shapes and schemas, which shortens the path from browsing to targeting; LOW because a description is not an access grant.",
+  "why": "The body is an OpenAPI document with an openapi 3 version field and a paths object.",
+  "fix": [
+   "Restrict the description to authenticated developers.",
+   "Remove internal routes from the published subset."
+  ],
+  "verifyT": "Request the path and confirm the description is not served publicly, or no longer lists internal routes.",
+  "cells": [
+   {
+    "suffix": "openapi-spec",
+    "lang": "http",
+    "name": "OpenAPI document returned",
+    "safe": "management interface not exposed",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*\"openapi\"\\s*:\\s*\"3\\.)(?=[\\s\\S]*\"paths\")"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "{\"openapi\":\"3.0.3\",\"info\":{\"title\":\"Shop API\",\"version\":\"1.0.0\"},\"paths\":{\"/admin/users\":{\"get\":{\"responses\":{\"200\":{\"description\":\"ok\"}}}},\"/internal/config\":{\"get\":{}}}}"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "{\"openapi\":\"3.1.0\",\"info\":{\"title\":\"Internal\",\"version\":\"2\"},\"paths\":{\"/v2/tenants\":{\"post\":{}},\"/v2/tenants/{id}/keys\":{\"get\":{}}}}"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "{0.3\",\"info\":{\"title\":\"Shop API\",\"version\":\"1.0.0\"},:{\"/admin/users\":{\"get\":{\"responses\":{\"200\":{\"description\":\"ok\"}}}},\"/internal/config\":{\"get\":{}}}}"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "body-graphiql-playground",
+  "category": "debug-exposure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "GraphQL IDE interface disclosed",
+  "description": "The response is a GraphQL IDE shell: the GraphiQL or Playground container together with a graphql endpoint reference is the page a developer uses to run queries interactively. The IDE ships with a query editor pointed at the live endpoint.",
+  "remediation": "Disable the IDE in production builds, or serve it only to authenticated developers behind a separate host. Keep introspection restricted to the audiences that need it.",
+  "limitation": "One response body. The rule reports the IDE shell; it does not run a query and cannot show whether introspection is enabled on the endpoint.",
+  "scopeT": "One response whose body renders a GraphQL IDE shell.",
+  "fp": "A documentation page that names GraphiQL is not reported; the IDE container element is required.",
+  "recordDesc": "A GraphQL IDE is served at this endpoint, so an interactive query console against the GraphQL API is reachable and invites hand-written queries from any visitor.",
+  "applicability": "Responses served by a GraphQL deployment.",
+  "risk": "The IDE lets a visitor explore the schema and run queries by hand, which turns an introspection surface into a working console; MEDIUM because the API still authorises the queries it receives.",
+  "why": "The body carries a GraphiQL or Playground container and a GraphQL endpoint reference.",
+  "fix": [
+   "Disable the IDE in production.",
+   "Serve it only to authenticated developers."
+  ],
+  "verifyT": "Request the path and confirm the IDE is not served in production.",
+  "cells": [
+   {
+    "suffix": "graphiql-playground",
+    "lang": "http",
+    "name": "GraphiQL interface returned",
+    "safe": "management interface not exposed",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*GraphiQL)(?=[\\s\\S]*graphql)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<!doctype html><html><head><title>GraphiQL</title></head><body><div id=\"graphiql\"></div><script>var graphqlEndpoint = \"/graphql\";</script></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><body><div class=\"graphiql-container\"></div><script>window.GraphQLPlayground = {endpoint: \"/api/graphql\"};</script></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<!doctype html><html><head><title></title></head><body><div id=\"\"></div><script>var Endpoint = \"/\";</script></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "body-package-json-served",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "LOW",
+  "title": "package.json manifest served from the web root",
+  "description": "The response is a package.json manifest: the name, dependencies and version fields are the manifest schema, and they pin the exact package versions the application build resolved.",
+  "remediation": "Serve the built application rather than its source manifest, and keep manifests outside the document root. Where a package identity is genuinely public, publish it from the registry instead.",
+  "limitation": "One response body. The rule reports the manifest; it does not look up any version against an advisory source and makes no claim that a pinned version is vulnerable.",
+  "scopeT": "One response whose body is a package.json manifest with name and dependencies fields.",
+  "fp": "A JavaScript bundle that contains the word dependencies but not the manifest fields is not reported.",
+  "recordDesc": "A package.json manifest is served at this endpoint, so the dependency inventory and the exact versions the build resolved are readable without probing.",
+  "applicability": "Responses served from a source directory or a misconfigured static root.",
+  "risk": "Exact versions let a reader match the deployment against known issues for those releases without probing; LOW because the manifest alone is not an exploit and the packages may be patched by rebuilds.",
+  "why": "The body is a package manifest with name and dependencies fields.",
+  "fix": [
+   "Stop serving the manifest from the document root.",
+   "Publish package identity from the registry instead."
+  ],
+  "verifyT": "Request the path and confirm the manifest is not served.",
+  "cells": [
+   {
+    "suffix": "package-json-served",
+    "lang": "http",
+    "name": "package.json returned",
+    "safe": "management interface not exposed",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*\"dependencies\")(?=[\\s\\S]*\"name\")"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "{\"name\":\"shop-web\",\"version\":\"4.2.1\",\"scripts\":{\"build\":\"vite build\"},\"dependencies\":{\"express\":\"4.18.2\",\"axios\":\"0.21.1\",\"lodash\":\"4.17.19\"},\"devDependencies\":{\"vite\":\"4.5.0\"}}"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "{\"name\":\"internal-api\",\"version\":\"1.3.0\",\"dependencies\":{\"jsonwebtoken\":\"8.5.1\",\"pg\":\"8.11.3\"},\"engines\":{\"node\":\">=18\"}}"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "{:\"shop-web\",\"version\":\"4.2.1\",\"scripts\":{\"build\":\"vite build\"},:{\"express\":\"4.18.2\",\"axios\":\"0.21.1\",\"lodash\":\"4.17.19\"},\"devDependencies\":{\"vite\":\"4.5.0\"}}"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "body-webconfig-served",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "HIGH",
+  "title": "ASP.NET web.config served with settings",
+  "description": "The response is an ASP.NET configuration file: the configuration root, the system.webServer section and usually a connectionStrings block are the file schema. A served copy exposes connection strings and application keys in clear text.",
+  "remediation": "Configure the server to refuse requests for configuration files, remove the file from the static root, and rotate every credential the file contains.",
+  "limitation": "One response body. The rule reports the configuration schema; it does not enumerate the values and cannot tell whether the credentials are still valid.",
+  "scopeT": "One response whose body is an ASP.NET configuration document with a system.webServer section.",
+  "fp": "A documentation page that quotes a configuration fragment is reported only when the full document shape appears.",
+  "recordDesc": "An ASP.NET configuration file is served at this endpoint, so connection strings and application settings, which usually include credentials, are readable in clear text.",
+  "applicability": "Responses served from an IIS or ASP.NET content root.",
+  "risk": "A served configuration file hands over database credentials and API keys, and on IIS it is enough to reach the database directly; HIGH because the values are usable without cracking.",
+  "why": "The body is an ASP.NET configuration document with a system.webServer section.",
+  "fix": [
+   "Refuse requests for configuration files.",
+   "Rotate every credential the file contains."
+  ],
+  "verifyT": "Request the path and confirm the server refuses it; confirm the credentials were rotated.",
+  "cells": [
+   {
+    "suffix": "webconfig-served",
+    "lang": "http",
+    "name": "ASP.NET web.config returned",
+    "safe": "management interface not exposed",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*<system\\.webServer>)(?=[\\s\\S]*</configuration>)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<?xml version=\"1.0\" encoding=\"utf-8\"?><configuration><connectionStrings><add name=\"shop\" connectionString=\"Server=db;Database=shop;User Id=sa;Password=Pa55w0rd!\"/></connectionStrings><system.webServer><handlers><add name=\"x\" path=\"*.x\" verb=\"*\"/></handlers></system.webServer></configuration>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<?xml version=\"1.0\"?><configuration><appSettings><add key=\"ApiKey\" value=\"abc123\"/></appSettings><system.webServer><httpErrors mode=\"Detailed\"/></system.webServer></configuration>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<?xml version=\"1.0\" encoding=\"utf-8\"?><configuration><connectionStrings><add name=\"shop\" connectionString=\"Server=db;Database=shop;User Id=sa;Password=Pa55w0rd!\"/></connectionStrings><handlers><add name=\"x\" path=\"*.x\" verb=\"*\"/></handlers></system.webServer>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "body-jenkins-script-console",
+  "category": "debug-exposure",
+  "cwe": "CWE-200",
+  "severity": "HIGH",
+  "title": "Jenkins script console disclosed",
+  "description": "The response is the Jenkins script console: the Groovy script editor and the Jenkins chrome identify the administrative page that runs arbitrary Groovy inside the controller process. The console is a remote-code-execution surface by design.",
+  "remediation": "Require authentication and an administrative role for the script console, restrict Jenkins to the internal network, and confirm that anonymous read access is disabled.",
+  "limitation": "One response body. The rule reports the console page; it does not submit the form and cannot show whether the request was authorised.",
+  "scopeT": "One response whose body renders the Jenkins script console.",
+  "fp": "A documentation page describing the console is reported too when it carries the editor and the Jenkins chrome; the reviewer confirms which page it is.",
+  "recordDesc": "The Jenkins script console is served at this endpoint, so the administrative Groovy console is reachable from this network position.",
+  "applicability": "Responses served by a Jenkins controller.",
+  "risk": "A caller who can submit the form runs code in the Jenkins controller with its credentials and access to every build secret; HIGH because the console is code execution by design once it is reachable and unauthenticated.",
+  "why": "The body carries the Groovy script console and the Jenkins chrome.",
+  "fix": [
+   "Require an administrator role for the console.",
+   "Restrict Jenkins to the internal network."
+  ],
+  "verifyT": "Request the path without credentials and confirm the console is refused or redirects to login.",
+  "cells": [
+   {
+    "suffix": "jenkins-script-console",
+    "lang": "http",
+    "name": "Jenkins script console returned",
+    "safe": "management interface not exposed",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*Groovy\\ script)(?=[\\s\\S]*Jenkins)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Jenkins</title></head><body><h1>Jenkins</h1><form action=\"/script\"><textarea name=\"script\">println \"hello\"</textarea><p>Groovy script</p></form></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<!doctype html><html><body><h2>Jenkins</h2><div id=\"script-console\">Groovy script</div></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title></title></head><body><h1></h1><form action=\"/script\"><textarea name=\"script\">println \"hello\"</textarea><p></p></form></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "body-jenkins-dashboard",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "Jenkins dashboard disclosed",
+  "description": "The response is the Jenkins dashboard: the Jenkins chrome together with the Manage Jenkins link and the job list identifies the controller home page. The dashboard names the jobs and exposes the management entry point.",
+  "remediation": "Require authentication for the dashboard and disable anonymous read access. Restrict the controller to the internal network.",
+  "limitation": "One response body. The rule reports the dashboard; it does not open a job and cannot show whether builds or credentials are reachable.",
+  "scopeT": "One response whose body renders the Jenkins dashboard with a management link.",
+  "fp": "A login page that carries the Jenkins chrome but no job list is not reported.",
+  "recordDesc": "The Jenkins dashboard is served at this endpoint, so the controller home page with its job list and management link is reachable.",
+  "applicability": "Responses served by a Jenkins controller.",
+  "risk": "Job names reveal deployment targets and repository layout, and an anonymous dashboard often accompanies anonymous build access; MEDIUM because the page is read-only.",
+  "why": "The body carries the Jenkins chrome, the Manage Jenkins link and a job list.",
+  "fix": [
+   "Require authentication for the dashboard.",
+   "Disable anonymous read access."
+  ],
+  "verifyT": "Request the dashboard without credentials and confirm it redirects to login.",
+  "cells": [
+   {
+    "suffix": "jenkins-dashboard",
+    "lang": "http",
+    "name": "Jenkins dashboard returned",
+    "safe": "management interface not exposed",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*Jenkins)(?=[\\s\\S]*Manage\\ Jenkins)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Dashboard [Jenkins]</title></head><body><div id=\"jenkins-head\"><a href=\"/manage\">Manage Jenkins</a></div><div id=\"job_shop\"><a href=\"/job/shop/\">shop</a></div></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<!doctype html><html><body><div id=\"jenkins\"><span>Jenkins</span><a href=\"manage\">Manage Jenkins</a></div><table id=\"projectstatus\"><tr><td>deploy-prod</td></tr></table></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Dashboard []</title></head><body><div id=\"-head\"><a href=\"/manage\">Manage </a></div><div id=\"job_shop\"><a href=\"/job/shop/\">shop</a></div></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "body-h2-console",
+  "category": "debug-exposure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "H2 database console disclosed",
+  "description": "The response is the H2 console login form: the H2 Console heading together with the JDBC URL field identifies the embedded database console. The form accepts a JDBC URL, so the console itself decides which database to open.",
+  "remediation": "Disable spring.h2.console.enabled outside development, and never expose the console on a network interface. If it is needed, bind it to loopback and require the database password.",
+  "limitation": "One response body. The rule reports the console form; it does not submit a JDBC URL and cannot show which databases the server can reach.",
+  "scopeT": "One response whose body renders the H2 console login form.",
+  "fp": "A page that describes the console without the JDBC URL field is not reported.",
+  "recordDesc": "The H2 console is served at this endpoint, so an interactive SQL console that accepts a caller-supplied JDBC URL is reachable on the network.",
+  "applicability": "Responses served by a Spring Boot application with the H2 console enabled.",
+  "risk": "A reachable H2 console runs SQL against whatever database the submitted URL names, including remote databases the server can reach; MEDIUM because the console may still require a database password.",
+  "why": "The body carries the H2 Console heading and a JDBC URL field.",
+  "fix": [
+   "Disable the console outside development.",
+   "Bind it to loopback where it is needed."
+  ],
+  "verifyT": "Request the console path and confirm it returns 404 in the deployed configuration.",
+  "cells": [
+   {
+    "suffix": "h2-console",
+    "lang": "http",
+    "name": "H2 console page returned",
+    "safe": "management interface not exposed",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*H2\\ Console)(?=[\\s\\S]*JDBC\\ URL)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>H2 Console</title></head><body><form method=\"post\" action=\"login.do\"><input name=\"url\" value=\"jdbc:h2:mem:test\"><label>JDBC URL</label><input name=\"user\"></form></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<!doctype html><html><body><h1>H2 Console</h1><form><input name=\"driver\" value=\"org.h2.Driver\"><span>JDBC URL</span></form></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title></title></head><body><form method=\"post\" action=\"login.do\"><input name=\"url\" value=\"jdbc:h2:mem:test\"><label></label><input name=\"user\"></form></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "body-tomcat-manager",
+  "category": "debug-exposure",
+  "cwe": "CWE-200",
+  "severity": "HIGH",
+  "title": "Tomcat manager application disclosed",
+  "description": "The response is the Tomcat manager application: the manager heading together with the Server Information block and the deploy form identifies the administrative console. That console deploys and undeploys web applications.",
+  "remediation": "Remove the manager application from production, or restrict it to an administrative network with a manager role and a strong credential. Never publish /manager on the application ingress.",
+  "limitation": "One response body. The rule reports the manager page; it does not submit the deploy form and cannot show whether the request would be authorised.",
+  "scopeT": "One response whose body renders the Tomcat manager console.",
+  "fp": "A Tomcat error page is a different finding with its own rule and is not reported here.",
+  "recordDesc": "The Tomcat manager console is served at this endpoint, so the deploy and undeploy controls are reachable from this network position.",
+  "applicability": "Responses served by an Apache Tomcat installation with the manager webapp.",
+  "risk": "A caller who can submit the deploy form installs a web application and runs code as the Tomcat user; HIGH because deployment is code execution once the console is reachable.",
+  "why": "The body carries the Tomcat manager heading, the Server Information block and a deploy control.",
+  "fix": [
+   "Remove the manager application from production.",
+   "Restrict it to an administrative network with a manager role."
+  ],
+  "verifyT": "Request /manager/html and confirm it is refused or absent.",
+  "cells": [
+   {
+    "suffix": "tomcat-manager",
+    "lang": "http",
+    "name": "Tomcat manager page returned",
+    "safe": "management interface not exposed",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*Tomcat\\ Web\\ Application\\ Manager)(?=[\\s\\S]*Server\\ Information)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Tomcat Web Application Manager</title></head><body><h1>/manager/html</h1><table><tr><td>Server Information</td><td>Apache Tomcat/9.0.82</td></tr></table><form action=\"/manager/html/deploy\"><input name=\"deployPath\"></form></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<!doctype html><html><body><h2>Tomcat Web Application Manager</h2><p>Server Information</p><a href=\"deploy\">Deploy directory or WAR file located on server</a></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title></title></head><body><h1>/manager/html</h1><table><tr><td></td><td>Apache Tomcat/9.0.82</td></tr></table><form action=\"/manager/html/deploy\"><input name=\"deployPath\"></form></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "body-adminer-login",
+  "category": "debug-exposure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "Adminer database console disclosed",
+  "description": "The response is the Adminer login page: the Adminer product name together with the driver selector and the Log in control identifies the single-file database console. The form names the database engines the deployment supports.",
+  "remediation": "Remove Adminer from production, or restrict it to the management network behind an authenticating proxy. Never leave the login page on the application ingress.",
+  "limitation": "One response body. The rule reports the login page; it does not attempt a login and cannot show which database privileges would follow.",
+  "scopeT": "One response whose body renders the Adminer login form.",
+  "fp": "A page that links to Adminer without the driver selector is not reported.",
+  "recordDesc": "The Adminer console is served at this endpoint, so a database administration login that fronts the application database is reachable.",
+  "applicability": "Responses served by an Adminer deployment.",
+  "risk": "A reachable Adminer accepts credentials against the database and, after login, runs SQL and exports data; MEDIUM because the page is the login form and no session is established.",
+  "why": "The body carries the Adminer product name, a driver selector and a login control.",
+  "fix": [
+   "Remove Adminer from production.",
+   "Restrict it to the management network."
+  ],
+  "verifyT": "Request the path and confirm the login page is not served.",
+  "cells": [
+   {
+    "suffix": "adminer-login",
+    "lang": "http",
+    "name": "Adminer login page returned",
+    "safe": "management interface not exposed",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*Adminer)(?=[\\s\\S]*Log\\ in)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Login - Adminer</title></head><body><form method=\"post\"><select name=\"auth[driver]\"><option>MySQL</option></select><input name=\"auth[username]\"><input type=\"submit\" value=\"Log in\"></form><p>Adminer 4.8.1</p></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<!doctype html><html><body><h1>Adminer</h1><form><select name=\"auth[driver]\"><option>PostgreSQL</option></select><button>Log in</button></form></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Login - </title></head><body><form method=\"post\"><select name=\"auth[driver]\"><option>MySQL</option></select><input name=\"auth[username]\"><input type=\"submit\" value=\"\"></form><p> 4.8.1</p></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "body-symfony-profiler",
+  "category": "debug-exposure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "Symfony profiler toolbar disclosed",
+  "description": "The response carries the Symfony web profiler toolbar: the sf-toolbar element and the Symfony name are the toolbar that development builds inject into every page. The toolbar links a profiler that records queries, configuration and request data.",
+  "remediation": "Disable the web profiler outside development (web_profiler toolbar false, debug false), clear the profiler store, and confirm the toolbar is absent from production pages.",
+  "limitation": "One response body. The rule reports the toolbar; it does not request a profile token and cannot show what a stored profile contains.",
+  "scopeT": "One response whose body injects the Symfony profiler toolbar.",
+  "fp": "A Symfony page without the toolbar is not reported; the toolbar element is required.",
+  "recordDesc": "The Symfony profiler toolbar is present in the response, so the debug profiler is enabled on this deployment and its stored request profiles are likely reachable.",
+  "applicability": "Responses rendered by a Symfony application.",
+  "risk": "Profiler profiles record SQL, configuration values and request parameters, and are addressable by token; MEDIUM because the toolbar itself does not prove the profile store is reachable.",
+  "why": "The body carries the sf-toolbar element and the Symfony name.",
+  "fix": [
+   "Disable the web profiler outside development.",
+   "Confirm the toolbar is absent from production pages."
+  ],
+  "verifyT": "Fetch a production page and confirm no sf-toolbar element is present.",
+  "cells": [
+   {
+    "suffix": "symfony-profiler",
+    "lang": "http",
+    "name": "Symfony profiler emitted",
+    "safe": "management interface not exposed",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*sf\\-toolbar)(?=[\\s\\S]*Symfony)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><body><div id=\"sfToolbarMainContent\"><span>Symfony</span></div><style>#sf-toolbar{}</style><script>var sf_toolbar = 1;</script></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<!doctype html><html><body><div class=\"sf-toolbar\" data-sf-role=\"toolbar\"><span>Symfony v6.3</span></div></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><body><div id=\"sfToolbarMainContent\"><span></span></div><style>#{}</style><script>var sf_toolbar = 1;</script></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "body-laravel-ignition",
+  "category": "debug-exposure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "Laravel Ignition error page disclosed",
+  "description": "The response is the Laravel Ignition error page: the Ignition container together with the Laravel framework marker identifies the detailed exception renderer. That page shows stack frames, environment values and the source excerpt around the throw.",
+  "remediation": "Set APP_DEBUG=false in production and confirm the generic error page is returned. Ignition should not be reachable on a production host.",
+  "limitation": "One response body. The rule reports the Ignition page; it does not read every rendered field and cannot show which environment values the page included.",
+  "scopeT": "One response whose body renders the Ignition error page.",
+  "fp": "The Laravel Whoops page is a different renderer with its own rule; a page carrying both markers is reported by both.",
+  "recordDesc": "The Ignition error page is served, so the detailed exception renderer is enabled on this deployment and its diagnostics are visible to the caller.",
+  "applicability": "Responses rendered by a Laravel application.",
+  "risk": "The page discloses stack frames, file paths and often environment values, which is enough to plan a follow-up; MEDIUM because the diagnostic page itself does not execute code.",
+  "why": "The body carries the Ignition container and the Laravel framework marker.",
+  "fix": [
+   "Set APP_DEBUG=false in production.",
+   "Confirm the generic error page is returned."
+  ],
+  "verifyT": "Trigger an error and confirm the response is the generic page without Ignition.",
+  "cells": [
+   {
+    "suffix": "laravel-ignition",
+    "lang": "http",
+    "name": "Ignition page returned",
+    "safe": "management interface not exposed",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*Ignition)(?=[\\s\\S]*laravel)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Whoops! There was an error.</title></head><body><div class=\"ignition\"><span>Ignition</span><p>Laravel v10.2.0</p><pre>APP_KEY</pre></div></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<!doctype html><html><body><div data-ignition=\"error\"><h1>500</h1><code>laravel/framework 10.1</code></div></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Whoops! There was an error.</title></head><body><div class=\"\"><span></span><p> v10.2.0</p><pre>APP_KEY</pre></div></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "body-traefik-dashboard",
+  "category": "debug-exposure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "Traefik dashboard disclosed",
+  "description": "The response is the Traefik dashboard: the Traefik name together with the dashboard container identifies the proxy administration UI. The dashboard lists routers, services and middlewares, including their forwarding targets.",
+  "remediation": "Keep the dashboard on the internal network or disable it, and require authentication through a middleware when it must be reachable.",
+  "limitation": "One response body. The rule reports the dashboard; it does not read provider data and cannot show whether the API is enabled insecurely.",
+  "scopeT": "One response whose body renders the Traefik dashboard.",
+  "fp": "A page that mentions Traefik without the dashboard container is not reported.",
+  "recordDesc": "The Traefik dashboard is served at this endpoint, so the proxy configuration view with its router and service inventory is reachable.",
+  "applicability": "Responses served by a Traefik instance with the dashboard enabled.",
+  "risk": "The dashboard maps every backend address and rule, which is a ready-made target list, and older releases exposed provider data without authentication; MEDIUM because the page is read-only.",
+  "why": "The body carries the Traefik name and a dashboard container.",
+  "fix": [
+   "Disable the dashboard or keep it internal.",
+   "Require authentication through a middleware."
+  ],
+  "verifyT": "Request the dashboard and confirm it is not reachable from untrusted networks.",
+  "cells": [
+   {
+    "suffix": "traefik-dashboard",
+    "lang": "http",
+    "name": "Traefik dashboard returned",
+    "safe": "management interface not exposed",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*traefik)(?=[\\s\\S]*Dashboard)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Traefik</title></head><body><div id=\"traefik-dashboard\"></div><script src=\"/dashboard/traefik.js\"></script><h1>Dashboard</h1></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<!doctype html><html><body><h2>Traefik</h2><section id=\"dashboard\"><p>HTTP Routers</p></section></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title></title></head><body><div id=\"-\"></div><script src=\"//.js\"></script><h1></h1></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "body-alertmanager-ui",
+  "category": "debug-exposure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "Prometheus Alertmanager UI disclosed",
+  "description": "The response is the Alertmanager web UI: the product name together with the Alerts, Silences and Status navigation identifies the alert routing console. That console can create silences that stop pages from firing.",
+  "remediation": "Require authentication in front of Alertmanager, keep it on the internal network, and alert on silence creation from unexpected sources.",
+  "limitation": "One response body. The rule reports the UI; it does not create a silence and cannot show whether the request would be accepted.",
+  "scopeT": "One response whose body renders the Alertmanager console.",
+  "fp": "The Prometheus metrics rule is a different product and a different page.",
+  "recordDesc": "The Alertmanager UI is served at this endpoint, so the alert routing console and the silence controls that can suppress pages are reachable.",
+  "applicability": "Responses served by an Alertmanager instance.",
+  "risk": "A caller who can create a silence suppresses the alerts that would report an incident; MEDIUM because a silence requires the console to accept the request.",
+  "why": "The body carries the Alertmanager name and the console navigation.",
+  "fix": [
+   "Put authentication in front of Alertmanager.",
+   "Keep it on the internal network."
+  ],
+  "verifyT": "Request the UI and confirm it is not reachable without authentication.",
+  "cells": [
+   {
+    "suffix": "alertmanager-ui",
+    "lang": "http",
+    "name": "Alertmanager page returned",
+    "safe": "management interface not exposed",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*Alertmanager)(?=[\\s\\S]*Silences)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Alertmanager</title></head><body><nav><a href=\"/alerts\">Alerts</a><a href=\"/silences\">Silences</a></nav></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<!doctype html><html><body><h1>Alertmanager</h1><ul><li>Alerts</li><li>Silences</li><li>Status</li></ul></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title></title></head><body><nav><a href=\"/alerts\">Alerts</a><a href=\"/\"></a></nav></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "body-minio-console",
+  "category": "debug-exposure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "MinIO object-storage console disclosed",
+  "description": "The response is the MinIO console: the MinIO product name together with the console shell identifies the object-storage administration UI. The console manages buckets, access keys and lifecycle rules.",
+  "remediation": "Keep the console on the internal network behind an authenticating proxy and issue scoped service accounts instead of root credentials.",
+  "limitation": "One response body. The rule reports the console shell; it does not list a bucket and cannot show whether a login would succeed.",
+  "scopeT": "One response whose body renders the MinIO console.",
+  "fp": "The bucket-listing rule reports anonymous listings and is a different finding.",
+  "recordDesc": "The MinIO console is served at this endpoint, so the object-storage administration interface, which manages buckets and access keys, is reachable.",
+  "applicability": "Responses served by a MinIO deployment.",
+  "risk": "A reachable console exposes the bucket inventory and, after login, access-key and policy management; MEDIUM because the page alone does not prove credentials are accepted.",
+  "why": "The body carries the MinIO product name and a console shell.",
+  "fix": [
+   "Keep the console on the internal network.",
+   "Issue scoped service accounts."
+  ],
+  "verifyT": "Request the console and confirm it is not reachable from untrusted networks.",
+  "cells": [
+   {
+    "suffix": "minio-console",
+    "lang": "http",
+    "name": "MinIO console returned",
+    "safe": "management interface not exposed",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*MinIO)(?=[\\s\\S]*Console)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>MinIO Console</title></head><body><div id=\"minio-console\"></div><script src=\"/static/minio.js\"></script><h1>Console</h1></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<!doctype html><html><body><span>MinIO</span><div class=\"console-app\" data-console=\"minio\"></div></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title> </title></head><body><div id=\"-\"></div><script src=\"/static/.js\"></script><h1></h1></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "body-vault-ui",
+  "category": "debug-exposure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "HashiCorp Vault UI disclosed",
+  "description": "The response is the Vault web UI: the Vault name together with the seal-status panel identifies the secrets-engine console. The panel distinguishes a sealed from an unsealed instance and leads to the unseal flow.",
+  "remediation": "Keep the Vault UI on the management network behind an authenticating proxy, and never expose the listener on the application ingress.",
+  "limitation": "One response body. The rule reports the UI; it does not authenticate and cannot read a secret.",
+  "scopeT": "One response whose body renders the Vault UI.",
+  "fp": "A page that mentions Vault without the seal panel is not reported.",
+  "recordDesc": "The Vault UI is served at this endpoint, so the secrets-engine console, its seal state and its authentication methods are reachable.",
+  "applicability": "Responses served by a Vault listener with the UI enabled.",
+  "risk": "The UI exposes the seal state and the authentication methods, and an unsealed console is the entry point to every secret the engine holds; MEDIUM because the page alone does not prove a login is possible.",
+  "why": "The body carries the Vault name and the seal-status panel.",
+  "fix": [
+   "Keep the UI on the management network.",
+   "Do not expose the listener on the application ingress."
+  ],
+  "verifyT": "Request the UI and confirm it is not reachable from untrusted networks.",
+  "cells": [
+   {
+    "suffix": "vault-ui",
+    "lang": "http",
+    "name": "Vault UI returned",
+    "safe": "management interface not exposed",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*Vault)(?=[\\s\\S]*Seal)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Vault</title></head><body><div id=\"vault-ui\"></div><p>Seal status</p><script src=\"/ui/vault.js\"></script></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<!doctype html><html><body><h1>Vault</h1><section><h2>Seal</h2><p>Vault is sealed</p></section></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title></title></head><body><div id=\"-ui\"></div><p> status</p><script src=\"/ui/.js\"></script></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "body-nomad-ui",
+  "category": "debug-exposure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "HashiCorp Nomad UI disclosed",
+  "description": "The response is the Nomad web UI: the Nomad name with the Jobs and Clients navigation identifies the workload orchestrator console. The console lists jobs, allocations and client nodes.",
+  "remediation": "Enable ACLs for the UI, keep it on the management network, and require a token through an authenticating proxy.",
+  "limitation": "One response body. The rule reports the UI; it does not stop a job and cannot show whether the request would be authorised.",
+  "scopeT": "One response whose body renders the Nomad console.",
+  "fp": "A Consul UI is a different product and a different rule.",
+  "recordDesc": "The Nomad UI is served at this endpoint, so the orchestrator console with its job, allocation and client inventory is reachable.",
+  "applicability": "Responses served by a Nomad server with the UI enabled.",
+  "risk": "The console names the workloads and their client nodes, and can stop or resubmit jobs where the ACL policy allows it; MEDIUM because the page alone does not prove a change is accepted.",
+  "why": "The body carries the Nomad name and the Jobs navigation.",
+  "fix": [
+   "Enable ACLs for the UI.",
+   "Keep it on the management network."
+  ],
+  "verifyT": "Request the UI and confirm it requires a token or is unreachable.",
+  "cells": [
+   {
+    "suffix": "nomad-ui",
+    "lang": "http",
+    "name": "Nomad UI returned",
+    "safe": "management interface not exposed",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*Nomad)(?=[\\s\\S]*Jobs)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Nomad</title></head><body><div id=\"nomad-ui\"></div><nav><a href=\"/ui/jobs\">Jobs</a><a href=\"/ui/nodes\">Clients</a></nav></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<!doctype html><html><body><h1>Nomad</h1><ul><li>Jobs</li><li>Clients</li><li>Servers</li></ul></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title></title></head><body><div id=\"-ui\"></div><nav><a href=\"/ui/\"></a><a href=\"/ui/nodes\">Clients</a></nav></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "body-argocd-ui",
+  "category": "debug-exposure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "Argo CD GitOps console disclosed",
+  "description": "The response is the Argo CD UI: the Argo CD name together with the Applications view identifies the GitOps deployment console. The console shows every application, its sync state and the cluster it targets.",
+  "remediation": "Require SSO in front of Argo CD, keep the server on the internal network, and restrict the default admin account.",
+  "limitation": "One response body. The rule reports the UI; it does not trigger a sync and cannot show whether one would be accepted.",
+  "scopeT": "One response whose body renders the Argo CD console.",
+  "fp": "A job scheduler UI is a different product and a different rule.",
+  "recordDesc": "The Argo CD UI is served at this endpoint, so the deployment console with its application inventory and sync controls is reachable.",
+  "applicability": "Responses served by an Argo CD server.",
+  "risk": "The console maps clusters and deployment sources, and can trigger a sync where permissions allow it, which is a path to running attacker-chosen manifests; MEDIUM because the page alone does not prove a sync is accepted.",
+  "why": "The body carries the Argo CD name and the Applications view.",
+  "fix": [
+   "Require SSO in front of Argo CD.",
+   "Restrict the default admin account."
+  ],
+  "verifyT": "Request the UI and confirm it redirects to SSO or is unreachable.",
+  "cells": [
+   {
+    "suffix": "argocd-ui",
+    "lang": "http",
+    "name": "Argo CD page returned",
+    "safe": "management interface not exposed",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*Argo\\ CD)(?=[\\s\\S]*Applications)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Argo CD</title></head><body><div id=\"argocd-ui\"></div><h1>Applications</h1><script src=\"/static/argocd.js\"></script></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<!doctype html><html><body><span>Argo CD</span><nav>Applications</nav><div class=\"argo-app\"></div></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title></title></head><body><div id=\"argocd-ui\"></div><h1></h1><script src=\"/static/argocd.js\"></script></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "body-harbor-ui",
+  "category": "debug-exposure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "Harbor registry UI disclosed",
+  "description": "The response is the Harbor registry UI: the Harbor name together with the Projects view identifies the container registry console. The console lists projects, repositories and their scan results.",
+  "remediation": "Require authentication for project browsing, keep the UI on the internal network, and restrict anonymous pull to projects that need it.",
+  "limitation": "One response body. The rule reports the UI; it does not pull an image and cannot show whether anonymous pull is enabled.",
+  "scopeT": "One response whose body renders the Harbor console.",
+  "fp": "An artefact repository UI is a different product and a different rule.",
+  "recordDesc": "The Harbor UI is served at this endpoint, so the container registry console with its project and repository inventory is reachable.",
+  "applicability": "Responses served by a Harbor deployment.",
+  "risk": "The console names every repository and tag, which is a ready-made image target list, and exposes project membership after login; MEDIUM because the page alone does not prove a pull is permitted.",
+  "why": "The body carries the Harbor name and the Projects view.",
+  "fix": [
+   "Require authentication for project browsing.",
+   "Restrict anonymous pull."
+  ],
+  "verifyT": "Request the UI and confirm project browsing requires authentication.",
+  "cells": [
+   {
+    "suffix": "harbor-ui",
+    "lang": "http",
+    "name": "Harbor page returned",
+    "safe": "management interface not exposed",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*Harbor)(?=[\\s\\S]*Projects)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Harbor</title></head><body><div id=\"harbor-app\"></div><h1>Projects</h1><script src=\"/static/harbor.js\"></script></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<!doctype html><html><body><span>Harbor</span><nav>Projects</nav><div class=\"registry-app\"></div></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title></title></head><body><div id=\"-app\"></div><h1></h1><script src=\"/static/.js\"></script></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "body-keycloak-admin",
+  "category": "debug-exposure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "Keycloak administration console disclosed",
+  "description": "The response is the Keycloak administration console: the Keycloak name together with the Administration view identifies the identity-provider admin UI. That console manages realms, clients and user credentials.",
+  "remediation": "Restrict the admin console to the management network, require strong administrator credentials with MFA, and disable the temporary admin account after realm setup.",
+  "limitation": "One response body. The rule reports the console page; it does not attempt a login and cannot show which realms exist.",
+  "scopeT": "One response whose body renders the Keycloak administration console.",
+  "fp": "A login page without the Administration view is not reported.",
+  "recordDesc": "The Keycloak administration console is served at this endpoint, so the identity-provider management interface is reachable.",
+  "applicability": "Responses served by a Keycloak deployment.",
+  "risk": "The console is the entry point to every realm and client registration, and a default admin account left enabled there is a common finding; MEDIUM because the page alone does not prove a login is possible.",
+  "why": "The body carries the Keycloak name and the Administration view.",
+  "fix": [
+   "Restrict the admin console to the management network.",
+   "Require MFA for administrators."
+  ],
+  "verifyT": "Request the console and confirm it is not reachable from untrusted networks.",
+  "cells": [
+   {
+    "suffix": "keycloak-admin",
+    "lang": "http",
+    "name": "Keycloak admin page returned",
+    "safe": "management interface not exposed",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*Keycloak)(?=[\\s\\S]*Administration)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Keycloak Administration Console</title></head><body><div id=\"kc-admin\"></div><h1>Administration</h1><script src=\"/resources/keycloak.js\"></script></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<!doctype html><html><body><span>Keycloak</span><nav>Administration</nav><div id=\"admin-console\"></div></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>  Console</title></head><body><div id=\"kc-admin\"></div><h1></h1><script src=\"/resources/.js\"></script></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "body-php-fpm-status",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "LOW",
+  "title": "PHP-FPM status page disclosed",
+  "description": "The response is the PHP-FPM status page: the pool name together with the process manager line is the status template that pm.status_path serves. It reports live worker counts and queue depth.",
+  "remediation": "Restrict pm.status_path to localhost through the web server, or disable it. Never publish it on the public interface.",
+  "limitation": "One response body. The rule reports the status template; it does not exercise the workers and cannot show the pool configuration beyond what the page prints.",
+  "scopeT": "One response whose body renders the PHP-FPM status template.",
+  "fp": "A PHP page that prints the word pool is not reported; the process manager line is required.",
+  "recordDesc": "The PHP-FPM status page is served, so the process manager configuration and live worker metrics are readable by any caller.",
+  "applicability": "Responses served by PHP-FPM with the status path enabled.",
+  "risk": "The page discloses the pool name, manager mode and queue depth, which tells an attacker how much concurrency the deployment has and when it is saturated; LOW because the data is operational metrics.",
+  "why": "The body carries the PHP-FPM pool line and the process manager line.",
+  "fix": [
+   "Restrict pm.status_path to localhost.",
+   "Disable the status path where it is not needed."
+  ],
+  "verifyT": "Request the status path from outside and confirm it is refused.",
+  "cells": [
+   {
+    "suffix": "php-fpm-status",
+    "lang": "http",
+    "name": "PHP-FPM status returned",
+    "safe": "management interface not exposed",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*pool:)(?=[\\s\\S]*process\\ manager)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><body><h1>PHP-FPM Status Page</h1><table><tr><td>pool:</td><td>www</td></tr><tr><td>process manager:</td><td>dynamic</td></tr><tr><td>accepted conn:</td><td>4821</td></tr></table></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "PHP-FPM Status Page\npool: www\nprocess manager: ondemand\naccepted conn: 912\nlisten queue: 0"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><body><h1>PHP-FPM Status Page</h1><table><tr><td></td><td>www</td></tr><tr><td>:</td><td>dynamic</td></tr><tr><td>accepted conn:</td><td>4821</td></tr></table></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "body-nginx-stub-status",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "LOW",
+  "title": "nginx stub_status page disclosed",
+  "description": "The response is the nginx stub_status template: the Active connections line followed by the accepts/handled/requests table is the fixed output of that module. It reports live connection counters.",
+  "remediation": "Restrict the stub_status location to loopback or an internal monitoring network with an allow directive, or remove it.",
+  "limitation": "One response body. The rule reports the stub_status template; it cannot identify the proxied services or their configuration.",
+  "scopeT": "One response whose body renders the nginx stub_status template.",
+  "fp": "An nginx default page is not reported; the status template is required.",
+  "recordDesc": "The nginx stub_status page is served at this endpoint, so the proxy connection counters, which show traffic volume and concurrency, are readable.",
+  "applicability": "Responses served by nginx with stub_status enabled.",
+  "risk": "The counters show traffic volume and current concurrency, which helps time a load-based attack or confirm that a target is live; LOW because the data is operational metrics.",
+  "why": "The body carries the stub_status Active connections line and the accepts table.",
+  "fix": [
+   "Restrict the stub_status location to loopback.",
+   "Remove it where it is not needed."
+  ],
+  "verifyT": "Request the status location from outside and confirm it is refused.",
+  "cells": [
+   {
+    "suffix": "nginx-stub-status",
+    "lang": "http",
+    "name": "nginx stub_status returned",
+    "safe": "management interface not exposed",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*Active\\ connections:)(?=[\\s\\S]*server\\ accepts\\ handled\\ requests)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "Active connections: 291\nserver accepts handled requests\n 16630948 16630948 31070465\nReading: 6 Writing: 179 Waiting: 106"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "Active connections: 12\nserver accepts handled requests\n 8432 8432 12011\nReading: 0 Writing: 1 Waiting: 11"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": " 291\n\n 16630948 16630948 31070465\nReading: 6 Writing: 179 Waiting: 106"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "body-memcached-stats",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "Memcached statistics disclosed",
+  "description": "The response is memcached statistics output: the STAT version line together with the STAT curr_items counter is the text protocol reply to the stats command. The cache speaks this protocol on its client port without authentication.",
+  "remediation": "Bind memcached to loopback or a private interface, enable SASL authentication where a network client needs it, and never expose the client port to untrusted networks.",
+  "limitation": "One response body. The rule reports the statistics reply; it does not issue a get or set and cannot show which keys are stored.",
+  "scopeT": "One response whose body is memcached statistics output.",
+  "fp": "A different key-value service with its own STAT format is not reported; the memcached version line is required.",
+  "recordDesc": "Memcached answered the stats command, so its text protocol is reachable without authentication and the counters it reports prove the cache is open.",
+  "applicability": "Responses from a memcached text-protocol port.",
+  "risk": "The reply proves unauthenticated access to the cache, which means get and set commands are also reachable and cached session data can be read or poisoned; MEDIUM because the statistics themselves are counters.",
+  "why": "The body is memcached stats output with a version line and an item counter.",
+  "fix": [
+   "Bind memcached to loopback or a private interface.",
+   "Enable SASL where a network client needs it."
+  ],
+  "verifyT": "Send the stats command from an untrusted network and confirm it is refused.",
+  "cells": [
+   {
+    "suffix": "memcached-stats",
+    "lang": "http",
+    "name": "Memcached STAT output returned",
+    "safe": "management interface not exposed",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*STAT\\ version)(?=[\\s\\S]*STAT\\ curr_items)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "STAT pid 1\nSTAT uptime 918273\nSTAT version 1.6.21\nSTAT curr_connections 12\nSTAT cmd_get 91823\nSTAT curr_items 4021\nSTAT bytes 1048576\nEND"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "STAT version 1.6.17\nSTAT uptime 991\nSTAT curr_items 12\nSTAT bytes 2048\nEND"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "STAT pid 1\nSTAT uptime 918273\n 1.6.21\nSTAT curr_connections 12\nSTAT cmd_get 91823\n 4021\nSTAT bytes 1048576\nEND"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "body-mongodb-http-interface",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "MongoDB HTTP interface disclosed",
+  "description": "The response is the MongoDB native-port HTTP reply: the message about accessing MongoDB over HTTP on the driver port identifies a port that speaks the MongoDB wire protocol rather than HTTP. The reply is what the server returns to an HTTP request on that port.",
+  "remediation": "Bind MongoDB to a private interface, enable authentication and role-based access, and never publish the driver port on an application ingress.",
+  "limitation": "One response body. The rule reports the port reply; it does not speak the wire protocol and cannot show whether authentication is enforced.",
+  "scopeT": "One response whose body carries the HTTP-over-native-port message.",
+  "fp": "A documentation page quoting the message is reported too; the reviewer confirms which endpoint answered.",
+  "recordDesc": "A MongoDB native driver port answered an HTTP request, so the database wire protocol endpoint is reachable from this network position.",
+  "applicability": "Responses from a MongoDB native driver port.",
+  "risk": "A reachable native port accepts driver commands, and a deployment without authentication allows reads and writes of every database; MEDIUM because the reply itself shows only that the port is reachable.",
+  "why": "The body carries the MongoDB HTTP-over-native-port message.",
+  "fix": [
+   "Bind MongoDB to a private interface.",
+   "Enable authentication and role-based access."
+  ],
+  "verifyT": "Connect to the driver port from an untrusted network and confirm it is refused.",
+  "cells": [
+   {
+    "suffix": "mongodb-http-interface",
+    "lang": "http",
+    "name": "MongoDB HTTP message returned",
+    "safe": "management interface not exposed",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*trying\\ to\\ access\\ MongoDB\\ over\\ HTTP)(?=[\\s\\S]*MongoDB)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><body><h1>MongoDB</h1><p>It looks like you are trying to access MongoDB over HTTP on the native driver port.</p></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>MongoDB</title></head><body>You are trying to access MongoDB over HTTP on the native driver port. See the documentation.</body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><body><h1></h1><p>It looks like you are  on the native driver port.</p></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "body-php-debugbar",
+  "category": "debug-exposure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "PHP Debug Bar toolbar disclosed",
+  "description": "The response carries the PHP Debug Bar: the phpdebugbar element together with the PhpDebugBar script object is the toolbar that the debug bar package injects. It collects queries, request data and configuration for the current request.",
+  "remediation": "Disable the debug bar outside development and confirm production responses carry no toolbar markup.",
+  "limitation": "One response body. The rule reports the toolbar; it does not enumerate the collected panels and cannot show which values the collector captured.",
+  "scopeT": "One response whose body injects the PHP Debug Bar.",
+  "fp": "A page that mentions the package without the toolbar element is not reported.",
+  "recordDesc": "The PHP Debug Bar is injected into the response, so the debug toolbar is enabled in this deployment and its collected request data is rendered to the caller.",
+  "applicability": "Responses rendered by a PHP application with the debug bar enabled.",
+  "risk": "The toolbar exposes SQL, configuration values and request parameters in the page source; MEDIUM because the data is rendered but the collector runs server-side.",
+  "why": "The body carries the phpdebugbar element and the PhpDebugBar object.",
+  "fix": [
+   "Disable the debug bar outside development.",
+   "Confirm production responses carry no toolbar markup."
+  ],
+  "verifyT": "Fetch a production page and confirm no phpdebugbar element is present.",
+  "cells": [
+   {
+    "suffix": "php-debugbar",
+    "lang": "http",
+    "name": "PHP Debug Bar rendered",
+    "safe": "management interface not exposed",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*phpdebugbar)(?=[\\s\\S]*PhpDebugBar)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><body><div id=\"phpdebugbar\"></div><script>var PhpDebugBar = {version: \"1.18\"};</script></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<!doctype html><html><body><div class=\"phpdebugbar\" data-phpdebugbar=\"1\"><span>PhpDebugBar</span></div></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><body><div id=\"\"></div><script>var  = {version: \"1.18\"};</script></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "body-clockwork-debugbar",
+  "category": "debug-exposure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "Clockwork debug toolbar disclosed",
+  "description": "The response carries the Clockwork debug toolbar: the clockwork element together with the Clockwork script object is the toolbar the Clockwork package injects. It records requests, queries and timeline data for the profiler.",
+  "remediation": "Disable Clockwork outside development and confirm production responses carry no toolbar markup or profiling endpoint.",
+  "limitation": "One response body. The rule reports the toolbar; it does not request a profile and cannot show what one contains.",
+  "scopeT": "One response whose body injects the Clockwork toolbar.",
+  "fp": "A different debug toolbar is a different package and a different rule.",
+  "recordDesc": "The Clockwork toolbar is injected into the response, so the Clockwork profiler is enabled and its request metadata is reachable.",
+  "applicability": "Responses rendered by a PHP application with Clockwork enabled.",
+  "risk": "The toolbar links a profiler that stores request timelines, SQL and log entries, which map application behaviour; MEDIUM because the toolbar itself does not prove the profile store is public.",
+  "why": "The body carries the clockwork element and the Clockwork object.",
+  "fix": [
+   "Disable Clockwork outside development.",
+   "Confirm no profiling endpoint is exposed."
+  ],
+  "verifyT": "Fetch a production page and confirm no clockwork element is present.",
+  "cells": [
+   {
+    "suffix": "clockwork-debugbar",
+    "lang": "http",
+    "name": "Clockwork toolbar rendered",
+    "safe": "management interface not exposed",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*clockwork)(?=[\\s\\S]*Clockwork)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><body><div id=\"clockwork\"></div><script>window.Clockwork = {version: \"5.1\"};</script></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<!doctype html><html><body><div class=\"clockwork-toolbar\" data-clockwork=\"1\"><span>Clockwork</span></div></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><body><div id=\"\"></div><script>window. = {version: \"5.1\"};</script></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "body-elmah-error-log",
+  "category": "debug-exposure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "ELMAH error log disclosed",
+  "description": "The response is an ELMAH error log page: the Error Log heading together with the ELMAH attribution identifies the ASP.NET error-log module. The page lists exception types and request paths, and each entry opens the full exception detail.",
+  "remediation": "Restrict the elmah.axd path to administrators or remove the module from production, and purge existing log entries.",
+  "limitation": "One response body. The rule reports the log index; it does not open an entry and cannot show which values an exception recorded.",
+  "scopeT": "One response whose body renders the ELMAH error log index.",
+  "fp": "A generic ASP.NET error page is a different finding with its own rule.",
+  "recordDesc": "The ELMAH error log is served at this endpoint, so stored exception records with their request paths and captured form values are readable.",
+  "applicability": "Responses served by an ASP.NET application with ELMAH enabled.",
+  "risk": "The log names failing routes and exception types and each entry carries the request form values, which often include credentials; MEDIUM because the log must be opened to reach those values.",
+  "why": "The body carries the ELMAH Error Log heading and attribution.",
+  "fix": [
+   "Restrict the elmah.axd path to administrators.",
+   "Remove the module from production."
+  ],
+  "verifyT": "Request the log path and confirm it is refused or absent.",
+  "cells": [
+   {
+    "suffix": "elmah-error-log",
+    "lang": "http",
+    "name": "ELMAH page returned",
+    "safe": "management interface not exposed",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*Error\\ Log\\ for)(?=[\\s\\S]*ELMAH)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>ELMAH</title></head><body><h1>Error Log for application</h1><table><tr><td>System.NullReferenceException</td><td>/Orders/Edit</td></tr></table><p>Powered by ELMAH</p></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<!doctype html><html><body><h2>Error Log for shop</h2><span>ELMAH</span><ul><li>SqlException at /api/items</li></ul></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title></title></head><body><h1> application</h1><table><tr><td>System.NullReferenceException</td><td>/Orders/Edit</td></tr></table><p>Powered by </p></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "body-wordpress-generator-meta",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "LOW",
+  "title": "WordPress version in generator meta tag",
+  "description": "The response carries a generator meta tag naming WordPress with its version: the meta name and the WordPress content string together publish the exact release. That version tells a reader which plugin and core issues apply.",
+  "remediation": "Remove the generator meta tag from the theme and keep the core and plugins updated. Version hiding is defence in depth, not a substitute for patching.",
+  "limitation": "One response body. The rule reports the meta tag; it does not look the version up against an advisory source and makes no claim that the release is vulnerable.",
+  "scopeT": "One response whose body publishes a WordPress version in a generator meta tag.",
+  "fp": "A plugin that prints the WordPress name without the generator meta tag is not reported.",
+  "recordDesc": "The page publishes its WordPress version in a generator meta tag, so the exact release is readable without probing the site.",
+  "applicability": "Responses rendered by a WordPress site.",
+  "risk": "The version narrows the search for applicable core and plugin issues to one release; LOW because the version alone is not an exploit and many deployments stay patched.",
+  "why": "The body carries a generator meta tag whose content names WordPress and a version.",
+  "fix": [
+   "Remove the generator meta tag.",
+   "Keep core and plugins updated."
+  ],
+  "verifyT": "Fetch the page and confirm no generator meta tag names WordPress.",
+  "cells": [
+   {
+    "suffix": "wordpress-generator-meta",
+    "lang": "http",
+    "name": "WordPress generator meta returned",
+    "safe": "management interface not exposed",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*name=[\"\\']generator[\"\\'])(?=[\\s\\S]*WordPress)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><meta name=\"generator\" content=\"WordPress 6.2.2\"><title>Blog</title></head><body><h1>Blog</h1></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<!doctype html><html><head><meta name=\"generator\" content=\"WordPress 5.9.8\"></head><body>Home</body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><meta  content=\" 6.2.2\"><title>Blog</title></head><body><h1>Blog</h1></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "body-drupal-generator-meta",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "LOW",
+  "title": "Drupal version in generator meta tag",
+  "description": "The response carries a generator meta tag naming Drupal and its major version: the meta name and the Drupal content string together publish the release line. That line tells a reader which core issues may still apply.",
+  "remediation": "Remove the generator meta tag where the site does not need it and keep core and contributed modules updated.",
+  "limitation": "One response body. The rule reports the meta tag; it does not look up an advisory and makes no claim that the release is vulnerable.",
+  "scopeT": "One response whose body publishes a Drupal version in a generator meta tag.",
+  "fp": "An RSS feed that names Drupal is not reported; the meta tag is required.",
+  "recordDesc": "The page publishes its Drupal release line in a generator meta tag, so the major version is readable without probing the site.",
+  "applicability": "Responses rendered by a Drupal site.",
+  "risk": "The release line narrows the search for applicable core and contributed-module issues; LOW because the line alone is not an exploit and the site may be patched.",
+  "why": "The body carries a generator meta tag whose content names Drupal.",
+  "fix": [
+   "Remove the generator meta tag.",
+   "Keep core and modules updated."
+  ],
+  "verifyT": "Fetch the page and confirm no generator meta tag names Drupal.",
+  "cells": [
+   {
+    "suffix": "drupal-generator-meta",
+    "lang": "http",
+    "name": "Drupal generator meta returned",
+    "safe": "management interface not exposed",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*name=[\"\\']Generator[\"\\'])(?=[\\s\\S]*Drupal)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><meta name=\"Generator\" content=\"Drupal 10 (https://www.drupal.org)\"><title>Portal</title></head><body>Portal</body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<!doctype html><html><head><meta name=\"generator\" content=\"Drupal 9 (https://www.drupal.org)\"></head><body>Home</body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><meta  content=\" 10 (https://www..org)\"><title>Portal</title></head><body>Portal</body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "body-joomla-generator-meta",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "LOW",
+  "title": "Joomla version in generator meta tag",
+  "description": "The response carries a generator meta tag naming Joomla: the meta name and the Joomla content string publish the CMS and, in many templates, its version. That identity tells a reader which extension and core issues may apply.",
+  "remediation": "Remove or genericise the generator meta tag and keep core and extensions updated.",
+  "limitation": "One response body. The rule reports the meta tag; it does not resolve the version against an advisory source and makes no claim that the site is vulnerable.",
+  "scopeT": "One response whose body publishes a Joomla identity in a generator meta tag.",
+  "fp": "A page that links to joomla.org without the meta tag is not reported.",
+  "recordDesc": "The page publishes its Joomla identity, and often its version, in a generator meta tag, so the CMS and its release line are readable.",
+  "applicability": "Responses rendered by a Joomla site.",
+  "risk": "The identity narrows the search for applicable core and extension issues; LOW because the tag alone is not an exploit and the site may be patched.",
+  "why": "The body carries a generator meta tag whose content names Joomla.",
+  "fix": [
+   "Remove or genericise the generator meta tag.",
+   "Keep core and extensions updated."
+  ],
+  "verifyT": "Fetch the page and confirm no generator meta tag names Joomla.",
+  "cells": [
+   {
+    "suffix": "joomla-generator-meta",
+    "lang": "http",
+    "name": "Joomla generator meta returned",
+    "safe": "management interface not exposed",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*name=[\"\\']generator[\"\\'])(?=[\\s\\S]*Joomla)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><meta name=\"generator\" content=\"Joomla! - Open Source Content Management\"><title>Site</title></head><body>Site</body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<!doctype html><html><head><meta name=\"generator\" content=\"Joomla! 4.4.1\"></head><body>Home</body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><meta  content=\"! - Open Source Content Management\"><title>Site</title></head><body>Site</body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "feature-policy-obsolete",
+  "category": "security-headers",
+  "cwe": "CWE-693",
+  "severity": "LOW",
+  "title": "Obsolete Feature-Policy header present",
+  "description": "The response sends `Feature-Policy`, the header that Permissions-Policy replaced. Current browsers ignore it, so a deployment that believes it restricted a powerful feature through this header has in fact declared nothing, and the two headers can disagree while both are present.",
+  "remediation": "Move every directive to Permissions-Policy, which uses `feature=(allow-list)` syntax, and remove Feature-Policy once the translation is verified.",
+  "limitation": "One header value. The rule reports the obsolete header; it does not compare it with any Permissions-Policy that is also present and cannot say which features end up allowed.",
+  "scopeT": "One response that carries a Feature-Policy header.",
+  "fp": "A deployment that keeps Feature-Policy for an old client is still reported; current browsers ignore the header.",
+  "recordDesc": "The Feature-Policy header is ignored by current browsers, so the restriction it declares is not applied and the deployment has no effective policy from this header.",
+  "applicability": "Responses that send a security header.",
+  "risk": "A powerful feature the deployment meant to block stays available to embedded frames; LOW because a Permissions-Policy may still be in force beside it.",
+  "why": "The response carries a Feature-Policy header.",
+  "fix": [
+   "Translate the directives to Permissions-Policy.",
+   "Remove Feature-Policy afterwards."
+  ],
+  "verifyT": "Fetch the page and confirm Feature-Policy is gone and Permissions-Policy states the intended policy.",
+  "cells": [
+   {
+    "suffix": "policy-obsolete",
+    "lang": "http",
+    "name": "Feature-Policy header emitted",
+    "safe": "Permissions-Policy used instead",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Feature-Policy",
+     "valuePattern": "\\S"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Feature-Policy": "camera 'none'; microphone 'none'"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Feature-Policy": "geolocation=()"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Permissions-Policy": "camera=()"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "default-src 'self'"
+       }
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "public-key-pins-obsolete",
+  "category": "security-headers",
+  "cwe": "CWE-693",
+  "severity": "LOW",
+  "title": "Removed Public-Key-Pins header present",
+  "description": "The response sends `Public-Key-Pins`, a header that was removed from the specification after browsers stopped implementing it. It now adds bytes to every response and no protection, and a pinning mistake is not mitigated by anything the header claims.",
+  "remediation": "Remove Public-Key-Pins and rely on HSTS plus certificate transparency monitoring. If pinning is required, implement it in the client rather than through a removed header.",
+  "limitation": "One header value. The rule reports the removed header; it does not evaluate the pin list and cannot say whether any client still honours it.",
+  "scopeT": "One response that carries a Public-Key-Pins header.",
+  "fp": "A prepared-but-unshipped configuration is not observable; the rule reports the header only when it is sent.",
+  "recordDesc": "Public-Key-Pins no longer has any effect in browsers, so the pinning protection the deployment believes it configured does not exist.",
+  "applicability": "Responses that send a security header.",
+  "risk": "An operator may believe certificate pinning is enforced and skip other controls; LOW because the absence of protection is the whole impact.",
+  "why": "The response carries a Public-Key-Pins header.",
+  "fix": [
+   "Remove Public-Key-Pins.",
+   "Use HSTS and certificate transparency monitoring instead."
+  ],
+  "verifyT": "Fetch the page and confirm the header is absent.",
+  "cells": [
+   {
+    "suffix": "key-pins-obsolete",
+    "lang": "http",
+    "name": "Public-Key-Pins header emitted",
+    "safe": "HSTS used instead",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Public-Key-Pins",
+     "valuePattern": "\\S"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Public-Key-Pins": "pin-sha256=\"abc=\"; max-age=5184000"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Public-Key-Pins": "max-age=100; pin-sha256=\"def=\""
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Strict-Transport-Security": "max-age=63072000"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       }
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "x-xss-protection-enabled",
+  "category": "security-headers",
+  "cwe": "CWE-693",
+  "severity": "LOW",
+  "title": "Obsolete X-XSS-Protection auditor enabled",
+  "description": "The response enables the legacy XSS auditor with `X-XSS-Protection: 1` or `1; mode=block`. The auditor was removed from current browsers, and where it still runs it can be abused to suppress or alter parts of a page, so enabling it is at best inert and at worst harmful.",
+  "remediation": "Send `X-XSS-Protection: 0` or omit the header, and rely on a Content-Security-Policy for script control.",
+  "limitation": "One header value. The rule reports the enabling value; it does not evaluate whether a legacy engine is in use and cannot show the auditor acting on a page.",
+  "scopeT": "One response whose X-XSS-Protection value enables the auditor.",
+  "fp": "A value of 0 is not reported; it is the recommended setting.",
+  "recordDesc": "The XSS auditor this header enables is removed from current browsers, so the header is inert, and older engines that still honour it can be steered by crafted input.",
+  "applicability": "Responses that send X-XSS-Protection.",
+  "risk": "The header changes nothing in current browsers and in legacy engines can blank page sections; LOW because either outcome is limited.",
+  "why": "The value is 1, with or without mode=block.",
+  "fix": [
+   "Set X-XSS-Protection to 0 or remove it.",
+   "Rely on Content-Security-Policy instead."
+  ],
+  "verifyT": "Fetch the page and confirm the header is 0 or absent.",
+  "cells": [
+   {
+    "suffix": "xss-protection-enabled",
+    "lang": "http",
+    "name": "X-XSS-Protection is set to enable the legacy auditor",
+    "safe": "X-XSS-Protection is 0 or absent",
+    "check": {
+     "type": "response-header-matches",
+     "header": "X-XSS-Protection",
+     "valuePattern": "^\\s*1\\s*$|^\\s*1\\s*;\\s*mode\\s*=\\s*block\\s*$"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-XSS-Protection": "1"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-XSS-Protection": "1; mode=block"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-XSS-Protection": "0"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       }
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "x-ua-compatible-ie",
+  "category": "security-headers",
+  "cwe": "CWE-1104",
+  "severity": "LOW",
+  "title": "X-UA-Compatible forces a legacy document mode",
+  "description": "The response asks the browser to render in a legacy document mode through `X-UA-Compatible`. Current browsers ignore the header, and where it is still honoured it selects an older engine with weaker behaviour than the standards mode the page was tested in.",
+  "remediation": "Remove X-UA-Compatible and serve standards mode. If an intranet client genuinely needs a legacy mode, scope the header to that deployment rather than to every response.",
+  "limitation": "One header value. The rule reports the header; it cannot tell which engine a given client selects or whether the page depends on legacy behaviour.",
+  "scopeT": "One response whose X-UA-Compatible value selects a legacy document mode.",
+  "fp": "A deployment that needs the header for a scoped intranet client is still reported; the finding is that it applies to this response.",
+  "recordDesc": "X-UA-Compatible pins the rendering engine to a legacy mode that the current browsers no longer provide, so the header either does nothing or selects weaker behaviour.",
+  "applicability": "Responses that send X-UA-Compatible.",
+  "risk": "A legacy engine renders the page with older parsing and security behaviour, and the page is no longer what the developers tested; LOW because the header is inert in current browsers.",
+  "why": "The response carries an X-UA-Compatible header naming an IE document mode.",
+  "fix": [
+   "Remove X-UA-Compatible.",
+   "Serve standards mode."
+  ],
+  "verifyT": "Fetch the page and confirm the header is absent.",
+  "cells": [
+   {
+    "suffix": "ua-compatible-ie",
+    "lang": "http",
+    "name": "X-UA-Compatible pins a legacy engine",
+    "safe": "no document-mode override",
+    "check": {
+     "type": "response-header-matches",
+     "header": "X-UA-Compatible",
+     "valuePattern": "(?:^|,)\\s*IE\\s*=\\s*(?:EmulateIE\\d+|5|7|8|9|10)\\b"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-UA-Compatible": "IE=edge"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-UA-Compatible": "IE=EmulateIE7"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-UA-Compatible": "IE=8"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       }
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "cors-allow-headers-authorization",
+  "category": "cors",
+  "cwe": "CWE-942",
+  "severity": "MEDIUM",
+  "title": "Access-Control-Allow-Headers permits Authorization",
+  "description": "The preflight response lists `Authorization` in Access-Control-Allow-Headers, so the browser will attach a bearer token or basic credential to the actual cross-origin request. Every origin the allow-list admits can therefore use the caller's credential against this endpoint.",
+  "remediation": "Do not permit Authorization cross-origin unless a specific, small set of origins must send it. Keep the origin allow-list explicit and never reflect arbitrary origins beside a credential-bearing endpoint.",
+  "limitation": "One header value. The rule reads the preflight allow-list and cannot see the request Origin, so it does not claim that any particular origin is admitted.",
+  "scopeT": "One response whose Access-Control-Allow-Headers value lists Authorization.",
+  "fp": "A preflight that allows the header but answers a strict origin allow-list is still reported; the rule reports the header grant, not the origin decision.",
+  "recordDesc": "Permitting Authorization in the preflight allow-list lets the browser send the caller credential cross-origin, so the origin allow-list now decides who may act with that credential.",
+  "applicability": "Preflight responses that send Access-Control-Allow-Headers.",
+  "risk": "An allow-listed origin reads authenticated data with the user token, and any origin reflected into Access-Control-Allow-Origin receives that capability; MEDIUM because the allow-list still has to admit the origin.",
+  "why": "Access-Control-Allow-Headers names Authorization.",
+  "fix": [
+   "Remove Authorization from the allow-list unless a fixed origin set needs it.",
+   "Keep the origin allow-list explicit."
+  ],
+  "verifyT": "Send a preflight with Access-Control-Request-Headers: authorization and confirm the response no longer allows it.",
+  "cells": [
+   {
+    "suffix": "allow-headers-authorization",
+    "lang": "http",
+    "name": "Access-Control-Allow-Headers lists Authorization",
+    "safe": "only the custom headers the client sends",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Access-Control-Allow-Headers",
+     "valuePattern": "(?:^|,)\\s*authorization\\s*(?:,|$)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Access-Control-Allow-Headers": "Authorization"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Access-Control-Allow-Headers": "content-type, authorization"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Access-Control-Allow-Headers": "content-type, x-request-id"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Access-Control-Allow-Headers": "x-authorization-id"
+       }
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "cors-allow-methods-trace",
+  "category": "cors",
+  "cwe": "CWE-16",
+  "severity": "LOW",
+  "title": "Access-Control-Allow-Methods permits TRACE",
+  "description": "The preflight response advertises `TRACE` in Access-Control-Allow-Methods. TRACE echoes the request back, and allowing it cross-origin with credentials invites a cross-site tracing attempt against the endpoint; the method is also unnecessary for any JSON API.",
+  "remediation": "Remove TRACE from Access-Control-Allow-Methods and disable the method at the server. Advertise only the verbs the API actually serves.",
+  "limitation": "One header value. The rule reports the advertised method and cannot show whether the server would answer a TRACE request.",
+  "scopeT": "One response whose Access-Control-Allow-Methods value lists TRACE.",
+  "fp": "The HTTP Allow header is a different surface with its own rule.",
+  "recordDesc": "Advertising TRACE in a CORS preflight makes the echo method reachable from an allowed origin, which is a known cross-site tracing primitive.",
+  "applicability": "Preflight responses that send Access-Control-Allow-Methods.",
+  "risk": "An allow-listed origin can send a credentialed TRACE request and read the echoed headers; LOW because the origin allow-list must still admit it and most servers disable TRACE.",
+  "why": "Access-Control-Allow-Methods lists TRACE.",
+  "fix": [
+   "Remove TRACE from the advertised methods.",
+   "Disable TRACE at the server."
+  ],
+  "verifyT": "Send a preflight and confirm TRACE is no longer advertised; send TRACE and confirm it is refused.",
+  "cells": [
+   {
+    "suffix": "allow-methods-trace",
+    "lang": "http",
+    "name": "Access-Control-Allow-Methods lists TRACE",
+    "safe": "only the methods the API serves",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Access-Control-Allow-Methods",
+     "valuePattern": "(?:^|,)\\s*TRACE\\s*(?:,|$)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Access-Control-Allow-Methods": "GET, POST, TRACE"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Access-Control-Allow-Methods": "TRACE"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Access-Control-Allow-Methods": "GET, POST, DELETE"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Access-Control-Allow-Methods": "GET, POST"
+       }
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "cache-control-contradictory",
+  "category": "cache-control",
+  "cwe": "CWE-16",
+  "severity": "LOW",
+  "title": "Cache-Control declares public and no-store together",
+  "description": "The Cache-Control header contains both `public` and `no-store`. The directives describe opposite intents: `no-store` says nothing may be written to a cache, while `public` says a shared cache may keep the response. Implementations differ in which they honour, so the actual caching of the response depends on the intermediary.",
+  "remediation": "State one caching intent per response. For per-user data use `no-store`; for shareable content drop no-store and keep the freshness directives.",
+  "limitation": "One header value. The rule reports the contradictory pair and does not decide which directive an intermediary applies.",
+  "scopeT": "One response whose Cache-Control value contains public and no-store.",
+  "fp": "A response that uses private with no-store is not reported; the contradiction requires public.",
+  "recordDesc": "Cache-Control declares public and no-store at the same time, so whether an intermediary stores the response depends on its directive precedence rather than on the deployment policy.",
+  "applicability": "Responses that send Cache-Control.",
+  "risk": "A shared cache that honours public may store a response the deployment meant to keep out of caches, which can expose per-user content; LOW because most caches give no-store precedence.",
+  "why": "Cache-Control contains both public and no-store.",
+  "fix": [
+   "State a single caching intent.",
+   "Use no-store alone for per-user data."
+  ],
+  "verifyT": "Fetch the endpoint and confirm Cache-Control carries either public or no-store, not both.",
+  "cells": [
+   {
+    "suffix": "control-contradictory",
+    "lang": "http",
+    "name": "Cache-Control combines public with no-store",
+    "safe": "one caching intent",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Cache-Control",
+     "valuePattern": "^(?=[\\s\\S]*\\bpublic\\b)(?=[\\s\\S]*\\bno-store\\b)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Cache-Control": "public, no-store"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Cache-Control": "public, max-age=3600, no-store"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Cache-Control": "public, max-age=3600"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Cache-Control": "no-store, private"
+       }
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "expires-invalid-date",
+  "category": "cache-control",
+  "cwe": "CWE-16",
+  "severity": "LOW",
+  "title": "Expires header is not a valid HTTP date",
+  "description": "The Expires header carries a value that is not an HTTP date, such as `0` or `-1`. A user agent cannot parse it, so the attribute is ignored and the freshness decision falls back to heuristic caching from the other headers, which usually gives the response a longer life than the deployment intended.",
+  "remediation": "Send an HTTP date, or drop Expires and express the lifetime with Cache-Control max-age. Never use the legacy `0` or `-1` sentinels.",
+  "limitation": "One header value. The rule validates the date shape only; it does not compute the freshness lifetime a cache would derive.",
+  "scopeT": "One response whose Expires value is not an HTTP date.",
+  "fp": "A response with no Expires header is not reported; the rule needs the malformed value.",
+  "recordDesc": "An Expires value that is not an HTTP date is ignored, so the response freshness falls back to heuristics instead of the declared lifetime.",
+  "applicability": "Responses that send Expires.",
+  "risk": "A response meant to expire immediately can be heuristically cached for a long period, which stale-serves per-user content; LOW because Cache-Control usually decides first.",
+  "why": "Expires does not parse as an HTTP date.",
+  "fix": [
+   "Send a valid HTTP date or remove Expires.",
+   "Express lifetime with Cache-Control max-age."
+  ],
+  "verifyT": "Fetch the endpoint and confirm Expires is a valid HTTP date or absent.",
+  "cells": [
+   {
+    "suffix": "invalid-date",
+    "lang": "http",
+    "name": "Expires carries a non-date value",
+    "safe": "Expires carries an HTTP date or is absent",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Expires",
+     "valuePattern": "^\\s*(?![A-Za-z]{3}, \\d{2} [A-Za-z]{3} \\d{4} \\d{2}:\\d{2}:\\d{2} GMT\\s*$)\\S"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Expires": "0"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Expires": "-1"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Expires": "Thu, 01 Jan 1970 00:00:00 GMT"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Cache-Control": "no-store"
+       }
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "content-type-multipart-no-boundary",
+  "category": "response-headers",
+  "cwe": "CWE-16",
+  "severity": "LOW",
+  "title": "Multipart Content-Type omits the boundary parameter",
+  "description": "The Content-Type declares a multipart media type without the `boundary` parameter. The boundary is what separates the parts, so a receiver cannot split the body and falls back to its own guessing or refuses the message; either way the declared type is not the type the receiver processes.",
+  "remediation": "Send the boundary parameter with the multipart type and keep it unpredictable. Where the body is not multipart, use the type that describes it.",
+  "limitation": "One header value. The rule validates the parameter only; it does not parse the body and cannot show how a particular client handles the missing parameter.",
+  "scopeT": "One response whose multipart Content-Type omits the boundary parameter.",
+  "fp": "A missing Content-Type header is a different finding with its own rule.",
+  "recordDesc": "A multipart Content-Type without a boundary cannot be parsed as declared, so the receiver guesses or rejects the body instead of reading the parts the sender wrote.",
+  "applicability": "Responses that send a multipart Content-Type.",
+  "risk": "A client that guesses the boundary can be steered into reading attacker-chosen part boundaries, and a strict client refuses the response; LOW because the affected content is multipart bodies rather than scripts.",
+  "why": "Content-Type is multipart/* with no boundary parameter.",
+  "fix": [
+   "Add the boundary parameter.",
+   "Use a type that matches the body."
+  ],
+  "verifyT": "Fetch the response and confirm the multipart type carries a boundary.",
+  "cells": [
+   {
+    "suffix": "type-multipart-no-boundary",
+    "lang": "http",
+    "name": "multipart Content-Type has no boundary",
+    "safe": "boundary parameter present",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Content-Type",
+     "valuePattern": "^(?![\\s\\S]*\\bboundary\\b)\\s*multipart/[^;\\s]+"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "multipart/form-data"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "multipart/mixed"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "multipart/form-data; boundary=----abc123"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=utf-8"
+       }
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ }
+]

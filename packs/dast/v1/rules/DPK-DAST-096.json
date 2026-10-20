@@ -1,0 +1,83 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-096",
+  "title": "Basic authentication challenge sent over plaintext HTTP",
+  "description": "The response is delivered over http and challenges the client with the Basic scheme. Basic encodes the user name and password in base64, which is reversible, so every credential the client sends is readable by anyone on the path. The check is scoped to http observations: the same challenge over https is not reported, because TLS protects the credential in transit.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-319",
+  "category": "transport-security",
+  "remediation": "Serve the endpoint over HTTPS only and keep HTTP Strict-Transport-Security on the redirect path; replace Basic with a challenge that does not transmit a reusable secret, or restrict Basic to short-lived tokens inside TLS.",
+  "limitation": "Transport-conditioned header check: it reads one WWW-Authenticate value on one http observation. It cannot tell whether the client actually answers the challenge, and an https challenge is out of scope by design.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "WWW-Authenticate",
+    "valuePattern": "(?:^|,)\\s*Basic(?:\\s|,|$)",
+    "requireScheme": "http"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "http://app.example/admin",
+        "status": 401,
+        "headers": {
+          "WWW-Authenticate": "Basic realm=\"admin\""
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "http://app.example/api",
+        "status": 401,
+        "headers": {
+          "WWW-Authenticate": [
+            "Negotiate",
+            "Basic realm=\"api\""
+          ]
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "http://app.example/admin",
+        "status": 401,
+        "headers": {
+          "WWW-Authenticate": "Basic"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/admin",
+        "status": 401,
+        "headers": {
+          "WWW-Authenticate": "Basic realm=\"admin\""
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "http://app.example/admin",
+        "status": 401,
+        "headers": {
+          "WWW-Authenticate": "Bearer realm=\"admin\""
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "http://app.example/",
+        "status": 200,
+        "headers": {}
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1165"
+  ]
+}

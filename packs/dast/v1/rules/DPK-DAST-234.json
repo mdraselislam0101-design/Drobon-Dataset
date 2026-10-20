@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-234",
+  "title": "MongoDB HTTP interface disclosed",
+  "description": "The response is the MongoDB native-port HTTP reply: the message about accessing MongoDB over HTTP on the driver port identifies a port that speaks the MongoDB wire protocol rather than HTTP. The reply is what the server returns to an HTTP request on that port.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Bind MongoDB to a private interface, enable authentication and role-based access, and never publish the driver port on an application ingress.",
+  "limitation": "One response body. The rule reports the port reply; it does not speak the wire protocol and cannot show whether authentication is enforced.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*trying\\ to\\ access\\ MongoDB\\ over\\ HTTP)(?=[\\s\\S]*MongoDB)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body><h1>MongoDB</h1><p>It looks like you are trying to access MongoDB over HTTP on the native driver port.</p></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>MongoDB</title></head><body>You are trying to access MongoDB over HTTP on the native driver port. See the documentation.</body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body><h1></h1><p>It looks like you are  on the native driver port.</p></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1303"
+  ]
+}

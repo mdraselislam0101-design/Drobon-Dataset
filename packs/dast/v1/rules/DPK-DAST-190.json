@@ -1,0 +1,62 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-190",
+  "title": "Secure cookie attribute delivered over plaintext HTTP",
+  "description": "A response fetched over plaintext HTTP sets a cookie with the Secure attribute. The attribute asks the user agent to send the cookie only over TLS, but the header that delivered it already crossed the network unprotected, and several user agents refuse to store a Secure cookie that arrived over an insecure origin at all.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-614",
+  "category": "transport-security",
+  "remediation": "Serve the endpoint over HTTPS and mark the cookie Secure there. Redirect plaintext requests to HTTPS before any Set-Cookie is emitted rather than issuing the cookie on the plaintext response.",
+  "limitation": "One header value and the scheme of the observation URL. The rule judges a Secure attribute on an http response only; over https the same header is correct and is not reported.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Set-Cookie",
+    "valuePattern": ";\\s*secure(?=[\\s;=]|$)",
+    "requireScheme": "http"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "http://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Path=/; Secure; HttpOnly; SameSite=Lax"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "http://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Secure; SameSite=Strict; HttpOnly"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Path=/; Secure; HttpOnly; SameSite=Lax"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "http://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Path=/; HttpOnly; SameSite=Lax"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1259"
+  ]
+}

@@ -1,0 +1,66 @@
+diff --git a/scripts/generate-assets.mjs b/scripts/generate-assets.mjs
+index c1b562b..775afb8 100644
+--- a/scripts/generate-assets.mjs
++++ b/scripts/generate-assets.mjs
+@@ -34,6 +34,7 @@ const ROOT = process.cwd();
+ const CELLS_DIR = join(ROOT, 'data', 'asset-cells');
+ const MANIFEST_FILE = join(CELLS_DIR, '.manifest.json');
+ const QUARANTINE_FILE = join(CELLS_DIR, 'quarantine.json');
++const LEGACY_RECORDS_FILE = join(ROOT, 'data', 'legacy-records.json');
+ 
+ // --- leak pre-screen mirror (same shapes as test-consistency §13) -------------
+ const STRICT = [
+@@ -290,11 +291,18 @@ function existingMaxNumber(kind) {
+ 
+ function main() {
+   const manifest = existsSync(MANIFEST_FILE) ? JSON.parse(readFileSync(MANIFEST_FILE, 'utf8')) : { cells: {}, legacy: [] };
++  const legacyRecordSource = existsSync(LEGACY_RECORDS_FILE) ? JSON.parse(readFileSync(LEGACY_RECORDS_FILE, 'utf8')) : { records: {} };
+   const classes = loadCellData();
+   const quarantined = [];
+   const nextIds = { sast: existingMaxNumber('sast'), secrets: existingMaxNumber('secrets'), dast: existingMaxNumber('dast') };
+   let nextPat = 40;
+   let nextRec = 0;
++  for (const legacy of manifest.legacy ?? []) {
++    if (legacy.recId) {
++      const n = Number.parseInt(legacy.recId.slice('DPK-REC-'.length), 10);
++      if (n > nextRec) nextRec = n;
++    }
++  }
+   for (const cell of Object.values(manifest.cells)) {
+     const patN = Number.parseInt(cell.patId.slice('DPK-PAT-'.length), 10);
+     const recN = Number.parseInt(cell.recId.slice('DPK-REC-'.length), 10);
+@@ -475,6 +483,34 @@ function main() {
+     const sigKey = kind === 'dast' ? `check:${JSON.stringify(record.check)}` : `re:${[...(record.languages ?? ['universal'])].sort().join(',')}::${record.patterns[0].source}::${record.patterns[0].flags ?? ''}`;
+     seenSignals.set(sigKey, `legacy:${record.id}`);
+     wanted.set(join('knowledge', 'patterns', `${patId}.json`), pattern);
++    // Concept record: authored once for the pre-generator rules (fixed ids).
++    const legacyRec = legacyRecordSource.records?.[record.id];
++    if (legacyRec === undefined) {
++      quarantined.push({ cell: `legacy:${record.id}`, reason: 'missing authored concept record in legacy-records.json' });
++      return;
++    }
++    const concept = {
++      schemaVersion: 'drobon.knowledge.record/v1',
++      id: legacyRec.recordId,
++      category: legacyRec.category,
++      subcategory: legacyRec.subcategory,
++      title: legacyRec.title,
++      description: legacyRec.description,
++      applicability: legacyRec.applicability,
++      risk: legacyRec.risk,
++      relatedPatterns: [patId],
++      relatedRules: [record.id],
++      origin: 'original-authored',
++      cell: `legacy:${record.id}`,
++      validationStatus: 'VALIDATED',
++    };
++    const recErrors = validateRecord(concept);
++    if (recErrors.length > 0) {
++      quarantined.push({ cell: `legacy:${record.id}`, reason: `record schema: ${recErrors[0]}` });
++      return;
++    }
++    wanted.set(join('knowledge', 'records', `${legacyRec.recordId}.json`), concept);
++    manifest.legacy[manifest.legacy.length - 1].recId = legacyRec.recordId;
+   });
+ 
+   // Compile cells (sorted for determinism).

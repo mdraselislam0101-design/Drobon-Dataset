@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-216",
+  "title": "Argo CD GitOps console disclosed",
+  "description": "The response is the Argo CD UI: the Argo CD name together with the Applications view identifies the GitOps deployment console. The console shows every application, its sync state and the cluster it targets.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "debug-exposure",
+  "remediation": "Require SSO in front of Argo CD, keep the server on the internal network, and restrict the default admin account.",
+  "limitation": "One response body. The rule reports the UI; it does not trigger a sync and cannot show whether one would be accepted.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*Argo\\ CD)(?=[\\s\\S]*Applications)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Argo CD</title></head><body><div id=\"argocd-ui\"></div><h1>Applications</h1><script src=\"/static/argocd.js\"></script></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<!doctype html><html><body><span>Argo CD</span><nav>Applications</nav><div class=\"argo-app\"></div></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title></title></head><body><div id=\"argocd-ui\"></div><h1></h1><script src=\"/static/argocd.js\"></script></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1285"
+  ]
+}

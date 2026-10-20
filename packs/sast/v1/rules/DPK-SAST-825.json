@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-825",
+  "title": "Response header built from a non-literal value in javascript — review required",
+  "description": "setHeader is called with a value that is not a string literal, so whatever the variable holds is serialized into the response header block. If CR or LF reaches that value, the peer can end the header section early and append headers or a body — response splitting, cache poisoning, and cookie injection all ride on that. The rule flags the non-literal argument; it cannot tell whether the value is sanitized.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-113",
+  "category": "http-response-splitting",
+  "remediation": "Reject CR and LF in header values, build headers through the platform API with validated types, and keep request data out of Location and Set-Cookie construction.",
+  "limitation": "Lexical: one call shape (setHeader) in javascript; framework helpers that serialize headers differently are out of scope.",
+  "languages": [
+    "javascript"
+  ],
+  "patterns": [
+    {
+      "source": "\\bsetHeader\\(\\s*[^,\\n]{1,80},\\s*(?!(?:\\s*[\"\\'\\d]))"
+    }
+  ],
+  "tests": [
+    {
+      "line": "res.setHeader(\"X-Trace-Id\", traceId)",
+      "match": true
+    },
+    {
+      "line": "# audit: res.setHeader(\"X-Trace-Id\", traceId) present",
+      "match": true
+    },
+    {
+      "line": "res.setHeader(\"X-Frame-Options\", \"DENY\")",
+      "match": false
+    },
+    {
+      "line": "# verified: res.setHeader(\"X-Frame-Options\", \"DENY\")",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1003"
+  ]
+}

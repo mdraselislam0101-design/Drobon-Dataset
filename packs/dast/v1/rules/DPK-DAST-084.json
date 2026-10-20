@@ -1,0 +1,73 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-084",
+  "title": "CORS exposes every response header to any origin",
+  "description": "The Access-Control-Expose-Headers response header declares a wildcard, so a cross-origin reader can inspect every response header the API emits, including rate-limit state, trace ids and any custom header that carries account metadata. The check reads the declared exposure list; it does not claim a specific header is sensitive.",
+  "severity": "LOW",
+  "cwe": "CWE-942",
+  "category": "cors",
+  "remediation": "List the headers the client actually reads (for example X-Total-Count, ETag) instead of exposing all of them.",
+  "limitation": "Observation-level: evaluates the Access-Control-Expose-Headers header alone. It does not evaluate whether the origin policy also permits an untrusted origin.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Access-Control-Expose-Headers",
+    "valuePattern": "^\\*$"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://api.example/v1/orders",
+        "status": 200,
+        "headers": {
+          "Access-Control-Allow-Origin": "https://app.example",
+          "Access-Control-Expose-Headers": "*"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://api.example/v1/orders",
+        "status": 200,
+        "headers": {
+          "Access-Control-Expose-Headers": " * "
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://api.example/v1/orders",
+        "status": 200,
+        "headers": {
+          "Access-Control-Expose-Headers": "X-Total-Count, ETag"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://api.example/v1/orders",
+        "status": 200,
+        "headers": {
+          "Access-Control-Allow-Origin": "https://app.example"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/x",
+        "status": 200,
+        "headers": {
+          "Access-Control-Expose-Headers": "X-*"
+        },
+        "body": ""
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1153"
+  ]
+}

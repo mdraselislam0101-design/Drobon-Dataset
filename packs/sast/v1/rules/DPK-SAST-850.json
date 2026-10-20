@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-850",
+  "title": "Object injection via Marshal.load in ruby — review required",
+  "description": "Marshal.load rebuilds arbitrary Ruby objects from a byte string, including their class names and instance state. A crafted payload reaches code paths in classes the application has loaded, which is the entry point for Ruby object-injection chains. The rule flags the call; whether the bytes are trusted is a review decision.",
+  "severity": "HIGH",
+  "cwe": "CWE-502",
+  "category": "unsafe-deserialization",
+  "remediation": "Use JSON.parse for untrusted data, or sign the payload and verify the signature before decoding; never Marshal.load request data.",
+  "limitation": "Lexical call match; reachable gadget classes depend on the loaded application.",
+  "languages": [
+    "ruby"
+  ],
+  "patterns": [
+    {
+      "source": "\\bMarshal\\.(?:load|restore)\\b"
+    }
+  ],
+  "tests": [
+    {
+      "line": "data = Marshal.load(params[:state])",
+      "match": true
+    },
+    {
+      "line": "# audit: data = Marshal.load(params[:state]) present",
+      "match": true
+    },
+    {
+      "line": "data = JSON.parse(params[:state])",
+      "match": false
+    },
+    {
+      "line": "# verified: data = JSON.parse(params[:state])",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1031"
+  ]
+}

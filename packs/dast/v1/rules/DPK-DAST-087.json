@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-087",
+  "title": "Content-Security-Policy without default-src",
+  "description": "The Content-Security-Policy header declares specific directives but no default-src fallback. Every fetch directive that is not named falls back to the unrestricted default, so a policy that looks comprehensive can leave image, font, frame and worker sources wide open. The check reports the missing fallback.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-693",
+  "category": "csp-weakness",
+  "remediation": "Add a restrictive default-src 'self' (or 'none') so unnamed directives inherit a safe policy.",
+  "limitation": "Observation-level: the same check also fires when the header is entirely absent, which DPK-DAST-002 separately reports as the stronger finding. Read both rows together.",
+  "check": {
+    "type": "response-header-missing-directive",
+    "header": "Content-Security-Policy",
+    "directive": "default-src"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'self'; object-src 'none'; frame-ancestors 'self'"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/checkout",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'self' https://cdn.example; img-src 'self'"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src 'self'; script-src 'self'; object-src 'none'"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "img-src 'self'; default-src 'none'"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1156"
+  ]
+}

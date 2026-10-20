@@ -297,8 +297,12 @@ const DAST_EDGE_CASES_P3 = [
     { url: 'HTTP://app.example/', status: 200, headers: {} }, true],
   ['http-url: https is not http', { type: 'http-url' },
     { url: 'https://app.example/', status: 200, headers: {} }, false],
-  ['missing-header: present but empty is not missing', { type: 'missing-response-header', header: 'X-Frame-Options' },
-    { url: 'https://app.example/', status: 200, headers: { 'X-Frame-Options': '' } }, false],
+  // Repaired (DAST cumulative pump 2): an empty field value supplies nothing to
+  // the browser, so it is the same security outcome as an absent header. The
+  // old expectation (`false`) encoded the defect; the regression rows for the
+  // repaired behaviour are DAST_EDGE_CASES_P7.
+  ['missing-header: present but empty is missing', { type: 'missing-response-header', header: 'X-Frame-Options' },
+    { url: 'https://app.example/', status: 200, headers: { 'X-Frame-Options': '' } }, true],
   ['missing-header: lowercase name counts as present', { type: 'missing-response-header', header: 'X-Frame-Options' },
     { url: 'https://app.example/', status: 200, headers: { 'x-frame-options': 'DENY' } }, false],
   ['missing-header: absent header is missing', { type: 'missing-response-header', header: 'X-Frame-Options' },
@@ -358,12 +362,43 @@ const DAST_EDGE_CASES_P4 = [
   ['p4 directive: comma-joined no-store is present', { type: 'response-header-missing-directive', header: 'Cache-Control', directive: 'no-store' }, { url: 'https://a.example/', status: 200, headers: { 'Cache-Control': 'no-cache,no-store' } }, false],
   ['p4 body requireScheme: uppercase HTTPS page is in scope', { type: 'response-body-matches', valuePattern: 'src', requireScheme: 'https' }, { url: 'HTTPS://app.example/', status: 200, headers: {}, body: '<img src="x">' }, true],
 ];
+// Pump 7 (DAST cumulative pump, iteration 2): rows for three repairs proven by
+// direct probes — cookie attribute OWS, empty header values, and the optional
+// requireScheme scope on header matches. Expected values follow docs/PACKS.md.
+const DAST_EDGE_CASES_P7 = [
+  ['p7 cookie Secure: OWS before the semicolon still counts as the flag', { type: 'cookie-missing-flag', flag: 'Secure' },
+    { url: 'https://a.example/', status: 200, headers: { 'Set-Cookie': 'sid=1; Secure ; HttpOnly' } }, false],
+  ['p7 cookie HttpOnly: OWS before the semicolon still counts as the flag', { type: 'cookie-missing-flag', flag: 'HttpOnly' },
+    { url: 'https://a.example/', status: 200, headers: { 'Set-Cookie': 'sid=1; Secure; HttpOnly ; SameSite=Lax' } }, false],
+  ['p7 cookie SameSite: OWS around the equals sign still counts as the attribute', { type: 'cookie-missing-flag', flag: 'SameSite' },
+    { url: 'https://a.example/', status: 200, headers: { 'Set-Cookie': 'sid=1; SameSite = Strict' } }, false],
+  ['p7 cookie Secure: padded cookie is still missing Secure', { type: 'cookie-missing-flag', flag: 'Secure' },
+    { url: 'https://a.example/', status: 200, headers: { 'Set-Cookie': 'sid=1; HttpOnly ; SameSite=Lax' } }, true],
+  ['p7 cookie Secure: flag token inside an attribute value is not the flag', { type: 'cookie-missing-flag', flag: 'Secure' },
+    { url: 'https://a.example/', status: 200, headers: { 'Set-Cookie': 'sid=1; Path=/Secure' } }, true],
+  ['p7 missing header: empty value is missing', { type: 'missing-response-header', header: 'X-Frame-Options' },
+    { url: 'https://a.example/', status: 200, headers: { 'X-Frame-Options': '' } }, true],
+  ['p7 missing header: whitespace-only value is missing', { type: 'missing-response-header', header: 'Content-Security-Policy' },
+    { url: 'https://a.example/', status: 200, headers: { 'Content-Security-Policy': '   ' } }, true],
+  ['p7 missing header: one non-empty value among empty ones is present', { type: 'missing-response-header', header: 'X-A' },
+    { url: 'https://a.example/', status: 200, headers: { 'X-A': ['', 'ok'] } }, false],
+  ['p7 header-matches requireScheme http: Basic challenge over http is in scope', { type: 'response-header-matches', header: 'WWW-Authenticate', valuePattern: '^Basic(?:\\s|$)', requireScheme: 'http' },
+    { url: 'http://a.example/', status: 401, headers: { 'WWW-Authenticate': 'Basic realm="x"' } }, true],
+  ['p7 header-matches requireScheme http: same challenge over https is out of scope', { type: 'response-header-matches', header: 'WWW-Authenticate', valuePattern: '^Basic(?:\\s|$)', requireScheme: 'http' },
+    { url: 'https://a.example/', status: 401, headers: { 'WWW-Authenticate': 'Basic realm="x"' } }, false],
+  ['p7 header-matches requireScheme https: uppercase scheme is in scope', { type: 'response-header-matches', header: 'WWW-Authenticate', valuePattern: '^Basic(?:\\s|$)', requireScheme: 'https' },
+    { url: 'HTTPS://a.example/', status: 401, headers: { 'WWW-Authenticate': 'Basic realm="x"' } }, true],
+  ['p7 header-matches requireScheme https: malformed URL is out of scope', { type: 'response-header-matches', header: 'WWW-Authenticate', valuePattern: 'Basic', requireScheme: 'https' },
+    { url: 'not a url', status: 401, headers: { 'WWW-Authenticate': 'Basic realm="x"' } }, false],
+  ['p7 header-matches requireScheme http: absent header is no match', { type: 'response-header-matches', header: 'WWW-Authenticate', valuePattern: 'Basic', requireScheme: 'http' },
+    { url: 'http://a.example/', status: 401, headers: {} }, false],
+];
 // Pump 5: rows for mutant coverage gaps found in Pump 5 (uppercase scheme on the observed URL).
 const DAST_EDGE_CASES_P5 = [
   ['p5 host-differs: uppercase observed scheme and host still compare hosts', { type: 'response-header-host-differs', header: 'Location' }, { url: 'HTTPS://APP.example/login', status: 302, headers: { Location: 'https://other.example/' } }, true],
   ['p5 host-differs: uppercase observed scheme, same host is not a change', { type: 'response-header-host-differs', header: 'Location' }, { url: 'HTTPS://APP.example/login', status: 302, headers: { Location: 'https://app.example/home' } }, false],
 ];
-for (const [label, check, observation, expected] of [...DAST_EDGE_CASES, ...DAST_EDGE_CASES_P3, ...DAST_EDGE_CASES_P4, ...DAST_EDGE_CASES_P5]) {
+for (const [label, check, observation, expected] of [...DAST_EDGE_CASES, ...DAST_EDGE_CASES_P3, ...DAST_EDGE_CASES_P4, ...DAST_EDGE_CASES_P5, ...DAST_EDGE_CASES_P7]) {
   let actual;
   let thrown = null;
   try {
@@ -511,6 +546,30 @@ for (const [label, line, match] of GEN_CASES) {
   assert(
     evalDastCheck({ type: 'missing-response-header', header: 'X-Frame-Options' }, { url: 'https://a/', headers: null }) === true,
     'dast robustness: missing-header finding survives a null header map',
+  );
+  // RFC 7230 OWS is not part of the field value. Anchored patterns must see the
+  // semantic value, not the transport padding, or a legitimate `*`/`null`
+  // header is silently missed and a `nosniff` value is falsely reported.
+  assert(
+    evalDastCheck(
+      { type: 'response-header-matches', header: 'Access-Control-Allow-Origin', valuePattern: '^\\*$' },
+      { url: 'https://a/', status: 200, headers: { 'Access-Control-Allow-Origin': ' * ' } },
+    ) === true,
+    'dast normalization: OWS around a header value is trimmed (CORS wildcard)',
+  );
+  assert(
+    evalDastCheck(
+      { type: 'response-header-matches', header: 'X-Content-Type-Options', valuePattern: '^(?!\\s*nosniff\\s*$).+' },
+      { url: 'https://a/', status: 200, headers: { 'X-Content-Type-Options': ' nosniff ' } },
+    ) === false,
+    'dast normalization: padded nosniff is not reported as a weak value',
+  );
+  assert(
+    evalDastCheck(
+      { type: 'response-header-host-differs', header: 'Location' },
+      { url: 'https://a.example/', status: 302, headers: { Location: ' //b.example/next' } },
+    ) === true,
+    'dast normalization: OWS before a protocol-relative Location is trimmed',
   );
 }
 

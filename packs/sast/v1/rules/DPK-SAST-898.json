@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-898",
+  "title": "Dynamic evaluation of a runtime string in julia — review required",
+  "description": "eval parses and executes a string in the module scope. A string that carries request data becomes arbitrary Julia code with the process privileges, and macro expansion at that point can reach the filesystem and network. The rule flags the call; whether the string is externally influenced is a review decision.",
+  "severity": "HIGH",
+  "cwe": "CWE-95",
+  "category": "code-injection",
+  "remediation": "Parse input into data structures and dispatch through a fixed function table instead of evaluating strings.",
+  "limitation": "Lexical: matches eval calls; a string literal evaluated at load time is still reported for review.",
+  "languages": [
+    "julia"
+  ],
+  "patterns": [
+    {
+      "source": "\\beval\\s*\\(\\s*(?!\")"
+    }
+  ],
+  "tests": [
+    {
+      "line": "result = eval(user_expression)",
+      "match": true
+    },
+    {
+      "line": "# audit: result = eval(user_expression) present",
+      "match": true
+    },
+    {
+      "line": "result = parse(Int, user_count)",
+      "match": false
+    },
+    {
+      "line": "# verified: result = parse(Int, user_count)",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1081"
+  ]
+}

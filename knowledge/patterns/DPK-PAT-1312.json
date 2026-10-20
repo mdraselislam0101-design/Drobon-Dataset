@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1312",
+  "title": "Signal: Database dump with schema statements served",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-body-matches",
+      "valuePattern": "(?=[\\s\\S]*-- (?:MySQL|MariaDB|PostgreSQL)[^\\n]*dump)(?=[\\s\\S]*CREATE TABLE)"
+    }
+  },
+  "scope": "One response whose body carries a database dump banner and a CREATE TABLE statement.",
+  "limitations": "One response body. The rule reports the dump banner and a CREATE TABLE statement; it cannot count the rows or tell which tables the export covers.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "-- MySQL dump 10.13  Distrib 8.0.35, for Linux (x86_64)\n--\n-- Host: db.internal    Database: shop\n-- ------------------------------------------------------\nDROP TABLE IF EXISTS `customers`;\nCREATE TABLE `customers` (`id` int NOT NULL, `email` varchar(255));\nINSERT INTO `customers` VALUES (1,\"a@example.com\");"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "-- PostgreSQL database dump\n-- Dumped from database version 15.4\nCREATE TABLE public.orders (id integer, total numeric);\nCOPY public.orders (id, total) FROM stdin;"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": " 10.13  Distrib 8.0.35, for Linux (x86_64)\n--\n-- Host: db.internal    Database: shop\n-- ------------------------------------------------------\nDROP TABLE IF EXISTS `customers`;\n `customers` (`id` int NOT NULL, `email` varchar(255));\nINSERT INTO `customers` VALUES (1,\"a@example.com\");"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A tutorial page that quotes a dump banner and a table statement is reported too; the pairing is the export shape.",
+  "linkedRules": [
+    "DPK-DAST-243"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:body-sql-dump:sql-dump",
+  "validationStatus": "VALIDATED"
+}

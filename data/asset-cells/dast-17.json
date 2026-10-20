@@ -1,0 +1,128 @@
+[
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "hsts-invalid-max-age",
+  "category": "transport-security",
+  "cwe": "CWE-319",
+  "severity": "MEDIUM",
+  "title": "Strict-Transport-Security max-age is not a valid delta-seconds value",
+  "description": "The HSTS header carries a max-age directive whose value is not an unsigned decimal integer: it is empty, negative, fractional, or contains trailing characters. A user agent that cannot parse delta-seconds discards the whole header, so the site has no HSTS policy at all while its operators believe one is deployed. Quoted values are excluded here because DPK-DAST-024 already reports every quoted max-age as invalid.",
+  "remediation": "Send max-age as a bare unsigned integer number of seconds, for example max-age=31536000. Validate the value at the framework or proxy layer so a template error cannot ship a non-numeric duration.",
+  "limitation": "One header value. The rule judges the max-age syntax visible in the response; it cannot prove that a browser discarded the header, and quoted values are graded by DPK-DAST-024 instead.",
+  "scopeT": "One response whose Strict-Transport-Security max-age directive is present with an unquoted, non-numeric or missing value.",
+  "fp": "A deployment that deliberately sends a non-numeric placeholder during a rollout is reported; the browser ignores the header in that state either way.",
+  "recordDesc": "Strict-Transport-Security carries a max-age directive that is not a plain unsigned integer. Parsers reject the directive, and HSTS processing stops for the whole header, so the origin loses the protection the header was meant to establish: the next plaintext navigation is not upgraded and the browser records no HSTS state.",
+  "applicability": "HTTPS responses that set Strict-Transport-Security.",
+  "risk": "No HSTS enforcement despite an HSTS header being present; MEDIUM severity, matching a missing policy.",
+  "why": "The max-age directive has no value, or its value is not digits followed by a directive boundary.",
+  "fix": [
+   "Emit max-age=<unsigned seconds> with no quotes and no units.",
+   "Add a response-header test that rejects non-numeric max-age values."
+  ],
+  "verifyT": "Request the endpoint over HTTPS and confirm max-age is an unsigned integer that a strict parser accepts.",
+  "cells": [
+   {
+    "suffix": "invalid-value",
+    "lang": "http",
+    "name": "HSTS max-age is unparsable",
+    "safe": "HSTS max-age is a valid integer",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Strict-Transport-Security",
+     "valuePattern": "(?:^|;)\\s*max-age\\s*(?:;|$)|(?:^|;)\\s*max-age\\s*=\\s*(?![0-9]+\\s*(?:;|$))(?!\")[^;\\s]*"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Strict-Transport-Security": "max-age=abc"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Strict-Transport-Security": "max-age="
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Strict-Transport-Security": "max-age"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Strict-Transport-Security": "max-age=-1; includeSubDomains"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Strict-Transport-Security": "max-age=300abc"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Strict-Transport-Security": "max-age=31536000; includeSubDomains"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Strict-Transport-Security": "max-age=\"300\""
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Strict-Transport-Security": "includeSubDomains"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {}
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ }
+]

@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-914",
+  "title": "Shell invoked explicitly from exec.Command in go — review required",
+  "description": "exec.Command(\"sh\", \"-c\", ...) starts a shell and hands it a command string. exec.Command itself does not invoke a shell, so this is a deliberate choice that reintroduces shell parsing, and any interpolated value becomes shell syntax. The rule flags the sh -c form; whether the string carries request data is a review decision.",
+  "severity": "HIGH",
+  "cwe": "CWE-78",
+  "category": "command-injection",
+  "remediation": "Call exec.Command with the program and its arguments directly, and validate dynamic arguments.",
+  "limitation": "Lexical: matches literal sh/bash -c pairs on one line; a shell name held in a variable is out of scope.",
+  "languages": [
+    "go"
+  ],
+  "patterns": [
+    {
+      "source": "\\b(?:exec\\.Command\\s*\\(\\s*[\"'](?:sh|bash)[\"']\\s*,\\s*[\"']-c[\"'])"
+    }
+  ],
+  "tests": [
+    {
+      "line": "cmd := exec.Command(\"sh\", \"-c\", userCommand)",
+      "match": true
+    },
+    {
+      "line": "# audit: cmd := exec.Command(\"sh\", \"-c\", userCommand) present",
+      "match": true
+    },
+    {
+      "line": "cmd := exec.Command(\"ls\", \"-l\", userDir)",
+      "match": false
+    },
+    {
+      "line": "# verified: cmd := exec.Command(\"ls\", \"-l\", userDir)",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1097"
+  ]
+}

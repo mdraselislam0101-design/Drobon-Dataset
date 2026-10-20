@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-130",
+  "title": "etcd version endpoint disclosed in a response",
+  "description": "The response is the etcd version document: it carries the etcdserver and etcdcluster version fields. An unauthenticated etcd endpoint is the cluster's configuration store, so the same port usually answers key reads and writes, including the keys that hold service credentials.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Authenticate etcd, enable TLS on the client port and keep it on a private network. Rotate any secret whose key space was reachable.",
+  "limitation": "Two body markers. A generic JSON document with one version field is not reported.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*\"etcdserver\")(?=[\\s\\S]*\"etcdcluster\")"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://etcd.example:2379/version",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"etcdserver\":\"3.5.9\",\"etcdcluster\":\"3.5.0\"}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://etcd.example:2379/version",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"etcdserver\": \"3.4.27\", \"etcdcluster\": \"3.4.0\"}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/api/version",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"etcdserver\":\"3.5.9\"}"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body>Home</body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1199"
+  ]
+}

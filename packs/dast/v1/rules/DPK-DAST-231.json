@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-231",
+  "title": "Laravel Ignition error page disclosed",
+  "description": "The response is the Laravel Ignition error page: the Ignition container together with the Laravel framework marker identifies the detailed exception renderer. That page shows stack frames, environment values and the source excerpt around the throw.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "debug-exposure",
+  "remediation": "Set APP_DEBUG=false in production and confirm the generic error page is returned. Ignition should not be reachable on a production host.",
+  "limitation": "One response body. The rule reports the Ignition page; it does not read every rendered field and cannot show which environment values the page included.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*Ignition)(?=[\\s\\S]*laravel)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Whoops! There was an error.</title></head><body><div class=\"ignition\"><span>Ignition</span><p>Laravel v10.2.0</p><pre>APP_KEY</pre></div></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<!doctype html><html><body><div data-ignition=\"error\"><h1>500</h1><code>laravel/framework 10.1</code></div></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Whoops! There was an error.</title></head><body><div class=\"\"><span></span><p> v10.2.0</p><pre>APP_KEY</pre></div></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1300"
+  ]
+}

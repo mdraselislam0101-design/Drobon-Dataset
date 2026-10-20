@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1233",
+  "title": "Signal: Docker daemon API info disclosed",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-body-matches",
+      "valuePattern": "(?=[\\s\\S]*\"DockerRootDir\")(?=[\\s\\S]*\"ApiVersion\")"
+    }
+  },
+  "scope": "One response whose body is a Docker info document with DockerRootDir and ApiVersion fields.",
+  "limitations": "One response body. The rule reports the info document; it does not list a container or start one, so it does not prove that container control is possible from this position.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "{\"ID\":\"abc\",\"Containers\":12,\"Images\":40,\"Driver\":\"overlay2\",\"DockerRootDir\":\"/var/lib/docker\",\"ServerVersion\":\"24.0.7\",\"ApiVersion\":\"1.43\",\"OperatingSystem\":\"Ubuntu 22.04\"}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "{\"Containers\":3,\"DockerRootDir\":\"/var/lib/docker\",\"ApiVersion\":\"1.41\",\"ServerVersion\":\"20.10.24\"}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "{\"ID\":\"abc\",\"Containers\":12,\"Images\":40,\"Driver\":\"overlay2\",:\"/var/lib/docker\",\"ServerVersion\":\"24.0.7\",:\"1.43\",\"OperatingSystem\":\"Ubuntu 22.04\"}"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A daemon behind a mutually authenticated proxy that still returns info to an authorised caller is not a finding; the rule reports reachability from this position.",
+  "linkedRules": [
+    "DPK-DAST-164"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:body-docker-daemon-info:docker-daemon-info",
+  "validationStatus": "VALIDATED"
+}

@@ -1,0 +1,295 @@
+[
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "refresh-header-redirect",
+  "category": "open-redirect",
+  "cwe": "CWE-601",
+  "severity": "LOW",
+  "title": "Refresh header redirects to an absolute URL",
+  "description": "The Refresh response header carries a url= target, which makes the browser load a different document after the delay. Unlike the Location header, Refresh is not covered by the redirect rules, and a target built from request data turns the endpoint into an open redirect that survives filters written for Location. The check reports the header; it does not claim the target is attacker-chosen.",
+  "remediation": "Remove Refresh-based navigation and use a server-side redirect with a validated target, or restrict the target to a fixed relative path.",
+  "limitation": "Observation-level: reads the Refresh header only. Meta-refresh markup inside a body is a different evidence shape and is not reported by this check.",
+  "scopeT": "One response: Refresh carries a URL target.",
+  "fp": "A deliberate splash page that refreshes to a fixed same-site document is reported by design.",
+  "recordDesc": "A response navigates through the Refresh header. Meta-refresh style navigation is easy to build from a request parameter, and because it never touches the Location header it slips past redirect allowlists, WAF rules and open-redirect scanners that only inspect Location.",
+  "applicability": "HTTP responses that carry a Refresh header.",
+  "risk": "User redirected to an arbitrary destination; LOW severity.",
+  "why": "The Refresh header declares a URL target.",
+  "fix": [
+   "Use a server-side redirect with a validated target.",
+   "Restrict the target to a fixed same-site path."
+  ],
+  "verifyT": "Request the endpoint with a hostile target parameter and confirm no redirect occurs.",
+  "cells": [
+   {
+    "suffix": "refresh",
+    "lang": "http",
+    "name": "Refresh header target",
+    "safe": "Refresh: 30",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Refresh",
+     "valuePattern": "\\burl\\s*=\\s*[\"']?\\s*(?:https://|http://|//)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/leave",
+       "status": 200,
+       "headers": {
+        "Refresh": "0; url=https://partner.example/offer"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/leave",
+       "status": 200,
+       "headers": {
+        "Refresh": "5;URL='//partner.example/offer'"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/leave",
+       "status": 200,
+       "headers": {
+        "Refresh": "30"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/leave",
+       "status": 200,
+       "headers": {
+        "Cache-Control": "no-store"
+       }
+      },
+      "match": false
+     }
+    ],
+    "overrides": {
+     "limitation": "Observation-level: reads the Refresh header only. Meta-refresh markup inside a body is a different evidence shape and is not reported by this check. Any absolute or protocol-relative target matches, including a same-host https target, because the header alone cannot show where the value came from; this is the broad \"Refresh navigation present\" question. DPK-DAST-110 (plaintext target) and DPK-DAST-118 (protocol-relative target) report the two shapes that are unsafe on their own and also match here, so a downgrade produces both this review row and the specific finding."
+    }
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "csp-script-src-plaintext",
+  "category": "csp-weakness",
+  "cwe": "CWE-319",
+  "severity": "MEDIUM",
+  "title": "Content-Security-Policy script-src allows plaintext HTTP origins",
+  "description": "The script-src directive names an http: source, so the policy permits scripts to be fetched over plaintext. An active network attacker can substitute the script in transit, and the policy then authorises the injected code instead of blocking it. The check reports the directive value; it does not claim interception is happening.",
+  "remediation": "Serve every script source over HTTPS and drop http: sources from script-src (upgrade-insecure-requests can help during migration).",
+  "limitation": "Observation-level: matches a plaintext source inside script-src only. Other fetch directives that carry http: sources are separate checks.",
+  "scopeT": "One response: script-src names a plaintext source.",
+  "fp": "A lab page that intentionally loads a plaintext local script is reported by design.",
+  "recordDesc": "A policy permits plaintext script origins. A CSP is only as strong as its source list: once http: appears in script-src, the policy authorises whatever the network delivers, so the header no longer constrains script execution for anyone on the path.",
+  "applicability": "HTML responses that deliver a Content-Security-Policy header.",
+  "risk": "Script injection through plaintext transport is authorised by policy; MEDIUM severity.",
+  "why": "A script-src source uses the http scheme.",
+  "fix": [
+   "Serve scripts over HTTPS only.",
+   "Remove http: sources from script-src."
+  ],
+  "verifyT": "Parse the delivered policy and confirm script-src lists only https: or relative sources.",
+  "cells": [
+   {
+    "suffix": "script-src-http",
+    "lang": "http",
+    "name": "CSP script-src plaintext",
+    "safe": "script-src 'self' https://cdn.example",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Content-Security-Policy",
+     "valuePattern": "^(?:(?!script-src(?=[\\s;]|$))[^;]*;\\s*)*script-src(?=[\\s;]|$)[^;]*?(?<=\\s)http:(?=\\s|;|/|$)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "script-src 'self' http://cdn.example"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "script-src http:"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "script-src 'self'; script-src http:"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "script-src 'self' https://cdn.example"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "img-src http:"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {}
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "csp-frame-ancestors-wildcard",
+  "category": "csp-weakness",
+  "cwe": "CWE-693",
+  "severity": "MEDIUM",
+  "title": "Content-Security-Policy frame-ancestors allows every origin",
+  "description": "The frame-ancestors directive contains a standalone wildcard, so any site may embed this document in a frame. The directive is the modern replacement for X-Frame-Options, and a wildcard silently removes the clickjacking protection that the policy appears to provide. The check reports the directive value.",
+  "remediation": "Replace frame-ancestors * with 'none' or an explicit list of embedding origins.",
+  "limitation": "Observation-level: matches a standalone wildcard in frame-ancestors. A policy that omits the directive entirely is reported by a separate rule.",
+  "scopeT": "One response: frame-ancestors contains a standalone wildcard.",
+  "fp": "A documented embeddable widget may intentionally allow any parent; it is still reported because the header cannot express that intent.",
+  "recordDesc": "A policy lets every origin frame the document. frame-ancestors is the CSP control that stops clickjacking, and a wildcard turns it into a no-op while the security review sees a CSP header present and assumes the surface is covered.",
+  "applicability": "HTML responses that deliver a Content-Security-Policy header.",
+  "risk": "Clickjacking protection disabled by policy; MEDIUM severity.",
+  "why": "The frame-ancestors directive grants a standalone wildcard.",
+  "fix": [
+   "Use frame-ancestors 'none' for non-embeddable pages.",
+   "List the embedding origins explicitly when embedding is intended."
+  ],
+  "verifyT": "Parse the policy and confirm frame-ancestors no longer contains a wildcard.",
+  "cells": [
+   {
+    "suffix": "frame-ancestors",
+    "lang": "http",
+    "name": "CSP frame-ancestors wildcard",
+    "safe": "frame-ancestors 'self'",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Content-Security-Policy",
+     "valuePattern": "^(?:(?!frame-ancestors)[^;]*;\\s*)*frame-ancestors(?=\\s)[^;]*?(?<=\\s)(?:\\*|(?:https?|wss?)://\\*)(?=\\s|;|$)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "frame-ancestors *"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "frame-ancestors 'self' *"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "frame-ancestors 'self'; frame-ancestors *"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "frame-ancestors 'self'"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "default-src *; frame-ancestors 'self'"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {}
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "frame-ancestors https://*"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "frame-ancestors https://*.example.com"
+       }
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ }
+]

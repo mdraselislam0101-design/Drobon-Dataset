@@ -1,0 +1,87 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1332",
+  "title": "Signal: Set-Cookie Expires value is not an HTTP date",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-header-matches",
+      "header": "Set-Cookie",
+      "valuePattern": ";\\s*expires\\s*=\\s*(?![A-Za-z]{3}, \\d{2} [A-Za-z]{3} \\d{4} \\d{2}:\\d{2}:\\d{2} GMT)[^;]*"
+    }
+  },
+  "scope": "One Set-Cookie header whose Expires attribute value is not an HTTP date.",
+  "limitations": "One header value. The rule validates the date shape only and does not compare it with Max-Age or with the clock, which the observation does not carry.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Expires=0; Path=/; Secure; HttpOnly; SameSite=Lax"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Expires=2030-01-01; Path=/; Secure; HttpOnly; SameSite=Lax"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Expires=Wed, 01 Jan 2031 00:00:00 GMT; Path=/; Secure; HttpOnly"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Max-Age=3600; Path=/; Secure; HttpOnly"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Expires=Wednesday; Path=/; Secure; HttpOnly"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Expires=wed, 01 jan 2031 00:00:00 GMT; Path=/; Secure; HttpOnly"
+        }
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A cookie with both a valid Expires and Max-Age is not reported here; the Max-Age rules judge that pair.",
+  "linkedRules": [
+    "DPK-DAST-263"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:cookie-expires-invalid:expires-invalid",
+  "validationStatus": "VALIDATED"
+}

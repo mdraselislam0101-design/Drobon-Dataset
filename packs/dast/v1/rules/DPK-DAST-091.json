@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-091",
+  "title": "Git repository metadata served by the web server",
+  "description": "The response is the contents of a Git configuration file, proving that the .git directory is inside the served tree. When that directory is reachable, the full commit history, branch names and often embedded credentials can be reconstructed with standard tooling. The check reports the configuration file; it does not assume the history has been downloaded.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-540",
+  "category": "information-disclosure",
+  "remediation": "Deny dot-directories at the web server and deploy build output instead of the working tree.",
+  "limitation": "Observation-level: matches the Git configuration key that identifies a repository config file. A bare .git/config exposed under another name is out of scope.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "repositoryformatversion\\s*=\\s*0"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://site.example/.git/config",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "[core]\n\trepositoryformatversion = 0\n\tfilemode = true\n\tbare = false"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://site.example/.git/config",
+        "status": 200,
+        "headers": {},
+        "body": "repositoryformatversion=0\n[remote \"origin\"]\n\turl = https://git.example/app.git"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://site.example/",
+        "status": 200,
+        "headers": {},
+        "body": "<html><body>Welcome</body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://site.example/.git/config",
+        "status": 404,
+        "headers": {},
+        "body": "Not Found"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1160"
+  ]
+}

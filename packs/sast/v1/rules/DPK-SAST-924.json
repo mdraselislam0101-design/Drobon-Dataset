@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-924",
+  "title": "Shell command executed through Open3 from a string in ruby — review required",
+  "description": "Open3.capture3 with a single string runs the command through the shell. A value interpolated into that string is parsed as shell syntax, so a semicolon or backtick appends commands. The rule flags the string form; the argument-array form is the safe counterpart.",
+  "severity": "HIGH",
+  "cwe": "CWE-78",
+  "category": "command-injection",
+  "remediation": "Call capture3 with separate arguments, or capture2e with an explicit array, and validate dynamic values.",
+  "limitation": "Lexical: matches capture3 calls whose first argument is a variable or interpolated string.",
+  "languages": [
+    "ruby"
+  ],
+  "patterns": [
+    {
+      "source": "\\bOpen3\\.(?:capture3|capture2e?|popen3)\\s*\\(\\s*[\"']?[^,\\n)]*#\\{"
+    }
+  ],
+  "tests": [
+    {
+      "line": "stdout, stderr, status = Open3.capture3(\"convert #{user_file} out.png\")",
+      "match": true
+    },
+    {
+      "line": "# audit: stdout, stderr, status = Open3.capture3(\"convert #{user_file} out.png\") present",
+      "match": true
+    },
+    {
+      "line": "stdout, stderr, status = Open3.capture3(\"convert\", user_file, \"out.png\")",
+      "match": false
+    },
+    {
+      "line": "# verified: stdout, stderr, status = Open3.capture3(\"convert\", user_file, \"out.png\")",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1107"
+  ]
+}

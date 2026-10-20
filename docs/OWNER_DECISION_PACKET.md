@@ -6,7 +6,7 @@ Every status below was re-verified against the working tree on 2026-10-17
 identical). Nothing in this packet is an approval, a legal clearance, or a
 release authorization. Companion machine-readable records:
 `docs/BLOCKER_REGISTER.json` (BLK-001..019 open, BLK-R01..R03 resolved),
-`docs/OWNER_DECISIONS.json` (5/5 `OWNER_DECISION_REQUIRED`),
+`docs/OWNER_DECISIONS.json` (4 of 5 `OWNER_DECISION_REQUIRED`; ORIGINAL_CONTENT approved 2026-10-17),
 `docs/INGESTION_GATES.json` (GATE-1..4), `docs/OWNER_ACTION_REQUIRED.md`
 (your register — unchanged by this packet), `docs/SOURCE_RELEASE_GATE.md`,
 `docs/LICENSE_DECISION_RECORD.md`, `docs/LICENSE_REVIEW.md` (lay evidence).
@@ -53,7 +53,9 @@ superseded by this table.
 
 Verification after these changes: full suite + all validators green; corpus
 counts at that run unchanged (951/911/951/61/94/65/792; Phase 5 recount
-2026-10-17 after DPK-SEC-106/107 = 953/913/953/61/96/65/792); coverage recomputed on the
+2026-10-17 after DPK-SEC-106/107 = 953/913/953/61/96/65/792). **Current tree
+(2026-10-18 recount, `docs/CURRENT_INVENTORY.json`): 954/914/954/61/97/65/792**
+(pack rules / patterns / records / remediation / CWE / secrets / SAST); coverage recomputed on the
 canonical methodology at that run (72.9% = 37.90/52; SAST engine 69.0%; DEVELOPER
 73.6%; Phase 5 recount 2026-10-17 after R-CWE-03 = 74.8% = 38.90/52).
 Nothing here touches D-1/D-2/GATE-1..4 or the Production Intelligence Lock.
@@ -63,7 +65,8 @@ Nothing here touches D-1/D-2/GATE-1..4 or the Production Intelligence Lock.
 ## P1 — 2026-10-17 BLOCKER-RESOLUTION PUMP ADDENDUM: prepared decision packages (nothing decided)
 
 State after this pump: **all statuses unchanged** — OWNER_DECISIONS.json stays
-5/5 `OWNER_DECISION_REQUIRED`, GATE-1..4 stay `BLOCKED`, BLK-001..004 stay
+at 4 of 5 pending (the 2026-10-17 ORIGINAL_CONTENT approval predates this pump),
+GATE-1..4 stay `BLOCKED`, BLK-001..004 stay
 open. This pump prepared evidence packages only. A prepared decision is not an
 approved decision.
 
@@ -78,7 +81,7 @@ Prepared artifacts (cross-referenced from `docs/BLOCKER_REGISTER.json`
 | Source-liveness, revocation, staleness design + cadence record | `docs/INGESTION_PROTOCOL.md` §13 | D-4 / BLK-004 |
 | Per-source rights/redistribution checklist | `docs/SOURCE_RELEASE_GATE.md` S1–S6 (existing, cited) | D-2 / BLK-002 |
 | Original-content rights checklist | section D below (existing, cited) | D-1 / BLK-001 |
-| Remaining-work classification (8-way) | `DROBON_REMAINING_WORK.csv` `classification` column (22 rows) | all |
+| Remaining-work classification (8-way) | `DROBON_REMAINING_WORK.csv` `classification` column (30 rows) | all |
 | Draft license (explicitly NOT APPROVED) | `docs/PROPRIETARY_LICENSE_DRAFT.md` | D-1 |
 
 Open questions this pump made explicit beyond the per-source license/
@@ -128,10 +131,10 @@ them):
 
 **Rights and provenance blockers:** BLK-001 (no `LICENSE`/`COPYING` file
 exists — all-rights-reserved default, `docs/LICENSE_DECISION_RECORD.md` §1);
-BLK-002 (all five `docs/OWNER_DECISIONS.json` entries undecided;
+BLK-002 (four of five `docs/OWNER_DECISIONS.json` entries undecided;
 `vuln-intel/sources.json` `redistribution: UNVERIFIED` for GHSA and OSV).
 Provenance itself is complete (100/100 seed records carry
-`source/sourceUrl/retrievedAt/license` pointers; 953/953 original artifacts
+`source/sourceUrl/retrievedAt/license` pointers; 954/954 original artifacts
 carry `origin` lineage) — provenance is **not** the blocker; **rights** are.
 
 **Independent-review requirements:** GATE-3 — a named human reviewer must open
@@ -446,11 +449,11 @@ Statuses use: `VERIFIED` · `RECOMMENDATION_ONLY` · `BLOCKED_OWNER_DECISION` ·
 
 1. **ID:** D-13. 2. **Question:** create `DPK-REC` records for the 40 legacy
    patterns (DPK-PAT-0001..), or keep the documented retention exception?
-3. **Current value:** 953 patterns, 913 records, exactly 40 patterns without
+3. **Current value:** 954 patterns, 914 records, exactly 40 patterns without
    a record link (recomputed 2026-10-17, Phase 5, from `relatedPatterns`); exception
    documented in `docs/DATASET_APP_CONTRACT.md` §1. 4. **Options:** create
    (via cells + validate + recount) / keep exception. 5. **Implications:**
-   counts move 913→953 only through validated authoring (never padding);
+   counts move 914→954 only through validated authoring (never padding);
    knowledge depth for early rules. 6. **RECOMMENDATION (not an approval):**
    both honest — create only if the coverage is wanted. 7. **Deps:** none.
 8. **BC:** additive. 9. **Evidence:** decision; if created, full recount +
@@ -637,7 +640,7 @@ gate never implies another.
 | 3 | D-1 original-content rights | GATE-2 / G6 | grant for own work | owner decision | grant file(s) + LICENSE_DECISION_RECORD §4 + matrix flips | owner | **blocking** | **CLOSED** — BLK-001 | D-1 reply + grant commit |
 | 4 | D-2 source redistribution rights | GATE-2 / G6 | per-source rights | per-source verdicts | section C rows flipped with evidence; counsel notes where obtained | owner (+ counsel) | **blocking** | **CLOSED** — BLK-002 | D-2 reply per source |
 | 5 | Stage approval | GATE-1 | lift lock for named batch | D-2 done | written approval: stage, sources, maintainer, license basis | owner | **blocking** | **CLOSED** — no approval exists | approval text + date + decider |
-| 6 | Source-rights review gate | GATE-2 | license decision recorded | D-1 + D-2 | completed decision record + tripwires updated consistently + suite green | owner + validator | **blocking** | **CLOSED** — 5/5 undecided | D-1+D-2 landing |
+| 6 | Source-rights review gate | GATE-2 | license decision recorded | D-1 + D-2 | completed decision record + tripwires updated consistently + suite green | owner + validator | **blocking** | **CLOSED** — 4 of 5 pending (ORIGINAL_CONTENT approved 2026-10-17) | D-1+D-2 landing |
 | 7 | Independent reviewer | GATE-3 | human opens every URL | reviewer named | identity + capacity + HONESTY.md acknowledgment | owner / reviewer | **blocking** | **CLOSED** — no reviewer | named commitment |
 | 8 | Main App provider design | GATE-4 | verified consumer contract | app design accepted | app-repo design (range policy, zero-match, config-lock) accepted | app maintainers | **blocking (external)** | **CLOSED** — tracked as external dependency; **not implementable in this repo** | app workstream (loaders GAP-005..009, CVSS/prioritization per `docs/DATASET_APP_CONTRACT.md`) |
 | 9 | Production ingestion authorization | G8 / GATE-1..4 aggregate | data may flow | gates 3–8 | `requireGates()` passes only with all 4 GATE rows non-BLOCKED | owner | **blocking** | **CLOSED** — fail-closed reproduced | all four gates satisfied |

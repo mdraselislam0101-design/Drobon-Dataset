@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-155",
+  "title": "Strict-Transport-Security delivered over plaintext HTTP",
+  "description": "The response carrying Strict-Transport-Security was fetched over http://. User agents ignore the header on a non-secure response, so the policy is not installed even though every configuration review sees an HSTS header. The site keeps its first-visit downgrade window while appearing to have closed it.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-319",
+  "category": "transport-security",
+  "remediation": "Serve HSTS only from the HTTPS listener, and make the HTTP listener answer with a redirect to HTTPS that does not pretend to set the policy. Check the proxy configuration for an add_header rule that is applied to both listeners.",
+  "limitation": "One response and its scheme. The rule judges the secured-ness of the response that carried the header; it cannot see whether the HTTPS listener sets the header correctly.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Strict-Transport-Security",
+    "valuePattern": "^\\s*\\S",
+    "requireScheme": "http"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "http://app.example/",
+        "status": 200,
+        "headers": {
+          "Strict-Transport-Security": "max-age=31536000; includeSubDomains"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "http://app.example/login",
+        "status": 301,
+        "headers": {
+          "Strict-Transport-Security": "max-age=63072000"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Strict-Transport-Security": "max-age=31536000"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "http://app.example/",
+        "status": 200,
+        "headers": {
+          "Strict-Transport-Security": "   "
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "http://app.example/",
+        "status": 200,
+        "headers": {}
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1224"
+  ]
+}

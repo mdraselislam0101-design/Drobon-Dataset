@@ -1,0 +1,81 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-269",
+  "title": "Content-Security-Policy nonce is too short to be unguessable",
+  "description": "The Content-Security-Policy lists a `'nonce-...'` source whose value is shorter than sixteen characters. A nonce only protects the policy while an attacker cannot predict it; a short value can be enumerated against the application, and a guessed nonce makes the strict policy accept an injected script.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-330",
+  "category": "csp-weakness",
+  "remediation": "Generate the nonce from a cryptographically secure random source with at least 128 bits of entropy, and re-issue it on every response. Sixteen base64 characters is the practical floor; most frameworks default to more.",
+  "limitation": "One header value. The rule measures the length of the nonce as written and does not test its randomness, so a long but predictable nonce is not reported here.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Content-Security-Policy",
+    "valuePattern": "'nonce-[A-Za-z0-9+/=_-]{1,15}'"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'nonce-abc123'"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src 'self'; script-src 'nonce-0123456789abc'"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'nonce-r4nd0mB4se64V4lue'"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'self'"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'nonce-abcdefghijklmno'"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'nonce-abcdefghijklmnop'"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1338"
+  ]
+}

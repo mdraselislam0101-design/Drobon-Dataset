@@ -13,7 +13,7 @@
     }
   },
   "scope": "Legacy signal mirrored from DPK-DAST-006.",
-  "limitations": "One header value counts as one cookie: a folded multi-cookie single value may under-flag. Responses that set no cookies never match. No CWE is claimed: the app's own cookie rule omits one, so this rule omits it too.",
+  "limitations": "One header value counts as one cookie: a folded multi-cookie single value may under-flag. A flag attribute ignores its value, so `HttpOnly=1` still enables HttpOnly and is not reported. A header a user agent discards (no name=value pair, or a control character) stores no cookie and is not reported. A `SameSite=None` cookie without `Secure` is refused by browsers and is reported by DPK-DAST-071, so this rule does not report a missing HttpOnly flag on it: no cookie exists. Responses that set no cookies never match.",
   "examples": [
     {
       "observation": {
@@ -42,9 +42,98 @@
         "headers": {}
       },
       "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "set-cookie": "id=1; Path=/; Secure; HttpOnly ; SameSite=Lax"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "set-cookie": "id=1; HttpOnly=1"
+        },
+        "body": ""
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "set-cookie": "=orphan-name"
+        },
+        "body": ""
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "set-cookie": "id=1; Secure"
+        },
+        "body": ""
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "set-cookie": "id=1; SameSite=None"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "set-cookie": "id=1; SameSite=None; Secure"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "set-cookie": [
+            "id=1; Secure; HttpOnly",
+            "theme=dark; Secure"
+          ]
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "set-cookie": [
+            "id=1; Secure; HttpOnly",
+            "theme=dark; Secure; HttpOnly"
+          ]
+        }
+      },
+      "match": false
     }
   ],
-  "fpNotes": "One header value counts as one cookie: a folded multi-cookie single value may under-flag. Responses that set no cookies never match. No CWE is claimed: the app's own cookie rule omits one, so this rule omits it too.",
+  "fpNotes": "One header value counts as one cookie: a folded multi-cookie single value may under-flag. A flag attribute ignores its value, so `HttpOnly=1` still enables HttpOnly and is not reported. A header a user agent discards (no name=value pair, or a control character) stores no cookie and is not reported. A `SameSite=None` cookie without `Secure` is refused by browsers and is reported by DPK-DAST-071, so this rule does not report a missing HttpOnly flag on it: no cookie exists. Responses that set no cookies never match.",
   "linkedRules": [
     "DPK-DAST-006"
   ],

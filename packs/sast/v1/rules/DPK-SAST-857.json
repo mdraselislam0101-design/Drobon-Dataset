@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-857",
+  "title": "Legacy keyed unarchiving in swift — review required",
+  "description": "NSKeyedUnarchiver.unarchiveTopLevelObjectWithData is the legacy entry point for decoding archived object graphs. It instantiates classes named inside the payload, so data from a network source can construct unintended objects and run their decoding hooks. The rule flags the API; payload provenance is a review decision.",
+  "severity": "HIGH",
+  "cwe": "CWE-502",
+  "category": "unsafe-deserialization",
+  "remediation": "Decode untrusted data with a schema-bound format such as Codable/JSON, or use requiringSecureCoding with an explicit allowed-class set.",
+  "limitation": "Lexical call match; reachable gadget classes depend on the linked frameworks.",
+  "languages": [
+    "swift"
+  ],
+  "patterns": [
+    {
+      "source": "\\bNSKeyedUnarchiver\\.unarchiveTopLevelObjectWithData\\s*\\("
+    }
+  ],
+  "tests": [
+    {
+      "line": "let obj = try NSKeyedUnarchiver.unarchiveTopLevelObjectWithData(data)",
+      "match": true
+    },
+    {
+      "line": "# audit: let obj = try NSKeyedUnarchiver.unarchiveTopLevelObjectWithData(data) present",
+      "match": true
+    },
+    {
+      "line": "let obj = try JSONDecoder().decode(Profile.self, from: data)",
+      "match": false
+    },
+    {
+      "line": "# verified: let obj = try JSONDecoder().decode(Profile.self, from: data)",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1040"
+  ]
+}

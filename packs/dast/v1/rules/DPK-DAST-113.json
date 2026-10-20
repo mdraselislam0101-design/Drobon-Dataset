@@ -1,0 +1,89 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-113",
+  "title": "Alt-Svc advertises a cleartext HTTP/2 alternative",
+  "description": "The Alt-Svc response header names h2c as an alternative service. h2c is HTTP/2 without TLS: a client that follows the advertisement sends subsequent requests to the named authority in cleartext, even when the original response arrived over HTTPS. The header is evidence of an offered cleartext path, not of a client that took it.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-319",
+  "category": "transport-security",
+  "remediation": "Stop advertising h2c on internet-facing origins. Publish only TLS-based alternatives (h2, h3) and let HTTP/1.1 clients upgrade through the normal TLS listener.",
+  "limitation": "Header value check on one response. It cannot prove the advertised authority is reachable or that any client selected the alternative, and it does not follow the advertisement.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Alt-Svc",
+    "valuePattern": "(?:^|,)\\s*h2c\\s*=\\s*\""
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Alt-Svc": "h2c=\":80\""
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Alt-Svc": "h3=\":443\", h2c=\":8080\"; ma=86400"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Alt-Svc": "h2c=\":443\""
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Alt-Svc": "h3=\":443\"; ma=86400"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Alt-Svc": "h2=\":443\"; ma=60"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Alt-Svc": "clear"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {}
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1182"
+  ]
+}

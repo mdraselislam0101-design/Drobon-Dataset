@@ -1,0 +1,314 @@
+[
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "cookie-samesite-none",
+    "category": "cookie-flags",
+    "cwe": "CWE-1275",
+    "cweDef": {
+      "name": "Sensitive Cookie with Improper SameSite Attribute",
+      "summary": "A cookie without an effective SameSite policy travels on cross-site requests."
+    },
+    "severity": "MEDIUM",
+    "title": "Cookie sets SameSite=None without Secure",
+    "description": "The observed Set-Cookie header declares SameSite=None but the same cookie carries no Secure attribute. Modern browsers reject such a cookie outright, and where they do not, the cookie is eligible to travel on cross-site requests without transport protection. This observation check reports the combination visible in one response.",
+    "remediation": "Pair SameSite=None with Secure on every cookie that must be sent cross-site, or switch to SameSite=Lax where the flow allows it ({safe}).",
+    "limitation": "Single-response header observation: the check does not follow redirects or verify how the client enforces the cookie.",
+    "scopeT": "One response: inspect a Set-Cookie value for SameSite=None without Secure.",
+    "fp": "Cookies deliberately scoped to a trusted local origin during development are the accepted exception.",
+    "recordDesc": "The response sets a cookie with SameSite=None and no Secure attribute. Browsers refuse this combination on paper, which turns into a silently missing session in practice, and older or permissive clients may still store it and send it across sites. Either way the declared policy and the delivered protection differ.",
+    "applicability": "Any HTTPS response that issues cookies for cross-site use.",
+    "risk": "Session cookie rejected or sent without the intended isolation; MEDIUM severity.",
+    "why": "SameSite=None appears without the Secure attribute on the same cookie.",
+    "fix": [
+      "Add Secure alongside SameSite=None.",
+      "Use SameSite=Lax when cross-site delivery is unnecessary."
+    ],
+    "verifyT": "Re-observe the response: the cookie carries both SameSite=None and Secure, or no longer uses None.",
+    "cells": [
+      {
+        "suffix": "samesite-none",
+        "lang": "http",
+        "name": "SameSite=None without Secure",
+        "safe": "SameSite=Lax; Secure",
+        "check": {
+          "type": "response-header-matches",
+          "header": "Set-Cookie",
+          "valuePattern": "^(?![^\\n]*(?:^|;)\\s*secure(?=[\\s;=]|$))(?=[^\\n]*(?:^|;)\\s*samesite\\s*=\\s*none\\s*(?:;|$))"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/login",
+              "status": 200,
+              "headers": {
+                "Set-Cookie": "sid=abc; SameSite=None"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/login",
+              "status": 200,
+              "headers": {
+                "Set-Cookie": "sid=abc; Path=/; SameSite=None"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/login",
+              "status": 200,
+              "headers": {
+                "Set-Cookie": "sid=abc; SameSite=None; Secure"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/login",
+              "status": 200,
+              "headers": {
+                "Set-Cookie": "sid=abc; SameSite=Lax"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/x",
+              "status": 200,
+              "headers": {
+                "Set-Cookie": "sid=abc; Secure; SameSite=None"
+              },
+              "body": ""
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/x",
+              "status": 200,
+              "headers": {
+                "Set-Cookie": "sid=abc; HttpOnly; SameSite=None; Secure"
+              },
+              "body": ""
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Set-Cookie": "id=1; SameSite=None; Secure=0"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Set-Cookie": "id=1; SameSite=None; Secure=1; HttpOnly"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Set-Cookie": "id=1; SameSite=None; HttpOnly"
+              }
+            },
+            "match": true
+          }
+        ],
+        "overrides": {
+          "limitation": "Value check on the cookie attribute list. A flag attribute ignores its value (RFC 6265 section 5.3), so `Secure=0` counts as Secure and is not reported. Only a cookie that the browser would store is judged: a discarded header sets no cookie. The rule reads one Set-Cookie value and cannot confirm that the cookie is used for a session.",
+          "remediation": "Send the cookie with both attributes, for example `Set-Cookie: sid=...; SameSite=None; Secure; HttpOnly`. If the cookie does not need to be sent in third-party contexts, prefer `SameSite=Lax` or `SameSite=Strict`, which do not require Secure."
+        }
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "xcto-value-invalid",
+    "category": "security-headers",
+    "cwe": "CWE-693",
+    "cweDef": {
+      "name": "Protection Mechanism Failure",
+      "summary": "A browser protection is present but not actually in force."
+    },
+    "severity": "LOW",
+    "title": "X-Content-Type-Options present with a non-nosniff value",
+    "description": "The response carries an X-Content-Type-Options header whose value is not nosniff. A present-but-wrong value looks like protection in a header inventory while leaving MIME sniffing enabled, so a resource served with an ambiguous type can still be reinterpreted as script. The check compares the observed value.",
+    "remediation": "Send exactly X-Content-Type-Options: nosniff, and pair it with accurate Content-Type values ({safe}).",
+    "limitation": "Header value only: multiple values and case variants are compared literally apart from letter case.",
+    "scopeT": "One response: confirm the header value equals nosniff.",
+    "fp": "Proxies that append a second header value are the accepted false positive and should be fixed upstream.",
+    "recordDesc": "The response advertises X-Content-Type-Options but does not set nosniff. Automated header audits commonly count the presence alone, so this state passes review while the browser keeps sniffing: an uploaded file or a JSON endpoint can then be treated as HTML or JavaScript. The header only protects anything when the value is exactly nosniff.",
+    "applicability": "Responses that serve user-controlled or ambiguously typed content.",
+    "risk": "Content sniffing enables script execution from non-script content; LOW severity.",
+    "why": "The header exists but its value does not disable sniffing.",
+    "fix": [
+      "Set the value to nosniff.",
+      "Return accurate Content-Type values."
+    ],
+    "verifyT": "Re-observe the response and confirm the single value nosniff.",
+    "cells": [
+      {
+        "suffix": "xcto-value",
+        "lang": "http",
+        "name": "X-Content-Type-Options value",
+        "safe": "nosniff on every response",
+        "check": {
+          "type": "response-header-matches",
+          "header": "x-content-type-options",
+          "valuePattern": "^(?!\\s*nosniff\\s*$).+"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/upload",
+              "status": 200,
+              "headers": {
+                "X-Content-Type-Options": "sniff"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/upload",
+              "status": 200,
+              "headers": {
+                "X-Content-Type-Options": "nosniff, sniff"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/upload",
+              "status": 200,
+              "headers": {
+                "X-Content-Type-Options": "nosniff"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/upload",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html"
+              }
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "csp-report-only",
+    "category": "security-headers",
+    "cwe": "CWE-693",
+    "cweDef": {
+      "name": "Protection Mechanism Failure",
+      "summary": "A browser protection is present but not actually in force."
+    },
+    "severity": "MEDIUM",
+    "title": "Content-Security-Policy delivered in report-only mode",
+    "description": "The response sets Content-Security-Policy-Report-Only, so the policy collects violation reports while the browser enforces nothing. Teams often keep this mode for longer than intended, and header inventories then list a CSP as present even though no restriction applies. The check flags the report-only header.",
+    "remediation": "Promote the policy to the enforcing Content-Security-Policy header once reports are clean, keeping the report-only copy during the transition ({safe}).",
+    "limitation": "Header observation only: the policy contents and the violation reports are not evaluated.",
+    "scopeT": "One response: confirm whether policy enforcement is report-only.",
+    "fp": "A short, documented rollout window is the accepted exception and must have an owner and an end date.",
+    "recordDesc": "The response carries its policy only in report-only mode. Browsers then send violation reports and block nothing, so an injected script still executes while the dashboard suggests coverage. The gap is easy to miss because the header name is nearly identical to the enforcing one.",
+    "applicability": "HTML responses expected to enforce a Content-Security-Policy.",
+    "risk": "No effective script restriction despite an apparent CSP; MEDIUM severity.",
+    "why": "The policy is present only in report-only mode.",
+    "fix": [
+      "Move the policy to the enforcing header.",
+      "Keep report-only during a dated rollout."
+    ],
+    "verifyT": "Re-observe the response and confirm an enforcing Content-Security-Policy header.",
+    "cells": [
+      {
+        "suffix": "csp-report-only",
+        "lang": "http",
+        "name": "Content-Security-Policy-Report-Only",
+        "safe": "an enforcing Content-Security-Policy",
+        "check": {
+          "type": "response-header-matches",
+          "header": "Content-Security-Policy-Report-Only",
+          "valuePattern": "\\S"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy-Report-Only": "default-src 'self'; report-uri /csp"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/account",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy-Report-Only": "script-src 'self'"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "default-src 'self'"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy-Report-Only": ""
+              }
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  }
+]

@@ -2,7 +2,7 @@
 
 Machine-verifiable evidence contract for DROBON findings and reports.
 Implemented by `scripts/finding-evidence.mjs` (`drobon.finding.evidence/v1`)
-and tested by `scripts/test-finding-evidence.mjs` (24/24). Dataset-side
+and tested by `scripts/test-finding-evidence.mjs` (31/31). Dataset-side
 contract and synthetic tests only: no App runtime or database changes.
 
 ## 1. Confirmed-finding evidence requirements

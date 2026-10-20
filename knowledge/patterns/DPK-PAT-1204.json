@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1204",
+  "title": "Signal: Object storage bucket listing disclosed in a response",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-body-matches",
+      "valuePattern": "(?=[\\s\\S]*<ListBucketResult)(?=[\\s\\S]*xmlns=\"http://s3\\.amazonaws\\.com/doc/2006-03-01/\")"
+    }
+  },
+  "scope": "One response whose body contains a ListBucketResult element in the S3 namespace.",
+  "limitations": "Two body markers. An S3 error document such as AccessDenied does not match, because it carries no ListBucketResult element.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://files.example.s3.amazonaws.com/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/xml"
+        },
+        "body": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><ListBucketResult xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\"><Name>files.example</Name><Contents><Key>backup-2026-01.zip</Key></Contents></ListBucketResult>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://files.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/xml"
+        },
+        "body": "<ListBucketResult xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\"><Key>db.sql.gz</Key></ListBucketResult>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://files.example/",
+        "status": 403,
+        "headers": {
+          "Content-Type": "application/xml"
+        },
+        "body": "<Error><Code>AccessDenied</Code><Message>Access Denied</Message></Error>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body>Home</body></html>"
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A static site that serves a copy of a listing as documentation is reported only if the XML root element is reproduced.",
+  "linkedRules": [
+    "DPK-DAST-135"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:body-s3-bucket-listing:body-s3-bucket-listing",
+  "validationStatus": "VALIDATED"
+}

@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-192",
+  "title": "Access-Control-Allow-Credentials carries an unrecognised token",
+  "description": "The Access-Control-Allow-Credentials value is neither `true` nor `false`: it is some other token such as `1`, `yes` or a list. The protocol compares the header to the exact token `true`, so the value disables credentialed cross-origin access without saying so, and a header that was meant to enable it silently does nothing.",
+  "severity": "LOW",
+  "cwe": "CWE-942",
+  "category": "cors",
+  "remediation": "Emit exactly `true` when credentialed access is intended and remove the header otherwise. Do not pass the flag through a formatter that can spell it differently.",
+  "limitation": "One header value. Comparison is case-insensitive like every other header value pattern in this pack, so a capitalised True is not reported even though the protocol is case-sensitive; the rule reports values that are not a true/false spelling at all.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Access-Control-Allow-Credentials",
+    "valuePattern": "^\\s*(?!true\\s*$)(?!false\\s*$)\\S"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Access-Control-Allow-Credentials": "yes"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Access-Control-Allow-Credentials": "1"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Access-Control-Allow-Credentials": "true"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Access-Control-Allow-Credentials": "false"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1261"
+  ]
+}

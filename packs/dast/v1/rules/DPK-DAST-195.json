@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-195",
+  "title": "Access-Control-Allow-Origin names more than one origin",
+  "description": "The Access-Control-Allow-Origin value contains two origins, separated by whitespace or a comma. The CORS protocol allows exactly one origin or the literal `*`; a list never matches the requesting origin, so the grant the deployment intended silently fails and the header records a confusion about how the value is consumed.",
+  "severity": "LOW",
+  "cwe": "CWE-942",
+  "category": "cors",
+  "remediation": "Emit one origin per response, chosen from the request's Origin against an explicit allow-list. Never concatenate several origins into one header value.",
+  "limitation": "One header value. The rule reads the declared value and cannot see the request Origin, so it cannot tell which of the listed origins was intended for this response.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Access-Control-Allow-Origin",
+    "valuePattern": "^\\s*https?://[^\\s/]+(?:\\s+|,\\s*)https?://"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Access-Control-Allow-Origin": "https://a.example https://b.example"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Access-Control-Allow-Origin": "https://a.example, https://b.example"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Access-Control-Allow-Origin": "https://a.example"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Access-Control-Allow-Origin": "https://a.example/"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1264"
+  ]
+}

@@ -9,11 +9,11 @@ name the script that re-verifies the claim on every run.
 | Capability (app evidence) | Verdict | Dataset position | Machine check |
 |---|---|---|---|
 | SCA matching (`sca/provider.ts assess`) | REQUIRED | 100-record validated seed; breadth blocked | `validate.mjs`, `check-vectors.mjs` |
-| SAST detection (app catalog-gated engine) | SUPPLEMENTAL | 792 Dataset rules (`DPK-SAST-*`); 549 fully reachable by Main App catalog ids + 11 any-file (omitted `languages`), 207 with no analyzed tag (PACKS.md, Phase 4 recount) | `validate-packs.mjs`, `test-packs.mjs`, `test-consistency.mjs` (reachability) |
+| SAST detection (app catalog-gated engine) | SUPPLEMENTAL | 950 Dataset rules (`DPK-SAST-*`); reachability recount in `docs/PACKS.md` (658 fully, 29 partial, 221 with no analyzed tag, 11 any-file / omitted `languages`) | `validate-packs.mjs`, `test-packs.mjs`, `test-consistency.mjs` (reachability) |
 | Secrets detection (shape-only) | SUPPLEMENTAL | 97 Dataset rules (`DPK-SEC-*`; recount 2026-10-17 Phase 9, DPK-SEC-108 added); no app secrets pack consumer | `validate-packs.mjs`, `test-packs.mjs` |
-| DAST observation (app: 8 hard-coded `DG-DAST-001..008` in `apps/api/src/scans/dast/rules.ts`, code not data) | SUPPLEMENTAL | 65 Dataset rules over 7 closed check types (recount 2026-10-16; loader-future; no app consumer of `packs/dast`) | `validate-packs.mjs`, `test-packs.mjs` (DAST evaluator rows) |
-| CWE classification (app-referenced ids) | REQUIRED | 61 entries in `knowledge/cwe/` (count re-derived in Batch 1; app-referenced subset NOT re-counted) | `validate-cwe.mjs`, `test-consistency.mjs` |
-| Remediation content (app computes status) | REQUIRED | 954 remediation files, one per pack rule (recount 2026-10-17 Phase 9) | `validate-audiences.mjs`, `test-consistency.mjs` |
+| DAST observation (app: 8 hard-coded `DG-DAST-001..008` in `apps/api/src/scans/dast/rules.ts`, code not data) | SUPPLEMENTAL | 263 Dataset rules over 7 closed check types (recount 2026-10-20; loader-future; no app consumer of `packs/dast`) | `validate-packs.mjs`, `test-packs.mjs` (DAST evaluator rows) |
+| CWE classification (app-referenced ids) | REQUIRED | 63 entries in `knowledge/cwe/`; app-referenced subset recounted 2026-10-18: **16 distinct `DG-*` CWE ids, 16/16 resolve**, 47 entries not App-referenced | `validate-cwe.mjs`, `test-consistency.mjs`, `validate-capability-coverage.mjs` |
+| Remediation content (app computes status) | REQUIRED | 1310 remediation files, one per pack rule (recount 2026-10-20) | `validate-audiences.mjs`, `test-consistency.mjs` |
 | Lessons (internal catalog, loader-future) | SUPPLEMENTAL | 6 lessons (2 `lsn_dev_*`, 4 `lsn_pack_*`), practice validator-executed | `validate-audiences.mjs` |
 | Assessment templates (loader-future) | SUPPLEMENTAL | 3 templates, never pre-authorize (count re-derived Pump 4) | `validate-audiences.mjs` |
 | Engagement aids (no app consumer) | SUPPLEMENTAL | 2 standalone passive-only aids (count re-derived Pump 4) | `validate-audiences.mjs` |
@@ -29,4 +29,15 @@ name the script that re-verifies the claim on every run.
 
 No schema or compatibility changes are required on the dataset side: record
 bounds, enums, and the record-to-advisory projection mirror the app contracts
-(verified 2026-10-14 at `c32c797`; NOT re-verified in Pump 4). Dataset counts re-derived again 2026-10-16 (secrets 96 with DPK-SEC-106/107 (Phase 5 probe-gap closure); lessons 6); app-side engine facts re-read at `c32c797` the same day (counts above corrected where stale). Re-verify this table at each app re-check.
+(verified 2026-10-14 at `c32c797`; NOT re-verified in Pump 4). Dataset counts re-derived again 2026-10-20 after the DAST capability-aligned expansion (SAST 950; secrets 97; DAST 263; lessons 6; pack total 1310) and pin-checked by `scripts/test-current-state.mjs`; app-side engine facts re-read at `c32c797` on 2026-10-14/16 and unchanged at 2026-10-18 (counts above corrected where stale). Re-verify this table at each app re-check.
+
+## Canonical row-level matrix (2026-10-18)
+
+This table states per-capability verdicts. The row-level matrix with stable
+`DCC-*` ids, asset references, relationships, evaluation evidence, rights and
+integration status is `docs/CAPABILITY_COVERAGE_MATRIX.json` (rendered to
+`docs/CAPABILITY_COVERAGE_MATRIX.md`) and is gated by
+`scripts/validate-capability-coverage.mjs`. Summary at 2026-10-18: 33 rows —
+2 COVERED_VERIFIED, 7 APP_INTEGRATION_BLOCKED, 1 RIGHTS_BLOCKED,
+23 NOT_APPLICABLE. A capability is never marked covered from rule counts alone,
+and an App implementation gap is not recorded as a Dataset defect.

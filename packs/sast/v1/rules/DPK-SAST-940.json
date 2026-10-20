@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-940",
+  "title": "Database user created with a literal password in sql — review required",
+  "description": "CREATE USER or ALTER USER with an inline password literal stores a credential in the migration or bootstrap script. The value enters version control, backups and shell history, and it cannot be rotated without editing the script. The rule flags the literal; whether the account is a real login is a review decision.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-798",
+  "category": "hardcoded-credential",
+  "remediation": "Create the account without a password, deliver the secret through an approved secret store, and rotate it out of band.",
+  "limitation": "Lexical: matches a quoted password literal; a password supplied through a variable is out of scope.",
+  "languages": [
+    "sql"
+  ],
+  "patterns": [
+    {
+      "source": "\\b(?:CREATE|ALTER)\\s+USER\\b[^\\n;]*\\b(?:IDENTIFIED\\s+BY|PASSWORD)\\s+['\"]"
+    }
+  ],
+  "tests": [
+    {
+      "line": "CREATE USER app_user IDENTIFIED BY 'changeme';",
+      "match": true
+    },
+    {
+      "line": "# audit: CREATE USER app_user IDENTIFIED BY 'changeme'; present",
+      "match": true
+    },
+    {
+      "line": "CREATE USER app_user IDENTIFIED BY :secret;",
+      "match": false
+    },
+    {
+      "line": "# verified: CREATE USER app_user IDENTIFIED BY :secret;",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1125"
+  ]
+}

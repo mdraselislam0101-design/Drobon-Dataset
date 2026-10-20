@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-830",
+  "title": "Outbound request to a computed URL in javascript — review required",
+  "description": "A fetch, axios, or got call in javascript receives a URL built from a template literal, string concatenation, or request fields. If the interpolated part is attacker controlled, the runtime is a proxy into the private network: internal admin ports, service meshes, and cloud metadata addresses all answer from inside. The rule flags the computed argument, not the trust level of the value.",
+  "severity": "HIGH",
+  "cwe": "CWE-918",
+  "category": "server-side-request-forgery",
+  "remediation": "Resolve outbound destinations against a constant allowlist, strip credentials from URLs, disable automatic redirect following, and block private address ranges after DNS resolution.",
+  "limitation": "Lexical match on common client call shapes; taint, redirects, and DNS rebinding are out of scope.",
+  "languages": [
+    "javascript"
+  ],
+  "patterns": [
+    {
+      "source": "\\b(?:(?:fetch|axios\\.(?:get|post|put|delete|patch|request)|got\\.(?:get|post|put|delete))\\(\\s*(?:`[^`\\n]*\\$\\{|[A-Za-z_$][\\w$]*\\s*\\+|(?:req|request)\\.(?:query|body|params)))"
+    }
+  ],
+  "tests": [
+    {
+      "line": "fetch(`https://api.example.com/users/${userId}`)",
+      "match": true
+    },
+    {
+      "line": "# audit: fetch(`https://api.example.com/users/${userId}`) present",
+      "match": true
+    },
+    {
+      "line": "fetch(\"https://api.example.com/v1/users\")",
+      "match": false
+    },
+    {
+      "line": "# verified: fetch(\"https://api.example.com/v1/users\")",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1008"
+  ]
+}

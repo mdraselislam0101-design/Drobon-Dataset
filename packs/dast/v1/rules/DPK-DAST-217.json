@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-217",
+  "title": "AWS credentials file served",
+  "description": "The response is an AWS shared-credentials file: the `[default]` or `[profile ...]` section header together with an aws_access_key_id key is the format the AWS CLI and SDKs read. The file pairs the access key id with its secret.",
+  "severity": "HIGH",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Remove the file from the web root, deactivate the exposed access keys, and issue replacements that are delivered through an instance role or a secret manager rather than a file.",
+  "limitation": "One response body. The rule reports the credentials-file shape; it does not use the key and cannot determine the permissions attached to it.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*\\[(?:default|profile [^\\]]+)\\])(?=[\\s\\S]*aws_access_key_id)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "[default]\naws_access_key_id = AKIAiosfodnn7redacted\naws_secret_access_key = wJalrXUtnFEMI/K7MDENG/redacted\nregion = us-east-1\n[profile deploy]\naws_access_key_id = AKIAi44qh8dhbredacted"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "[profile ci]\naws_access_key_id=AKIAi44qh8dhbredacted\naws_secret_access_key=je7MtGbClwBF/2Zp9Utk/redacted"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "\n = AKIAiosfodnn7redacted\naws_secret_access_key = wJalrXUtnFEMI/K7MDENG/redacted\nregion = us-east-1\n\n = AKIAi44qh8dhbredacted"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1286"
+  ]
+}

@@ -829,7 +829,12 @@ assert(
 // them must produce byte-identical stdout, guarding against timestamps,
 // unsorted traversal, or map-ordering regressions.
 function runToString(script, args) {
-  return execFileSync('node', [join(ROOT, 'scripts', script), ...args], { cwd: ROOT, encoding: 'utf8' });
+  // The manifest for the 1,299-rule tree is larger than Node's 1 MiB default
+  // pipe buffer, so the buffer is raised. It is a transport limit, not an
+  // assertion: the byte-identity comparison below is unchanged.
+  return execFileSync('node', [join(ROOT, 'scripts', script), ...args], {
+    cwd: ROOT, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024,
+  });
 }
 const manifestRunA = runToString('manifest.mjs', ['--scope', 'all']);
 const manifestRunB = runToString('manifest.mjs', ['--scope', 'all']);
@@ -888,32 +893,99 @@ function collectRepoTextFiles(root) {
   walk(root);
   return found.sort();
 }
+// Evaluation fixtures are a second, deliberately narrower exemption surface.
+// A credential-shaped line in data/eval-cases/*.json is exempt ONLY when the
+// case declares synthetic:true AND testOnly:true, the line is fixture content
+// (fixture.lines / observation header, body or URL) after JSON unescaping, and
+// the line also carries a synthetic-shape marker (EXAMPLE / placeholder /
+// repeated-character filler). Prose elsewhere in the same case (purpose,
+// notes, provenance, limitations) stays strictly scanned, and unmarked fixture
+// values fail closed. `null` means "not an eligible synthetic eval case".
+const EVAL_CASE_PREFIX = 'data/eval-cases/';
+function syntheticEvalCase(rel, text) {
+  if (!rel.startsWith(EVAL_CASE_PREFIX) || !rel.endsWith('.json')) return null;
+  let doc;
+  try {
+    doc = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  if (doc?.synthetic !== true || doc?.testOnly !== true) return null;
+  return doc;
+}
+function evalFixtureContent(doc) {
+  const content = [];
+  const add = (value) => {
+    if (typeof value !== 'string') return;
+    for (const line of value.split('\n')) {
+      const trimmed = line.trim();
+      if (trimmed.length >= 8) content.push(trimmed);
+    }
+  };
+  const fixture = doc?.fixture && typeof doc.fixture === 'object' ? doc.fixture : {};
+  if (Array.isArray(fixture.lines)) fixture.lines.forEach(add);
+  const observation = fixture.observation && typeof fixture.observation === 'object' ? fixture.observation : null;
+  if (observation) {
+    add(observation.url);
+    add(observation.body);
+    for (const [name, value] of Object.entries(observation.headers ?? {})) {
+      if (Array.isArray(value)) value.forEach((item) => add(`${name}: ${item}`));
+      else add(`${name}: ${value}`);
+    }
+  }
+  return content;
+}
+const normalizeScanLine = (line) => line.replace(/\\/g, '').replace(/,\s*$/, '');
+function classifySecretMatch({ line, isSecretsFixture, evalDoc, evalContent }) {
+  const marked = FIXTURE_SAFE_MARKERS.some((marker) => marker.test(line));
+  if (isSecretsFixture) return marked ? 'fixture-marked' : 'fixture-unmarked';
+  if (evalDoc) {
+    const normalized = normalizeScanLine(line);
+    const isFixtureContent = evalContent.some((content) => normalized.includes(content));
+    if (isFixtureContent) return marked ? 'eval-fixture-marked' : 'eval-unmarked';
+  }
+  return 'strict';
+}
 const strictViolations = [];
 const fixtureFailures = [];
+const evalFixtureExemptions = [];
+const evalFixtureFailures = [];
 for (const file of collectRepoTextFiles(ROOT)) {
   const rel = file.slice(ROOT.length + 1);
-  const inSecretsFixtures = rel === 'packs/secrets' || rel.startsWith('packs/secrets/');
-  const lines = readFileSync(file, 'utf8').split('\n');
-  lines.forEach((line, index) => {
+  const text = readFileSync(file, 'utf8');
+  const isSecretsFixture = rel === 'packs/secrets' || rel.startsWith('packs/secrets/');
+  const evalDoc = syntheticEvalCase(rel, text);
+  const evalContent = evalDoc ? evalFixtureContent(evalDoc) : [];
+  text.split('\n').forEach((line, index) => {
     for (const pattern of SECRET_PATTERNS) {
       if (!pattern.re.test(line)) continue;
-      if (!inSecretsFixtures) {
+      const verdict = classifySecretMatch({ line, isSecretsFixture, evalDoc, evalContent });
+      if (verdict === 'strict') {
         strictViolations.push(`${rel}:${index + 1}:${pattern.name}`);
-      } else if (!FIXTURE_SAFE_MARKERS.some((marker) => marker.test(line))) {
+      } else if (verdict === 'fixture-unmarked') {
         fixtureFailures.push(`${rel}:${index + 1}:${pattern.name}: ${line.trim().slice(0, 80)}`);
+      } else if (verdict === 'eval-unmarked') {
+        evalFixtureFailures.push(`${rel}:${index + 1}:${pattern.name}: ${line.trim().slice(0, 80)}`);
+      } else if (verdict === 'eval-fixture-marked') {
+        evalFixtureExemptions.push(`${rel}:${index + 1}:${pattern.name}`);
       }
     }
   });
 }
 assert(
   strictViolations.length === 0,
-  'positive: no credential shapes outside packs/secrets fixtures',
+  'positive: no credential shapes outside packs/secrets fixtures and synthetic eval fixture content',
   strictViolations.slice(0, 5).join(' | '),
 );
 assert(
   fixtureFailures.length === 0,
   'positive: every secrets-fixture credential shape carries a safety marker',
   fixtureFailures.slice(0, 5).join(' | '),
+);
+assert(
+  evalFixtureFailures.length === 0,
+  'positive: every eval-case credential shape is marked synthetic fixture content',
+  evalFixtureFailures.slice(0, 5).join(' | '),
 );
 const scannerPositives = [
   '-----BEGIN ' + 'RSA PRIVATE KEY-----',
@@ -939,6 +1011,62 @@ assert(
   scannerFalseAlarms.length === 0,
   'positive: leak scanner stays silent on safe documentation lines',
   scannerFalseAlarms.join(' | '),
+);
+// Probe the eval-case allowance itself: it must be opt-in by declaration
+// (synthetic + testOnly), limited to verbatim fixture content, and absent
+// everywhere else. A future fixture that inlines a live-shaped token into
+// prose, or forgets the declarations, has to fail this scan.
+const plantedToken = 'AK' + 'IA' + 'EXAMPLE' + '0'.repeat(9);
+const unmarkedToken = 'AK' + 'IA' + 'Q7Z2M4X8C1V5B9N3';
+const plantedCase = (overrides = {}) => ({
+  schemaVersion: 'drobon.eval.case/v1',
+  synthetic: true,
+  testOnly: true,
+  purpose: 'scanner probe only; contains no credential',
+  notes: [`prose must never carry ${plantedToken} inline`],
+  fixture: { name: 'probe.txt', lines: [`aws_access_key_id = "${plantedToken}"`] },
+  ...overrides,
+});
+const probeVerdict = (rel, doc, line) => {
+  const text = JSON.stringify(doc);
+  const parsed = syntheticEvalCase(rel, text);
+  return classifySecretMatch({
+    line,
+    isSecretsFixture: false,
+    evalDoc: parsed,
+    evalContent: parsed ? evalFixtureContent(parsed) : [],
+  });
+};
+const plantedText = JSON.stringify(plantedCase(), null, 2);
+const fixtureLine = plantedText.split('\n').find((line) => line.includes('aws_access_key_id'));
+const proseLine = plantedText.split('\n').find((line) => line.includes('prose must never carry'));
+const evalAllowanceProbes = [
+  ['marked fixture content of a declared synthetic case is exempt',
+    probeVerdict('data/eval-cases/PROBE-001.json', plantedCase(), fixtureLine) === 'eval-fixture-marked'],
+  ['prose inside the same synthetic case stays strictly scanned',
+    probeVerdict('data/eval-cases/PROBE-001.json', plantedCase(), proseLine) === 'strict'],
+  ['synthetic:false is never exempt',
+    probeVerdict('data/eval-cases/PROBE-002.json', plantedCase({ synthetic: false }), fixtureLine) === 'strict'],
+  ['testOnly:false is never exempt',
+    probeVerdict('data/eval-cases/PROBE-003.json', plantedCase({ testOnly: false }), fixtureLine) === 'strict'],
+  ['a non-eval path is never exempt, even with the declarations',
+    probeVerdict('docs/PROBE-004.json', plantedCase(), fixtureLine) === 'strict'],
+  ['an unparseable eval-case file is never exempt',
+    syntheticEvalCase('data/eval-cases/PROBE-005.json', `{"synthetic":true,"testOnly":true,`) === null],
+  ['a secrets fixture line without a safety marker is still a failure',
+    classifySecretMatch({ line: `key = "${unmarkedToken}"`, isSecretsFixture: true, evalDoc: null, evalContent: [] })
+      === 'fixture-unmarked'],
+  ['unmarked fixture content fails closed instead of being exempt', (() => {
+    const doc = plantedCase({ fixture: { name: 'probe.txt', lines: [`aws_access_key_id = "${unmarkedToken}"`] } });
+    const line = JSON.stringify(doc, null, 2).split('\n').find((entry) => entry.includes(unmarkedToken));
+    return probeVerdict('data/eval-cases/PROBE-006.json', doc, line) === 'eval-unmarked';
+  })()],
+];
+const evalAllowanceFailures = evalAllowanceProbes.filter(([, ok]) => !ok).map(([name]) => name);
+assert(
+  evalAllowanceFailures.length === 0,
+  'positive: eval-case leak allowance is scoped to declared, marked synthetic fixture content',
+  evalAllowanceFailures.join(' | '),
 );
 
 // --- generator fail-loud guard + quarantine invariant (Pump 3) ------------------
@@ -1015,8 +1143,8 @@ assert(
     trueDuplicates.map((g) => g.map((r) => r.id).join('/')).join(' | '),
   );
   assert(
-    groups.length === 32 && groups.reduce((a, g) => a + g.length, 0) === 87,
-    'dup-review snapshot: 32 shared-pattern groups / 87 rules (re-classify if changed; Batch 4 Kotlin/Java language split reviewed; Phase 9 ruby backtick diverged from perl — language-native #{} interpolation)',
+    groups.length === 34 && groups.reduce((a, g) => a + g.length, 0) === 91,
+    'dup-review snapshot: 34 shared-pattern groups / 91 rules (re-classify if changed; Batch 4 Kotlin/Java language split reviewed; Phase 9 ruby backtick diverged from perl — language-native #{} interpolation; 2026-10-19 openssl dockerfile/shell pair and the AEGIS 2026-10-19 batches reviewed: no group member is a same-language duplicate, TRUE_DUPLICATE stays 0)',
     `${groups.length} groups / ${groups.reduce((a, g) => a + g.length, 0)} rules`,
   );
   assert(

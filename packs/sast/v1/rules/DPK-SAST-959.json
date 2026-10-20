@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-959",
+  "title": "File response built from a runtime path in python — review required",
+  "description": "send_file with a value that is not a literal passes a runtime path straight to the response. If that value includes request data and is not normalised, ../ segments or absolute paths escape the intended directory. The rule flags the non-literal call; whether the path is constrained is a review decision.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-22",
+  "category": "path-traversal",
+  "remediation": "Resolve the requested name against a fixed base with safe_join, reject traversal, and serve only regular files.",
+  "limitation": "Lexical: matches a non-literal first argument; a helper that validates the path is not seen.",
+  "languages": [
+    "python"
+  ],
+  "patterns": [
+    {
+      "source": "\\bsend_file\\s*\\(\\s*[A-Za-z_][\\w.]*"
+    }
+  ],
+  "tests": [
+    {
+      "line": "return send_file(request.args.get(\"name\"))",
+      "match": true
+    },
+    {
+      "line": "# audit: return send_file(request.args.get(\"name\")) present",
+      "match": true
+    },
+    {
+      "line": "return send_file(\"static/report.pdf\")",
+      "match": false
+    },
+    {
+      "line": "# verified: return send_file(\"static/report.pdf\")",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1144"
+  ]
+}

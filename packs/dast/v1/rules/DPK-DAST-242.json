@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-242",
+  "title": "Private key material served in a response",
+  "description": "The response body carries a PEM private key block: the BEGIN/END markers and the base64 MII payload that follows them are the shape of an encoded key, not of sample text. A key served by a web endpoint is readable by anyone who can request the path, whatever algorithm it encodes.",
+  "severity": "HIGH",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Remove the file from the web root and rotate the key, because a served key must be treated as compromised. Store key material outside the document root and check for accidental inclusion in deployment artefacts.",
+  "limitation": "One response body. The rule reports the PEM markers and payload shape; it does not validate the key and cannot tell which service the key belongs to.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----)(?=[\\s\\S]*[A-Za-z0-9+/]{20,})"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "-----BEGIN DSA PRIVATE KEY-----\nMIIBuwIBAAKBgQDZ3fQ8kQ0m9XQ4p1r7Kk2LwYy1n2b3c4d5e6f7g8h9i0j\n1k2l3m4n5o6p7q8r9s0t1u2v3w4x5y6z7A8B9C0D1E2F3G4H5I==\n-----END DSA PRIVATE KEY-----"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "-----BEGIN DSA PRIVATE KEY-----\nMIIBugIBAAKBgQC8x7w6v5u4t3s2r1q0p9o8n7m6l5k4j3i2h1g0f9e8d7c6b5a4Z\n3Y2X1W0V9U8T7S6R5Q4P3O2N1M0L9K8J7I6H5G4F3E2D1C0B9A8==\n-----END DSA PRIVATE KEY-----"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "\n\n==\n-----END DSA PRIVATE KEY-----"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1311"
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-090",
+  "title": "Rust panic message with source location disclosed in a response",
+  "description": "The response body contains the Rust panic format \"thread 'NAME' panicked at LOCATION\". The message carries the thread name and the exact source path and line that panicked, which maps the crate layout and the failing branch. The check reports the disclosed panic; it does not claim the path is attacker-controllable.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-209",
+  "category": "debug-exposure",
+  "remediation": "Catch panics at the request boundary (std::panic::catch_unwind or the framework's error layer) and return a generic error response.",
+  "limitation": "Observation-level: matches the standard panic banner. A custom panic hook that prints its own message is out of scope.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "thread '[^']{1,64}' panicked at"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://api.example/orders/42",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/plain; charset=utf-8"
+        },
+        "body": "thread 'main' panicked at src/handlers/orders.rs:42:9:\ncalled `Result::unwrap()` on an `Err` value"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://api.example/v1/pay",
+        "status": 500,
+        "headers": {},
+        "body": "thread 'actix-rt|system:0|arbiter:1' panicked at src/payments.rs:118:5:"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://api.example/orders/42",
+        "status": 500,
+        "headers": {},
+        "body": "Internal error. Reference 12ab34."
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://api.example/health",
+        "status": 200,
+        "headers": {},
+        "body": "{\"status\":\"ok\"}"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1159"
+  ]
+}

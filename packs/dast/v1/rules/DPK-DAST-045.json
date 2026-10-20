@@ -1,17 +1,17 @@
 {
   "schemaVersion": "drobon.pack.dast/v1",
   "id": "DPK-DAST-045",
-  "title": "Weak response control (charset-less Content-Type)",
-  "description": "The response weakens a control: charset-less Content-Type. Protocol-relative redirects, wildcard timing origins, and charset-less content types widen attacks. This check matches the weakness directly.",
+  "title": "Charset-less text/html or text/plain Content-Type",
+  "description": "The response declares text/html or text/plain without a charset parameter, so the browser has to fall back to a legacy default or to content sniffing when it decodes the page. The same bytes can then be read with a different character mapping than the server intended, which enables encoding-based script smuggling and mis-rendered content.",
   "severity": "MEDIUM",
   "cwe": "CWE-693",
   "category": "security-headers",
-  "remediation": "Strengthen the control (charset=utf-8).",
-  "limitation": "Header check: it cannot confirm exploitability.",
+  "remediation": "Immediate: declare `charset=utf-8` on every `text/html` and `text/plain` response and make sure the bytes are actually encoded that way, since a declared charset that disagrees with the payload produces mojibake rather than safety. Durable: set the `Content-Type` once in the framework or the reverse proxy instead of per handler, and keep any `<meta charset>` declaration identical to the header so the two cannot disagree. Trade-off: legacy clients that relied on automatic encoding detection now have to honour the declared encoding, which is the intended behaviour but can surface previously hidden encoding bugs.",
+  "limitation": "Media-type scoped: only text/html and text/plain need a charset declaration here. application/json (RFC 8259), application/javascript (RFC 9239) and text/css are defined as UTF-8, binary types take no charset parameter, and a wholly missing Content-Type is reported by DPK-DAST-074.",
   "check": {
-    "type": "response-header-missing-directive",
+    "type": "response-header-matches",
     "header": "Content-Type",
-    "directive": "charset"
+    "valuePattern": "^(?:text/html|text/plain)(?!.*\\bcharset\\b)"
   },
   "tests": [
     {
@@ -39,6 +39,16 @@
         "url": "https://app.example/",
         "status": 200,
         "headers": {
+          "Content-Type": "TEXT/HTML"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
           "Content-Type": "text/html; charset=utf-8"
         }
       },
@@ -46,10 +56,40 @@
     },
     {
       "observation": {
-        "url": "http://app.example/",
+        "url": "https://app.example/",
         "status": 200,
         "headers": {
-          "Content-Type": "text/html; charset=utf-8"
+          "Content-Type": "text/html;charset=UTF-8"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/api/orders",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/logo.png",
+        "status": 200,
+        "headers": {
+          "Content-Type": "image/png"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/app.js",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/javascript"
         }
       },
       "match": false

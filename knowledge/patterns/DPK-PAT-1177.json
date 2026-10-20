@@ -1,0 +1,95 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1177",
+  "title": "Signal: Content-Security-Policy worker-src allows every origin",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-header-matches",
+      "header": "Content-Security-Policy",
+      "valuePattern": "^(?:(?!worker-src(?=[\\s;]|$))[^;]*;\\s*)*worker-src(?=[\\s;]|$)[^;]*?(?<=\\s)(?:\\*|(?:https?|wss?)://\\*)(?=\\s|;|$)"
+    }
+  },
+  "scope": "One Content-Security-Policy value whose first worker-src declaration contains the wildcard or a scheme wildcard host.",
+  "limitations": "One header value, first declaration of the directive only. worker-src falls back to child-src and script-src when absent, so this rule judges explicit declarations only.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "worker-src *"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src 'self'; worker-src 'self' https://*"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "worker-src 'self'"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "worker-src https://*.example.com"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src *"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "worker-src 'self'; worker-src *"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {}
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "Applications that legitimately load workers from a CDN can be reported; the observation cannot show which origins are intended.",
+  "linkedRules": [
+    "DPK-DAST-108"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:csp-worker-src-wildcard:worker-src",
+  "validationStatus": "VALIDATED"
+}

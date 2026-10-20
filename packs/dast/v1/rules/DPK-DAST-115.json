@@ -1,0 +1,89 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-115",
+  "title": "Content-Security-Policy report-uri uses a plaintext endpoint",
+  "description": "The policy declares report-uri with an http:// endpoint. Violation reports travel outside the page: they carry the blocked URL, the document URL and the violated directive, so a plaintext collector exposes browsing context to anyone on the path. report-to is a different mechanism that names a group, not a URL, and is handled by the Report-To rule instead.",
+  "severity": "LOW",
+  "cwe": "CWE-319",
+  "category": "transport-security",
+  "remediation": "Serve the report collector over HTTPS and list only https:// endpoints in report-uri, or migrate to report-to with an HTTPS endpoint in the Report-To header.",
+  "limitation": "First report-uri declaration only, matching the specification rule that later duplicates are ignored. It does not verify the endpoint is reachable, and it cannot see whether reports are actually sent.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Content-Security-Policy",
+    "valuePattern": "^(?:(?!report-uri(?=[\\s;]|$))[^;]*;\\s*)*report-uri(?=[\\s;]|$)[^;]*?\\shttp://[^\\s;]+"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src 'self'; report-uri http://collector.example/r"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "report-uri https://collector.example/r http://backup.example/r"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "report-uri https://collector.example/r"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "report-uri /local-collector"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "report-to http://collector.example"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "report-uri https://a.example; report-uri http://b.example"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {}
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1184"
+  ]
+}

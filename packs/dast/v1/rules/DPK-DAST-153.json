@@ -1,0 +1,71 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-153",
+  "title": "Content-Security-Policy strict-dynamic without a nonce or hash",
+  "description": "The Content-Security-Policy script-src directive lists 'strict-dynamic' but carries no nonce or hash source. A browser that implements strict-dynamic ignores host and scheme sources in that directive only when a nonce or hash is present to bootstrap the trust chain; without one the keyword does not establish the delegation the policy author expected.",
+  "severity": "LOW",
+  "cwe": "CWE-693",
+  "category": "csp-weakness",
+  "remediation": "Add a per-response nonce (or a hash of the allowed inline script) to script-src alongside 'strict-dynamic', and template the nonce into the script tags the page emits. Keep the host allowlist only for browsers that do not support strict-dynamic.",
+  "limitation": "One header value. The rule reports the keyword combination the policy states; it does not test browser behaviour and cannot see whether the application intended a nonce that failed to render.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Content-Security-Policy",
+    "valuePattern": "^(?=[\\s\\S]*?(?:^|;)\\s*script-src\\s[^;]*'strict-dynamic')(?![\\s\\S]*'nonce-)(?![\\s\\S]*'sha256-)(?![\\s\\S]*'sha384-)(?![\\s\\S]*'sha512-)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'strict-dynamic'"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'self' 'strict-dynamic'; object-src 'none'"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'nonce-r4nd0m' 'strict-dynamic'"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'sha256-abc=' 'strict-dynamic'"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'self'"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1222"
+  ]
+}

@@ -1,0 +1,89 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1165",
+  "title": "Signal: Basic authentication challenge sent over plaintext HTTP",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-header-matches",
+      "header": "WWW-Authenticate",
+      "valuePattern": "(?:^|,)\\s*Basic(?:\\s|,|$)",
+      "requireScheme": "http"
+    }
+  },
+  "scope": "One http response: WWW-Authenticate offers the Basic scheme.",
+  "limitations": "Transport-conditioned header check: it reads one WWW-Authenticate value on one http observation. It cannot tell whether the client actually answers the challenge, and an https challenge is out of scope by design.",
+  "examples": [
+    {
+      "observation": {
+        "url": "http://app.example/admin",
+        "status": 401,
+        "headers": {
+          "WWW-Authenticate": "Basic realm=\"admin\""
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "http://app.example/api",
+        "status": 401,
+        "headers": {
+          "WWW-Authenticate": [
+            "Negotiate",
+            "Basic realm=\"api\""
+          ]
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "http://app.example/admin",
+        "status": 401,
+        "headers": {
+          "WWW-Authenticate": "Basic"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/admin",
+        "status": 401,
+        "headers": {
+          "WWW-Authenticate": "Basic realm=\"admin\""
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "http://app.example/admin",
+        "status": 401,
+        "headers": {
+          "WWW-Authenticate": "Bearer realm=\"admin\""
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "http://app.example/",
+        "status": 200,
+        "headers": {}
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "Endpoints that only ever sit behind a TLS-terminating proxy while the origin speaks http can be reported; the observation URL is the only transport evidence available.",
+  "linkedRules": [
+    "DPK-DAST-096"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:cleartext-basic-auth:basic-over-http",
+  "validationStatus": "VALIDATED"
+}

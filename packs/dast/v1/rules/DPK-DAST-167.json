@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-167",
+  "title": "Hadoop NameNode UI disclosed",
+  "description": "The response is the Hadoop NameNode web UI: the NameNode heading with an hdfs:// address identifies the filesystem coordinator. The UI lists live data nodes, capacity and block information.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "debug-exposure",
+  "remediation": "Keep the NameNode UI on the internal network behind an authenticating proxy and enable the Hadoop HTTP authentication setting where the UI must be reachable.",
+  "limitation": "One response body. The rule reports the NameNode UI; it does not browse the filesystem and cannot show whether file access is open.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*NameNode)(?=[\\s\\S]*hdfs)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>NameNode</title></head><body><h3>NameNode Information</h3><div>hdfs://namenode:8020</div><table><tr><td>Live Nodes</td><td>6</td></tr></table></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<!doctype html><html><body><h1>NameNode</h1><p>hdfs://cluster-nn:8020</p><a href=\"dfshealth.html\">Overview</a></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title></title></head><body><h3> Information</h3><div>://:8020</div><table><tr><td>Live Nodes</td><td>6</td></tr></table></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1236"
+  ]
+}

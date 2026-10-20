@@ -1,0 +1,105 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1168",
+  "title": "Signal: Content-Security-Policy form-action allows every origin",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-header-matches",
+      "header": "Content-Security-Policy",
+      "valuePattern": "^(?:(?!form-action(?=[\\s;]|$))[^;]*;\\s*)*form-action(?=[\\s;]|$)[^;]*?(?<=\\s)(?:\\*|(?:https?|wss?)://\\*)(?=\\s|;|$)"
+    }
+  },
+  "scope": "One Content-Security-Policy value whose first form-action declaration contains the wildcard or a scheme wildcard host.",
+  "limitations": "One header value, first declaration of the directive only. It reports the wildcard permission, not whether a form on the page can be modified by an attacker.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "form-action *"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src 'self'; form-action 'self' *"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "form-action http://*"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "form-action 'self'"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "form-action 'none'"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src *"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "form-action 'self'; form-action *"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {}
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A page whose forms legitimately submit to many origins can still be reported; the policy cannot express a bounded set the observation could check.",
+  "linkedRules": [
+    "DPK-DAST-099"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:csp-form-action-wildcard:form-action",
+  "validationStatus": "VALIDATED"
+}

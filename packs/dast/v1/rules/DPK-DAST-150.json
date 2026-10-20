@@ -1,0 +1,71 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-150",
+  "title": "Content-Security-Policy sandbox grants both allow-scripts and allow-same-origin",
+  "description": "The Content-Security-Policy sandbox directive lists both allow-scripts and allow-same-origin. Together they let sandboxed content run script and keep the origin of the embedding document, which is the documented way to remove the sandbox's protection: the framed document can reach the same-origin DOM and storage it was supposed to be isolated from.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-693",
+  "category": "csp-weakness",
+  "remediation": "Drop one of the two tokens. A frame that must run script should not keep its origin (allow-scripts alone), and a frame that must keep its origin should not run script. Serve untrusted content from a separate origin instead of weakening the sandbox.",
+  "limitation": "One header value. The rule reports the token combination in the sandbox directive; it cannot tell which content the policy applies to or whether the frame is same-origin in practice.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Content-Security-Policy",
+    "valuePattern": "(?:^|;)\\s*sandbox\\s(?=[^;]*allow-scripts)(?=[^;]*allow-same-origin)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "sandbox allow-scripts allow-same-origin"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src 'self'; sandbox allow-same-origin allow-scripts allow-forms"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "sandbox allow-scripts"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "sandbox allow-same-origin"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "sandbox allow-scripts allow-popups"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1219"
+  ]
+}

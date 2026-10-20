@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-161",
+  "title": "Apache Airflow interface disclosed",
+  "description": "The response is the Apache Airflow web interface: the page title and the Airflow boot object identify the workflow scheduler console. Airflow holds connection strings for the systems its DAGs touch and can trigger jobs.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "debug-exposure",
+  "remediation": "Keep the Airflow web server on an internal network behind an authenticating proxy, enable its authentication backend, and do not expose it through the application ingress.",
+  "limitation": "One response body. The rule reports the Airflow shell; it does not trigger a DAG and cannot show which connections are configured.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*<title>Airflow)(?=[\\s\\S]*airflow)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Airflow</title></head><body><div id=\"react-container\" data-airflow=\"webserver\"></div><script src=\"/static/airflow.js\"></script></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<!doctype html><html><head><title>Airflow - DAGs</title></head><body><script>window.airflow = {\"version\":\"2.7.1\"};</script></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head></title></head><body><div id=\"react-container\" data-=\"webserver\"></div><script src=\"/static/.js\"></script></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1230"
+  ]
+}

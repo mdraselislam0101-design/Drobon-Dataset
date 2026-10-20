@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-137",
+  "title": "Spring Actuator index disclosed in a response",
+  "description": "The response is the Actuator discovery document: a JSON object with an _links map whose entries name actuator endpoints. It tells a reader which management endpoints exist, so health, metrics, env or heapdump can be requested directly instead of guessed.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "debug-exposure",
+  "remediation": "Require authentication on the management port, or disable the discovery endpoint. Review whether every endpoint the index lists is meant to be reachable.",
+  "limitation": "Two body markers. A generic JSON API response that happens to contain _links is not reported unless it also names actuator.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*\"_links\")(?=[\\s\\S]*/actuator)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/actuator",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"_links\":{\"self\":{\"href\":\"http://localhost:8080/actuator\"},\"env\":{\"href\":\"http://localhost:8080/actuator/env\"}}}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/actuator/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/hal+json"
+        },
+        "body": "{\"_links\":{\"health\":{\"href\":\"/actuator/health\"}}} <!-- actuator -->"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/api",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"_links\":{\"self\":\"/api/items\"}}"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body>Home</body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1206"
+  ]
+}

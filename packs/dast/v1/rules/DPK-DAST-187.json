@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-187",
+  "title": "Set-Cookie declares SameSite more than once",
+  "description": "The Set-Cookie header contains two SameSite attributes. RFC 6265 defines last-wins behaviour for an attribute that repeats, but intermediaries and older user agents have disagreed, and the header itself no longer states one unambiguous policy. A cookie that reads as Lax to one parser can be None to another.",
+  "severity": "LOW",
+  "cwe": "CWE-436",
+  "category": "cookie-flags",
+  "remediation": "Emit exactly one SameSite attribute per cookie. If a framework contributes one, remove the hand-written copy rather than appending a second.",
+  "limitation": "One header value. The rule reports the repeated attribute and does not decide which value wins, because that depends on the user agent; the effective protection is outside the observation.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Set-Cookie",
+    "valuePattern": "^(?=[\\s\\S]*;\\s*samesite\\s*=[\\s\\S]*;\\s*samesite\\s*=)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Path=/; Secure; HttpOnly; SameSite=Lax; SameSite=None"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Secure; HttpOnly; SameSite=Strict; SameSite=Lax"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Path=/; Secure; HttpOnly; SameSite=Lax"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Path=/; Secure; HttpOnly"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1256"
+  ]
+}

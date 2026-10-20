@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-251",
+  "title": "Cache-Control declares public and no-store together",
+  "description": "The Cache-Control header contains both `public` and `no-store`. The directives describe opposite intents: `no-store` says nothing may be written to a cache, while `public` says a shared cache may keep the response. Implementations differ in which they honour, so the actual caching of the response depends on the intermediary.",
+  "severity": "LOW",
+  "cwe": "CWE-16",
+  "category": "cache-control",
+  "remediation": "State one caching intent per response. For per-user data use `no-store`; for shareable content drop no-store and keep the freshness directives.",
+  "limitation": "One header value. The rule reports the contradictory pair and does not decide which directive an intermediary applies.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Cache-Control",
+    "valuePattern": "^(?=[\\s\\S]*\\bpublic\\b)(?=[\\s\\S]*\\bno-store\\b)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Cache-Control": "public, no-store"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Cache-Control": "public, max-age=3600, no-store"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Cache-Control": "public, max-age=3600"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Cache-Control": "no-store, private"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1320"
+  ]
+}

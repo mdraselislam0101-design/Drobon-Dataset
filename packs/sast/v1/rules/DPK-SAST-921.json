@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-921",
+  "title": "Remote content fetched from a computed URL in php — review required",
+  "description": "file_get_contents accepts URLs when the HTTP wrapper is enabled, so a computed value makes the server fetch whatever host it names. That reaches loopback services, RFC 1918 hosts and cloud metadata. The rule flags the URL argument; whether it is request-derived is a review decision.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-918",
+  "category": "server-side-request-forgery",
+  "remediation": "Allowlist scheme and host, reject private and link-local addresses after resolution, and prefer a hardened HTTP client.",
+  "limitation": "Lexical: matches file_get_contents with a non-literal argument; URL assembly in a helper is out of scope.",
+  "languages": [
+    "php"
+  ],
+  "patterns": [
+    {
+      "source": "\\bfile_get_contents\\s*\\(\\s*(?![\"'])"
+    }
+  ],
+  "tests": [
+    {
+      "line": "$body = file_get_contents($_GET[\"url\"]);",
+      "match": true
+    },
+    {
+      "line": "# audit: $body = file_get_contents($_GET[\"url\"]); present",
+      "match": true
+    },
+    {
+      "line": "$body = file_get_contents(\"/var/app/config.json\");",
+      "match": false
+    },
+    {
+      "line": "# verified: $body = file_get_contents(\"/var/app/config.json\");",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1104"
+  ]
+}

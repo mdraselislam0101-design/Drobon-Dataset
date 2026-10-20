@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-117",
+  "title": "Referrer-Policy sends full URLs to cross-origin destinations",
+  "description": "The policy no-referrer-when-downgrade sends the full referrer URL to every destination that is at least as secure as the current page. It strips the referrer only on a downgrade, so an https page still hands full paths and query strings to unrelated https sites. DPK-DAST-068 covers unsafe-url, which sends the full URL on every request; this rule covers the narrower default that leaks on every non-downgrade hop.",
+  "severity": "LOW",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Use strict-origin-when-cross-origin or same-origin. Both keep the full URL on same-origin navigation and send only the origin, or nothing, across origins.",
+  "limitation": "Header value check on one response. It cannot see which URLs carry sensitive query strings or whether a destination is third-party.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Referrer-Policy",
+    "valuePattern": "(?:^|[,\\s])no-referrer-when-downgrade(?:$|[,\\s])"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Referrer-Policy": "no-referrer-when-downgrade"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Referrer-Policy": "strict-origin-when-cross-origin, no-referrer-when-downgrade"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Referrer-Policy": "strict-origin-when-cross-origin"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Referrer-Policy": "no-referrer"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Referrer-Policy": "unsafe-url"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {}
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1186"
+  ]
+}

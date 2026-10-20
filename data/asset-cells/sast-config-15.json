@@ -1,0 +1,498 @@
+[
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "apache-sslprotocol-all",
+    "category": "transport-security",
+    "cwe": "CWE-327",
+    "severity": "MEDIUM",
+    "title": "TLS protocol policy re-enabled every protocol in {lang} — review required",
+    "description": "SSLProtocol all re-enables protocol versions the platform disabled, including SSLv3 and TLS 1.0 where the library still implements them. Clients can then negotiate a version with known weaknesses. The rule flags the directive; whether the listener is reachable is a review question.",
+    "remediation": "Set SSLProtocol to -all followed by TLSv1.2 and TLSv1.3 only.",
+    "limitation": "Lexical: matches one SSLProtocol line; a later line that disables protocols again is not linked.",
+    "scopeT": "Single-line match on SSLProtocol all in {lang}.",
+    "fp": "A documented test listener that never serves traffic is the accepted exception.",
+    "recordDesc": "In {lang}, every protocol version is enabled at once. The directive overrides the library default, which already excludes obsolete versions, so the configuration recreates exposure the runtime had removed. Version negotiation picks the highest common version, but an attacker controls their own offer.",
+    "applicability": "{lang} web servers terminating TLS.",
+    "risk": "Downgrade to a protocol with known cryptographic weaknesses; MEDIUM severity.",
+    "why": "Obsolete protocol versions are enabled explicitly.",
+    "fix": [
+      "Disable all protocols explicitly.",
+      "Enable only TLS 1.2 and 1.3."
+    ],
+    "verifyT": "A client offering only TLS 1.0 is refused.",
+    "sinks": {
+      "apache": [
+        "\\bSSLProtocol\\s+all\\b",
+        "SSLProtocol all",
+        "SSLProtocol -all +TLSv1.2 +TLSv1.3",
+        "explicit TLS 1.2 and 1.3 only"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "nginx-dav-methods",
+    "category": "access-control",
+    "cwe": "CWE-284",
+    "severity": "MEDIUM",
+    "title": "WebDAV write methods enabled in {lang} — review required",
+    "description": "dav_methods enables WebDAV verbs, and PUT or DELETE let a client write or remove files under the served root. Combined with a weak location rule that is exactly a file-upload surface without an application in front of it. The rule flags the directive; whether authentication guards the location is a review decision.",
+    "remediation": "Disable WebDAV unless the endpoint requires it, and require authentication plus a write-only directory when it does.",
+    "limitation": "Lexical: matches dav_methods with a write verb; an auth_basic guard in the same block is not linked.",
+    "scopeT": "Single-line match on dav_methods PUT or DELETE in {lang}.",
+    "fp": "A deliberately authenticated WebDAV endpoint is the reviewed exception.",
+    "recordDesc": "In {lang}, HTTP write verbs are enabled for a served location. WebDAV grants filesystem changes through ordinary HTTP requests, so the access-control decision moves from application code to a location block. A missing or misordered auth directive then exposes the directory to anyone who can reach it.",
+    "applicability": "{lang} servers that expose file shares or upload endpoints.",
+    "risk": "Unauthenticated file write or deletion; MEDIUM severity.",
+    "why": "The server accepts write verbs through WebDAV.",
+    "fix": [
+      "Disable dav_methods.",
+      "Require authentication for any WebDAV location."
+    ],
+    "verifyT": "A PUT request without credentials is refused.",
+    "sinks": {
+      "nginx": [
+        "\\bdav_methods\\s+[^;\\n]*\\b(?:PUT|DELETE)\\b",
+        "dav_methods PUT DELETE;",
+        "dav_methods off;",
+        "WebDAV disabled"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "nginx-ssl-ciphers-all",
+    "category": "transport-security",
+    "cwe": "CWE-327",
+    "severity": "MEDIUM",
+    "title": "All cipher suites enabled in {lang} — review required",
+    "description": "ssl_ciphers ALL offers every suite the TLS library implements, including export, NULL and anonymous suites where they exist. The client then picks from a set that was never reviewed. The rule flags the directive; the linked library version determines which suites actually survive.",
+    "remediation": "Restrict ssl_ciphers to a reviewed modern list and disable anonymous and NULL suites.",
+    "limitation": "Lexical: matches the literal ALL token; a named list is out of scope even when it is weak.",
+    "scopeT": "Single-line match on ssl_ciphers ALL in {lang}.",
+    "fp": "A laboratory listener with a pinned test client is the accepted exception.",
+    "recordDesc": "In {lang}, the cipher list is delegated to the library default-everything set. Cipher negotiation is where forward secrecy and authentication properties are chosen, and ALL includes suites without either. The setting is usually copied from an old snippet and survives upgrades unchanged.",
+    "applicability": "{lang} TLS terminators.",
+    "risk": "Negotiation of a weak or unauthenticated cipher suite; MEDIUM severity.",
+    "why": "The cipher list is not restricted to reviewed suites.",
+    "fix": [
+      "Name an explicit modern cipher list.",
+      "Exclude aNULL, eNULL and export suites."
+    ],
+    "verifyT": "A client offering only an anonymous suite is refused.",
+    "sinks": {
+      "nginx": [
+        "\\bssl_ciphers\\s+[\"']?ALL\\b",
+        "ssl_ciphers ALL;",
+        "ssl_ciphers HIGH:!aNULL:!MD5;",
+        "an explicit reviewed cipher list"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "csp-unsafe-inline",
+    "category": "xss",
+    "cwe": "CWE-693",
+    "severity": "MEDIUM",
+    "title": "Content Security Policy permits inline script in {lang} — review required",
+    "description": "A CSP that includes 'unsafe-inline' allows script elements and event handlers written directly into the document. The policy then stops blocking the injection shape it exists to stop, and only network-source restrictions remain. The rule flags the directive; whether another control filters markup is a review decision.",
+    "remediation": "Remove 'unsafe-inline' and move inline script to files, or use a per-response nonce or hash.",
+    "limitation": "Lexical: matches a meta-tag policy on one line; a policy delivered as an HTTP header is out of scope.",
+    "scopeT": "Single-line match on an unsafe-inline CSP in {lang}.",
+    "fp": "A static documentation page with no user-controlled markup is the reviewed exception.",
+    "recordDesc": "In {lang}, the policy explicitly allows inline script. CSP is the browser-enforced backstop for injection flaws; 'unsafe-inline' removes it for the script vector while leaving the rest of the policy intact, which makes the protection look present in a header review. Nonces or hashes preserve the restriction without breaking legitimate inline bootstrapping.",
+    "applicability": "{lang} templates that ship a CSP meta tag.",
+    "risk": "Injected inline script executes despite the policy; MEDIUM severity.",
+    "why": "The policy opts out of blocking inline script.",
+    "fix": [
+      "Remove 'unsafe-inline'.",
+      "Use a nonce or hash for required inline script."
+    ],
+    "verifyT": "An injected inline handler is blocked and a nonce-tagged script still runs.",
+    "sinks": {
+      "html": [
+        "Content-Security-Policy[^\\n]*'unsafe-inline'|Content-Security-Policy[^\\n]*unsafe-inline",
+        "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'self'; script-src 'unsafe-inline'\">",
+        "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'self'\">",
+        "a policy without unsafe-inline"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "gradle-minify-false",
+    "category": "mobile-security",
+    "cwe": "CWE-693",
+    "severity": "MEDIUM",
+    "title": "Release build keeps code shrinking disabled in {lang} — review required",
+    "description": "minifyEnabled false leaves R8/ProGuard off for a build variant. The application ships readable class and symbol names that make reverse engineering and targeted patching cheaper, and unused code paths are not removed. The rule flags the setting; whether the variant is a release build is a review decision.",
+    "remediation": "Enable minifyEnabled and shrinkResources for the release build type, and keep the mapping file internal.",
+    "limitation": "Lexical: matches the setting without knowing which build type contains it.",
+    "scopeT": "Single-line match on minifyEnabled false in {lang}.",
+    "fp": "A debug-only variant that is never published is the accepted exception.",
+    "recordDesc": "In {lang}, the release pipeline is configured without code shrinking. Decompilation of a non-minified APK recovers near-original structure, which shortens the path from a published binary to a working exploit. Shrinking is not a security boundary by itself, but removing it is a deliberate hardening regression.",
+    "applicability": "{lang} Android build scripts.",
+    "risk": "Easier reverse engineering and code tampering; MEDIUM severity.",
+    "why": "The release variant disables name and code shrinking.",
+    "fix": [
+      "Set minifyEnabled true for release.",
+      "Enable resource shrinking."
+    ],
+    "verifyT": "The release build produces a mapping file and shrunk classes.",
+    "sinks": {
+      "gradle": [
+        "\\bminifyEnabled\\s+false\\b",
+        "minifyEnabled false",
+        "minifyEnabled true",
+        "shrinking enabled for release"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "gradle-debug-signing",
+    "category": "mobile-security",
+    "cwe": "CWE-693",
+    "severity": "MEDIUM",
+    "title": "Release variant signed with the debug key in {lang} — review required",
+    "description": "signingConfig signingConfigs.debug applies the shared, publicly known debug keystore to a build variant. Anyone can produce an update signed with the same key, so the signature stops distinguishing the publisher. The rule flags the assignment; whether the variant is shipped is a review decision.",
+    "remediation": "Create a private release keystore and reference signingConfigs.release from the release build type.",
+    "limitation": "Lexical: matches the assignment; a release build type that overrides it later is not linked.",
+    "scopeT": "Single-line match on debug signing in {lang}.",
+    "fp": "A debug-only variant is the accepted exception.",
+    "recordDesc": "In {lang}, a variant is signed with the debug keystore. The debug key is generated with a well-known password and alias, and it is not secret. A build distributed with it cannot be distinguished from a rebuild by a third party, which breaks update integrity for anyone who installs it.",
+    "applicability": "{lang} Android build scripts.",
+    "risk": "Forged updates accepted as the same publisher; MEDIUM severity.",
+    "why": "The signing configuration references the shared debug key.",
+    "fix": [
+      "Use a private release keystore.",
+      "Keep the keystore outside version control."
+    ],
+    "verifyT": "The release APK is signed with the release certificate.",
+    "sinks": {
+      "gradle": [
+        "\\bsigningConfig\\s+signingConfigs\\.debug\\b",
+        "signingConfig signingConfigs.debug",
+        "signingConfig signingConfigs.release",
+        "the release signing configuration"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "nim-execcmd",
+    "category": "command-injection",
+    "cwe": "CWE-78",
+    "severity": "HIGH",
+    "title": "Shell command executed through execCmd in {lang} — review required",
+    "description": "osproc.execCmd passes its string to the system shell. A value concatenated with & becomes shell syntax, so a separator in the value appends commands running with the process identity. The rule flags the call; whether the string carries external data is a review decision.",
+    "remediation": "Use execProcess with an argument sequence so no shell is involved, and validate dynamic values.",
+    "limitation": "Lexical: matches execCmd calls; execProcess is out of scope and is the safer form.",
+    "scopeT": "Single-line match on execCmd in {lang}.",
+    "fp": "A constant command in build tooling is the accepted false positive.",
+    "recordDesc": "In {lang}, the shell helper is called with a command string. Nim string concatenation with & is visually quiet, so a request value can reach the command without an obvious boundary. The shell then decides where the command ends.",
+    "applicability": "{lang} services and tooling that call external programs.",
+    "risk": "Shell injection with process privileges; HIGH severity.",
+    "why": "A command string is handed to the shell.",
+    "fix": [
+      "Use execProcess with separate arguments.",
+      "Allowlist dynamic values."
+    ],
+    "verifyT": "A payload containing a separator is passed as literal argument text.",
+    "sinks": {
+      "nim": [
+        "\\bexecCmd\\s*\\(",
+        "discard execCmd(\"convert \" & userFile & \" out.png\")",
+        "discard execProcess(\"convert\", args = [userFile, \"out.png\"])",
+        "execProcess with an argument sequence"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "vba-createobject-wscript",
+    "category": "command-injection",
+    "cwe": "CWE-78",
+    "severity": "HIGH",
+    "title": "Windows shell object created in {lang} — review required",
+    "description": "CreateObject(\"WScript.Shell\") gives the macro or script a Run and Exec surface. A command assembled from document content or a cell value becomes a program launch under the signed-in user. The rule flags the object creation; whether the command text is externally influenced is a review decision.",
+    "remediation": "Remove the WScript.Shell dependency; if a program must run, use a fixed command with validated parameters.",
+    "limitation": "Lexical: matches the object creation; later Run calls are not linked.",
+    "scopeT": "Single-line match on WScript.Shell creation in {lang}.",
+    "fp": "A signed administrative macro that only launches a fixed internal tool is the reviewed exception.",
+    "recordDesc": "In {lang}, the Windows shell automation object is created. Office documents routinely carry VBA, and the shell object is the standard bridge from document content to process execution. The rule fires on the capability, because the same line appears in both benign automation and malicious droppers.",
+    "applicability": "{lang} macros and administrative scripts.",
+    "risk": "Process execution with the signed-in user identity; HIGH severity.",
+    "why": "The script creates a shell automation object.",
+    "fix": [
+      "Remove WScript.Shell.",
+      "Run a fixed tool with validated parameters."
+    ],
+    "verifyT": "The macro no longer references WScript.Shell.",
+    "sinks": {
+      "vba": [
+        "CreateObject\\s*\\(\\s*[\"']WScript\\.Shell[\"']",
+        "Set sh = CreateObject(\"WScript.Shell\")",
+        "Set fso = CreateObject(\"Scripting.FileSystemObject\")",
+        "no shell automation object"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "jinja-safe-filter",
+    "category": "xss",
+    "cwe": "CWE-79",
+    "severity": "MEDIUM",
+    "title": "Autoescaping bypassed with the safe filter in {lang} — review required",
+    "description": "The safe filter marks a value as trusted markup, so Jinja stops escaping it. A value that carries user text then becomes active HTML, which is the classic stored-XSS path in template code. The rule flags the filter; whether the value is user-controlled is a review decision.",
+    "remediation": "Remove the filter and let autoescaping apply, or sanitize the value with an HTML-aware allowlist first.",
+    "limitation": "Lexical: matches the filter in template source; the value origin is not tracked.",
+    "scopeT": "Single-line match on the safe filter in {lang}.",
+    "fp": "A constant, developer-authored fragment is the reviewed exception.",
+    "recordDesc": "In {lang}, a value is explicitly exempted from autoescaping. Template engines escape by default, and the safe filter is the documented way to opt out. Every opt-out is a place where an upstream change that introduces user text silently becomes an injection point.",
+    "applicability": "{lang} templates rendered by web services.",
+    "risk": "Cross-site scripting through unescaped output; MEDIUM severity.",
+    "why": "The template marks a value as trusted markup.",
+    "fix": [
+      "Remove the safe filter.",
+      "Sanitize with an allowlist before marking trusted."
+    ],
+    "verifyT": "A payload of markup is rendered as text.",
+    "sinks": {
+      "jinja": [
+        "\\|\\s*safe\\b",
+        "{{ user_bio | safe }}",
+        "{{ user_bio | escape }}",
+        "escaped output without the safe filter"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "android-webview-debug",
+    "category": "debug-exposure",
+    "cwe": "CWE-489",
+    "severity": "MEDIUM",
+    "title": "WebView remote debugging enabled in {lang} — review required",
+    "description": "setWebContentsDebuggingEnabled(true) lets any adb-connected host inspect and drive the application WebView, including page content, cookies and JavaScript execution. On a production build it turns physical or debugging access into session compromise. The rule flags the call; whether the build ships enabled is a review decision.",
+    "remediation": "Gate the call on a debug build flag, or remove it from production variants.",
+    "limitation": "Lexical: matches the call with a literal true; a build-config expression is out of scope.",
+    "scopeT": "Single-line match on enabled WebView debugging in {lang}.",
+    "fp": "A debug-only build that never ships is the accepted exception.",
+    "recordDesc": "In {lang}, WebView debugging is switched on unconditionally. The API exists for development, and Chrome inspection then exposes the live DOM and stored session material over adb. The setting is often added while diagnosing a rendering issue and left behind.",
+    "applicability": "{lang} Android applications that embed a WebView.",
+    "risk": "Session and page-content exposure through the debug bridge; MEDIUM severity.",
+    "why": "The application enables the debug inspection bridge.",
+    "fix": [
+      "Gate on BuildConfig.DEBUG.",
+      "Remove from release variants."
+    ],
+    "verifyT": "chrome://inspect lists no production WebView.",
+    "sinks": {
+      "java": [
+        "setWebContentsDebuggingEnabled\\s*\\(\\s*true\\b",
+        "WebView.setWebContentsDebuggingEnabled(true);",
+        "WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG);",
+        "debug gating by build type"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "python-sendfile-dynamic",
+    "category": "path-traversal",
+    "cwe": "CWE-22",
+    "severity": "MEDIUM",
+    "title": "File response built from a runtime path in {lang} — review required",
+    "description": "send_file with a value that is not a literal passes a runtime path straight to the response. If that value includes request data and is not normalised, ../ segments or absolute paths escape the intended directory. The rule flags the non-literal call; whether the path is constrained is a review decision.",
+    "remediation": "Resolve the requested name against a fixed base with safe_join, reject traversal, and serve only regular files.",
+    "limitation": "Lexical: matches a non-literal first argument; a helper that validates the path is not seen.",
+    "scopeT": "Single-line match on send_file with a runtime argument in {lang}.",
+    "fp": "A path resolved from an allowlisted map is the reviewed exception.",
+    "recordDesc": "In {lang}, a file response is produced from a runtime path. The framework will serve whatever path it receives, including absolute paths and parent traversal, unless the application normalises it. Download endpoints are a common place for request parameters to reach this call unchanged.",
+    "applicability": "{lang} web services that return files.",
+    "risk": "Disclosure of files outside the intended directory; MEDIUM severity.",
+    "why": "A runtime path reaches the file response helper.",
+    "fix": [
+      "Join against a fixed base.",
+      "Reject traversal and absolute paths."
+    ],
+    "verifyT": "A ../ payload returns 404 and the intended file still downloads.",
+    "sinks": {
+      "python": [
+        "\\bsend_file\\s*\\(\\s*[A-Za-z_][\\w.]*",
+        "return send_file(request.args.get(\"name\"))",
+        "return send_file(\"static/report.pdf\")",
+        "a literal path inside the static directory"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "ios-keychain-always",
+    "category": "permissions",
+    "cwe": "CWE-732",
+    "severity": "MEDIUM",
+    "title": "Keychain item readable while the device is locked in {lang} — review required",
+    "description": "kSecAttrAccessibleAlways keeps an item available even when the device is locked, so anything that can read the keychain in that state obtains the secret. Modern accessibility classes restrict items to unlocked or first-unlock states. The rule flags the attribute; whether the item holds a sensitive value is a review decision.",
+    "remediation": "Use kSecAttrAccessibleWhenUnlockedThisDeviceOnly, or AfterFirstUnlockThisDeviceOnly only when background access is required.",
+    "limitation": "Lexical: matches the accessibility constant; item contents are not inspected.",
+    "scopeT": "Single-line match on the always-accessible keychain class in {lang}.",
+    "fp": "A non-sensitive cached identifier with a documented reason is the reviewed exception.",
+    "recordDesc": "In {lang}, a keychain item is marked accessible regardless of lock state. The accessibility class is the only thing that binds a secret to device unlock, and choosing Always removes that binding. The constant is also deprecated, which makes its presence a signal of copied legacy code.",
+    "applicability": "{lang} iOS applications that store credentials.",
+    "risk": "Credential disclosure while the device is locked; MEDIUM severity.",
+    "why": "The item is available without an unlocked device.",
+    "fix": [
+      "Use WhenUnlockedThisDeviceOnly.",
+      "Reserve background classes for non-sensitive items."
+    ],
+    "verifyT": "The item is unreadable in the locked state and readable after unlock.",
+    "sinks": {
+      "swift": [
+        "kSecAttrAccessibleAlways\\b",
+        "kSecAttrAccessible: kSecAttrAccessibleAlways",
+        "kSecAttrAccessible: kSecAttrAccessibleWhenUnlockedThisDeviceOnly",
+        "an unlocked-only accessibility class"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "android-world-readable",
+    "category": "permissions",
+    "cwe": "CWE-732",
+    "severity": "MEDIUM",
+    "title": "App-private file written with world access in {lang} — review required",
+    "description": "MODE_WORLD_READABLE or MODE_WORLD_WRITEABLE creates a file any application on the device can read or modify. The constants are deprecated because they break the per-application sandbox, yet they still appear in legacy code. The rule flags the mode; whether the file holds sensitive data is a review decision.",
+    "remediation": "Use MODE_PRIVATE and share data through a scoped ContentProvider when another application needs it.",
+    "limitation": "Lexical: matches the mode constant; values held in a variable are out of scope.",
+    "scopeT": "Single-line match on world-accessible file modes in {lang}.",
+    "fp": "A legacy migration path with an explicit, reviewed exception is the only accepted use.",
+    "recordDesc": "In {lang}, an application file is opened with a world-accessible mode. The sandbox normally makes the file private to the app uid; these modes widen it to every application on the device, including ones the user did not intend to trust. The flags are deprecated but remain functional on older API levels.",
+    "applicability": "{lang} Android applications with legacy file I/O.",
+    "risk": "Cross-application data disclosure or tampering; MEDIUM severity.",
+    "why": "The file mode breaks the application sandbox.",
+    "fix": [
+      "Use MODE_PRIVATE.",
+      "Share through a scoped provider."
+    ],
+    "verifyT": "Another application cannot open the file path.",
+    "sinks": {
+      "java": [
+        "MODE_WORLD_(?:READABLE|WRITEABLE)",
+        "openFileOutput(\"session\", MODE_WORLD_READABLE);",
+        "openFileOutput(\"session\", MODE_PRIVATE);",
+        "private file mode"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "ios-allow-any-https",
+    "category": "transport-security",
+    "cwe": "CWE-295",
+    "severity": "HIGH",
+    "title": "Certificate validation disabled for a connection in {lang} — review required",
+    "description": "setAllowsAnyHTTPSCertificate(true) makes the connection accept any server certificate, including one generated by an on-path attacker. TLS keeps encrypting, but the peer is no longer authenticated. The rule flags the call; whether the endpoint is also pinned elsewhere is a review decision.",
+    "remediation": "Remove the call and rely on platform validation; use a pinned trust evaluation if the endpoint needs pinning.",
+    "limitation": "Lexical: matches the literal true; a conditional that only runs in debug is still reported.",
+    "scopeT": "Single-line match on disabled certificate validation in {lang}.",
+    "fp": "A debug-only branch is the reviewed exception and should be removed before release.",
+    "recordDesc": "In {lang}, certificate validation is switched off for a host. The API is deprecated, which signals legacy networking code, but it still functions on supported systems. Any code path that disables validation turns every subsequent request to that host into an interceptable channel.",
+    "applicability": "{lang} iOS applications with legacy NSURLConnection code.",
+    "risk": "Traffic interception and response substitution; HIGH severity.",
+    "why": "The connection accepts any certificate.",
+    "fix": [
+      "Remove the call.",
+      "Pin the expected certificate if required."
+    ],
+    "verifyT": "A self-signed test endpoint is rejected.",
+    "sinks": {
+      "swift": [
+        "setAllowsAnyHTTPSCertificate\\s*\\(\\s*true\\b",
+        "connection.setAllowsAnyHTTPSCertificate(true, forHost: host)",
+        "connection.setAllowsAnyHTTPSCertificate(false, forHost: host)",
+        "platform certificate validation"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "java-dynamic-url",
+    "category": "server-side-request-forgery",
+    "cwe": "CWE-918",
+    "severity": "MEDIUM",
+    "title": "URL built from a runtime value in {lang} — review required",
+    "description": "new URL with a runtime string produces a connection target chosen outside the code. If the value includes request data, the server can be steered to internal addresses, cloud metadata endpoints or file schemes. The rule flags the construction; whether the value is validated against an allowlist is a review decision.",
+    "remediation": "Parse the value, require an https scheme and an allowlisted host, resolve it, and block private address ranges before connecting.",
+    "limitation": "Lexical: matches a non-literal first argument; a validated helper is not inspected.",
+    "scopeT": "Single-line match on dynamic URL construction in {lang}.",
+    "fp": "A URL assembled from a fixed base and a numeric id is the reviewed exception.",
+    "recordDesc": "In {lang}, a URL object is created from a variable. The class accepts every scheme it can resolve, and the connection follows redirects by default. SSRF defences belong before construction, because once the URL exists the target has already been chosen.",
+    "applicability": "{lang} services that fetch remote resources.",
+    "risk": "Server-side request forgery against internal services; MEDIUM severity.",
+    "why": "The request target is chosen at runtime.",
+    "fix": [
+      "Allowlist scheme and host.",
+      "Resolve and reject private addresses."
+    ],
+    "verifyT": "A metadata-endpoint address is refused before the request.",
+    "sinks": {
+      "java": [
+        "new\\s+URL\\s*\\(\\s*[A-Za-z_$][\\w$]*\\s*\\)",
+        "URL url = new URL(targetUrl);",
+        "URL url = new URL(\"https://api.example.com/health\");",
+        "a fixed, allowlisted URL"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "csharp-webclient-ssrf",
+    "category": "server-side-request-forgery",
+    "cwe": "CWE-918",
+    "severity": "MEDIUM",
+    "title": "Remote download from a runtime URL in {lang} — review required",
+    "description": "WebClient.DownloadString or DownloadData with a non-literal address fetches whatever target the value names. If the value includes request data, the server can be steered to internal services or metadata endpoints. The rule flags the call; whether the address is allowlisted is a review decision.",
+    "remediation": "Use HttpClient with an allowlisted base address, and reject private ranges after DNS resolution.",
+    "limitation": "Lexical: matches a non-literal first argument; a validated helper is not inspected.",
+    "scopeT": "Single-line match on dynamic WebClient downloads in {lang}.",
+    "fp": "A download from a fixed constant address is the accepted false positive.",
+    "recordDesc": "In {lang}, a download helper is called with a runtime address. WebClient follows redirects and accepts every scheme the underlying stack supports, so validation performed after the call cannot undo the request. The pattern is common in integration code that forwards a caller-supplied URL.",
+    "applicability": "{lang} services that fetch remote resources.",
+    "risk": "Server-side request forgery against internal services; MEDIUM severity.",
+    "why": "The request target is chosen at runtime.",
+    "fix": [
+      "Allowlist scheme and host.",
+      "Reject private addresses after resolution."
+    ],
+    "verifyT": "A metadata-endpoint address is refused before the request.",
+    "sinks": {
+      "csharp": [
+        "\\.Download(?:String|Data)\\s*\\(\\s*[A-Za-z_]",
+        "var body = client.DownloadString(targetUrl);",
+        "var body = client.DownloadString(\"https://api.example.com/health\");",
+        "a fixed, allowlisted address"
+      ]
+    }
+  }
+]

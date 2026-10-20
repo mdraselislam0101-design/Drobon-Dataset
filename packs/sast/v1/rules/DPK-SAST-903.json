@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-903",
+  "title": "Perl object graph restored from untrusted bytes in perl — review required",
+  "description": "Storable::retrieve rebuilds a Perl data structure, including blessed references, from a byte stream. A crafted payload can instantiate classes and trigger their magic methods during restoration, which is object injection rather than plain data parsing. The rule flags the call; whether the bytes come from a trusted store is a review decision.",
+  "severity": "HIGH",
+  "cwe": "CWE-502",
+  "category": "unsafe-deserialization",
+  "remediation": "Store untrusted data as JSON or another schema-bound format, and never thaw bytes received from a request or a shared queue.",
+  "limitation": "Lexical: matches retrieve and thaw calls; a custom deserializer that validates the stream first is out of scope.",
+  "languages": [
+    "perl"
+  ],
+  "patterns": [
+    {
+      "source": "\\b(?:Storable::)?(?:retrieve|thaw)\\s*\\("
+    }
+  ],
+  "tests": [
+    {
+      "line": "my $obj = Storable::retrieve($payload);",
+      "match": true
+    },
+    {
+      "line": "# audit: my $obj = Storable::retrieve($payload); present",
+      "match": true
+    },
+    {
+      "line": "my $data = decode_json($payload);",
+      "match": false
+    },
+    {
+      "line": "# verified: my $data = decode_json($payload);",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1086"
+  ]
+}

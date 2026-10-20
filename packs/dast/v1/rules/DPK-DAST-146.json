@@ -1,0 +1,101 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-146",
+  "title": "Content-Security-Policy img-src allows a wildcard source",
+  "description": "The Content-Security-Policy img-src directive allows a bare wildcard source: the token `*` or a scheme wildcard such as `https://*` appears inside that directive's source list. The policy therefore permits the browser to load the affected resource type from any origin, which is the opposite of what a restrictive policy is meant to express. Images can be loaded from any origin, so injected markup or a third-party script can beacon page-derived data out in image requests that need no script execution and no cors grant.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-693",
+  "category": "csp-weakness",
+  "remediation": "Replace the wildcard in img-src with the explicit origins that must be reachable, and use 'none' or 'self' where no third-party origin is needed. If the wildcard was added to unblock a single vendor, name that vendor's origin instead so the policy keeps recording intent.",
+  "limitation": "One header value and one directive. The rule judges img-src only when it is written in the policy; when the directive is absent, the default-src or child-src fallback decides the behaviour and other rules report that case. Values are matched lexically, so an origin wildcard such as *.example.com is not treated as a bare wildcard.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Content-Security-Policy",
+    "valuePattern": "(?:^|;)\\s*img-src\\s[^;]*(?<=\\s)(?:\\*|(?:https?|wss?)://\\*)(?=[\\s;]|$)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "img-src *"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "img-src 'self' *"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src 'self'; img-src https://cdn.example.com *; frame-ancestors 'none'"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "img-src 'self'"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "img-src *.example.com"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "img-src https://*.example.com"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src *"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "img-src 'self'; img-src https://cdn.example.com"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1215"
+  ]
+}

@@ -1,0 +1,166 @@
+[
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "permissions-policy-wildcard-feature",
+    "category": "security-headers",
+    "cwe": "CWE-693",
+    "cweDef": {
+      "name": "Protection Mechanism Failure",
+      "summary": "A browser protection is present but not actually in force."
+    },
+    "severity": "LOW",
+    "title": "Permissions-Policy grants a powerful feature to every origin",
+    "description": "The Permissions-Policy header contains a wildcard grant for a powerful feature such as camera, microphone or geolocation. Any embedded frame can then request the feature without the top-level document narrowing it, which is the opposite of what the header exists to do. The check reports the wildcard grant on one observation; it does not claim the feature is actually reachable.",
+    "remediation": "Replace wildcard grants with an explicit allowlist of origins, or close the feature with an empty allowlist (camera=()).",
+    "limitation": "Observation-level: the check reads the declared header text and does not evaluate how a browser applies the policy to a specific frame.",
+    "scopeT": "One response: confirm a wildcard grant for a powerful feature.",
+    "fp": "A deployment that intentionally delegates one feature to a trusted origin is reported only when the grant is a wildcard.",
+    "recordDesc": "The response delegates a powerful feature to every origin. Permissions-Policy restricts which frames may use capabilities like the camera and microphone; a wildcard removes the restriction for any origin the page embeds. The header is increasingly common but is often copied with wildcards that were meant as placeholders.",
+    "applicability": "HTML responses that deliver a Permissions-Policy header.",
+    "risk": "Feature delegation to untrusted frames; LOW severity.",
+    "why": "A powerful feature is granted to every origin.",
+    "fix": [
+      "Use an explicit origin allowlist.",
+      "Close unused features with an empty allowlist."
+    ],
+    "verifyT": "Re-observe the header and confirm no feature uses a wildcard grant.",
+    "cells": [
+      {
+        "suffix": "permissions-wildcard",
+        "lang": "http",
+        "name": "Permissions-Policy wildcard",
+        "safe": "camera=(), microphone=()",
+        "check": {
+          "type": "response-header-matches",
+          "header": "Permissions-Policy",
+          "valuePattern": "(?:^|[,;\\s])(?:camera|microphone|geolocation)\\s*=\\s*\\(?\\s*\\*"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Permissions-Policy": "camera=*"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/embed",
+              "status": 200,
+              "headers": {
+                "Permissions-Policy": "geolocation=*, microphone=()"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Permissions-Policy": "camera=(self), microphone=()"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Content-Security-Policy": "default-src 'self'"
+              }
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "coop-unsafe-none",
+    "category": "security-headers",
+    "cwe": "CWE-693",
+    "cweDef": {
+      "name": "Protection Mechanism Failure",
+      "summary": "A browser protection is present but not actually in force."
+    },
+    "severity": "LOW",
+    "title": "Cross-Origin-Opener-Policy explicitly set to unsafe-none",
+    "description": "The response sets Cross-Origin-Opener-Policy to unsafe-none, which is the value that disables the browsing-context separation the header otherwise provides. A document that opens or is opened by a cross-origin window keeps a live opener relationship, enabling window references across origins. The check reports the explicit value; the impact depends on what the page does with opener access.",
+    "remediation": "Set Cross-Origin-Opener-Policy to same-origin, or same-origin-allow-popups where popups must keep a relationship.",
+    "limitation": "Observation-level: whether the page relies on cross-origin opener access is a design question the header alone cannot answer.",
+    "scopeT": "One response: confirm COOP is present with the unsafe-none value.",
+    "fp": "A page whose documented design requires cross-origin window messaging is the accepted, reviewed exception.",
+    "recordDesc": "The response explicitly opts out of cross-origin opener isolation. unsafe-none is the default in browsers that predate COOP, so setting it is equivalent to stating that cross-origin window references are wanted; it also defeats the isolation needed for cross-origin isolation features. A copied header template with the wrong value is the usual cause.",
+    "applicability": "HTML responses that deliver a Cross-Origin-Opener-Policy header.",
+    "risk": "Cross-origin window reference exposure; LOW severity.",
+    "why": "The policy explicitly disables opener isolation.",
+    "fix": [
+      "Set the header to same-origin.",
+      "Use same-origin-allow-popups where popups are required."
+    ],
+    "verifyT": "Re-observe the header and confirm same-origin or same-origin-allow-popups.",
+    "cells": [
+      {
+        "suffix": "coop-unsafe-none",
+        "lang": "http",
+        "name": "COOP unsafe-none",
+        "safe": "same-origin",
+        "check": {
+          "type": "response-header-matches",
+          "header": "Cross-Origin-Opener-Policy",
+          "valuePattern": "(?:^|[,;\\s])unsafe-none(?:$|[,;\\s])"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Cross-Origin-Opener-Policy": "unsafe-none"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/popup",
+              "status": 200,
+              "headers": {
+                "Cross-Origin-Opener-Policy": "same-origin-allow-popups, unsafe-none"
+              }
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Cross-Origin-Opener-Policy": "same-origin"
+              }
+            },
+            "match": false
+          },
+          {
+            "observation": {
+              "url": "https://app.example/",
+              "status": 200,
+              "headers": {
+                "Cross-Origin-Embedder-Policy": "require-corp"
+              }
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  }
+]

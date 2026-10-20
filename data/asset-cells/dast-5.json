@@ -1,0 +1,206 @@
+[
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "content-type-missing",
+  "category": "security-headers",
+  "cwe": "CWE-693",
+  "cweDef": {
+   "name": "Protection Mechanism Failure",
+   "summary": "A browser protection is absent or not actually in force."
+  },
+  "severity": "LOW",
+  "title": "Content-Type header missing from the response",
+  "description": "The response carries no Content-Type header at all. Browsers then infer the type from the bytes, which lets an uploaded or reflected payload be reinterpreted as HTML or script when the browser guesses wrong. The check reports the absent header on one observation; it does not claim exploitability.",
+  "remediation": "Send an explicit Content-Type on every response, including error responses, and pair it with X-Content-Type-Options: nosniff ({safe}).",
+  "limitation": "Single-response observation: the check does not test how a specific browser would sniff the body.",
+  "scopeT": "One response: confirm that no Content-Type header is present.",
+  "fp": "Responses with no body (204, 304) are the accepted exception and are often flagged in error.",
+  "recordDesc": "The response omits Content-Type entirely. Without a declared type the browser falls back to sniffing, and a body that begins with HTML or script characters can execute in the origin even when the server intended it as text. The gap is easy to miss because the page usually renders correctly in the browser that guessed first.",
+  "applicability": "Any HTTP response that carries a body.",
+  "risk": "Content sniffing and script execution from mis-typed content; LOW severity.",
+  "why": "No Content-Type header is present on a body-bearing response.",
+  "fix": [
+   "Emit an explicit Content-Type.",
+   "Add X-Content-Type-Options: nosniff."
+  ],
+  "verifyT": "Re-observe the response and confirm a single accurate Content-Type value.",
+  "cells": [
+   {
+    "suffix": "content-type",
+    "lang": "http",
+    "name": "Content-Type",
+    "safe": "text/html; charset=utf-8",
+    "check": {
+     "type": "missing-response-header",
+     "header": "Content-Type"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/profile",
+       "status": 200,
+       "headers": {
+        "Cache-Control": "no-store"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/upload",
+       "status": 201,
+       "headers": {
+        "X-Content-Type-Options": "nosniff"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/profile",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=utf-8"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/profile",
+       "status": 200,
+       "headers": {
+        "Content-Type": ""
+       }
+      },
+      "match": true
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "csp-object-src",
+  "category": "security-headers",
+  "cwe": "CWE-693",
+  "cweDef": {
+   "name": "Protection Mechanism Failure",
+   "summary": "A browser protection is absent or not actually in force."
+  },
+  "severity": "LOW",
+  "title": "Content-Security-Policy without object-src or default-src",
+  "description": "The policy neither sets object-src nor supplies a default-src fallback, so object, embed and applet loading is unconstrained. object-src is a fetch directive: when it is absent the browser applies default-src, which is why a policy that sets default-src is not reported here.",
+  "remediation": "Add object-src 'none' (or rely on a restrictive default-src) so plugins and embedded objects cannot load from arbitrary origins.",
+  "limitation": "Fallback-aware directive check: a policy that sets default-src constrains object loading through the fallback and is not reported. A policy that sets object-src explicitly is out of scope for this check, and a policy delivered by a meta element cannot be seen.",
+  "scopeT": "One response: confirm that object-src is absent from the policy.",
+  "fp": "Policies relying on default-src without explicit object-src are reported even though some browsers fall back; this is intentional defence-in-depth.",
+  "recordDesc": "object-src controls plugin and embedded-object loading. It is a fetch directive, so an absent object-src inherits default-src; only a policy that states neither leaves object loading unconstrained. Plugins historically offered a code-execution surface that the rest of the policy does not cover.",
+  "applicability": "HTML responses that carry a Content-Security-Policy header.",
+  "risk": "Unconstrained plugin and object loading under an otherwise restrictive policy; LOW severity.",
+  "why": "Neither object-src nor default-src is declared.",
+  "fix": [
+   "Add object-src 'none'.",
+   "Keep a restrictive default-src so future directives inherit it."
+  ],
+  "verifyT": "Parse the policy and confirm either object-src or default-src is declared.",
+  "cells": [
+   {
+    "suffix": "object-src",
+    "lang": "http",
+    "name": "CSP object-src",
+    "safe": "object-src 'none'",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Content-Security-Policy",
+     "valuePattern": "^(?![^\\n]*(?:^|[;,])\\s*(?:object-src|default-src)(?=[\\s;,]|$))[^\\n]*$"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "script-src 'self'; frame-ancestors 'self'"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "form-action 'self'; base-uri 'none'"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "upgrade-insecure-requests"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "default-src 'self'; script-src 'self'"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "default-src 'none'"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "object-src 'none'"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Security-Policy": "object-src 'none'; default-src 'self'"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {}
+      },
+      "match": false
+     }
+    ],
+    "overrides": {
+     "limitation": "Fallback-aware directive check: a policy that sets default-src constrains object loading through the fallback and is not reported. A policy that sets object-src explicitly is out of scope for this check, and a policy delivered by a meta element cannot be seen. Because the check requires both object-src and default-src to be absent, every case it reports is also reported by DPK-DAST-087 (missing default-src); this rule adds the object-loading explanation, not a second condition."
+    }
+   }
+  ]
+ }
+]

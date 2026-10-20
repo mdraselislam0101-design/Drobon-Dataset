@@ -1,0 +1,87 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1337",
+  "title": "Signal: Content-Security-Policy script-src trusts every subdomain of an origin",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-header-matches",
+      "header": "Content-Security-Policy",
+      "valuePattern": "(?:^|;)\\s*script-src\\s[^;]*(?<=[\\s/])\\*\\.[\\w.-]+(?=[\\s;]|$)"
+    }
+  },
+  "scope": "One policy whose script-src carries a `*.domain` source.",
+  "limitations": "One header value and one directive. The rule reports the wildcard form; it cannot tell which subdomains exist or whether any of them is presently attacker-influenced.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' *.example.com"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; script-src https://*.cdn.example.com"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'self' https://cdn.example.com"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'self'; img-src *.example.com"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'self' *"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'self' https://*.example.com https://cdn.example.com"
+        }
+      },
+      "match": true
+    }
+  ],
+  "fpNotes": "A wildcard for a domain whose every subdomain is genuinely trusted is still reported; the rule reports the form, and the reviewer decides whether that trust is deliberate.",
+  "linkedRules": [
+    "DPK-DAST-268"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:csp-scriptsrc-subdomain-wildcard:scriptsrc-subdomain-wildcard",
+  "validationStatus": "VALIDATED"
+}

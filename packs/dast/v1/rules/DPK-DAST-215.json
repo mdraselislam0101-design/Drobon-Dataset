@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-215",
+  "title": "Prometheus Alertmanager UI disclosed",
+  "description": "The response is the Alertmanager web UI: the product name together with the Alerts, Silences and Status navigation identifies the alert routing console. That console can create silences that stop pages from firing.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "debug-exposure",
+  "remediation": "Require authentication in front of Alertmanager, keep it on the internal network, and alert on silence creation from unexpected sources.",
+  "limitation": "One response body. The rule reports the UI; it does not create a silence and cannot show whether the request would be accepted.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*Alertmanager)(?=[\\s\\S]*Silences)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Alertmanager</title></head><body><nav><a href=\"/alerts\">Alerts</a><a href=\"/silences\">Silences</a></nav></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<!doctype html><html><body><h1>Alertmanager</h1><ul><li>Alerts</li><li>Silences</li><li>Status</li></ul></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title></title></head><body><nav><a href=\"/alerts\">Alerts</a><a href=\"/\"></a></nav></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1284"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-882",
+  "title": "Non-cryptographic thread RNG used where a token may be generated in rust — review required",
+  "description": "rand::thread_rng is a fast user-space generator seeded from the OS but not designed for secrets; its output can be predicted once state is observed. Using it for tokens, reset codes or keys weakens the value regardless of length. The rule flags the call; whether the value is security-relevant is a review decision.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-330",
+  "category": "weak-cryptography",
+  "remediation": "Use rand::rngs::OsRng or getrandom for tokens, nonces and keys, and reserve thread_rng for simulations and sampling.",
+  "limitation": "Lexical: matches thread_rng() calls; a wrapper that already mixes in OsRng is out of scope.",
+  "languages": [
+    "rust"
+  ],
+  "patterns": [
+    {
+      "source": "\\bthread_rng\\s*\\(\\s*\\)"
+    }
+  ],
+  "tests": [
+    {
+      "line": "let token: u64 = thread_rng().gen();",
+      "match": true
+    },
+    {
+      "line": "# audit: let token: u64 = thread_rng().gen(); present",
+      "match": true
+    },
+    {
+      "line": "let key = OsRng.gen::<[u8; 32]>();",
+      "match": false
+    },
+    {
+      "line": "# verified: let key = OsRng.gen::<[u8; 32]>();",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1065"
+  ]
+}

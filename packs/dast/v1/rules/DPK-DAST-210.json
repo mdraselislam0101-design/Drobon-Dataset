@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-210",
+  "title": "Location header names a script or data scheme",
+  "description": "The Location header names a `javascript:`, `vbscript:` or `data:` URL instead of a web address. A redirect to such a scheme hands the navigation target to a script or to inline document content, and the response that carries it is indistinguishable from an ordinary redirect until the scheme is read.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-601",
+  "category": "open-redirect",
+  "remediation": "Restrict Location to absolute https URLs or to paths on the same host, and reject any value whose scheme is not http or https before sending it. Never reflect a request parameter into Location without that check.",
+  "limitation": "One header value. The rule reports the scheme the header names; it cannot prove the value is attacker-influenced, and browsers differ in how they treat script schemes in a redirect.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Location",
+    "valuePattern": "^\\s*(?:javascript|vbscript|data)\\s*:"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 302,
+        "headers": {
+          "Location": "javascript:alert(document.domain)"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 302,
+        "headers": {
+          "Location": "data:text/html;base64,PHNjcmlwdD4="
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 302,
+        "headers": {
+          "Location": "https://app.example/login"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 302,
+        "headers": {
+          "Location": "/login"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1279"
+  ]
+}

@@ -1,0 +1,67 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1273",
+  "title": "Signal: Content-Security-Policy script-src allows unsafe-hashes",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-header-matches",
+      "header": "Content-Security-Policy",
+      "valuePattern": "(?:^|;)\\s*script-src\\s[^;]*(?<=\\s)'unsafe-hashes'(?=[\\s;]|$)"
+    }
+  },
+  "scope": "One response whose Content-Security-Policy script-src directive contains the `'unsafe-hashes'` keyword.",
+  "limitations": "One header value and one directive. The rule reports the keyword in script-src; it does not evaluate whether the policy also lists a hash that matches a handler in the page, because that comparison needs the document body and the policy together.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'self' 'unsafe-hashes'"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src 'self'; script-src 'unsafe-hashes' 'sha256-abc123='"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'self' 'sha256-abc123='"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'self'; style-src 'unsafe-hashes'"
+        }
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A policy that lists hashes no handler matches is still flagged; the finding is the keyword, not proof that a matching handler exists in the document.",
+  "linkedRules": [
+    "DPK-DAST-204"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:csp-scriptsrc-unsafe-hashes:scriptsrc-unsafe-hashes",
+  "validationStatus": "VALIDATED"
+}

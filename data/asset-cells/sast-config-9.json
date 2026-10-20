@@ -1,0 +1,188 @@
+[
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "go-ssrf-http-get",
+    "category": "server-side-request-forgery",
+    "cwe": "CWE-918",
+    "severity": "MEDIUM",
+    "title": "Server-side fetch with a computed URL in {lang} — review required",
+    "description": "net/http is called with a URL assembled at runtime rather than a literal. When any part of that URL comes from a request, the server can be steered to internal services, cloud metadata endpoints, or arbitrary hosts. The rule flags the non-literal call; whether the URL is attacker-influenced is a review decision.",
+    "remediation": "Resolve the destination against an allowlist of hosts and schemes, reject private and link-local address ranges after DNS resolution, and never pass request text directly to net/http.",
+    "limitation": "Lexical: matches http.Get/Post/Head with a non-literal argument; URLs built in a helper are out of scope.",
+    "scopeT": "Single-line match on a computed net/http request in {lang}.",
+    "fp": "Calls with a constant base URL concatenated to a fixed path segment are the accepted false positives.",
+    "recordDesc": "In {lang}, net/http receives a URL that is not a literal. Go performs no egress filtering of its own, and the default transport follows redirects, so a value derived from a query parameter can reach loopback services, RFC 1918 hosts, or the cloud metadata address. The call site looks like ordinary code because the type is still a string.",
+    "applicability": "{lang} services that fetch user-supplied or configured URLs.",
+    "risk": "Access to internal services and metadata endpoints; MEDIUM severity.",
+    "why": "The request URL is computed rather than constant.",
+    "fix": [
+      "Allowlist scheme and host before the call.",
+      "Reject private, loopback and link-local addresses after resolution."
+    ],
+    "verifyT": "An internal address is rejected by policy and the fetch returns a controlled error.",
+    "sinks": {
+      "go": [
+        "\\bhttp\\.(?:Get|Post|Head)\\(\\s*(?![\"'`])",
+        "http.Get(targetURL)",
+        "http.Get(\"https://api.example.com/v1/status\")",
+        "an allowlisted host resolved and checked before the call"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "js-samesite-none",
+    "category": "cookie-flags",
+    "cwe": "CWE-1275",
+    "severity": "MEDIUM",
+    "title": "Cookie set with SameSite=None in {lang} — review required",
+    "description": "A cookie is created with sameSite set to \"none\". Modern browsers only honour that attribute together with Secure, and the cookie becomes eligible to travel on cross-site requests. The rule flags the option; whether the cookie is sensitive and whether Secure is present is a review decision.",
+    "remediation": "Use SameSite=Lax or Strict unless cross-site delivery is required, and when None is required always pair it with secure: true.",
+    "limitation": "Lexical: matches a literal sameSite option on one line; option objects assembled elsewhere are out of scope.",
+    "scopeT": "Single-line match on sameSite: \"none\" in {lang}.",
+    "fp": "Cookies for a documented cross-site flow with Secure set are the accepted, reviewed exception.",
+    "recordDesc": "In {lang}, a cookie is written with SameSite=None. The attribute exists to permit cross-site delivery, which also means the cookie is attached to requests initiated by other origins. Without the Secure attribute browsers reject it outright; with Secure it still widens the CSRF surface compared with Lax. The decision should be explicit, not a default copied from a tutorial.",
+    "applicability": "{lang} services that set cookies with explicit attributes.",
+    "risk": "Cross-site request exposure and session misuse; MEDIUM severity.",
+    "why": "A cookie is explicitly opted into cross-site delivery.",
+    "fix": [
+      "Prefer SameSite=Lax.",
+      "When None is required, add secure: true and document the flow."
+    ],
+    "verifyT": "Re-inspection shows SameSite=Lax, or None paired with Secure and a documented cross-site requirement.",
+    "sinks": {
+      "javascript": [
+        "\\bsameSite\\s*:\\s*[\"']none[\"']",
+        "res.cookie(\"sid\", token, { sameSite: \"none\" })",
+        "res.cookie(\"sid\", token, { sameSite: \"lax\", httpOnly: true })",
+        "SameSite=Lax with httpOnly and secure"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "js-cookie-httponly",
+    "category": "cookie-flags",
+    "cwe": "CWE-1004",
+    "severity": "MEDIUM",
+    "title": "Cookie set without HttpOnly in {lang} — review required",
+    "description": "A cookie is written through res.cookie without the httpOnly option. Such a cookie is readable from JavaScript, so any XSS becomes immediate session theft. The rule matches single-line calls that lack the option; whether the cookie is sensitive is a review decision.",
+    "remediation": "Set httpOnly: true on every session or credential cookie, and keep such cookies out of client-side code entirely.",
+    "limitation": "Lexical: single-line res.cookie calls only; calls whose options are built elsewhere are out of scope.",
+    "scopeT": "Single-line match on a res.cookie call without httpOnly in {lang}.",
+    "fp": "Non-sensitive UI preference cookies are the accepted false positives.",
+    "recordDesc": "In {lang}, res.cookie writes a value without httpOnly. The browser then exposes the cookie to document.cookie, so a single script injection anywhere on the origin can read it and replay it. The option is easy to forget because the call works identically without it, and nothing at runtime signals the weaker setting.",
+    "applicability": "{lang} Express-style applications that set cookies directly.",
+    "risk": "Session theft through any script injection; MEDIUM severity.",
+    "why": "A cookie is written without the HttpOnly attribute.",
+    "fix": [
+      "Add httpOnly: true to sensitive cookies.",
+      "Keep session values out of client-side JavaScript."
+    ],
+    "verifyT": "The Set-Cookie header carries HttpOnly and document.cookie does not expose the value.",
+    "sinks": {
+      "javascript": [
+        "\\bres\\.cookie\\(\\s*(?![^\\n]*httpOnly)",
+        "res.cookie(\"sid\", token);",
+        "res.cookie(\"sid\", token, { httpOnly: true });",
+        "httpOnly on every sensitive cookie"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "js-cookie-secure",
+    "category": "cookie-flags",
+    "cwe": "CWE-614",
+    "severity": "MEDIUM",
+    "title": "Cookie set without the Secure attribute in {lang} — review required",
+    "description": "A cookie is written through res.cookie without secure: true. Browsers will send it over plain HTTP as well, so an on-path attacker on any http:// request to the host receives the value. The rule matches single-line calls that lack the option.",
+    "remediation": "Set secure: true on every cookie and serve the origin over HTTPS only, with HSTS enabled.",
+    "limitation": "Lexical: single-line res.cookie calls only; reverse-proxy behaviour is out of scope.",
+    "scopeT": "Single-line match on a res.cookie call without secure in {lang}.",
+    "fp": "Cookies deliberately scoped to local development over http are the accepted exception.",
+    "recordDesc": "In {lang}, res.cookie writes a cookie without the Secure attribute. The browser attaches it to http:// requests to the same host, including a redirect an attacker can trigger before HSTS is established. The value then travels in clear text where any hop can read it.",
+    "applicability": "{lang} services that set cookies and are reachable over TLS.",
+    "risk": "Cookie disclosure over cleartext transport; MEDIUM severity.",
+    "why": "A cookie is written without the Secure attribute.",
+    "fix": [
+      "Add secure: true.",
+      "Serve the origin over HTTPS with HSTS."
+    ],
+    "verifyT": "Set-Cookie carries Secure and an http:// request receives no cookie.",
+    "sinks": {
+      "javascript": [
+        "\\bres\\.cookie\\(\\s*(?![^\\n]*secure)",
+        "res.cookie(\"sid\", token);",
+        "res.cookie(\"sid\", token, { secure: true });",
+        "Secure on every cookie, HTTPS-only origin"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "python-samesite-none",
+    "category": "cookie-flags",
+    "cwe": "CWE-1275",
+    "severity": "MEDIUM",
+    "title": "Django or Flask cookie configured with SameSite=None in {lang} — review required",
+    "description": "A framework setting assigns samesite=\"None\" to session or CSRF cookies. The value opts the cookie into cross-site delivery; paired with a missing Secure flag it is rejected by browsers, and paired with Secure it still widens request exposure. The rule flags the literal setting.",
+    "remediation": "Use Lax unless a documented cross-site flow requires None, and set SESSION_COOKIE_SECURE and CSRF_COOKIE_SECURE when None is required.",
+    "limitation": "Lexical: matches a literal samesite assignment; settings loaded from environment variables are out of scope.",
+    "scopeT": "Single-line match on samesite=\"None\" in {lang}.",
+    "fp": "Explicit cross-site SSO cookies with Secure set are the accepted, reviewed exception.",
+    "recordDesc": "In {lang}, a cookie setting opts into SameSite=None. For session and CSRF cookies that widens the set of requests that carry them, which is precisely the property CSRF defences try to remove. The setting is often copied to fix an embedded login flow and then left in place for every cookie.",
+    "applicability": "{lang} Django/Flask deployments configuring cookie policy.",
+    "risk": "Cross-site request exposure for session cookies; MEDIUM severity.",
+    "why": "A framework cookie setting opts into cross-site delivery.",
+    "fix": [
+      "Prefer SESSION_COOKIE_SAMESITE = \"Lax\".",
+      "Add SESSION_COOKIE_SECURE when None is required."
+    ],
+    "verifyT": "Configuration shows Lax, or None with Secure and a documented cross-site flow.",
+    "sinks": {
+      "python": [
+        "[Ss][Aa][Mm][Ee][Ss][Ii][Tt][Ee]\\s*=\\s*[\"']None[\"']",
+        "SESSION_COOKIE_SAMESITE = \"None\"",
+        "SESSION_COOKIE_SAMESITE = \"Lax\"",
+        "Lax with SESSION_COOKIE_SECURE = True"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "swift-legacy-unarchive",
+    "category": "unsafe-deserialization",
+    "cwe": "CWE-502",
+    "severity": "HIGH",
+    "title": "Legacy keyed unarchiving in {lang} — review required",
+    "description": "NSKeyedUnarchiver.unarchiveTopLevelObjectWithData is the legacy entry point for decoding archived object graphs. It instantiates classes named inside the payload, so data from a network source can construct unintended objects and run their decoding hooks. The rule flags the API; payload provenance is a review decision.",
+    "remediation": "Decode untrusted data with a schema-bound format such as Codable/JSON, or use requiringSecureCoding with an explicit allowed-class set.",
+    "limitation": "Lexical call match; reachable gadget classes depend on the linked frameworks.",
+    "scopeT": "Single-line match on the legacy unarchive API in {lang}.",
+    "fp": "Archives produced and consumed inside one process from a trusted file are the accepted false positives.",
+    "recordDesc": "In {lang}, unarchiveTopLevelObjectWithData rebuilds an object graph from bytes. The archive names its own classes, so a crafted payload selects what the process instantiates and which decoding initialisers run. The newer API offers requiringSecureCoding; this legacy call does not, which is why it remains a deserialization sink.",
+    "applicability": "{lang} apps that decode keyed archives from files, messages, or the network.",
+    "risk": "Object injection leading to code execution; HIGH severity.",
+    "why": "Untrusted bytes are decoded through the legacy unarchiving API.",
+    "fix": [
+      "Use Codable or JSON for untrusted data.",
+      "If archives are required, enable requiringSecureCoding with an allowlist."
+    ],
+    "verifyT": "A payload naming an unlisted class is rejected before instantiation.",
+    "sinks": {
+      "swift": [
+        "\\bNSKeyedUnarchiver\\.unarchiveTopLevelObjectWithData\\s*\\(",
+        "let obj = try NSKeyedUnarchiver.unarchiveTopLevelObjectWithData(data)",
+        "let obj = try JSONDecoder().decode(Profile.self, from: data)",
+        "Codable decoding with no class names in the payload"
+      ]
+    }
+  }
+]

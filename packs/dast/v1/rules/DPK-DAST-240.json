@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-240",
+  "title": "PHP Debug Bar toolbar disclosed",
+  "description": "The response carries the PHP Debug Bar: the phpdebugbar element together with the PhpDebugBar script object is the toolbar that the debug bar package injects. It collects queries, request data and configuration for the current request.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "debug-exposure",
+  "remediation": "Disable the debug bar outside development and confirm production responses carry no toolbar markup.",
+  "limitation": "One response body. The rule reports the toolbar; it does not enumerate the collected panels and cannot show which values the collector captured.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*phpdebugbar)(?=[\\s\\S]*PhpDebugBar)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body><div id=\"phpdebugbar\"></div><script>var PhpDebugBar = {version: \"1.18\"};</script></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<!doctype html><html><body><div class=\"phpdebugbar\" data-phpdebugbar=\"1\"><span>PhpDebugBar</span></div></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body><div id=\"\"></div><script>var  = {version: \"1.18\"};</script></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1309"
+  ]
+}

@@ -1,46 +1,137 @@
 {
-  "schemaVersion": "drobon.pack.dast/v1",
-  "id": "DPK-DAST-006",
-  "title": "Cookie set without the HttpOnly flag",
-  "description": "A Set-Cookie response lacks the HttpOnly flag, so client-side script can read the cookie — any cross-site scripting flaw then becomes session theft. Cookie names and values are not inspected.",
-  "severity": "LOW",
-  "cwe": "CWE-1004",
-  "category": "cookie-flags",
-  "remediation": "Add the HttpOnly flag to every cookie that JavaScript does not need to read, alongside Secure and an explicit SameSite policy.",
-  "limitation": "One header value counts as one cookie: a folded multi-cookie single value may under-flag. Responses that set no cookies never match. No CWE is claimed: the app's own cookie rule omits one, so this rule omits it too.",
-  "check": {
-    "type": "cookie-missing-flag",
-    "flag": "HttpOnly"
-  },
-  "tests": [
-    {
-      "observation": {
-        "url": "https://example.com/",
-        "status": 200,
-        "headers": {
-          "set-cookie": "id=1; Path=/; Secure"
-        }
-      },
-      "match": true
-    },
-    {
-      "observation": {
-        "url": "https://example.com/",
-        "status": 200,
-        "headers": {
-          "set-cookie": "id=1; Path=/; Secure; HttpOnly"
-        }
-      },
-      "match": false
-    },
-    {
-      "observation": {
-        "url": "https://example.com/",
-        "status": 200,
-        "headers": {}
-      },
-      "match": false
+ "schemaVersion": "drobon.pack.dast/v1",
+ "id": "DPK-DAST-006",
+ "title": "Cookie set without the HttpOnly flag",
+ "description": "A Set-Cookie response lacks the HttpOnly flag, so client-side script can read the cookie \u2014 any cross-site scripting flaw then becomes session theft. Cookie names and values are not inspected.",
+ "severity": "LOW",
+ "cwe": "CWE-1004",
+ "category": "cookie-flags",
+ "remediation": "Add the HttpOnly flag to every cookie that JavaScript does not need to read, alongside Secure and an explicit SameSite policy.",
+ "limitation": "One header value counts as one cookie: a folded multi-cookie single value may under-flag. A flag attribute ignores its value, so `HttpOnly=1` still enables HttpOnly and is not reported. A header a user agent discards (no name=value pair, or a control character) stores no cookie and is not reported. A `SameSite=None` cookie without `Secure` is refused by browsers and is reported by DPK-DAST-071, so this rule does not report a missing HttpOnly flag on it: no cookie exists. Responses that set no cookies never match.",
+ "check": {
+  "type": "cookie-missing-flag",
+  "flag": "HttpOnly"
+ },
+ "tests": [
+  {
+   "observation": {
+    "url": "https://example.com/",
+    "status": 200,
+    "headers": {
+     "set-cookie": "id=1; Path=/; Secure"
     }
-  ],
-  "patternRefs": ["DPK-PAT-0006"]
+   },
+   "match": true
+  },
+  {
+   "observation": {
+    "url": "https://example.com/",
+    "status": 200,
+    "headers": {
+     "set-cookie": "id=1; Path=/; Secure; HttpOnly"
+    }
+   },
+   "match": false
+  },
+  {
+   "observation": {
+    "url": "https://example.com/",
+    "status": 200,
+    "headers": {}
+   },
+   "match": false
+  },
+  {
+   "observation": {
+    "url": "https://app.example/login",
+    "status": 200,
+    "headers": {
+     "set-cookie": "id=1; Path=/; Secure; HttpOnly ; SameSite=Lax"
+    }
+   },
+   "match": false
+  },
+  {
+   "observation": {
+    "url": "https://app.example/",
+    "status": 200,
+    "headers": {
+     "set-cookie": "id=1; HttpOnly=1"
+    },
+    "body": ""
+   },
+   "match": false
+  },
+  {
+   "observation": {
+    "url": "https://app.example/",
+    "status": 200,
+    "headers": {
+     "set-cookie": "=orphan-name"
+    },
+    "body": ""
+   },
+   "match": false
+  },
+  {
+   "observation": {
+    "url": "https://app.example/",
+    "status": 200,
+    "headers": {
+     "set-cookie": "id=1; Secure"
+    },
+    "body": ""
+   },
+   "match": true
+  },
+  {
+   "observation": {
+    "url": "https://app.example/",
+    "status": 200,
+    "headers": {
+     "set-cookie": "id=1; SameSite=None"
+    }
+   },
+   "match": false
+  },
+  {
+   "observation": {
+    "url": "https://app.example/",
+    "status": 200,
+    "headers": {
+     "set-cookie": "id=1; SameSite=None; Secure"
+    }
+   },
+   "match": true
+  },
+  {
+   "observation": {
+    "url": "https://app.example/",
+    "status": 200,
+    "headers": {
+     "set-cookie": [
+      "id=1; Secure; HttpOnly",
+      "theme=dark; Secure"
+     ]
+    }
+   },
+   "match": true
+  },
+  {
+   "observation": {
+    "url": "https://app.example/",
+    "status": 200,
+    "headers": {
+     "set-cookie": [
+      "id=1; Secure; HttpOnly",
+      "theme=dark; Secure; HttpOnly"
+     ]
+    }
+   },
+   "match": false
+  }
+ ],
+ "patternRefs": [
+  "DPK-PAT-0006"
+ ]
 }

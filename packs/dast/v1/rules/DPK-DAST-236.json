@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-236",
+  "title": "HashiCorp Nomad UI disclosed",
+  "description": "The response is the Nomad web UI: the Nomad name with the Jobs and Clients navigation identifies the workload orchestrator console. The console lists jobs, allocations and client nodes.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "debug-exposure",
+  "remediation": "Enable ACLs for the UI, keep it on the management network, and require a token through an authenticating proxy.",
+  "limitation": "One response body. The rule reports the UI; it does not stop a job and cannot show whether the request would be authorised.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*Nomad)(?=[\\s\\S]*Jobs)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Nomad</title></head><body><div id=\"nomad-ui\"></div><nav><a href=\"/ui/jobs\">Jobs</a><a href=\"/ui/nodes\">Clients</a></nav></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<!doctype html><html><body><h1>Nomad</h1><ul><li>Jobs</li><li>Clients</li><li>Servers</li></ul></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title></title></head><body><div id=\"-ui\"></div><nav><a href=\"/ui/\"></a><a href=\"/ui/nodes\">Clients</a></nav></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1305"
+  ]
+}

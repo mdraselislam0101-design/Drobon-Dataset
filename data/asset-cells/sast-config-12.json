@@ -1,0 +1,715 @@
+[
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "bash-chmod-world-writable",
+    "category": "access-control",
+    "cwe": "CWE-732",
+    "severity": "MEDIUM",
+    "title": "World-writable permissions granted in a shell script in {lang} — review required",
+    "description": "chmod with a 777 or a+w mode gives every local account write access to the target. A file that a service reads or executes then becomes a persistence path for any unprivileged user on the host. The rule flags the mode; whether the target is inside a protected directory is a review decision.",
+    "remediation": "Grant the owning user and group the modes they need, for example 750 for directories and 640 for files, and never use 777.",
+    "limitation": "Lexical: matches a literal 777 or a+w mode; a mode computed from a variable is out of scope.",
+    "scopeT": "Single-line match on a world-writable chmod in {lang}.",
+    "fp": "A shared temporary directory created by a package installer is the accepted false positive.",
+    "recordDesc": "In {lang}, chmod grants write permission to everyone. World-writable files break the ownership boundary the rest of the system relies on, and when the target is read by a privileged process it becomes a route from an unprivileged account to that privilege. The mode is often added to silence a permission error during deployment.",
+    "applicability": "{lang} deployment and maintenance scripts.",
+    "risk": "Local privilege escalation through a shared writable path; MEDIUM severity.",
+    "why": "A world-writable mode is applied.",
+    "fix": [
+      "Use the narrowest mode that works.",
+      "Fix ownership instead of widening permissions."
+    ],
+    "verifyT": "stat shows no other-write bit on the target and the service still writes its own files.",
+    "sinks": {
+      "shell": [
+        "\\bchmod\\s+(?:-R )?(?:0?777|a\\+w|o\\+w)\\b",
+        "chmod 777 /var/app/data",
+        "chmod 750 /var/app/data",
+        "an owner/group mode without other-write"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "c-strcpy-into-fixed-buffer",
+    "category": "buffer-overflow",
+    "cwe": "CWE-120",
+    "severity": "HIGH",
+    "title": "Unbounded copy into a fixed-size buffer in {lang} — review required",
+    "description": "strcpy copies until the source terminator with no knowledge of the destination size. When the source length is influenced by input, the write overruns the buffer and can overwrite adjacent state, including a return address. The rule flags the call; whether the source can exceed the buffer is a review decision.",
+    "remediation": "Use snprintf with the destination size, or a bounded copy such as strlcpy where the platform provides it.",
+    "limitation": "Lexical: matches strcpy calls; a wrapper that already bounds the copy is out of scope.",
+    "scopeT": "Single-line match on strcpy in {lang}.",
+    "fp": "A source whose length is proven constant and shorter than the destination is the accepted false positive.",
+    "recordDesc": "In {lang}, strcpy writes an unbounded string into a fixed buffer. The C library cannot detect the overflow, and compilers only add checks when hardening flags are enabled, so the failure appears as memory corruption rather than a clean error. Input-driven copies through this function are a classic route to code execution.",
+    "applicability": "{lang} native code that handles external strings.",
+    "risk": "Memory corruption and possible code execution; HIGH severity.",
+    "why": "A copy has no destination bound.",
+    "fix": [
+      "Use snprintf with sizeof(destination).",
+      "Verify truncation is handled explicitly."
+    ],
+    "verifyT": "A maximal-length input is truncated and the process does not crash under a sanitizer build.",
+    "sinks": {
+      "c": [
+        "\\bstrcpy\\s*\\(",
+        "strcpy(dst, user_input);",
+        "snprintf(dst, sizeof(dst), \"%s\", user_input);",
+        "a bounded copy with an explicit size"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "docker-add-remote-url",
+    "category": "supply-chain",
+    "cwe": "CWE-494",
+    "severity": "MEDIUM",
+    "title": "Remote artifact fetched without an integrity check during the build in {lang} — review required",
+    "description": "ADD with an http or https source downloads content into the image without verifying a checksum or signature. The build trusts whatever the remote host returns at build time, so a compromised or replaced artifact enters every image built from the recipe. The rule flags the remote ADD; whether the artifact is pinned elsewhere is a review decision.",
+    "remediation": "Download in a RUN step, verify a published checksum, and only then place the artifact in the image.",
+    "limitation": "Lexical: matches ADD with a remote URL; a following RUN that verifies a checksum is not linked to the download.",
+    "scopeT": "Single-line match on ADD from a remote URL in {lang}.",
+    "fp": "A build that verifies a pinned digest in the same layer is the accepted exception.",
+    "recordDesc": "In {lang}, ADD pulls a file from a URL. Docker fetches the content at build time and offers no integrity metadata for it, so the artifact depends entirely on transport and server trust. Builds are often cached, which means one compromised fetch can persist across many rebuilds.",
+    "applicability": "{lang} images that embed tools or vendor artifacts.",
+    "risk": "Supply-chain substitution of build content; MEDIUM severity.",
+    "why": "A remote artifact is added without a checksum.",
+    "fix": [
+      "Download with curl in a RUN step.",
+      "Verify a pinned checksum before use."
+    ],
+    "verifyT": "A build against a modified artifact fails the checksum verification.",
+    "sinks": {
+      "dockerfile": [
+        "\\bADD\\s+https?://",
+        "ADD https://example.internal/tool.tar.gz /opt/tool.tar.gz",
+        "ADD vendor/tool.tar.gz /opt/tool.tar.gz",
+        "download plus checksum verification"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "dockerfile-npm-token-arg",
+    "category": "hardcoded-credential",
+    "cwe": "CWE-798",
+    "severity": "MEDIUM",
+    "title": "Registry token passed as a build argument in {lang} — review required",
+    "description": "ARG NPM_TOKEN accepts a registry credential as build input. Build arguments are recorded in image history and are visible to every step, so the token remains recoverable from the built image even after the layer that used it. The rule flags the argument name; whether the value is supplied at build time is a review decision.",
+    "remediation": "Use a BuildKit secret mount (RUN --mount=type=secret) or a pre-authenticated .npmrc that is removed in the same layer.",
+    "limitation": "Lexical: matches token-like ARG names; a secret mounted through BuildKit is out of scope and is the recommended form.",
+    "scopeT": "Single-line match on a credential-named build argument in {lang}.",
+    "fp": "A build argument that only carries a non-secret registry URL is the accepted false positive.",
+    "recordDesc": "In {lang}, a credential is passed through ARG. Docker stores build arguments in the image configuration and history, so a token supplied this way survives as long as the image does and is readable by anyone who can pull it. BuildKit secret mounts exist specifically to keep the value out of image layers.",
+    "applicability": "{lang} images that install private packages.",
+    "risk": "Registry credential disclosure from the image; MEDIUM severity.",
+    "why": "A secret is supplied as a build argument.",
+    "fix": [
+      "Use RUN --mount=type=secret.",
+      "Avoid ARG for any credential value."
+    ],
+    "verifyT": "docker history shows no token value and the secret mount is not persisted.",
+    "sinks": {
+      "dockerfile": [
+        "\\bARG\\s+\\w*(?:TOKEN|SECRET|PASSWORD|API_KEY)\\b",
+        "ARG NPM_TOKEN",
+        "ARG NPM_REGISTRY_URL",
+        "BuildKit secret mount instead of an ARG"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "gha-workflow-write-permission",
+    "category": "ci-security",
+    "cwe": "CWE-250",
+    "severity": "MEDIUM",
+    "title": "Workflow grants write permissions to every scope in {lang} — review required",
+    "description": "permissions: write-all gives the workflow token write access to contents, packages, issues, pull requests and actions. Any compromised step inherits that token and can push code or publish artifacts even when the job only needed to read. The rule flags the workflow-level grant; whether a later job narrows it is a review decision.",
+    "remediation": "Default the workflow to contents: read and grant the specific write scope only on the job that requires it.",
+    "limitation": "Lexical: matches a workflow-level write-all; a job-level permissions block is reported by the same pattern.",
+    "scopeT": "Single-line match on permissions: write-all in {lang}.",
+    "fp": "A release workflow whose single job genuinely publishes packages is the accepted, reviewed exception.",
+    "recordDesc": "In {lang}, the workflow token is granted every write scope. GitHub Actions exposes that token to every step, including third-party actions, so the effective privilege of the entire pipeline is the maximum scope. Narrow read defaults exist to keep a compromised dependency from pushing to the default branch.",
+    "applicability": "{lang} repositories that run automation on pull requests.",
+    "risk": "Repository or package takeover through a compromised step; MEDIUM severity.",
+    "why": "The workflow token can write to every scope.",
+    "fix": [
+      "Set permissions: contents: read at workflow level.",
+      "Grant a specific write scope on the job that needs it."
+    ],
+    "verifyT": "A dry-run step cannot push and only the release job holds packages: write.",
+    "sinks": {
+      "gha": [
+        "\\bpermissions\\s*:\\s*write-all\\b",
+        "permissions: write-all",
+        "permissions: read-all",
+        "read defaults with a job-scoped write"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "gha-unpinned-action-ref",
+    "category": "ci-security",
+    "cwe": "CWE-829",
+    "severity": "MEDIUM",
+    "title": "Third-party action referenced by a mutable tag in {lang} — review required",
+    "description": "uses: with a branch or major-version tag runs whatever the upstream repository points at today. A tag can be moved or a compromised maintainer can retarget it, so the workflow executes code that was never reviewed. The rule flags mutable refs; pinning to a commit digest is the accepted practice.",
+    "remediation": "Pin each third-party action to a full commit SHA and let a dependency bot propose digest updates.",
+    "limitation": "Lexical: matches branch and major-version refs; digest pins and local actions are not reported.",
+    "scopeT": "Single-line match on a mutable action reference in {lang}.",
+    "fp": "A first-party action in the same organisation referenced by a protected tag is the accepted exception.",
+    "recordDesc": "In {lang}, an action is referenced by a mutable tag. Tags are ordinary git refs and the upstream repository can repoint them at any commit, which means the code that runs in your pipeline is not the code you reviewed. Digest pins make the executed object immutable and auditable.",
+    "applicability": "{lang} workflows that call third-party actions.",
+    "risk": "Execution of substituted third-party code with workflow credentials; MEDIUM severity.",
+    "why": "The action reference is mutable.",
+    "fix": [
+      "Pin to a full commit SHA.",
+      "Automate digest updates through a reviewed bot."
+    ],
+    "verifyT": "Every uses: line ends in a 40-character digest and CI rejects tag references.",
+    "sinks": {
+      "gha": [
+        "\\buses\\s*:\\s*[^:\\s]+@(?:v\\d+(?:\\.\\d+){0,3}|main|master)\\b",
+        "      - uses: actions/checkout@v4",
+        "      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683",
+        "a full commit digest pin"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "powershell-downloadstring",
+    "category": "code-injection",
+    "cwe": "CWE-94",
+    "severity": "HIGH",
+    "title": "Remote content executed in PowerShell in {lang} — review required",
+    "description": "Invoke-Expression combined with DownloadString downloads a script and executes it in the current session, with no signature or hash check. Whoever controls the URL controls the code that runs with the operator privileges. The rule flags the pair; whether the URL is trusted is a review decision.",
+    "remediation": "Download to a file, verify a published signature or hash, and run it through a constrained execution policy.",
+    "limitation": "Lexical: matches the two cmdlets on one pipeline; obfuscated variants that split the string are out of scope.",
+    "scopeT": "Single-line match on Invoke-Expression with a download in {lang}.",
+    "fp": "A bootstrap script that verifies a signed package before execution is the accepted exception.",
+    "recordDesc": "In {lang}, a downloaded string is evaluated as code. The combination is the standard one-liner for remote script execution and is equally usable by an attacker who has obtained command execution; it also bypasses application allowlisting that would have blocked a saved script file.",
+    "applicability": "{lang} provisioning and administrative scripts.",
+    "risk": "Arbitrary code execution with operator privileges; HIGH severity.",
+    "why": "A remote script is evaluated without verification.",
+    "fix": [
+      "Save the script and verify its signature.",
+      "Execute the verified file instead of an expression."
+    ],
+    "verifyT": "A modified payload fails signature validation and nothing executes.",
+    "sinks": {
+      "powershell": [
+        "Invoke-Expression[^\\n]*DownloadString",
+        "Invoke-Expression (New-Object Net.WebClient).DownloadString(\"http://example.internal/a.ps1\")",
+        "$pkg = Get-AuthenticodeSignature ./tool.ps1; if ($pkg.Status -eq \"Valid\") { & ./tool.ps1 }",
+        "signature-verified download executed as a file"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "groovy-runtime-exec",
+    "category": "command-injection",
+    "cwe": "CWE-78",
+    "severity": "HIGH",
+    "title": "OS command executed from a string in {lang} — review required",
+    "description": "String.execute() passes its receiver to the system shell. When the string contains request data, shell metacharacters append commands that run with the JVM identity. The rule flags the call; whether the string is externally influenced is a review decision.",
+    "remediation": "Use ProcessBuilder with an argument list and validate each argument against an allowlist.",
+    "limitation": "Lexical: matches .execute() on a string; ProcessBuilder usage is out of scope and is the safer form.",
+    "scopeT": "Single-line match on String.execute in {lang}.",
+    "fp": "Constant commands assembled from literals are the accepted false positives.",
+    "recordDesc": "In {lang}, a command string is executed through the GDK convenience method. The method delegates to the shell, so quoting is the only defence and it is fragile across platforms. Jenkins pipelines frequently reach this shape when a parameter is interpolated into a shell step.",
+    "applicability": "{lang} scripts and pipeline steps that call system tools.",
+    "risk": "Arbitrary command execution with application privileges; HIGH severity.",
+    "why": "A command string is handed to the shell.",
+    "fix": [
+      "Use ProcessBuilder with an argument list.",
+      "Allowlist dynamic arguments."
+    ],
+    "verifyT": "A metacharacter payload is treated as literal argument text.",
+    "sinks": {
+      "groovy": [
+        "[\"'][^\"'\\n]*[\"']\\.execute\\s*\\(",
+        "\"ls ${params.dir}\".execute()",
+        "new ProcessBuilder(\"ls\", params.dir).start()",
+        "ProcessBuilder with an argument list"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "clojure-runtime-exec",
+    "category": "command-injection",
+    "cwe": "CWE-78",
+    "severity": "HIGH",
+    "title": "OS command executed from a runtime string in {lang} — review required",
+    "description": "clojure.java.shell/sh with :cmd and a raw string passes the command to the system shell. Request data inside that string becomes shell syntax, so a single semicolon appends another command. The rule flags the call; whether the string is externally influenced is a review decision.",
+    "remediation": "Call sh with a vector of separate arguments and no shell, and validate each argument against an allowlist.",
+    "limitation": "Lexical: matches sh calls with a :cmd key; argument-vector calls are not reported.",
+    "scopeT": "Single-line match on shell execution in {lang}.",
+    "fp": "Constant command strings with no external input are the accepted false positives.",
+    "recordDesc": "In {lang}, a shell command is built as a string. The shell re-parses it, so any metacharacter in an interpolated value starts a new command. The vector form of the same function avoids the shell entirely and removes the class of bug.",
+    "applicability": "{lang} services and tooling that invoke external programs.",
+    "risk": "Shell injection with application privileges; HIGH severity.",
+    "why": "A command string reaches the shell.",
+    "fix": [
+      "Pass a vector of arguments.",
+      "Do not use :cmd with interpolated values."
+    ],
+    "verifyT": "A payload with a semicolon is passed as one literal argument.",
+    "sinks": {
+      "clojure": [
+        "\\(\\s*sh\\s+[^\\n]*:cmd\\b",
+        "(sh :cmd (str \"convert \" user-file))",
+        "(sh \"convert\" user-file)",
+        "an argument vector without a shell"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "perl-two-arg-open",
+    "category": "command-injection",
+    "cwe": "CWE-78",
+    "severity": "MEDIUM",
+    "title": "Two-argument open in {lang} — review required",
+    "description": "open with two arguments interprets the filename as a mode string, so a name beginning with a pipe starts a command and a name beginning with > truncates a file. When the name comes from input, a single character changes a read into execution. The rule flags the two-argument form; whether the name is externally influenced is a review decision.",
+    "remediation": "Use the three-argument open with an explicit mode and a lexical filehandle, and validate the path.",
+    "limitation": "Lexical: matches open with exactly two arguments on one line; a filehandle passed separately is out of scope.",
+    "scopeT": "Single-line match on two-argument open in {lang}.",
+    "fp": "A literal filename constant is the accepted false positive.",
+    "recordDesc": "In {lang}, open is called in its two-argument form. Perl parses the second argument for a leading mode character, so \"|cmd\" executes a command and \">file\" writes. This behaviour is documented but easy to forget when the filename is a variable that previously only held paths.",
+    "applicability": "{lang} scripts that open files named by input or configuration.",
+    "risk": "Command execution or file truncation through a crafted name; MEDIUM severity.",
+    "why": "The open mode is derived from the filename string.",
+    "fix": [
+      "Use open(my $fh, \"<\", $path).",
+      "Validate the path against an allowlist."
+    ],
+    "verifyT": "A filename beginning with a pipe is rejected as an invalid path.",
+    "sinks": {
+      "perl": [
+        "\\bopen\\s*\\(\\s*[^,()\\n]+,\\s*(?:my )?\\$",
+        "open(FH, $filename);",
+        "open(my $fh, \"<\", $filename);",
+        "a three-argument open with an explicit mode"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "rust-tls-danger-accept",
+    "category": "transport-security",
+    "cwe": "CWE-295",
+    "severity": "HIGH",
+    "title": "TLS certificate verification bypassed in {lang} — review required",
+    "description": "danger_accept_invalid_certs makes the HTTP client accept any certificate, including expired, self-signed or attacker-supplied ones. The connection still looks encrypted, but there is no authentication of the peer. The rule flags the builder option; whether the endpoint is public is a review decision.",
+    "remediation": "Remove the option, load the correct root store, and add pinning or mTLS where the peer identity matters.",
+    "limitation": "Lexical: matches the builder call; a rustls verifier that implements custom validation is out of scope.",
+    "scopeT": "Single-line match on the insecure certificate option in {lang}.",
+    "fp": "A local test harness with a generated CA installed in the trust store is the accepted exception.",
+    "recordDesc": "In {lang}, the client is configured to accept invalid certificates. TLS without peer validation protects only against passive observers; an on-path attacker can present their own certificate and read or modify the traffic. The option is usually added to reach a staging host with a self-signed certificate and then ships.",
+    "applicability": "{lang} services and CLIs that call HTTPS endpoints.",
+    "risk": "Traffic interception and response tampering; HIGH severity.",
+    "why": "Certificate validation is disabled on the client.",
+    "fix": [
+      "Remove danger_accept_invalid_certs.",
+      "Install the correct CA in the trust store."
+    ],
+    "verifyT": "A self-signed endpoint is rejected and the trusted endpoint still connects.",
+    "sinks": {
+      "rust": [
+        "danger_accept_invalid_certs\\s*\\(\\s*true\\s*\\)",
+        "let client = reqwest::Client::builder().danger_accept_invalid_certs(true).build()?;",
+        "let client = reqwest::Client::builder().build()?;",
+        "the default verifier with a correct trust store"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "rust-unsafe-transmute",
+    "category": "memory-safety",
+    "cwe": "CWE-843",
+    "severity": "MEDIUM",
+    "title": "Unchecked type reinterpretation via transmute in {lang} — review required",
+    "description": "std::mem::transmute reinterprets the bits of one type as another with no validation. If the source size or layout is not guaranteed equal, or the destination type has invariants such as a non-zero discriminant, the result is undefined behaviour. The rule flags the call; whether the layouts were checked is a review decision.",
+    "remediation": "Use a checked conversion such as TryFrom, or bytemuck with a Pod bound where a zero-copy reinterpretation is genuinely required.",
+    "limitation": "Lexical: matches transmute calls; a transmute behind a sound abstraction is still reported for review.",
+    "scopeT": "Single-line match on std::mem::transmute in {lang}.",
+    "fp": "A documented, layout-asserted conversion with a compile-time size check is the accepted exception.",
+    "recordDesc": "In {lang}, memory is reinterpreted without a check. Rust relies on type invariants for safety, and transmute is the explicit escape hatch that can violate them: an invalid enum discriminant or a misaligned reference produces undefined behaviour rather than a panic. The call compiles whenever the sizes match, so the mistake is invisible until it is exploited or fuzzed.",
+    "applicability": "{lang} crates that parse binary formats or optimise hot paths.",
+    "risk": "Undefined behaviour and memory-safety violations; MEDIUM severity.",
+    "why": "A raw bit-level cast bypasses type invariants.",
+    "fix": [
+      "Use TryFrom or a validated conversion.",
+      "Where zero-copy is required, use bytemuck with a Pod bound."
+    ],
+    "verifyT": "A fuzz corpus over the parser reports no undefined behaviour under Miri or ASan.",
+    "sinks": {
+      "rust": [
+        "\\b(?:std::)?mem::transmute\\s*[<(]",
+        "let header: Header = unsafe { std::mem::transmute(bytes) };",
+        "let header = Header::try_from(bytes)?;",
+        "a checked conversion with TryFrom"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "julia-runtime-eval",
+    "category": "code-injection",
+    "cwe": "CWE-95",
+    "severity": "HIGH",
+    "title": "Dynamic evaluation of a runtime string in {lang} — review required",
+    "description": "eval parses and executes a string in the module scope. A string that carries request data becomes arbitrary Julia code with the process privileges, and macro expansion at that point can reach the filesystem and network. The rule flags the call; whether the string is externally influenced is a review decision.",
+    "remediation": "Parse input into data structures and dispatch through a fixed function table instead of evaluating strings.",
+    "limitation": "Lexical: matches eval calls; a string literal evaluated at load time is still reported for review.",
+    "scopeT": "Single-line match on eval in {lang}.",
+    "fp": "A REPL or notebook helper that evaluates operator-typed input is the accepted exception.",
+    "recordDesc": "In {lang}, eval compiles a runtime string. Julia evaluates in a module context, so the string can define methods, import packages and call anything the module can reach. When the string contains a request value, the entire language is the attack surface.",
+    "applicability": "{lang} services and data pipelines that accept expressions.",
+    "risk": "Arbitrary code execution with process privileges; HIGH severity.",
+    "why": "A string is compiled and executed at runtime.",
+    "fix": [
+      "Parse input into typed data.",
+      "Dispatch through a fixed function table."
+    ],
+    "verifyT": "A payload containing a function call is rejected by the parser.",
+    "sinks": {
+      "julia": [
+        "\\beval\\s*\\(\\s*(?!\")",
+        "result = eval(user_expression)",
+        "result = parse(Int, user_count)",
+        "a parser with an explicit allowlist"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "julia-shell-interpolation",
+    "category": "command-injection",
+    "cwe": "CWE-78",
+    "severity": "HIGH",
+    "title": "Shell command built from string interpolation in {lang} — review required",
+    "description": "Backtick command literals interpolate values into a shell command. A value containing a semicolon or command substitution is parsed by the shell, so the process runs commands the caller did not intend. The rule flags the interpolation; whether the value is externally influenced is a review decision.",
+    "remediation": "Pass each argument as a separate interpolated element ($(arg)) and avoid shell-string concatenation.",
+    "limitation": "Lexical: matches interpolation inside a backtick literal; argument-vector calls built from arrays are out of scope.",
+    "scopeT": "Single-line match on interpolated command literal in {lang}.",
+    "fp": "Interpolation of a value already validated as a path segment is the accepted false positive.",
+    "recordDesc": "In {lang}, a command is assembled by interpolation inside backticks. Julia passes the resulting string to the shell, so quoting rules apply and interpolated text is not escaped. Separate interpolation forms ($var inside the literal as its own argument) are safer because they avoid re-parsing.",
+    "applicability": "{lang} scripts that invoke external tools.",
+    "risk": "Shell injection with process privileges; HIGH severity.",
+    "why": "A shell command is assembled from interpolated text.",
+    "fix": [
+      "Interpolate each argument separately.",
+      "Validate values against an allowlist."
+    ],
+    "verifyT": "A semicolon payload is passed as literal argument text.",
+    "sinks": {
+      "julia": [
+        "`[^`\\n]*\\s\\$[A-Za-z_]",
+        "run(`convert $user_file out.png`)",
+        "run(`convert $(user_file) out.png`)",
+        "separate interpolated arguments with no shell string"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "crystal-shell-interpolation",
+    "category": "command-injection",
+    "cwe": "CWE-78",
+    "severity": "HIGH",
+    "title": "Shell command built from interpolation in {lang} — review required",
+    "description": "Backtick command literals interpolate values into a shell invocation. A value containing shell metacharacters appends commands that run with the process identity. The rule flags the interpolation; whether the value is externally influenced is a review decision.",
+    "remediation": "Use Process.run with an argument array so no shell is involved, and validate dynamic arguments.",
+    "limitation": "Lexical: matches interpolation inside a command literal; argument arrays are out of scope.",
+    "scopeT": "Single-line match on interpolated command execution in {lang}.",
+    "fp": "Interpolation of constants defined in the same file is the accepted false positive.",
+    "recordDesc": "In {lang}, a command literal interpolates a value. The literal is executed through the shell, so quoting is the only barrier and it is not applied automatically. Binary names with spaces or user-supplied arguments are the usual trigger.",
+    "applicability": "{lang} services and scripts that call external programs.",
+    "risk": "Shell injection with process privileges; HIGH severity.",
+    "why": "Interpolated text is passed to the shell.",
+    "fix": [
+      "Use Process.run with an argument array.",
+      "Allowlist dynamic values."
+    ],
+    "verifyT": "A metacharacter payload is treated as a single argument.",
+    "sinks": {
+      "crystal": [
+        "`[^`\\n]*#\\{",
+        "output = `ls #{user_dir}`",
+        "output = Process.run(\"ls\", [user_dir])",
+        "Process.run with an argument array"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "nim-exec-process",
+    "category": "weak-cryptography",
+    "cwe": "CWE-338",
+    "severity": "MEDIUM",
+    "title": "Non-cryptographic random module used where a secret may be generated in {lang} — review required",
+    "description": "random.randomize seeds a Mersenne Twister-style generator that is not cryptographically secure. Values derived from it are predictable once enough output is observed, which is fatal for tokens, reset codes and keys. The rule flags the API; whether the value is security-relevant is a review decision.",
+    "remediation": "Use a CSPRNG such as std/sysrand or the operating system generator for every security value.",
+    "limitation": "Lexical: matches randomize and rand calls from the stdlib random module; non-security sampling is still reported.",
+    "scopeT": "Single-line match on the stdlib random module in {lang}.",
+    "fp": "Simulations, games and test data are the accepted false positives.",
+    "recordDesc": "In {lang}, the standard random module is used. The generator is designed for speed and statistical quality, not unpredictability against an adversary; its state can be reconstructed from observed outputs. Security values need an interface backed by the operating system entropy source.",
+    "applicability": "{lang} services that mint identifiers or tokens.",
+    "risk": "Predictable security values; MEDIUM severity.",
+    "why": "A non-cryptographic generator may feed a secret.",
+    "fix": [
+      "Use std/sysrand for security values.",
+      "Keep the random module for non-security sampling."
+    ],
+    "verifyT": "Token generation calls the OS entropy interface and produces no reproducible sequence.",
+    "sinks": {
+      "nim": [
+        "\\brandomize\\s*\\(|\\brandom\\.rand\\s*\\(",
+        "randomize()",
+        "let token = urandom(32)",
+        "urandom for every security value"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "perl-marshal-retrieve",
+    "category": "unsafe-deserialization",
+    "cwe": "CWE-502",
+    "severity": "HIGH",
+    "title": "Perl object graph restored from untrusted bytes in {lang} — review required",
+    "description": "Storable::retrieve rebuilds a Perl data structure, including blessed references, from a byte stream. A crafted payload can instantiate classes and trigger their magic methods during restoration, which is object injection rather than plain data parsing. The rule flags the call; whether the bytes come from a trusted store is a review decision.",
+    "remediation": "Store untrusted data as JSON or another schema-bound format, and never thaw bytes received from a request or a shared queue.",
+    "limitation": "Lexical: matches retrieve and thaw calls; a custom deserializer that validates the stream first is out of scope.",
+    "scopeT": "Single-line match on Storable retrieval in {lang}.",
+    "fp": "A cache written and read only by the same trusted process is the accepted exception.",
+    "recordDesc": "In {lang}, a Storable stream is thawed. The format preserves object identity and class names, so restoration can construct blessed objects whose methods run during or after loading. Treating the stream as data while the library treats it as code is the root of the confusion.",
+    "applicability": "{lang} services that cache or exchange serialized structures.",
+    "risk": "Object injection leading to code execution; HIGH severity.",
+    "why": "An object graph is reconstructed from raw bytes.",
+    "fix": [
+      "Use JSON for untrusted data.",
+      "Restrict Storable to stores only trusted processes can write."
+    ],
+    "verifyT": "A crafted payload naming an arbitrary class is rejected before any method runs.",
+    "sinks": {
+      "perl": [
+        "\\b(?:Storable::)?(?:retrieve|thaw)\\s*\\(",
+        "my $obj = Storable::retrieve($payload);",
+        "my $data = decode_json($payload);",
+        "JSON decoding with schema validation"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "elixir-erlang-binary-to-term",
+    "category": "unsafe-deserialization",
+    "cwe": "CWE-502",
+    "severity": "HIGH",
+    "title": "Erlang term decoded from untrusted bytes in {lang} — review required",
+    "description": ":erlang.binary_to_term reconstructs arbitrary Erlang terms, including funs and atoms, from a binary. A crafted payload can exhaust the atom table or instantiate references a caller did not expect; the :safe option exists precisely because the default trusts the input. The rule flags the call; whether the bytes are attacker-controlled is a review decision.",
+    "remediation": "Decode only with :erlang.binary_to_term(bytes, [:safe]) from trusted producers, and prefer JSON for external data.",
+    "limitation": "Lexical: matches binary_to_term calls and reports whether :safe is present on the same line.",
+    "scopeT": "Single-line match on binary_to_term without :safe in {lang}.",
+    "fp": "Cluster-internal distribution payloads from a trusted node are the accepted exception.",
+    "recordDesc": "In {lang}, an Erlang term is decoded from a binary. The decoder will create atoms, funs and pids, so a remote payload can consume the finite atom table or produce terms that later code mishandles. The :safe flag limits creation but does not make external bytes equal to validated data.",
+    "applicability": "{lang} services that decode terms from queues, caches or sockets.",
+    "risk": "Resource exhaustion and unexpected object construction; HIGH severity.",
+    "why": "A term is decoded without the safe option.",
+    "fix": [
+      "Decode with [:safe] for trusted internal producers.",
+      "Use JSON for external input."
+    ],
+    "verifyT": "A payload containing a fun or a new atom is rejected.",
+    "sinks": {
+      "elixir": [
+        ":erlang\\.binary_to_term\\s*\\((?![^)\\n]*:safe)",
+        "term = :erlang.binary_to_term(payload)",
+        "term = :erlang.binary_to_term(payload, [:safe])",
+        "binary_to_term with :safe on trusted input only"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "haskell-read-user-input",
+    "category": "code-injection",
+    "cwe": "CWE-502",
+    "severity": "MEDIUM",
+    "title": "Haskell Read instance applied to external text in {lang} — review required",
+    "description": "read parses a value from a String using its Read instance. For types with derived instances the parse can construct nested structures of arbitrary depth, so a small input can exhaust memory or stack, and the partial function throws on malformed input. The rule flags read on a non-literal string; whether the input is bounded is a review decision.",
+    "remediation": "Parse with a schema-aware library such as aeson, bound the input size and depth, and return an explicit error type.",
+    "limitation": "Lexical: matches read applied to a variable; reads of string literals are out of scope.",
+    "scopeT": "Single-line match on read over external text in {lang}.",
+    "fp": "A REPL or test helper reading a fixed literal is the accepted false positive.",
+    "recordDesc": "In {lang}, read converts external text into a value. The derived Read parser accepts deeply nested input and the function is partial, so hostile input can crash the process or consume unbounded resources. Data from outside the program should go through a parser with size limits and a typed error channel.",
+    "applicability": "{lang} services that accept configuration or messages as text.",
+    "risk": "Denial of service and unhandled parse failure; MEDIUM severity.",
+    "why": "A partial text parser is applied to external input.",
+    "fix": [
+      "Use aeson or another schema-bound parser.",
+      "Bound input size and depth."
+    ],
+    "verifyT": "A deeply nested payload is rejected by the depth limit with a typed error.",
+    "sinks": {
+      "haskell": [
+        "\\bread\\s+(?!\")[a-zA-Z_(]",
+        "let value = read inputText :: Config",
+        "let value = eitherDecode inputBytes :: Either String Config",
+        "a bounded, schema-aware decoder"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "vba-shell-run",
+    "category": "command-injection",
+    "cwe": "CWE-78",
+    "severity": "HIGH",
+    "title": "Shell execution from VBA or VB in {lang} — review required",
+    "description": "Shell or ShellExecute runs an external program with a command line assembled in code. Office documents and VB applications that do this turn a document open or a form field into command execution with the user identity. The rule flags the call; whether the command line carries external text is a review decision.",
+    "remediation": "Remove shell execution from document code, and in VB applications use ProcessStartInfo with an argument list and a fixed executable.",
+    "limitation": "Lexical: matches Shell and ShellExecute calls; WMI-based execution is out of scope.",
+    "scopeT": "Single-line match on shell execution in {lang}.",
+    "fp": "A signed installer invoking a fixed executable is the accepted, reviewed exception.",
+    "recordDesc": "In {lang}, the runtime shell helper is invoked. The macro or application runs with the signed-in user, so a document that reaches this call can start any program the user can start. This is the execution primitive behind a large share of malicious Office documents, which is why it warrants review even in internal tooling.",
+    "applicability": "{lang} Office macros and desktop applications.",
+    "risk": "Arbitrary program execution with the user identity; HIGH severity.",
+    "why": "A program is launched from document or application code.",
+    "fix": [
+      "Remove the call from documents.",
+      "Use ProcessStartInfo with a fixed executable and argument list."
+    ],
+    "verifyT": "A document with macros disabled opens without launching any process.",
+    "sinks": {
+      "vbnet": [
+        "\\bShell(?:Execute)?\\s*(?:\\(|\\\")",
+        "Shell \"cmd.exe /c \" & userCommand",
+        "Process.Start(New ProcessStartInfo(\"notepad.exe\"))",
+        "a fixed executable launched through ProcessStartInfo"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "pascal-runtime-exec",
+    "category": "command-injection",
+    "cwe": "CWE-78",
+    "severity": "HIGH",
+    "title": "External program executed from a command line in {lang} — review required",
+    "description": "Exec or ExecuteProcess starts an external program from a command line string. When the string contains input, arguments can be appended or a different program selected through path tricks. The rule flags the call; whether the command line is externally influenced is a review decision.",
+    "remediation": "Resolve a fixed executable path and pass arguments separately with TProcess, validating each value.",
+    "limitation": "Lexical: matches Exec and ExecuteProcess calls; TProcess usage is out of scope.",
+    "scopeT": "Single-line match on program execution in {lang}.",
+    "fp": "A constant command line in a build tool is the accepted false positive.",
+    "recordDesc": "In {lang}, a program is launched from a single command-line string. The string is parsed by the platform, so quoting and separator rules decide where the executable ends and arguments begin; input containing spaces or quotes changes that split. Passing arguments as a list removes the ambiguity.",
+    "applicability": "{lang} desktop tools and service helpers.",
+    "risk": "Execution of unintended programs or arguments; HIGH severity.",
+    "why": "A command line is assembled and executed as one string.",
+    "fix": [
+      "Use TProcess with a fixed executable.",
+      "Pass arguments as separate entries."
+    ],
+    "verifyT": "An argument containing spaces and quotes reaches the child as one literal argument.",
+    "sinks": {
+      "pascal": [
+        "\\b(?:Exec|ExecuteProcess)\\s*\\(",
+        "Exec(\"/bin/sh\", \"-c \" + userCmd);",
+        "proc.Executable := \"/usr/bin/convert\"; proc.Parameters.Add(userFile);",
+        "TProcess with separate parameters"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "matlab-system-call",
+    "category": "command-injection",
+    "cwe": "CWE-78",
+    "severity": "HIGH",
+    "title": "Operating-system command executed from a MATLAB string in {lang} — review required",
+    "description": "system executes its string argument in the platform shell. A value from a file, a database or a web request that reaches that string can append commands running with the MATLAB process identity. The rule flags the call; whether the string is externally influenced is a review decision.",
+    "remediation": "Validate the command against an allowlist and pass arguments through a quoted, escaped builder rather than raw concatenation.",
+    "limitation": "Lexical: matches system calls; a wrapper that builds commands from constants is out of scope.",
+    "scopeT": "Single-line match on system in {lang}.",
+    "fp": "Constant commands in analysis scripts are the accepted false positives.",
+    "recordDesc": "In {lang}, system hands a string to the shell. MATLAB scripts often process filenames and identifiers read from data files, so the string can contain text the analyst did not type. Shell metacharacters in that text are interpreted, which turns a data file into a command source.",
+    "applicability": "{lang} analysis pipelines that shell out to external tools.",
+    "risk": "Command execution with the analyst or service identity; HIGH severity.",
+    "why": "A shell command string is executed.",
+    "fix": [
+      "Allowlist the command and its arguments.",
+      "Escape values before building the string."
+    ],
+    "verifyT": "A filename containing a semicolon is processed as a single path.",
+    "sinks": {
+      "matlab": [
+        "\\bsystem\\s*\\(\\s*[^)\\n]*\\+|\\bsystem\\s*\\(\\s*[a-zA-Z_]\\w*\\s*\\)",
+        "system([\"convert \" + filename + \" out.png\"]);",
+        "system(\"convert input.png out.png\");",
+        "an escaped, allowlisted command builder"
+      ]
+    }
+  },
+  {
+    "kind": "sast",
+    "framing": "flag",
+    "class": "solidity-selfdestruct",
+    "category": "code-injection",
+    "cwe": "CWE-284",
+    "severity": "MEDIUM",
+    "title": "Contract destruction call present in {lang} — review required",
+    "description": "selfdestruct removes the contract code and forwards its balance to a caller-supplied address. If the guard around it can be bypassed, the contract becomes unusable and its funds move. The rule flags the call; whether the guard is sound and whether the contract must outlive the deployment is a review decision.",
+    "remediation": "Remove selfdestruct, or gate it behind a multi-signature with a timelock and a documented migration procedure.",
+    "limitation": "Lexical: matches selfdestruct and suicide calls; the guard condition is not evaluated.",
+    "scopeT": "Single-line match on contract destruction in {lang}.",
+    "fp": "A deliberately ephemeral factory that the design documents as destroyable is the accepted exception.",
+    "recordDesc": "In {lang}, the contract can destroy itself. Destruction is irreversible, sends the remaining balance to the address the caller chose, and makes every stored state unreachable. Guard mistakes in this path are usually permanent and financially final.",
+    "applicability": "{lang} contracts that hold value or durable state.",
+    "risk": "Permanent loss of contract functionality and funds; MEDIUM severity.",
+    "why": "An irreversible destruction primitive is reachable from code.",
+    "fix": [
+      "Remove selfdestruct.",
+      "Use a multi-signature with a timelock if migration is required."
+    ],
+    "verifyT": "No call path reaches selfdestruct and an upgrade procedure is documented.",
+    "sinks": {
+      "solidity": [
+        "\\b(?:selfdestruct|suicide)\\s*\\(",
+        "function close() public onlyOwner { selfdestruct(payable(owner)); }",
+        "function close() public onlyOwner { paused = true; }",
+        "no destruction path in the deployed bytecode"
+      ]
+    }
+  }
+]

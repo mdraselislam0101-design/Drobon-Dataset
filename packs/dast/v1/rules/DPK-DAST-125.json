@@ -1,0 +1,69 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-125",
+  "title": "Profiler link exposed (X-Debug-Token-Link header)",
+  "description": "The response carries X-Debug-Token-Link, which is the Symfony profiler endpoint for the request that produced the page. The link is a token, so anyone who received the response can open the profiler and read collected request data: configuration, SQL, cache keys and, depending on the panels installed, credentials.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-215",
+  "category": "information-disclosure",
+  "remediation": "Run the profiler only in development, and strip X-Debug-Token and X-Debug-Token-Link in production. If the profiler must run, restrict it to a trusted network and rotate the debug token store.",
+  "limitation": "One header value. The rule reports the profiler link; it cannot tell whether the profiler endpoint still accepts the token or which panels are enabled.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "X-Debug-Token-Link",
+    "valuePattern": "^\\s*\\S"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "X-Debug-Token-Link": "/_profiler/8f2c1a"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "X-Debug-Token-Link": "https://app.example/_profiler/8f2c1a"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "X-Debug-Token-Link": ""
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "X-Debug-Token": "8f2c1a"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {}
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1194"
+  ]
+}

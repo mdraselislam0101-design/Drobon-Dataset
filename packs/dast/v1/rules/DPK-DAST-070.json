@@ -6,12 +6,12 @@
   "severity": "MEDIUM",
   "cwe": "CWE-693",
   "category": "security-headers",
-  "remediation": "Strengthen the value (explicit script source lists).",
+  "remediation": "Immediate: replace `*` in `script-src` with the exact script origins, or move to nonces or hashes with `'strict-dynamic'` where the markup allows. Durable: generate the source list from the assets the application actually serves, and keep `default-src` restrictive so an omitted directive cannot fall back to a wildcard. Trade-off: third-party widgets need explicit origins, and narrowing will break any that relied on the wildcard.",
   "limitation": "Value check: a host wildcard such as *.example.com is out of scope. It cannot confirm the deployment context.",
   "check": {
     "type": "response-header-matches",
     "header": "Content-Security-Policy",
-    "valuePattern": "script-src(?=\\s)[^;*]*?(?<=\\s)\\*(?=\\s*(?:;|$))"
+    "valuePattern": "^(?:(?!script-src(?=[\\s;]|$))[^;]*;\\s*)*script-src(?=[\\s;]|$)[^;]*?(?<=\\s)(?:\\*|(?:https?|wss?)://\\*)(?=\\s|;|$)"
   },
   "tests": [
     {
@@ -29,7 +29,7 @@
         "url": "https://app.example/",
         "status": 200,
         "headers": {
-          "Content-Security-Policy": "script-src 'self' *"
+          "Content-Security-Policy": "script-src 'self' * 'unsafe-inline'"
         }
       },
       "match": true
@@ -49,7 +49,7 @@
         "url": "https://app.example/",
         "status": 200,
         "headers": {
-          "Content-Security-Policy": "script-src 'self' https://cdn.example.com"
+          "Content-Security-Policy": "script-src 'self'; script-src *"
         }
       },
       "match": false
@@ -59,7 +59,7 @@
         "url": "https://app.example/",
         "status": 200,
         "headers": {
-          "Content-Security-Policy": "script-src *.example.com"
+          "Content-Security-Policy": "script-src https://*.cdn.example"
         }
       },
       "match": false
@@ -69,17 +69,7 @@
         "url": "https://app.example/",
         "status": 200,
         "headers": {
-          "Content-Security-Policy": "default-src *"
-        }
-      },
-      "match": false
-    },
-    {
-      "observation": {
-        "url": "https://app.example/",
-        "status": 200,
-        "headers": {
-          "Content-Security-Policy": "script-src-elem *"
+          "Content-Security-Policy": "default-src *; script-src 'self'"
         }
       },
       "match": false
@@ -91,6 +81,26 @@
         "headers": {}
       },
       "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src https://*"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src http://* 'self'"
+        }
+      },
+      "match": true
     }
   ],
   "patternRefs": [

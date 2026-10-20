@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-139",
+  "title": "Apache Tomcat error report disclosed in a response",
+  "description": "The response is the Tomcat error report page: it carries the server version banner and an Exception Report section with the stack trace. The banner names the exact Tomcat version, and the report prints class names, source paths and, in some configurations, the request parameters.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-209",
+  "category": "debug-exposure",
+  "remediation": "Configure a custom error page for the application and suppress the Tomcat version banner (server.info), so the container does not render its own report to clients.",
+  "limitation": "Two body markers. The version banner alone is reported by the server-banner rule; this rule requires the exception report section too.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*Apache Tomcat/)(?=[\\s\\S]*Exception Report)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/boom",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<h1>HTTP Status 500 - Internal Server Error</h1><hr><p><b>type</b> Exception report</p><p><b>message</b> boom</p><address>Apache Tomcat/9.0.82</address>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/api/boom",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "Exception Report<br>java.lang.IllegalStateException at com.example.Api.handle(Api.java:41)<br>Apache Tomcat/10.1.18"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body>Home</body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/boom",
+        "status": 500,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"status\":500,\"error\":\"Internal Server Error\"}"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1208"
+  ]
+}

@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-093",
+  "title": "Content-Security-Policy script-src allows plaintext HTTP origins",
+  "description": "The script-src directive names an http: source, so the policy permits scripts to be fetched over plaintext. An active network attacker can substitute the script in transit, and the policy then authorises the injected code instead of blocking it. The check reports the directive value; it does not claim interception is happening.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-319",
+  "category": "csp-weakness",
+  "remediation": "Serve every script source over HTTPS and drop http: sources from script-src (upgrade-insecure-requests can help during migration).",
+  "limitation": "Observation-level: matches a plaintext source inside script-src only. Other fetch directives that carry http: sources are separate checks.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Content-Security-Policy",
+    "valuePattern": "^(?:(?!script-src(?=[\\s;]|$))[^;]*;\\s*)*script-src(?=[\\s;]|$)[^;]*?(?<=\\s)http:(?=\\s|;|/|$)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'self' http://cdn.example"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src http:"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'self'; script-src http:"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "script-src 'self' https://cdn.example"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "img-src http:"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {}
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1162"
+  ]
+}

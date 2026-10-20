@@ -1,0 +1,71 @@
+{
+ "schemaVersion": "drobon.dast.overlap-ledger/v1",
+ "asOf": "2026-10-20",
+ "note": "Machine-checked record of DAST rules whose evidence is a strict subset of another rule's evidence. The ledger does not retire or rescope any rule: permanent asset IDs change only with owner approval. It exists so a new overlapping rule cannot be added silently, and so the documented overlap is discoverable from the rule it affects.",
+ "method": "Rule A is a subset of rule B when (1) A and B read the same response header, (2) every positive observation example of A also matches B, and (3) B matches at least one positive example that A does not. Pairs are recomputed from the rule files by scripts/validate-dast-overlaps.mjs on every run; this file only records the human review of pairs that the classifier does not treat as expected absence coverage.",
+ "expectedAbsenceClass": {
+  "description": "A pair is EXPECTED_ABSENCE_COVERAGE when the wider rule observes a header or directive being absent (check types missing-response-header and response-header-missing-directive) or is listed in absenceLike. Such a rule necessarily fires on many fixtures that another rule owns, because a missing header makes every per-directive check true. This is documented behaviour of the corpus, not duplication.",
+  "checkTypes": [
+   "missing-response-header",
+   "response-header-missing-directive"
+  ]
+ },
+ "absenceLike": [
+  {
+   "ruleId": "DPK-DAST-075",
+   "reason": "The rule is typed as a value pattern but its pattern matches the absence of both object-src and default-src, so it behaves like an absence rule and fires on every policy without a default-src fallback."
+  }
+ ],
+ "pairs": [
+  {
+   "narrow": "DPK-DAST-050",
+   "wide": "DPK-DAST-056",
+   "header": "Location",
+   "kind": "EVIDENCE_SUBSET",
+   "status": "BLOCKED_PENDING_OWNER_DECISION",
+   "rationale": "A protocol-relative Location target resolves to another host, so every case DPK-DAST-050 reports is also reported by DPK-DAST-056 (redirect to another host). DPK-DAST-050 is the subject of the existing owner decision OD-1, so it is not retired, rescoped or edited here.",
+   "action": "Retire or rescope only after the OD-1 decision. Until then both rules fire on the same header and the consumer sees the host-change finding as the substantive one.",
+   "documentedIn": "DPK-DAST-056"
+  },
+  {
+   "narrow": "DPK-DAST-076",
+   "wide": "DPK-DAST-047",
+   "header": "Cross-Origin-Opener-Policy",
+   "kind": "EVIDENCE_SUBSET",
+   "status": "REVIEWED_RETAINED",
+   "rationale": "DPK-DAST-076 reports the explicit unsafe-none token; DPK-DAST-047 reports any COOP value that does not isolate the browsing context, which includes unsafe-none. The narrower rule names the deliberate opt-out, the wider rule covers same-origin-allow-popups and unrecognised tokens as well.",
+   "action": "Keep both: the specific wording is what a reviewer needs when a team has deliberately written unsafe-none. The overlap is stated in DPK-DAST-047's limitation.",
+   "documentedIn": "DPK-DAST-047"
+  },
+  {
+   "narrow": "DPK-DAST-085",
+   "wide": "DPK-DAST-056",
+   "header": "Location",
+   "kind": "EVIDENCE_SUBSET",
+   "status": "REVIEWED_RETAINED",
+   "rationale": "The two rules ask different questions about the same header: DPK-DAST-056 asks whether the target leaves the origin, DPK-DAST-085 asks whether the target carries embedded credentials. A cross-host userinfo target satisfies both, but a same-host userinfo target satisfies only 085 and a cross-host target without userinfo satisfies only 056.",
+   "action": "Keep both. The overlap is stated in DPK-DAST-085's limitation.",
+   "documentedIn": "DPK-DAST-085"
+  },
+  {
+   "narrow": "DPK-DAST-110",
+   "wide": "DPK-DAST-094",
+   "header": "Refresh",
+   "kind": "EVIDENCE_SUBSET",
+   "status": "REVIEWED_RETAINED",
+   "rationale": "DPK-DAST-094 reports any absolute or protocol-relative Refresh target, including a same-host https target, because the header alone cannot show where the value came from. DPK-DAST-110 reports the subset whose target is plaintext, which is unsafe on its own and is rated MEDIUM rather than LOW.",
+   "action": "Keep both: 094 is the review row, 110 is the actionable downgrade. The relationship is stated in DPK-DAST-094's limitation and is a candidate for consolidation in the next owner review.",
+   "documentedIn": "DPK-DAST-094"
+  },
+  {
+   "narrow": "DPK-DAST-118",
+   "wide": "DPK-DAST-094",
+   "header": "Refresh",
+   "kind": "EVIDENCE_SUBSET",
+   "status": "REVIEWED_RETAINED",
+   "rationale": "DPK-DAST-118 reports the protocol-relative Refresh target, which is a subset of the absolute-or-protocol-relative set that DPK-DAST-094 reports. 118 states the resolution behaviour that makes the value cross-origin after parsing; 094 states only that a navigation target is present.",
+   "action": "Keep both. The relationship is stated in DPK-DAST-094's limitation.",
+   "documentedIn": "DPK-DAST-094"
+  }
+ ]
+}

@@ -1,0 +1,89 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-118",
+  "title": "Refresh header uses a protocol-relative target",
+  "description": "The Refresh header names a protocol-relative target (//host/path). Browsers resolve it against the current scheme, so the navigation leaves the origin while the value itself carries no scheme for a reviewer or a filter to notice. The rule is distinct from DPK-DAST-094 (absolute Refresh target) and DPK-DAST-110 (plaintext Refresh target): here the value is cross-origin only after resolution.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-601",
+  "category": "open-redirect",
+  "remediation": "Use a path-relative Refresh target (a single leading slash) or an absolute https URL on an allow-listed host. Do not accept a Refresh value from request input.",
+  "limitation": "One Refresh value. The rule does not resolve the target, follow the navigation, or judge whether the destination is trusted.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Refresh",
+    "valuePattern": "(?:^|;)\\s*url\\s*=\\s*['\"]?\\s*//"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Refresh": "0; url=//evil.example/x"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Refresh": "5; URL='//cdn.example/a'"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Refresh": "0; url=/home"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Refresh": "0; url=https://app.example/home"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Refresh": "0; url=http://app.example/home"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Refresh": "30"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {}
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1187"
+  ]
+}

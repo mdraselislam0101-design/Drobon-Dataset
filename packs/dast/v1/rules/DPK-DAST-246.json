@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-246",
+  "title": "Tomcat manager application disclosed",
+  "description": "The response is the Tomcat manager application: the manager heading together with the Server Information block and the deploy form identifies the administrative console. That console deploys and undeploys web applications.",
+  "severity": "HIGH",
+  "cwe": "CWE-200",
+  "category": "debug-exposure",
+  "remediation": "Remove the manager application from production, or restrict it to an administrative network with a manager role and a strong credential. Never publish /manager on the application ingress.",
+  "limitation": "One response body. The rule reports the manager page; it does not submit the deploy form and cannot show whether the request would be authorised.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*Tomcat\\ Web\\ Application\\ Manager)(?=[\\s\\S]*Server\\ Information)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Tomcat Web Application Manager</title></head><body><h1>/manager/html</h1><table><tr><td>Server Information</td><td>Apache Tomcat/9.0.82</td></tr></table><form action=\"/manager/html/deploy\"><input name=\"deployPath\"></form></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<!doctype html><html><body><h2>Tomcat Web Application Manager</h2><p>Server Information</p><a href=\"deploy\">Deploy directory or WAR file located on server</a></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title></title></head><body><h1>/manager/html</h1><table><tr><td></td><td>Apache Tomcat/9.0.82</td></tr></table><form action=\"/manager/html/deploy\"><input name=\"deployPath\"></form></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Welcome</title></head><body><h1>It works</h1></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1315"
+  ]
+}

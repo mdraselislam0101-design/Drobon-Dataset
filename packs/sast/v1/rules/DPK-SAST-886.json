@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-886",
+  "title": "SQLite statement built from an interpolated string in swift — review required",
+  "description": "sqlite3_exec compiles and runs a complete SQL string. Swift string interpolation splices values directly into that string, so any quote or UNION in a request value becomes part of the statement. The rule flags the call; the provenance of interpolated values is a review decision.",
+  "severity": "HIGH",
+  "cwe": "CWE-89",
+  "category": "sql-injection",
+  "remediation": "Prepare the statement with sqlite3_prepare_v2 and bind values with sqlite3_bind_*, never interpolate them into SQL.",
+  "limitation": "Lexical: matches sqlite3_exec calls only; statements built in a helper are out of scope.",
+  "languages": [
+    "swift"
+  ],
+  "patterns": [
+    {
+      "source": "\\bsqlite3_exec\\s*\\("
+    }
+  ],
+  "tests": [
+    {
+      "line": "sqlite3_exec(db, \"SELECT * FROM users WHERE name = '\\(name)'\", nil, nil, nil)",
+      "match": true
+    },
+    {
+      "line": "# audit: sqlite3_exec(db, \"SELECT * FROM users WHERE name = '\\(name)'\", nil, nil, nil) present",
+      "match": true
+    },
+    {
+      "line": "sqlite3_prepare_v2(db, \"SELECT * FROM users WHERE name = ?\", -1, &stmt, nil)",
+      "match": false
+    },
+    {
+      "line": "# verified: sqlite3_prepare_v2(db, \"SELECT * FROM users WHERE name = ?\", -1, &stmt, nil)",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1069"
+  ]
+}

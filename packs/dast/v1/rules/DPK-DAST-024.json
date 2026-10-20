@@ -2,16 +2,16 @@
   "schemaVersion": "drobon.pack.dast/v1",
   "id": "DPK-DAST-024",
   "title": "Weak Strict-Transport-Security max-age header value",
-  "description": "The response carries Strict-Transport-Security max-age with a weak or deprecated value. A weak value grants partial protection at best. This check matches the weak value directly.",
+  "description": "The Strict-Transport-Security max-age is shorter than one year or the value is quoted. A short duration leaves a recurring window in which an interceptable request can reset the policy; a quoted value is not valid delta-seconds, so a strict parser discards the whole header. The rule reports both shapes.",
   "severity": "LOW",
   "cwe": "CWE-693",
   "category": "security-headers",
-  "remediation": "Strengthen the value (max-age=31536000).",
-  "limitation": "Value check: it cannot confirm the deployment context.",
+  "remediation": "Send max-age as a bare unsigned integer of at least 31536000, with no quotes and no units, and keep the directive on every HTTPS response.",
+  "limitation": "Value check on one header value. It cannot see how the client parsed it: the quoted shape is discarded by a strict parser, which is closer in effect to a missing header (DPK-DAST-016) than to a short duration.",
   "check": {
     "type": "response-header-matches",
     "header": "Strict-Transport-Security",
-    "valuePattern": "max-age\\s*=\\s*[0-9]{1,7}\\b"
+    "valuePattern": "max-age\\s*=\\s*\"[^\"\\n]*\"|max-age\\s*=\\s*(?:[0-9]{1,7}|1[0-9]{7}|2[0-9]{7}|30[0-9]{6}|31[0-4][0-9]{5}|315[0-2][0-9]{4}|3153[0-5][0-9]{3})\\b"
   },
   "tests": [
     {
@@ -39,7 +39,37 @@
         "url": "https://app.example/",
         "status": 200,
         "headers": {
+          "Strict-Transport-Security": "max-age=10000000"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Strict-Transport-Security": "max-age=31535999"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
           "Strict-Transport-Security": "max-age=31536000"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Strict-Transport-Security": "max-age=36000000; includeSubDomains"
         }
       },
       "match": false
@@ -51,6 +81,36 @@
         "headers": {}
       },
       "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Strict-Transport-Security": "max-age=\"300\""
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Strict-Transport-Security": "max-age=\"31536000\""
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Strict-Transport-Security": "max-age=\"86400\"; includeSubDomains"
+        }
+      },
+      "match": true
     }
   ],
   "patternRefs": [

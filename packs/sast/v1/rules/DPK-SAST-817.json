@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-817",
+  "title": "Legacy cipher with RUN openssl enc -des -in app.tar -out app.enc (dockerfile) — review required",
+  "description": "The command RUN openssl enc -des -in app.tar -out app.enc encrypts with the single DES family, whose 56-bit keys are exhaustible and whose block size is far below modern guidance. The cipher is broken regardless of the passphrase. Use an authenticated cipher with a real KDF (a modern authenticated cipher). This lexical rule flags the cipher flag.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-327",
+  "category": "weak-cryptography",
+  "remediation": "Re-encrypt with an authenticated cipher and a modern KDF (a modern authenticated cipher).",
+  "limitation": "Lexical, line-based: matches the cipher flag; data already encrypted under the old scheme needs a migration plan.",
+  "languages": [
+    "dockerfile"
+  ],
+  "patterns": [
+    {
+      "source": "\\b(?:openssl\\s+enc\\b[^\\n]*\\s-des(?:3|-ede3)?\\b)"
+    }
+  ],
+  "tests": [
+    {
+      "line": "RUN openssl enc -des -in app.tar -out app.enc",
+      "match": true
+    },
+    {
+      "line": "# audit: RUN openssl enc -des -in app.tar -out app.enc present",
+      "match": true
+    },
+    {
+      "line": "RUN openssl enc -aes-256-gcm -in app.tar -out app.enc",
+      "match": false
+    },
+    {
+      "line": "# verified: RUN openssl enc -aes-256-gcm -in app.tar -out app.enc",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-0995"
+  ]
+}

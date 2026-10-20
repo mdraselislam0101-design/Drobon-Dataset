@@ -1,0 +1,71 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-158",
+  "title": "Refresh header targets a script scheme",
+  "description": "The Refresh header carries a url= target whose scheme is javascript: or vbscript:. The header exists to send the browser to another document, so a script scheme turns a redirect control into an inline script sink: wherever the value is derived from request data, an attacker can place markup that executes in the page origin.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-601",
+  "category": "open-redirect",
+  "remediation": "Build the Refresh target from a fixed allowlist of paths, not from request data, and never emit a script scheme. Prefer an HTTP 3xx redirect, which cannot carry a script scheme, and treat any existing javascript: target in configuration as a defect to remove.",
+  "limitation": "One header value. The rule reports the scheme the header names; it cannot prove the value is attacker-influenced, and some browsers block Refresh navigation to script schemes outright, so impact depends on the client.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Refresh",
+    "valuePattern": "^\\s*[0-9]*\\s*;?\\s*url\\s*=\\s*[\"\\']?\\s*(?:javascript|vbscript)\\s*:"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Refresh": "0; url=javascript:alert(document.cookie)"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Refresh": "5;URL=\"vbscript:msgbox(1)\""
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Refresh": "0; url=https://example.com/"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Refresh": "0; url=//example.com/"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Refresh": "30"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1227"
+  ]
+}

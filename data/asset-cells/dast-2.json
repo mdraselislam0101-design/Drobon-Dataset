@@ -1,1361 +1,1739 @@
 [
-  {
-    "class": "header-missing-2",
-    "kind": "dast",
-    "category": "security-headers",
-    "cwe": "CWE-693",
-    "severity": "MEDIUM",
-    "framing": "custom",
-    "title": "Missing {name} response header",
-    "description": "The response carries no {name} header. Its absence forfeits the protection the header provides. This check evaluates a normal observation and confirms the header is absent.",
-    "remediation": "Emit {name} on every response ({safe}).",
-    "limitation": "Header-name check: it cannot judge whether the header value is correct.",
-    "scopeT": "Single response: confirm the header is absent.",
-    "fp": "Non-browser endpoints are the common accepted case.",
-    "recordDesc": "{name} is a response header with no equivalent protection when absent. Responses carrying no such header fail this check.",
-    "applicability": "HTTP responses serving browser clients.",
-    "risk": "Loss of the header's protection; MEDIUM severity.",
-    "why": "Responses carry no {name} header.",
-    "fix": [
-      "Emit {name} on every response.",
-      "Confirm at the edge and the origin."
+ {
+  "class": "header-missing-2",
+  "kind": "dast",
+  "category": "security-headers",
+  "cwe": "CWE-693",
+  "severity": "MEDIUM",
+  "framing": "custom",
+  "title": "Missing {name} response header",
+  "description": "The response carries no {name} header. Its absence forfeits the protection the header provides. This check evaluates a normal observation and confirms the header is absent.",
+  "remediation": "Immediate: decide explicitly whether the header belongs on this response and, where it does, send the recommended value across the whole origin rather than on a single route. Durable: keep security headers in one middleware or edge configuration so a new route cannot omit them, and record the decision for headers the application deliberately does not send so a later reviewer does not re-add them by habit. Trade-off: an added header only helps if it is consistent \u2014 a value present on some routes and absent on others gives a false sense of coverage.",
+  "limitation": "Header-name check: it cannot judge whether the header value is correct.",
+  "scopeT": "Single response: confirm the header is absent.",
+  "fp": "Non-browser endpoints are the common accepted case.",
+  "recordDesc": "{name} is a response header with no equivalent protection when absent. Responses carrying no such header fail this check.",
+  "applicability": "HTTP responses serving browser clients.",
+  "risk": "Loss of the header's protection; MEDIUM severity.",
+  "why": "Responses carry no {name} header.",
+  "fix": [
+   "Decide per header whether the origin should send it.",
+   "Send the recommended value across the whole origin, not one route.",
+   "Record deliberate omissions so they are not re-added by habit."
+  ],
+  "verifyT": "Request several routes, including an error response, and confirm the header is either present with the intended value or deliberately absent everywhere.",
+  "cells": [
+   {
+    "suffix": "xpcp",
+    "lang": "http",
+    "name": "X-Permitted-Cross-Domain-Policies",
+    "safe": "none",
+    "check": {
+     "type": "missing-response-header",
+     "header": "X-Permitted-Cross-Domain-Policies"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/login",
+       "status": 200,
+       "headers": {
+        "Server": "web"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-Permitted-Cross-Domain-Policies": "none"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 500,
+       "headers": {
+        "X-Permitted-Cross-Domain-Policies": "none"
+       }
+      },
+      "match": false
+     }
     ],
-    "verifyT": "Rescan observes the header.",
-    "cells": [
-      {
-        "suffix": "xpcp",
-        "lang": "http",
-        "name": "X-Permitted-Cross-Domain-Policies",
-        "safe": "none",
-        "check": {
-          "type": "missing-response-header",
-          "header": "X-Permitted-Cross-Domain-Policies"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Content-Type": "text/html"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/login",
-              "status": 200,
-              "headers": {
-                "Server": "web"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "X-Permitted-Cross-Domain-Policies": "none"
-              }
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 500,
-              "headers": {
-                "X-Permitted-Cross-Domain-Policies": "none"
-              }
-            },
-            "match": false
-          }
-        ]
+    "overrides": {
+     "severity": "LOW",
+     "description": "The response omits X-Permitted-Cross-Domain-Policies. The header governs which crossdomain.xml files legacy Adobe clients may read from this origin. Modern browsers stopped using the mechanism, so absence matters only while a legacy client still talks to the site; the finding documents an unset legacy control.",
+     "remediation": "Send X-Permitted-Cross-Domain-Policies: none while any legacy client can reach the origin, and remove crossdomain.xml files that grant broad access. Where no such client exists, record that the header is unnecessary.",
+     "limitation": "Header-name check on a legacy control. It cannot tell whether a legacy client still consumes the origin, so a modern-only deployment is reported exactly like a live one.",
+     "recordDesc": "No X-Permitted-Cross-Domain-Policies header was sent. A legacy client falls back to its own default and the site cannot state that cross-domain policy files are disallowed, so a forgotten crossdomain.xml stays effective for that client class.",
+     "why": "The response carries no X-Permitted-Cross-Domain-Policies header.",
+     "fix": [
+      "Remove crossdomain.xml files that grant broad access.",
+      "Send none while a legacy client can still reach the origin."
+     ],
+     "verifyT": "Request the origin and confirm the header is none, or confirm no legacy client consumes the origin.",
+     "risk": "Legacy cross-domain policy reachable; LOW severity because modern browsers no longer use it."
+    }
+   },
+   {
+    "suffix": "expectct",
+    "lang": "http",
+    "name": "Expect-CT header",
+    "safe": "enforce with report-uri",
+    "check": {
+     "type": "missing-response-header",
+     "header": "Expect-CT"
+    },
+    "overrides": {
+     "title": "Expect-CT header absent (deprecated header, informational)",
+     "description": "Expect-CT is a deprecated response header. Chromium deprecated it from version 107, and browsers enforce Certificate Transparency without it. Its absence does not weaken a current browser. This informational check is kept so the deprecated header is not reintroduced as a requirement.",
+     "remediation": "No action is required on the response itself: Expect-CT was deprecated because browsers no longer act on it, so its absence is expected and is reported for inventory completeness only. Durable: remove the header from any configuration template that still sets it so a future deployment does not reintroduce a directive nothing enforces, and police Certificate Transparency from the CT logs or from your certificate monitoring instead. Trade-off: if you previously relied on Expect-CT report-only to detect mis-issued certificates, that signal has to move to a CT-log monitor before the header is removed.",
+     "limitation": "Header-name check on a deprecated header. Absence is not a current weakness.",
+     "why": "Expect-CT is deprecated; its absence does not weaken current browsers.",
+     "fix": [
+      "Take no action to add `Expect-CT`; browsers no longer act on it.",
+      "Remove `Expect-CT` from configuration templates that still set it.",
+      "Monitor Certificate Transparency from the CT logs instead."
+     ],
+     "verifyT": "Confirm no production response sets `Expect-CT` and that CT monitoring still reports the certificate; treat a remaining occurrence as inventory noise rather than a defect.",
+     "recordDesc": "Expect-CT is deprecated in current browsers. Its absence is informational and carries no current exposure.",
+     "risk": "Informational: no current exposure from absence; LOW severity.",
+     "fp": "Any deployment: the header is deprecated, so absence is expected.",
+     "scopeT": "Single response: header absence, informational only.",
+     "severity": "LOW"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       }
       },
-      {
-        "suffix": "expectct",
-        "lang": "http",
-        "name": "Expect-CT header",
-        "safe": "enforce with report-uri",
-        "check": {
-          "type": "missing-response-header",
-          "header": "Expect-CT"
-        },
-        "overrides": {
-          "title": "Expect-CT header absent (deprecated header, informational)",
-          "description": "Expect-CT is a deprecated response header. Chromium deprecated it from version 107, and browsers enforce Certificate Transparency without it. Its absence does not weaken a current browser. This informational check is kept so the deprecated header is not reintroduced as a requirement.",
-          "remediation": "No action needed. Do not add the deprecated Expect-CT header.",
-          "limitation": "Header-name check on a deprecated header. Absence is not a current weakness.",
-          "why": "Expect-CT is deprecated; its absence does not weaken current browsers.",
-          "fix": [
-            "Do not add the deprecated Expect-CT header."
-          ],
-          "verifyT": "Rescan reports this check as informational; no Expect-CT header is required.",
-          "recordDesc": "Expect-CT is deprecated in current browsers. Its absence is informational and carries no current exposure.",
-          "risk": "Informational: no current exposure from absence; LOW severity.",
-          "fp": "Any deployment: the header is deprecated, so absence is expected.",
-          "scopeT": "Single response: header absence, informational only.",
-          "severity": "LOW"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Content-Type": "text/html"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/login",
-              "status": 200,
-              "headers": {
-                "Server": "web"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Expect-CT": "enforce, max-age=86400"
-              }
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 500,
-              "headers": {
-                "Expect-CT": "enforce, max-age=1"
-              }
-            },
-            "match": false
-          }
-        ],
-        "description": "Expect-CT is a deprecated response header. Chromium deprecated Expect-CT in 2022 and removed support entirely in Chrome 107 (October 2022); browsers enforce Certificate Transparency for publicly trusted certificates without it. Its absence does not weaken a current browser. This informational check is kept so the deprecated header is not reintroduced as a requirement."
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/login",
+       "status": 200,
+       "headers": {
+        "Server": "web"
+       }
       },
-      {
-        "suffix": "nel",
-        "lang": "http",
-        "name": "NEL header",
-        "safe": "a report-to group",
-        "check": {
-          "type": "missing-response-header",
-          "header": "NEL"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Content-Type": "text/html"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/login",
-              "status": 200,
-              "headers": {
-                "Server": "web"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "NEL": "{\"report_to\":\"x\"}"
-              }
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 500,
-              "headers": {
-                "NEL": "{\"report_to\":\"x\"}"
-              }
-            },
-            "match": false
-          }
-        ]
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Expect-CT": "enforce, max-age=86400"
+       }
       },
-      {
-        "suffix": "reportto",
-        "lang": "http",
-        "name": "Report-To header",
-        "safe": "an endpoint group",
-        "check": {
-          "type": "missing-response-header",
-          "header": "Report-To"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Content-Type": "text/html"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/login",
-              "status": 200,
-              "headers": {
-                "Server": "web"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Report-To": "{\"group\":\"x\"}"
-              }
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 500,
-              "headers": {
-                "Report-To": "{\"group\":\"x\"}"
-              }
-            },
-            "match": false
-          }
-        ]
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 500,
+       "headers": {
+        "Expect-CT": "enforce, max-age=1"
+       }
       },
-      {
-        "suffix": "dnsprefetch",
-        "lang": "http",
-        "name": "X-DNS-Prefetch-Control header",
-        "safe": "off",
-        "check": {
-          "type": "missing-response-header",
-          "header": "X-DNS-Prefetch-Control"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Content-Type": "text/html"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/login",
-              "status": 200,
-              "headers": {
-                "Server": "web"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "X-DNS-Prefetch-Control": "off"
-              }
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 500,
-              "headers": {
-                "X-DNS-Prefetch-Control": "off"
-              }
-            },
-            "match": false
-          }
-        ]
-      },
-      {
-        "suffix": "oac",
-        "lang": "http",
-        "name": "Origin-Agent-Cluster header",
-        "safe": "?1",
-        "check": {
-          "type": "missing-response-header",
-          "header": "Origin-Agent-Cluster"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Content-Type": "text/html"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/login",
-              "status": 200,
-              "headers": {
-                "Server": "web"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Origin-Agent-Cluster": "?1"
-              }
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 500,
-              "headers": {
-                "Origin-Agent-Cluster": "?1"
-              }
-            },
-            "match": false
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "class": "banner-more",
-    "kind": "dast",
-    "category": "information-disclosure",
-    "cwe": "CWE-200",
-    "severity": "LOW",
-    "framing": "custom",
-    "title": "Infrastructure banner disclosed ({name})",
-    "description": "The response discloses a {name} banner. Infrastructure banners map the stack for attackers. This check matches the banner directly.",
-    "remediation": "Suppress the banner ({safe}).",
-    "limitation": "Banner check: version visibility alone is not exploitability.",
-    "scopeT": "Single response header value.",
-    "fp": "CDN-added banners are the common accepted case.",
-    "recordDesc": "{name} banners in responses map infrastructure. Quiet banners slow targeted attacks.",
-    "applicability": "HTTP responses carrying banners.",
-    "risk": "Stack fingerprinting; LOW severity.",
-    "why": "{name} discloses infrastructure detail.",
-    "fix": [
-      "Suppress with {safe}."
+      "match": false
+     }
     ],
-    "verifyT": "Rescan observes no banner.",
-    "cells": [
-      {
-        "suffix": "via",
-        "lang": "http",
-        "name": "Via header",
-        "safe": "stripped proxy headers",
-        "check": {
-          "type": "response-header-matches",
-          "header": "Via",
-          "valuePattern": "[^ ]"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Via": "1.1 proxy"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Via": "2.0 edge"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {}
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Server": "web"
-              }
-            },
-            "match": false
-          }
-        ]
+    "description": "Expect-CT is a deprecated response header. Chromium deprecated Expect-CT in 2022 and removed support entirely in Chrome 107 (October 2022); browsers enforce Certificate Transparency for publicly trusted certificates without it. Its absence does not weaken a current browser. This informational check is kept so the deprecated header is not reintroduced as a requirement."
+   },
+   {
+    "suffix": "nel",
+    "lang": "http",
+    "name": "NEL",
+    "safe": "a report-to group",
+    "check": {
+     "type": "missing-response-header",
+     "header": "NEL"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       }
       },
-      {
-        "suffix": "xcache",
-        "lang": "http",
-        "name": "X-Cache header",
-        "safe": "stripped cache headers",
-        "check": {
-          "type": "response-header-matches",
-          "header": "X-Cache",
-          "valuePattern": "[^ ]"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "X-Cache": "HIT"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "X-Cache": "MISS"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {}
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Server": "web"
-              }
-            },
-            "match": false
-          }
-        ]
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/login",
+       "status": 200,
+       "headers": {
+        "Server": "web"
+       }
       },
-      {
-        "suffix": "xvarnish",
-        "lang": "http",
-        "name": "X-Varnish header",
-        "safe": "stripped cache headers",
-        "check": {
-          "type": "response-header-matches",
-          "header": "X-Varnish",
-          "valuePattern": "[^ ]"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "X-Varnish": "123 456"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "X-Varnish": "789"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {}
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Server": "web"
-              }
-            },
-            "match": false
-          }
-        ]
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "NEL": "{\"report_to\":\"x\"}"
+       }
       },
-      {
-        "suffix": "xredirectby",
-        "lang": "http",
-        "name": "X-Redirect-By header",
-        "safe": "stripped platform headers",
-        "check": {
-          "type": "response-header-matches",
-          "header": "X-Redirect-By",
-          "valuePattern": "[^ ]"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "X-Redirect-By": "WordPress"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "X-Redirect-By": "Drupal"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {}
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Server": "web"
-              }
-            },
-            "match": false
-          }
-        ]
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 500,
+       "headers": {
+        "NEL": "{\"report_to\":\"x\"}"
+       }
       },
-      {
-        "suffix": "xdrupal",
-        "lang": "http",
-        "name": "X-Drupal-Cache header",
-        "safe": "stripped platform headers",
-        "check": {
-          "type": "response-header-matches",
-          "header": "X-Drupal-Cache",
-          "valuePattern": "[^ ]"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "X-Drupal-Cache": "HIT"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "X-Drupal-Cache": "MISS"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {}
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Server": "web"
-              }
-            },
-            "match": false
-          }
-        ]
-      },
-      {
-        "suffix": "p3p",
-        "lang": "http",
-        "name": "P3P header",
-        "safe": "removed legacy headers",
-        "check": {
-          "type": "response-header-matches",
-          "header": "P3P",
-          "valuePattern": "[^ ]"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "P3P": "CP=\"NOI\""
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "P3P": "CP=\"IDC\""
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {}
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Server": "web"
-              }
-            },
-            "match": false
-          }
-        ]
-      },
-      {
-        "suffix": "xservedby",
-        "lang": "http",
-        "name": "X-Served-By header",
-        "safe": "stripped edge headers",
-        "check": {
-          "type": "response-header-matches",
-          "header": "X-Served-By",
-          "valuePattern": "[^ ]"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "X-Served-By": "edge-1"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "X-Served-By": "edge-2"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {}
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Server": "web"
-              }
-            },
-            "match": false
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "class": "response-weak-2",
-    "kind": "dast",
-    "category": "security-headers",
-    "cwe": "CWE-693",
-    "severity": "MEDIUM",
-    "framing": "custom",
-    "title": "Weak response control ({name})",
-    "description": "The response weakens a control: {name}. Protocol-relative redirects, wildcard timing origins, and charset-less content types widen attacks. This check matches the weakness directly.",
-    "remediation": "Strengthen the control ({safe}).",
-    "limitation": "Header check: it cannot confirm exploitability.",
-    "scopeT": "Single response header value.",
-    "fp": "CDN behaviors are the common accepted case.",
-    "recordDesc": "{name} in responses weakens a control. Hardening the value restores the protection.",
-    "applicability": "HTTP responses carrying the header.",
-    "risk": "Varies by control; MEDIUM severity.",
-    "why": "{name} weakens a response control.",
-    "fix": [
-      "Strengthen to {safe}."
+      "match": false
+     }
     ],
-    "verifyT": "Rescan observes the hardened value.",
-    "cells": [
-      {
-        "suffix": "location-proto",
-        "lang": "http",
-        "name": "protocol-relative Location",
-        "safe": "absolute https URLs",
-        "check": {
-          "type": "response-header-matches",
-          "header": "Location",
-          "valuePattern": "^//"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 302,
-              "headers": {
-                "Location": "//evil.example/x"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 301,
-              "headers": {
-                "Location": "//cdn.example/x"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 302,
-              "headers": {
-                "Location": "https://app.example/x"
-              }
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {}
-            },
-            "match": false
-          }
-        ]
+    "overrides": {
+     "severity": "LOW",
+     "description": "The response omits NEL, so no Network Error Logging policy is stored for this origin. NEL is an observability control: it reports failed and misconfigured requests that never reach the server. Its absence does not weaken a browser protection, but it leaves certificate, DNS and connection failures invisible to the operator.",
+     "remediation": "If the origin has an error collector, send NEL with a report-to group and a max_age, and define that group in Report-To. If there is no collector, record the decision; sending NEL alone has no effect.",
+     "limitation": "Header-name check on one response. It cannot tell whether an error collector exists, and it does not validate the report group the header would name.",
+     "recordDesc": "No NEL header was sent. Network failures that never reach the application, including certificate and DNS problems, stay invisible to the operator, which delays detection of an outage or an interception attempt.",
+     "why": "The response carries no NEL header.",
+     "fix": [
+      "Stand up an error collector and describe it in Report-To.",
+      "Then send NEL naming that group and verify reports arrive."
+     ],
+     "verifyT": "Request the page and confirm NEL names a report group that Report-To defines.",
+     "risk": "No network-error visibility; LOW severity because the finding is observability rather than exposure."
+    }
+   },
+   {
+    "suffix": "reportto",
+    "lang": "http",
+    "name": "Report-To",
+    "safe": "an endpoint group",
+    "check": {
+     "type": "missing-response-header",
+     "header": "Report-To"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       }
       },
-      {
-        "suffix": "timing-star",
-        "lang": "http",
-        "name": "wildcard Timing-Allow-Origin",
-        "safe": "explicit origins",
-        "check": {
-          "type": "response-header-matches",
-          "header": "Timing-Allow-Origin",
-          "valuePattern": "^\\*$"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Timing-Allow-Origin": "*"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/x",
-              "status": 200,
-              "headers": {
-                "Timing-Allow-Origin": "*"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Timing-Allow-Origin": "https://app.example/"
-              }
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {}
-            },
-            "match": false
-          }
-        ]
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/login",
+       "status": 200,
+       "headers": {
+        "Server": "web"
+       }
       },
-      {
-        "suffix": "charset-missing",
-        "lang": "http",
-        "name": "charset-less Content-Type",
-        "safe": "charset=utf-8",
-        "check": {
-          "type": "response-header-missing-directive",
-          "header": "Content-Type",
-          "directive": "charset"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Content-Type": "text/html"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Content-Type": "text/plain"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Content-Type": "text/html; charset=utf-8"
-              }
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "http://app.example/",
-              "status": 200,
-              "headers": {
-                "Content-Type": "text/html; charset=utf-8"
-              }
-            },
-            "match": false
-          }
-        ]
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Report-To": "{\"group\":\"x\"}"
+       }
       },
-      {
-        "suffix": "hsts-nosub",
-        "lang": "http",
-        "name": "HSTS without includeSubDomains",
-        "safe": "includeSubDomains",
-        "check": {
-          "type": "response-header-missing-directive",
-          "header": "Strict-Transport-Security",
-          "directive": "includeSubDomains"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Strict-Transport-Security": "max-age=31536000"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Strict-Transport-Security": "max-age=1000"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Strict-Transport-Security": "max-age=31536000; includeSubDomains"
-              }
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "http://app.example/",
-              "status": 200,
-              "headers": {
-                "Strict-Transport-Security": "max-age=1; includeSubDomains"
-              }
-            },
-            "match": false
-          }
-        ]
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 500,
+       "headers": {
+        "Report-To": "{\"group\":\"x\"}"
+       }
       },
-      {
-        "suffix": "coop-lax",
-        "lang": "http",
-        "name": "COOP without same-origin",
-        "safe": "same-origin",
-        "check": {
-          "type": "response-header-missing-directive",
-          "header": "Cross-Origin-Opener-Policy",
-          "directive": "same-origin"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Cross-Origin-Opener-Policy": "unsafe-none"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Cross-Origin-Opener-Policy": "same-origin-allow-popups"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Cross-Origin-Opener-Policy": "same-origin"
-              }
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "http://app.example/",
-              "status": 200,
-              "headers": {
-                "Cross-Origin-Opener-Policy": "same-origin"
-              }
-            },
-            "match": false
-          }
-        ]
-      },
-      {
-        "suffix": "coep-lax",
-        "lang": "http",
-        "name": "COEP without require-corp",
-        "safe": "require-corp",
-        "check": {
-          "type": "response-header-missing-directive",
-          "header": "Cross-Origin-Embedder-Policy",
-          "directive": "require-corp"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Cross-Origin-Embedder-Policy": "unsafe-none"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Cross-Origin-Embedder-Policy": "credentialless"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "Cross-Origin-Embedder-Policy": "require-corp"
-              }
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "http://app.example/",
-              "status": 200,
-              "headers": {
-                "Cross-Origin-Embedder-Policy": "require-corp"
-              }
-            },
-            "match": false
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "class": "mixed-content",
-    "kind": "dast",
-    "category": "mixed-content",
-    "cwe": "CWE-319",
-    "severity": "MEDIUM",
-    "framing": "custom",
-    "title": "{name} on an HTTPS page",
-    "description": "The HTTPS response references a {name} over cleartext HTTP. Browsers block or warn on active mixed content, but passive resources still cross the network unprotected. This check reads one observed response body and confirms the cleartext reference.",
-    "remediation": "Serve every subresource over HTTPS ({safe}).",
-    "limitation": "Body text check on one response: it matches common markup tags only, not CSS url() or script-built URLs, and it does not prove the browser fetched the resource.",
-    "scopeT": "Single HTTPS response body: confirm no cleartext subresource reference.",
-    "fp": "Markup inside comments or documentation text can match the same tag shape.",
-    "recordDesc": "{name} over cleartext HTTP on an HTTPS page. The remedy is {safe}.",
-    "applicability": "HTTPS pages that reference subresources.",
-    "risk": "Cleartext subresources can be read or altered in transit; MEDIUM severity.",
-    "why": "The HTTPS page references a {name} over http://.",
-    "fix": [
-      "Change every subresource reference to https://.",
-      "Use upgrade-insecure-requests only as a transition aid."
+      "match": false
+     }
     ],
-    "verifyT": "Rescan shows no cleartext subresource reference on the page.",
-    "cells": [
-      {
-        "suffix": "http-subresource",
-        "lang": "http",
-        "name": "HTTP subresource",
-        "safe": "HTTPS URLs for every script, style, image, and frame",
-        "check": {
-          "type": "response-body-matches",
-          "valuePattern": "<(?:script|img|link|iframe|audio|video|source)\\b[^>]*\\s(?:src|href)\\s*=\\s*[\"']http://",
-          "requireScheme": "https"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "content-type": "text/html"
-              },
-              "body": "<script src=\"http://cdn.example/app.js\"></script>"
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "content-type": "text/html"
-              },
-              "body": "<script src=\"https://cdn.example/app.js\"></script>"
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "http://app.example/",
-              "status": 200,
-              "headers": {
-                "content-type": "text/html"
-              },
-              "body": "<script src=\"http://cdn.example/app.js\"></script>"
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "content-type": "text/html"
-              },
-              "body": "<html xmlns=\"http://www.w3.org/1999/xhtml\"></html>"
-            },
-            "match": false
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "class": "debug-exposure",
-    "kind": "dast",
-    "category": "debug-exposure",
-    "cwe": "CWE-489",
-    "severity": "MEDIUM",
-    "framing": "custom",
-    "title": "{name} disclosed in a response",
-    "description": "The response body carries a {name}. Debug output discloses code paths, versions, and internal state that help an attacker plan. This check reads one observed body and confirms the marker. Development-only output and production exposure look the same in one response.",
-    "remediation": "Disable debug output in production and return a generic error page ({safe}).",
-    "limitation": "Marker text check on one body: it cannot tell development output from production exposure, and a quoted marker in documentation can match.",
-    "scopeT": "Single response body: confirm no debug marker is returned.",
-    "fp": "Quoted examples in documentation or log excerpts can match the marker.",
-    "recordDesc": "A {name} in a response body exposes internal detail. The remedy is {safe}.",
-    "applicability": "HTTP responses from application servers and frameworks.",
-    "risk": "Internal paths, versions, and state disclosed to any client; MEDIUM severity.",
-    "why": "The response body carries a {name}.",
-    "fix": [
-      "Turn debug mode off in production.",
-      "Return a generic error with a correlation ID."
-    ],
-    "verifyT": "Rescan shows no debug marker in responses.",
-    "cells": [
-      {
-        "suffix": "python-traceback",
-        "lang": "http",
-        "name": "Python traceback",
-        "safe": "a generic error page with a correlation ID",
-        "check": {
-          "type": "response-body-matches",
-          "valuePattern": "Traceback \\(most recent call last\\)"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 500,
-              "headers": {
-                "content-type": "text/html"
-              },
-              "body": "Traceback (most recent call last):\n  File \"app.py\", line 12"
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 200,
-              "headers": {
-                "content-type": "text/html"
-              },
-              "body": "Recent calls are listed on the dashboard."
-            },
-            "match": false
-          }
-        ]
+    "overrides": {
+     "severity": "LOW",
+     "description": "The response omits Report-To, so no reporting group is configured for this origin and CSP, NEL and deprecation reports have nowhere to go. The header is reporting infrastructure: its absence hides browser-side violations from the operator without weakening a control the browser enforces.",
+     "remediation": "Define an HTTPS collector and send Report-To with a group name, a max_age and an endpoint, then reference that group from the policy that should report. If no collector exists, record the decision.",
+     "limitation": "Header-name check on one response. It cannot tell whether reporting is configured by another mechanism, and it does not validate the endpoint.",
+     "recordDesc": "No Report-To header was sent. Browser-side violations and network errors for this origin are dropped, so policy breakage or an attempted downgrade never reaches the operator through the reporting channel.",
+     "why": "The response carries no Report-To header.",
+     "fix": [
+      "Stand up an HTTPS collector.",
+      "Send Report-To with a group, then reference that group from the policy that should report."
+     ],
+     "verifyT": "Request the page and confirm Report-To names a group whose endpoint receives a test report.",
+     "risk": "No browser-side reporting; LOW severity because the finding is observability."
+    }
+   },
+   {
+    "suffix": "dnsprefetch",
+    "lang": "http",
+    "name": "X-DNS-Prefetch-Control",
+    "safe": "off",
+    "check": {
+     "type": "missing-response-header",
+     "header": "X-DNS-Prefetch-Control"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       }
       },
-      {
-        "suffix": "java-stack-frame",
-        "lang": "http",
-        "name": "Java stack frame",
-        "safe": "a generic error page with a correlation ID",
-        "check": {
-          "type": "response-body-matches",
-          "valuePattern": "\\bat [\\w$.<>]+\\([\\w$]+\\.java:\\d+\\)"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 500,
-              "headers": {
-                "content-type": "text/html"
-              },
-              "body": "java.lang.NullPointerException\n\tat com.example.App.run(App.java:42)"
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 500,
-              "headers": {
-                "content-type": "text/html"
-              },
-              "body": "The service is at capacity; retry later."
-            },
-            "match": false
-          }
-        ]
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/login",
+       "status": 200,
+       "headers": {
+        "Server": "web"
+       }
       },
-      {
-        "suffix": "django-debug",
-        "lang": "http",
-        "name": "Django debug page",
-        "safe": "a generic error page with a correlation ID",
-        "check": {
-          "type": "response-body-matches",
-          "valuePattern": "DEBUG\\s*=\\s*True"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 500,
-              "headers": {
-                "content-type": "text/html"
-              },
-              "body": "You're seeing this error because you have <code>DEBUG = True</code>."
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/",
-              "status": 500,
-              "headers": {
-                "content-type": "text/html"
-              },
-              "body": "<code>DEBUG = False</code> in production."
-            },
-            "match": false
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "class": "redirect-host-change",
-    "kind": "dast",
-    "category": "open-redirect",
-    "cwe": "CWE-601",
-    "severity": "LOW",
-    "framing": "custom",
-    "title": "Redirect to another host ({name})",
-    "description": "The response redirects to a different host through its {name}. A redirect to another host is not a vulnerability by itself. It becomes one when an attacker chooses the target. This check reads one observed redirect and confirms the host changes.",
-    "remediation": "Redirect only to relative paths or an allow-listed host ({safe}).",
-    "limitation": "Single-response check: it cannot tell whether the target is attacker-controlled. Passive scope only; no redirect is followed.",
-    "scopeT": "Single redirect response: confirm the target host differs from the request host.",
-    "fp": "Intentional redirects to a partner or identity provider are the common accepted case.",
-    "recordDesc": "A redirect through {name} can send users to another host. The remedy is {safe}.",
-    "applicability": "HTTP redirects from web applications.",
-    "risk": "Users sent to another host; severity depends on whether the target is attacker-chosen. LOW here because the check is passive.",
-    "why": "The redirect {name} points to a different host.",
-    "fix": [
-      "Redirect to relative paths.",
-      "Validate the target against an allow-list."
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-DNS-Prefetch-Control": "off"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 500,
+       "headers": {
+        "X-DNS-Prefetch-Control": "off"
+       }
+      },
+      "match": false
+     }
     ],
-    "verifyT": "Rescan shows the redirect stays on the request host or an allow-listed host.",
-    "cells": [
-      {
-        "suffix": "cross-host",
-        "lang": "http",
-        "name": "Location header",
-        "safe": "a relative path or an allow-listed host",
-        "check": {
-          "type": "response-header-host-differs",
-          "header": "Location"
-        },
-        "tests": [
-          {
-            "observation": {
-              "url": "https://app.example/login",
-              "status": 302,
-              "headers": {
-                "Location": "https://other.example/home"
-              }
-            },
-            "match": true
-          },
-          {
-            "observation": {
-              "url": "https://app.example/login",
-              "status": 302,
-              "headers": {
-                "Location": "/home"
-              }
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "https://app.example/login",
-              "status": 200,
-              "headers": {
-                "Location": "https://other.example/"
-              }
-            },
-            "match": false
-          },
-          {
-            "observation": {
-              "url": "https://app.example/login",
-              "status": 302,
-              "headers": {
-                "Location": "https://app.example/x"
-              }
-            },
-            "match": false
-          }
-        ]
-      }
+    "overrides": {
+     "severity": "LOW",
+     "description": "The response omits X-DNS-Prefetch-Control, so the browser default applies and may resolve hostnames referenced by links and subresources before the user follows them. That prefetch discloses which hosts a page references to the DNS resolver, including links the user never visits.",
+     "remediation": "Send X-DNS-Prefetch-Control: off on pages that link to sensitive or user-specific hosts. Keep the default where prefetch is a deliberate performance choice and the referenced hosts are public.",
+     "limitation": "Header-name check on one response. It cannot observe resolver traffic, so it reports the missing privacy control rather than a measured leak.",
+     "recordDesc": "No X-DNS-Prefetch-Control was sent, so DNS prefetch stays at the browser default. A page that links to sensitive or user-specific hosts can cause the resolver, and anyone watching it, to learn those hostnames before any click.",
+     "why": "The response carries no X-DNS-Prefetch-Control header.",
+     "fix": [
+      "Send off on pages that link to sensitive or user-specific hosts.",
+      "Keep the default only where the referenced hosts are public and prefetch is intentional."
+     ],
+     "verifyT": "Request the page and confirm X-DNS-Prefetch-Control is present with off on pages that reference sensitive hosts.",
+     "risk": "Hostname disclosure through prefetch; LOW severity because the leak is DNS metadata."
+    }
+   },
+   {
+    "suffix": "oac",
+    "lang": "http",
+    "name": "Origin-Agent-Cluster",
+    "safe": "?1",
+    "check": {
+     "type": "missing-response-header",
+     "header": "Origin-Agent-Cluster"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/login",
+       "status": 200,
+       "headers": {
+        "Server": "web"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Origin-Agent-Cluster": "?1"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 500,
+       "headers": {
+        "Origin-Agent-Cluster": "?1"
+       }
+      },
+      "match": false
+     }
+    ],
+    "overrides": {
+     "severity": "LOW",
+     "description": "The response omits Origin-Agent-Cluster. The header asks the browser to place the document in an origin-keyed agent cluster instead of the default site-keyed one, which narrows the state a same-site cross-origin document can share. Absence keeps the default, so the page loses an isolation hint rather than a protection it previously had.",
+     "remediation": "Send Origin-Agent-Cluster: ?1 on documents that tolerate origin-keyed isolation, and verify that same-site frames still work. Leave the default where a same-site frame relies on synchronous access.",
+     "limitation": "Header-name check on one response. It cannot tell whether the page depends on site-keyed synchrony, and browser handling of the hint still varies.",
+     "recordDesc": "No Origin-Agent-Cluster header was sent, so the document stays in the default agent cluster. A same-site cross-origin document can share more process state than an origin-keyed cluster allows, which weakens the isolation boundary without creating a direct exposure.",
+     "why": "The response carries no Origin-Agent-Cluster header.",
+     "fix": [
+      "Send ?1 where origin-keyed isolation is acceptable.",
+      "Test same-site frames and synchronous access before enabling it site-wide."
+     ],
+     "verifyT": "Request the document and confirm Origin-Agent-Cluster is present wherever the application supports origin-keyed isolation.",
+     "risk": "Default agent cluster retained; LOW severity because the header is an isolation hint."
+    }
+   }
+  ]
+ },
+ {
+  "class": "banner-more",
+  "kind": "dast",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "LOW",
+  "framing": "custom",
+  "title": "Infrastructure banner disclosed ({name})",
+  "description": "The response discloses a {name} banner. Infrastructure banners map the stack for attackers. This check matches the banner directly.",
+  "remediation": "Immediate: remove the header at the component that adds it \u2014 reverse proxy, CDN, cache tier or application platform \u2014 or strip it with a response-header rule at the edge. Durable: normalise hop-by-hop and platform headers centrally so a new deployment cannot reintroduce them, and keep that detail in logs rather than in responses. The value reveals stack vintage or cache topology, so treat it as configuration hygiene rather than evidence of an exploitable defect.",
+  "limitation": "Banner check: version visibility alone is not exploitability.",
+  "scopeT": "Single response header value.",
+  "fp": "CDN-added banners are the common accepted case.",
+  "recordDesc": "{name} banners in responses map infrastructure. Quiet banners slow targeted attacks.",
+  "applicability": "HTTP responses carrying banners.",
+  "risk": "Stack fingerprinting; LOW severity.",
+  "why": "{name} discloses infrastructure detail.",
+  "fix": [
+   "Remove the header at the component that adds it.",
+   "Strip it with a response-header rule at the proxy or edge tier.",
+   "Keep hop and topology detail in logs instead of responses."
+  ],
+  "verifyT": "Re-request the page and confirm the header is gone; check a redirect and a cached response too, because different components emit the header.",
+  "cells": [
+   {
+    "suffix": "via",
+    "lang": "http",
+    "name": "Via header",
+    "safe": "stripped proxy headers",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Via",
+     "valuePattern": "[^ ]"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Via": "1.1 proxy"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Via": "2.0 edge"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {}
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Server": "web"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Via": ""
+       }
+      },
+      "match": false
+     }
     ]
-  }
+   },
+   {
+    "suffix": "xcache",
+    "lang": "http",
+    "name": "X-Cache header",
+    "safe": "stripped cache headers",
+    "check": {
+     "type": "response-header-matches",
+     "header": "X-Cache",
+     "valuePattern": "[^ ]"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-Cache": "HIT"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-Cache": "MISS"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {}
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Server": "web"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-Cache": ""
+       }
+      },
+      "match": false
+     }
+    ]
+   },
+   {
+    "suffix": "xvarnish",
+    "lang": "http",
+    "name": "X-Varnish header",
+    "safe": "stripped cache headers",
+    "check": {
+     "type": "response-header-matches",
+     "header": "X-Varnish",
+     "valuePattern": "[^ ]"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-Varnish": "123 456"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-Varnish": "789"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {}
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Server": "web"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-Varnish": ""
+       }
+      },
+      "match": false
+     }
+    ]
+   },
+   {
+    "suffix": "xredirectby",
+    "lang": "http",
+    "name": "X-Redirect-By header",
+    "safe": "stripped platform headers",
+    "check": {
+     "type": "response-header-matches",
+     "header": "X-Redirect-By",
+     "valuePattern": "[^ ]"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-Redirect-By": "WordPress"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-Redirect-By": "Drupal"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {}
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Server": "web"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-Redirect-By": ""
+       }
+      },
+      "match": false
+     }
+    ]
+   },
+   {
+    "suffix": "xdrupal",
+    "lang": "http",
+    "name": "X-Drupal-Cache header",
+    "safe": "stripped platform headers",
+    "check": {
+     "type": "response-header-matches",
+     "header": "X-Drupal-Cache",
+     "valuePattern": "[^ ]"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-Drupal-Cache": "HIT"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-Drupal-Cache": "MISS"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {}
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Server": "web"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-Drupal-Cache": ""
+       }
+      },
+      "match": false
+     }
+    ]
+   },
+   {
+    "suffix": "p3p",
+    "lang": "http",
+    "name": "P3P header",
+    "safe": "removed legacy headers",
+    "check": {
+     "type": "response-header-matches",
+     "header": "P3P",
+     "valuePattern": "[^ ]"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "P3P": "CP=\"NOI\""
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "P3P": "CP=\"IDC\""
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {}
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Server": "web"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "P3P": ""
+       }
+      },
+      "match": false
+     }
+    ]
+   },
+   {
+    "suffix": "xservedby",
+    "lang": "http",
+    "name": "X-Served-By header",
+    "safe": "stripped edge headers",
+    "check": {
+     "type": "response-header-matches",
+     "header": "X-Served-By",
+     "valuePattern": "[^ ]"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-Served-By": "edge-1"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-Served-By": "edge-2"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {}
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Server": "web"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "X-Served-By": ""
+       }
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "class": "response-weak-2",
+  "kind": "dast",
+  "category": "security-headers",
+  "cwe": "CWE-693",
+  "severity": "MEDIUM",
+  "framing": "custom",
+  "title": "Weak response control ({name})",
+  "description": "The response weakens a control: {name}. Protocol-relative redirects, wildcard timing origins, and charset-less content types widen attacks. This check matches the weakness directly.",
+  "remediation": "Strengthen the control ({safe}).",
+  "limitation": "Header check: it cannot confirm exploitability.",
+  "scopeT": "Single response header value.",
+  "fp": "CDN behaviors are the common accepted case.",
+  "recordDesc": "{name} in responses weakens a control. Hardening the value restores the protection.",
+  "applicability": "HTTP responses carrying the header.",
+  "risk": "Varies by control; MEDIUM severity.",
+  "why": "{name} weakens a response control.",
+  "fix": [
+   "Strengthen to {safe}."
+  ],
+  "verifyT": "Rescan observes the hardened value.",
+  "cells": [
+   {
+    "suffix": "location-proto",
+    "lang": "http",
+    "name": "protocol-relative Location",
+    "safe": "absolute https URLs",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Location",
+     "valuePattern": "^//"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 302,
+       "headers": {
+        "Location": "//evil.example/x"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 301,
+       "headers": {
+        "Location": "//cdn.example/x"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 302,
+       "headers": {
+        "Location": "https://app.example/x"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {}
+      },
+      "match": false
+     }
+    ],
+    "overrides": {
+     "recordDesc": "A protocol-relative Location value has no scheme of its own, so the browser reuses the scheme of the request that produced the response.",
+     "risk": "A redirect built with a protocol-relative target can be followed to an attacker-chosen host on the same scheme, which supports phishing and token leakage; MEDIUM severity because the rule reports the shape and the reviewer still has to confirm the target is attacker-controlled."
+    }
+   },
+   {
+    "suffix": "timing-star",
+    "lang": "http",
+    "name": "wildcard Timing-Allow-Origin",
+    "safe": "explicit origins",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Timing-Allow-Origin",
+     "valuePattern": "^\\*$"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Timing-Allow-Origin": "*"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/x",
+       "status": 200,
+       "headers": {
+        "Timing-Allow-Origin": "*"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Timing-Allow-Origin": "https://app.example/"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {}
+      },
+      "match": false
+     }
+    ],
+    "overrides": {
+     "description": "The response sets Timing-Allow-Origin to the wildcard, so Resource Timing exposes detailed timing data for the resource to every origin. That measurement surface enables cross-origin probes of cache state, payload size and frame activity that the same-origin policy otherwise hides. An explicit origin list gives trusted partners the same measurements without opening them to everyone.",
+     "remediation": "List the origins that must read timing data instead of using the wildcard; if no partner needs the data, omit the header.",
+     "limitation": "One header value. It cannot show which resources are measured or that another origin is probing them; a cross-origin readout still requires script running on that origin.",
+     "recordDesc": "Timing-Allow-Origin is set to the wildcard. Resource Timing then reports detailed per-resource timing to any origin that embeds or fetches the resource, giving that origin a measurement channel that survives the same-origin policy and can be used to infer cache state, response size and activity.",
+     "why": "The Timing-Allow-Origin value is exactly the wildcard.",
+     "fix": [
+      "Replace the wildcard with the explicit origins that need the timing data.",
+      "Omit Timing-Allow-Origin when no partner measures the resource."
+     ],
+     "verifyT": "Request the endpoint and confirm Timing-Allow-Origin is absent or lists only the partner origins.",
+     "risk": "Cross-origin measurement of cache state, payload size and activity; MEDIUM severity because the leak is metadata rather than content."
+    }
+   },
+   {
+    "suffix": "charset-missing",
+    "lang": "http",
+    "name": "charset-less Content-Type",
+    "safe": "charset=utf-8",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Content-Type",
+     "valuePattern": "^(?:text/html|text/plain)(?!.*\\bcharset\\b)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "TEXT/HTML"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=utf-8"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html;charset=UTF-8"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/api/orders",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/json"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/logo.png",
+       "status": 200,
+       "headers": {
+        "Content-Type": "image/png"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/app.js",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/javascript"
+       }
+      },
+      "match": false
+     }
+    ],
+    "overrides": {
+     "title": "Charset-less text/html or text/plain Content-Type",
+     "description": "The response declares text/html or text/plain without a charset parameter, so the browser has to fall back to a legacy default or to content sniffing when it decodes the page. The same bytes can then be read with a different character mapping than the server intended, which enables encoding-based script smuggling and mis-rendered content.",
+     "limitation": "Media-type scoped: only text/html and text/plain need a charset declaration here. application/json (RFC 8259), application/javascript (RFC 9239) and text/css are defined as UTF-8, binary types take no charset parameter, and a wholly missing Content-Type is reported by DPK-DAST-074.",
+     "remediation": "Immediate: declare `charset=utf-8` on every `text/html` and `text/plain` response and make sure the bytes are actually encoded that way, since a declared charset that disagrees with the payload produces mojibake rather than safety. Durable: set the `Content-Type` once in the framework or the reverse proxy instead of per handler, and keep any `<meta charset>` declaration identical to the header so the two cannot disagree. Trade-off: legacy clients that relied on automatic encoding detection now have to honour the declared encoding, which is the intended behaviour but can surface previously hidden encoding bugs.",
+     "recordDesc": "A text/html or text/plain response without a charset parameter leaves the decoding decision to the browser's fallback, so the same bytes can be interpreted under a different character mapping than the application intended. Declaring charset=utf-8 pins the mapping and removes the ambiguity.",
+     "why": "The response is text/html or text/plain and declares no charset parameter.",
+     "risk": "Encoding confusion that can turn inert bytes into script; MEDIUM severity.",
+     "fix": [
+      "Declare `charset=utf-8` on `text/html` and `text/plain` responses.",
+      "Serve the bytes in the declared encoding.",
+      "Set the `Content-Type` once in the framework or proxy."
+     ],
+     "verifyT": "Request an HTML, a JSON and a plain-text route and confirm each `Content-Type` carries `charset=utf-8`; confirm a non-ASCII character renders correctly rather than as mojibake."
+    }
+   },
+   {
+    "suffix": "hsts-nosub",
+    "lang": "http",
+    "name": "HSTS without includeSubDomains",
+    "safe": "includeSubDomains",
+    "check": {
+     "type": "response-header-missing-directive",
+     "header": "Strict-Transport-Security",
+     "directive": "includeSubDomains"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Strict-Transport-Security": "max-age=31536000"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Strict-Transport-Security": "max-age=1000"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Strict-Transport-Security": "max-age=31536000; includeSubDomains"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "http://app.example/",
+       "status": 200,
+       "headers": {
+        "Strict-Transport-Security": "max-age=1; includeSubDomains"
+       }
+      },
+      "match": false
+     }
+    ],
+    "overrides": {
+     "description": "The Strict-Transport-Security policy omits includeSubDomains, so the protection applies to the exact host only. A subdomain served over plaintext, including forgotten staging, legacy or third-party-controlled hosts, stays reachable over HTTP and can be used to set or overwrite cookies scoped to the parent domain. The omission is visible in the policy itself.",
+     "remediation": "Add includeSubDomains once every subdomain can serve HTTPS, and keep the policy free of hosts that cannot.",
+     "limitation": "One header value. It does not enumerate subdomains or prove that a plaintext subdomain exists; the finding is the policy gap, not an observed downgrade. A response with no Strict-Transport-Security header also matches; DPK-DAST-016 reports that absence.",
+     "recordDesc": "Strict-Transport-Security does not cover subdomains. Only the exact host is pinned to HTTPS, so any subdomain that still answers over plaintext can be used to intercept or set cookies that the parent domain trusts, and the parent policy will not upgrade the browser on that host.",
+     "why": "The Strict-Transport-Security value has a max-age directive but no includeSubDomains directive.",
+     "fix": [
+      "Migrate every subdomain to HTTPS, then add includeSubDomains.",
+      "Remove or retire subdomains that cannot serve TLS before extending the policy."
+     ],
+     "verifyT": "Request the endpoint over HTTPS and confirm the policy contains includeSubDomains after all subdomains serve TLS.",
+     "risk": "Cleartext subdomain usable to intercept or set parent-domain cookies; MEDIUM severity because exploitation needs a live plaintext subdomain."
+    }
+   },
+   {
+    "suffix": "coop-lax",
+    "lang": "http",
+    "name": "Cross-Origin-Opener-Policy value without cross-origin isolation",
+    "safe": "same-origin",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Cross-Origin-Opener-Policy",
+     "valuePattern": "^(?=.*\\S)(?![\\s\\S]*?(?:^|[\\s,;])(?:same-origin|noopener-allow-popups)(?=[\\s,;]|$))[\\s\\S]*$"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Cross-Origin-Opener-Policy": "unsafe-none"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Cross-Origin-Opener-Policy": "same-origin-allow-popups"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Cross-Origin-Opener-Policy": "same-origin"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "http://app.example/",
+       "status": 200,
+       "headers": {
+        "Cross-Origin-Opener-Policy": "same-origin"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Cross-Origin-Opener-Policy": "noopener-allow-popups"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Cross-Origin-Opener-Policy": ""
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Cross-Origin-Opener-Policy": "bogus-value"
+       }
+      },
+      "match": true
+     }
+    ],
+    "overrides": {
+     "title": "Cross-Origin-Opener-Policy value without cross-origin isolation",
+     "description": "The response declares a Cross-Origin-Opener-Policy value that does not isolate the browsing context from its opener: `unsafe-none` (the default) or `same-origin-allow-popups` both keep opener access for some navigation, so a cross-origin page can retain a reference to this window.",
+     "limitation": "Value check on the COOP token. `same-origin` and `noopener-allow-popups` are isolation modes and are not reported; an empty value is not reported here because a missing or empty header is DPK-DAST-012. The explicit `unsafe-none` token is also reported by DPK-DAST-076, which asks the narrower question \"is the default opt-out spelled out?\"; both fire on that value by design, so read them together. The rule reads one response and cannot confirm that an opener relationship exists.",
+     "remediation": "Immediate: send `Cross-Origin-Opener-Policy: same-origin` on application documents so a cross-origin opener cannot retain a handle to the window. Durable: set the header once for the whole application and review OAuth and payment popups, which need `same-origin-allow-popups` instead. Trade-off: `same-origin` severs the `window.opener` relationship some sign-in and checkout flows rely on, so choose the stricter value per route rather than globally.",
+     "risk": "A window opened by a hostile page keeps its opener handle and can be navigated or measured through window.opener, and the document cannot opt into cross-origin isolation; MEDIUM severity because the impact depends on which sensitive pages an attacker can open in a new window.",
+     "recordDesc": "Cross-Origin-Opener-Policy is present but carries a value that does not isolate the browsing context: only same-origin (or same-origin-allow-popups where popups are intended) severs the window.opener relationship. The rule reports the non-isolating value; the reviewer decides which of the two is intended.",
+     "fix": [
+      "Send `Cross-Origin-Opener-Policy: same-origin` on application documents.",
+      "Use `same-origin-allow-popups` only on routes that open popups.",
+      "Set the header once rather than per handler."
+     ],
+     "verifyT": "Open the application from a cross-origin link and confirm `window.opener` is null; exercise the sign-in or payment popup and confirm it still completes."
+    }
+   },
+   {
+    "suffix": "coep-lax",
+    "lang": "http",
+    "name": "COEP without require-corp",
+    "safe": "require-corp",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Cross-Origin-Embedder-Policy",
+     "valuePattern": "^unsafe-none$"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Cross-Origin-Embedder-Policy": "unsafe-none"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Cross-Origin-Embedder-Policy": "UNSAFE-NONE"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Cross-Origin-Embedder-Policy": "credentialless"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Cross-Origin-Embedder-Policy": "require-corp"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {}
+      },
+      "match": false
+     }
+    ],
+    "overrides": {
+     "title": "Cross-Origin-Embedder-Policy explicitly disables cross-origin isolation",
+     "description": "The response sets Cross-Origin-Embedder-Policy to unsafe-none, the value that disables cross-origin isolation. The rule reports the explicit opt-out only: credentialless is a valid isolation mode and is not reported, and a missing header is reported separately by DPK-DAST-012.",
+     "remediation": "Immediate: send `Cross-Origin-Embedder-Policy: require-corp` on documents that need cross-origin isolation, or `credentialless` where subresources cannot carry CORP headers. Durable: set it together with `Cross-Origin-Opener-Policy: same-origin`, and keep an inventory of every embedded origin so a new third-party widget is checked before it ships. Trade-off: cross-origin images, scripts and frames that do not opt in stop loading, which will break third-party embeds until they add CORP or CORS headers.",
+     "limitation": "Value check: flags the explicit unsafe-none value only. A missing header is a separate finding (DPK-DAST-012); credentialless is a valid isolation mode and is not reported.",
+     "why": "The header explicitly selects unsafe-none, disabling isolation.",
+     "risk": "Cross-origin isolation is disabled by explicit policy; MEDIUM severity.",
+     "recordDesc": "A response explicitly sets COEP unsafe-none. This is the value that turns off cross-origin isolation; require-corp and credentialless are the two isolation modes and are not reported by this check.",
+     "scopeT": "One response: Cross-Origin-Embedder-Policy is exactly unsafe-none.",
+     "fp": "An application that intentionally opts out of isolation is reported by design; the exposure is the opt-out itself.",
+     "fix": [
+      "Send `Cross-Origin-Embedder-Policy: require-corp`, or `credentialless` where subresources cannot carry CORP.",
+      "Audit embedded images, scripts and frames for CORP or CORS headers first.",
+      "Pair the header with `Cross-Origin-Opener-Policy: same-origin`."
+     ],
+     "verifyT": "Load the page and confirm embedded resources still render with no COEP violation in the console; confirm `crossOriginIsolated` is true where the feature needs it."
+    }
+   }
+  ]
+ },
+ {
+  "class": "mixed-content",
+  "kind": "dast",
+  "category": "mixed-content",
+  "cwe": "CWE-319",
+  "severity": "MEDIUM",
+  "framing": "custom",
+  "title": "{name} on an HTTPS page",
+  "description": "The HTTPS response references a {name} over cleartext HTTP. Browsers block or warn on active mixed content, but passive resources still cross the network unprotected. This check reads one observed response body and confirms the cleartext reference.",
+  "remediation": "Serve every subresource over HTTPS ({safe}).",
+  "limitation": "Body text check on one response: it matches common markup tags only, not CSS url() or script-built URLs, and it does not prove the browser fetched the resource.",
+  "scopeT": "Single HTTPS response body: confirm no cleartext subresource reference.",
+  "fp": "Markup inside comments or documentation text can match the same tag shape.",
+  "recordDesc": "{name} over cleartext HTTP on an HTTPS page. The remedy is {safe}.",
+  "applicability": "HTTPS pages that reference subresources.",
+  "risk": "Cleartext subresources can be read or altered in transit; MEDIUM severity.",
+  "why": "The HTTPS page references a {name} over http://.",
+  "fix": [
+   "Change every subresource reference to https://.",
+   "Use upgrade-insecure-requests only as a transition aid."
+  ],
+  "verifyT": "Rescan shows no cleartext subresource reference on the page.",
+  "cells": [
+   {
+    "suffix": "http-subresource",
+    "lang": "http",
+    "name": "HTTP subresource",
+    "safe": "HTTPS URLs for every script, style, image, and frame",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "<(?:script|img|link|iframe|audio|video|source)\\b[^>]*\\s(?:src|href)\\s*=\\s*[\"']?\\s*http://",
+     "requireScheme": "https"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "content-type": "text/html"
+       },
+       "body": "<script src=\"http://cdn.example/app.js\"></script>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "content-type": "text/html"
+       },
+       "body": "<script src=\"https://cdn.example/app.js\"></script>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "http://app.example/",
+       "status": 200,
+       "headers": {
+        "content-type": "text/html"
+       },
+       "body": "<script src=\"http://cdn.example/app.js\"></script>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "content-type": "text/html"
+       },
+       "body": "<html xmlns=\"http://www.w3.org/1999/xhtml\"></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "content-type": "text/html"
+       },
+       "body": "<script src=http://cdn.example/app.js></script>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "content-type": "text/html"
+       },
+       "body": "<script src=https://cdn.example/app.js></script>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "class": "debug-exposure",
+  "kind": "dast",
+  "category": "debug-exposure",
+  "cwe": "CWE-489",
+  "severity": "MEDIUM",
+  "framing": "custom",
+  "title": "{name} disclosed in a response",
+  "description": "The response body carries a {name}. Debug output discloses code paths, versions, and internal state that help an attacker plan. This check reads one observed body and confirms the marker. Development-only output and production exposure look the same in one response.",
+  "remediation": "Disable debug output in production and return a generic error page ({safe}).",
+  "limitation": "Marker text check on one body: it cannot tell development output from production exposure, and a quoted marker in documentation can match.",
+  "scopeT": "Single response body: confirm no debug marker is returned.",
+  "fp": "Quoted examples in documentation or log excerpts can match the marker.",
+  "recordDesc": "A {name} in a response body exposes internal detail. The remedy is {safe}.",
+  "applicability": "HTTP responses from application servers and frameworks.",
+  "risk": "Internal paths, versions, and state disclosed to any client; MEDIUM severity.",
+  "why": "The response body carries a {name}.",
+  "fix": [
+   "Turn debug mode off in production.",
+   "Return a generic error with a correlation ID."
+  ],
+  "verifyT": "Rescan shows no debug marker in responses.",
+  "cells": [
+   {
+    "suffix": "python-traceback",
+    "lang": "http",
+    "name": "Python traceback",
+    "safe": "a generic error page with a correlation ID",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "Traceback \\(most recent call last\\)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 500,
+       "headers": {
+        "content-type": "text/html"
+       },
+       "body": "Traceback (most recent call last):\n  File \"app.py\", line 12"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "content-type": "text/html"
+       },
+       "body": "Recent calls are listed on the dashboard."
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/boom",
+       "status": 500,
+       "headers": {},
+       "body": "Traceback (most recent call last):\n  File \"app.py\", line 3"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/boom",
+       "status": 500,
+       "headers": {},
+       "body": "Traceback suppressed by the error handler at app.py line 3"
+      },
+      "match": false
+     }
+    ]
+   },
+   {
+    "suffix": "java-stack-frame",
+    "lang": "http",
+    "name": "Java stack frame",
+    "safe": "a generic error page with a correlation ID",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "\\bat [\\w$.<>]+\\([\\w$]+\\.java:\\d+\\)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 500,
+       "headers": {
+        "content-type": "text/html"
+       },
+       "body": "java.lang.NullPointerException\n\tat com.example.App.run(App.java:42)"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 500,
+       "headers": {
+        "content-type": "text/html"
+       },
+       "body": "The service is at capacity; retry later."
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/boom",
+       "status": 500,
+       "headers": {},
+       "body": "at com.example.Servlet.doGet(Servlet.java:88)"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/boom",
+       "status": 500,
+       "headers": {},
+       "body": "at com.example.Servlet.doGet(Servlet.kt:88)"
+      },
+      "match": false
+     }
+    ]
+   },
+   {
+    "suffix": "django-debug",
+    "lang": "http",
+    "name": "Django debug page",
+    "safe": "a generic error page with a correlation ID",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "DEBUG\\s*=\\s*True"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 500,
+       "headers": {
+        "content-type": "text/html"
+       },
+       "body": "You're seeing this error because you have <code>DEBUG = True</code>."
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 500,
+       "headers": {
+        "content-type": "text/html"
+       },
+       "body": "<code>DEBUG = False</code> in production."
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/debug",
+       "status": 200,
+       "headers": {},
+       "body": "<p>settings: DEBUG=True</p>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/debug",
+       "status": 200,
+       "headers": {},
+       "body": "DEBUG = False"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "class": "redirect-host-change",
+  "kind": "dast",
+  "category": "open-redirect",
+  "cwe": "CWE-601",
+  "severity": "LOW",
+  "framing": "custom",
+  "title": "Redirect to another host ({name})",
+  "description": "The response redirects to a different host through its {name}. A redirect to another host is not a vulnerability by itself. It becomes one when an attacker chooses the target. This check reads one observed redirect and confirms the host changes.",
+  "remediation": "Redirect only to relative paths or an allow-listed host ({safe}).",
+  "limitation": "Single-response check: it cannot tell whether the target is attacker-controlled. Passive scope only; no redirect is followed.",
+  "scopeT": "Single redirect response: confirm the target host differs from the request host.",
+  "fp": "Intentional redirects to a partner or identity provider are the common accepted case.",
+  "recordDesc": "A redirect through {name} can send users to another host. The remedy is {safe}.",
+  "applicability": "HTTP redirects from web applications.",
+  "risk": "Users sent to another host; severity depends on whether the target is attacker-chosen. LOW here because the check is passive.",
+  "why": "The redirect {name} points to a different host.",
+  "fix": [
+   "Redirect to relative paths.",
+   "Validate the target against an allow-list."
+  ],
+  "verifyT": "Rescan shows the redirect stays on the request host or an allow-listed host.",
+  "cells": [
+   {
+    "suffix": "cross-host",
+    "lang": "http",
+    "name": "Location header",
+    "safe": "a relative path or an allow-listed host",
+    "check": {
+     "type": "response-header-host-differs",
+     "header": "Location"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/login",
+       "status": 302,
+       "headers": {
+        "Location": "https://other.example/home"
+       }
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/login",
+       "status": 302,
+       "headers": {
+        "Location": "/home"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/login",
+       "status": 200,
+       "headers": {
+        "Location": "https://other.example/"
+       }
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/login",
+       "status": 302,
+       "headers": {
+        "Location": "https://app.example/x"
+       }
+      },
+      "match": false
+     }
+    ],
+    "overrides": {
+     "limitation": "Single-response check: it cannot tell whether the target is attacker-controlled. Passive scope only; no redirect is followed. A protocol-relative target is also reported by DPK-DAST-050 (the owner-blocked protocol-relative rule) and a target that carries credentials is also reported by DPK-DAST-085; both pairs are recorded in docs/DAST_OVERLAP_LEDGER.json, and this rule answers the host-change question only."
+    }
+   }
+  ]
+ }
 ]

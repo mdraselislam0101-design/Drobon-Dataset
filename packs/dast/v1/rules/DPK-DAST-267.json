@@ -1,0 +1,81 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-267",
+  "title": "Content-Security-Policy manifest-src allows plaintext HTTP sources",
+  "description": "The Content-Security-Policy manifest-src directive permits plaintext HTTP manifest sources. A web app manifest names the application name, icons and start URL, so a manifest fetched over plaintext can be replaced in transit to change how the installed application identifies itself.",
+  "severity": "LOW",
+  "cwe": "CWE-319",
+  "category": "csp-weakness",
+  "remediation": "Remove `http:` from manifest-src and serve the manifest from an HTTPS origin you control.",
+  "limitation": "One header value and one directive. The rule reports the scheme token in manifest-src only; when the directive is absent the default-src fallback decides, and other rules report that case.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Content-Security-Policy",
+    "valuePattern": "(?:^|;)\\s*manifest-src\\s[^;]*(?<=\\s)http:(?=[\\s;/]|$)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; manifest-src http:"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src 'self'; manifest-src https://app.example http://legacy.example/app.webmanifest"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "manifest-src 'self' https://app.example"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "manifest-src 'self'; img-src http:"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "manifest-src http://cdn.example"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Security-Policy": "default-src http:; manifest-src https://app.example"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1336"
+  ]
+}
