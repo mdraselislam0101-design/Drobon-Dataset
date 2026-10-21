@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-371",
+  "title": "Jetty default error page disclosed",
+  "description": "The response is the Jetty default error page: the HTTP error heading with the \"Powered by Jetty\" footer. It confirms the exact servlet container and its version line, which the application itself does not otherwise advertise.",
+  "severity": "LOW",
+  "cwe": "CWE-200",
+  "category": "debug-exposure",
+  "remediation": "Configure a custom error page and remove the container version from the footer.",
+  "limitation": "One response body. The rule recognises the container template; the version it prints may be older than the running build.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*HTTP ERROR)(?=[\\s\\S]*Powered by Jetty)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/missing",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Error 404 Not Found</title></head><body><h2>HTTP ERROR 404 Not Found</h2><hr><i>Powered by Jetty:// 11.0.15</i></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/boom",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body><h2>HTTP ERROR 500 Server Error</h2><hr><i>Powered by Jetty:// 9.4.51</i></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/missing",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body><h1>Page not found</h1><a href=\"/\">Back to the shop</a></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/docs/errors",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<p>Set a custom error handler so the container does not render its default page.</p>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1440"
+  ]
+}

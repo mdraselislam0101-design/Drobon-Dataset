@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-336",
+  "title": "clientaccesspolicy.xml permits every origin",
+  "description": "The response is a Silverlight client access policy whose access-policy grants the wildcard domain. The file tells every client that this host may be called cross-origin for any resource and any header.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-942",
+  "category": "information-disclosure",
+  "remediation": "Restrict the policy to the origins that need access, and remove the file when nothing consumes it.",
+  "limitation": "One response body. The rule reads the policy; it does not exercise a Silverlight client against it.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*<access-policy>)(?=[\\s\\S]*<domain[^>]{0,40}uri\\s*=\\s*\"\\*\")"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/clientaccesspolicy.xml",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/xml"
+        },
+        "body": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<access-policy>\n  <cross-domain-access>\n    <policy>\n      <allow-from http-request-headers=\"*\"><domain uri=\"*\"/></allow-from>\n    </policy>\n  </cross-domain-access>\n</access-policy>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/clientaccesspolicy.xml",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/xml"
+        },
+        "body": "<access-policy><cross-domain-access><policy><allow-from><domain uri=\"*\" /></allow-from></policy></cross-domain-access></access-policy>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/clientaccesspolicy.xml",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/xml"
+        },
+        "body": "<access-policy><cross-domain-access><policy><allow-from><domain uri=\"https://app.example\"/></allow-from></policy></cross-domain-access></access-policy>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/docs/policy",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<p>Do not use a wildcard domain in a client access policy.</p>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1405"
+  ]
+}

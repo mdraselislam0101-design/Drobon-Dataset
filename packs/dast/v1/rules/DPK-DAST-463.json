@@ -1,0 +1,101 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-463",
+  "title": "MD5 password digest served with its password marker",
+  "description": "The response pairs a password marker with a bare 32-character hexadecimal digest. MD5 is fast and unsalted values fall to precomputed tables almost immediately.",
+  "severity": "HIGH",
+  "cwe": "CWE-916",
+  "category": "credential-exposure",
+  "remediation": "Migrate to a memory-hard hash and never expose the digest; re-hash on next successful login.",
+  "limitation": "One response body. The rule reads the marker and the digest; it does not look the digest up.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*(?:password_hash|passwd_hash|pwd_hash))[\\s\\S]*?\\b[a-f0-9]{32}\\b"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://legacy.example/users/44",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "X-DNS-Prefetch-Control": "off",
+          "Origin-Agent-Cluster": "?1",
+          "Cache-Control": "no-store",
+          "NEL": "{\"report_to\":\"default\",\"max_age\":86400}",
+          "Report-To": "{\"group\":\"default\",\"max_age\":86400,\"endpoints\":[{\"url\":\"https://reports.example/csp\"}]}",
+          "Expect-CT": "max-age=86400, enforce"
+        },
+        "body": "{\"user\":44,\"password_hash\":\"5f4dcc3b5aa765d61d8327deb882cf99\"}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://legacy.example/export.txt",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "X-DNS-Prefetch-Control": "off",
+          "Origin-Agent-Cluster": "?1",
+          "Cache-Control": "no-store",
+          "NEL": "{\"report_to\":\"default\",\"max_age\":86400}",
+          "Report-To": "{\"group\":\"default\",\"max_age\":86400,\"endpoints\":[{\"url\":\"https://reports.example/csp\"}]}",
+          "Expect-CT": "max-age=86400, enforce"
+        },
+        "body": "password_hash=e10adc3949ba59abbe56e057f20f883e"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://legacy.example/help/passwords",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "X-DNS-Prefetch-Control": "off",
+          "Origin-Agent-Cluster": "?1",
+          "Cache-Control": "no-store",
+          "NEL": "{\"report_to\":\"default\",\"max_age\":86400}",
+          "Report-To": "{\"group\":\"default\",\"max_age\":86400,\"endpoints\":[{\"url\":\"https://reports.example/csp\"}]}",
+          "Expect-CT": "max-age=86400, enforce"
+        },
+        "body": "<html><body><h1>Password policy</h1><p>Passwords are stored with a slow hash. Older MD5 records are upgraded at login.</p></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1532"
+  ]
+}

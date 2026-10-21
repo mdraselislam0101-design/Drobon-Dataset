@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-308",
+  "title": "Xdebug variable dump disclosed in a response",
+  "description": "The response carries an Xdebug var_dump() block. Xdebug renders variables as HTML with the file path, line number and the full value tree, so a dump left in production discloses the code location and whatever the variable held.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-215",
+  "category": "debug-exposure",
+  "remediation": "Turn Xdebug off in production (xdebug.mode=off) and remove every var_dump()/dump() call from deployed code.",
+  "limitation": "One response body. The check recognises the dump markup; it does not read the dumped values.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "class='xdebug-var-dump'"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/search",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<pre class='xdebug-var-dump' dir='ltr'><b>string</b> 'secret-token' <i>(12)</i></pre>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/search",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<div class='xdebug-var-dump'><small>/var/www/search.php:42:</small><b>int</b> 200</div>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/search",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body><h1>Search</h1><p>No results.</p></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/search",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "Warning: Undefined array key \"q\" in /var/www/search.php on line 12"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1377"
+  ]
+}

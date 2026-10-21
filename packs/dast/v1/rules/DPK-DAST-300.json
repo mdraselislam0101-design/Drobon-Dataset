@@ -1,0 +1,65 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-300",
+  "title": "Location header carries an encoded line break",
+  "description": "The Location header contains a percent-encoded carriage return or line feed. A server that reflects a parameter into this header without stripping line breaks is one decoding step away from response splitting, and even without splitting the artefact proves the value was not sanitised.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-113",
+  "category": "content-injection",
+  "remediation": "Reject or strip CR and LF from any value placed in a response header, and validate redirect targets against an allow-list of paths or hosts.",
+  "limitation": "One Location header value. The check proves an encoded line break reached the header; it does not prove the client or an intermediary decodes it, and no header split is attempted.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Location",
+    "valuePattern": "(?:%0[dD]|%0[aA])"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/login?next=%2Fhome%0d%0aSet-Cookie:%20a=b",
+        "status": 302,
+        "headers": {
+          "Location": "/home%0d%0aSet-Cookie:%20a=b"
+        },
+        "body": ""
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login?next=%2Fhome%0a",
+        "status": 302,
+        "headers": {
+          "Location": "/home%0aX-Injected: 1"
+        },
+        "body": ""
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login?next=%2Fhome",
+        "status": 302,
+        "headers": {
+          "Location": "/home"
+        },
+        "body": ""
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login?next=%2Fa%20b",
+        "status": 302,
+        "headers": {
+          "Location": "/a%20b"
+        },
+        "body": ""
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1369"
+  ]
+}

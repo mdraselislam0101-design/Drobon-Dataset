@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-317",
+  "title": "Django SECRET_KEY value served in a response",
+  "description": "The body assigns a value to SECRET_KEY, the framework setting used to sign session cookies, password-reset tokens and any signed payload. With that value anyone can mint a session for any user, and the key cannot be rotated without invalidating every live session.",
+  "severity": "HIGH",
+  "cwe": "CWE-798",
+  "category": "information-disclosure",
+  "remediation": "Rotate the key, remove the settings dump from every served path, and load the value from the environment or a secret manager.",
+  "limitation": "One response body. The check reads the assignment shape; it does not reconstruct a signed cookie from the value.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "\\bSECRET_KEY\\s*=\\s*[\"']?[A-Za-z0-9_\\-!@#$%^&*()+=]{32,}[\"']?"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/__debug__/settings",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<pre>SECRET_KEY = 'django-insecure-4f8a1c9e2b7d6f0a3c5e8b1d4f7a9c2e'\nDEBUG = True</pre>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/static/settings.py",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "DEBUG = True\nSECRET_KEY = 'x9F2kLm4Qp7Rt1Vw3Yz6Bc8Df0Gh2Jk5'"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/static/settings.py",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "SECRET_KEY = os.environ[\"DJANGO_SECRET_KEY\"]"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/docs/settings",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<code>SECRET_KEY = \"changeme\"</code>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1386"
+  ]
+}

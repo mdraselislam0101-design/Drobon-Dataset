@@ -1,0 +1,101 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-458",
+  "title": "Session identifier served in a JSON response",
+  "description": "The response JSON carries a session identifier. Session ids are bearer credentials; a JSON copy is readable by page script and by anything that logs the response.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-522",
+  "category": "credential-exposure",
+  "remediation": "Keep session identifiers in httpOnly cookies and return only a session label to the client.",
+  "limitation": "One response body. The rule reads the field name and a long value; it does not replay the session.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "\"(?:session_id|sessionid|session_token)\"\\s*:\\s*\"[A-Za-z0-9._\\-]{20,}\""
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/api/session",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "X-DNS-Prefetch-Control": "off",
+          "Origin-Agent-Cluster": "?1",
+          "Cache-Control": "no-store",
+          "NEL": "{\"report_to\":\"default\",\"max_age\":86400}",
+          "Report-To": "{\"group\":\"default\",\"max_age\":86400,\"endpoints\":[{\"url\":\"https://reports.example/csp\"}]}",
+          "Expect-CT": "max-age=86400, enforce"
+        },
+        "body": "{\"user\":44,\"session_id\":\"sess_example_0123456789abcdef\",\"expires\":\"2026-11-01\"}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/debug/env",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "X-DNS-Prefetch-Control": "off",
+          "Origin-Agent-Cluster": "?1",
+          "Cache-Control": "no-store",
+          "NEL": "{\"report_to\":\"default\",\"max_age\":86400}",
+          "Report-To": "{\"group\":\"default\",\"max_age\":86400,\"endpoints\":[{\"url\":\"https://reports.example/csp\"}]}",
+          "Expect-CT": "max-age=86400, enforce"
+        },
+        "body": "{\"sessionid\":\"9f8e7d6c5b4a32100123456789abcdef\"}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/docs/sessions",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "X-DNS-Prefetch-Control": "off",
+          "Origin-Agent-Cluster": "?1",
+          "Cache-Control": "no-store",
+          "NEL": "{\"report_to\":\"default\",\"max_age\":86400}",
+          "Report-To": "{\"group\":\"default\",\"max_age\":86400,\"endpoints\":[{\"url\":\"https://reports.example/csp\"}]}",
+          "Expect-CT": "max-age=86400, enforce"
+        },
+        "body": "<html><body><h1>Sessions</h1><p>The session_id is stored in an httpOnly cookie and is never part of a JSON response.</p></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1527"
+  ]
+}

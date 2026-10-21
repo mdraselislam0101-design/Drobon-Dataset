@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1360",
+  "title": "Signal: MySQL server or driver error text disclosed in a response",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-body-matches",
+      "valuePattern": "(?:Can't connect to (?:local )?MySQL server|mysqli_sql_exception|mysqli::__construct\\(\\)|MySQL server has gone away|mysql_connect\\(\\)\\s*:)"
+    }
+  },
+  "scope": "One response body containing a MySQL/MariaDB connection or driver error string.",
+  "limitations": "One response body. The check reads the message text; it does not confirm that the database is reachable from the network, and it cannot tell an operator-facing health page from a public one.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/api/items?id=1",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<b>Warning</b>: mysqli::__construct(): (HY000/2002): Connection refused in /var/www/html/db.php"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/api/items",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "Can't connect to MySQL server on 'db' (111)"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/api/items",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<h1>Something went wrong</h1><p>Reference: 4f2c1d</p>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://db.example/docs/errors",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<h1>Error codes</h1><p>ER_ACCESS_DENIED_ERROR (1045)</p>"
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A documentation page that quotes these messages verbatim is reported; a health endpoint that returns only a boolean is not.",
+  "linkedRules": [
+    "DPK-DAST-291"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:dast-body-mysql-server-error:mysql-driver-error",
+  "validationStatus": "VALIDATED"
+}

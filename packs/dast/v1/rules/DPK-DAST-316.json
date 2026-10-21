@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-316",
+  "title": "Anchor navigates to a data: URI",
+  "description": "An anchor points at a data: URI. Browsers treat the resulting document as a new origin-less page, and script inside it runs from an opaque origin that inherits the opener in some engines; the construct is also a routine way to hide a payload from link scanners.",
+  "severity": "LOW",
+  "cwe": "CWE-79",
+  "category": "content-injection",
+  "remediation": "Serve the target as a real resource and link to it with https, and block data: in link href values at render time.",
+  "limitation": "One response body. The check reads static markup; it does not execute the URI and cannot see whether a script inside it would run in this browser.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "<a\\b[^>]{0,300}href\\s*=\\s*[\"']\\s*data:"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/invoice",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<a href=\"data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==\">Open</a>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/invoice",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<a href='data:text/plain,hello'>Open</a>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/invoice",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<a href=\"https://files.example/invoice.pdf\">Download</a>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/invoice",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<img src=\"data:image/png;base64,iVBORw0KGgo=\" alt=\"logo\">"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1385"
+  ]
+}

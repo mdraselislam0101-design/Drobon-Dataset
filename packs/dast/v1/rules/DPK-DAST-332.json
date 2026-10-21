@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-332",
+  "title": "Anchor opens a new tab without rel=noopener",
+  "description": "An anchor carries target=\"_blank\" and no rel=\"noopener\" or rel=\"noreferrer\". The opened document keeps a live window.opener reference, so a page the site links to can navigate the original tab to any origin and phish the user from a trusted starting point.",
+  "severity": "LOW",
+  "cwe": "CWE-693",
+  "category": "content-injection",
+  "remediation": "Add rel=\"noopener noreferrer\" to every target=\"_blank\" anchor, or use rel=\"noopener\" alone when referrer information must be kept.",
+  "limitation": "One response body. The check reads static markup; anchors created by script at runtime are invisible, and a rel value added by a framework helper is only seen if it is rendered into the HTML.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "<a\\b(?![^>]{0,400}noopener)(?![^>]{0,400}noreferrer)[^>]{0,300}target\\s*=\\s*[\"']_blank[\"']"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/help",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<a href=\"https://docs.vendor.example\" target=\"_blank\">Vendor docs</a>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/help",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<a target='_blank' rel='nofollow' href='/terms'>Terms</a>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/help",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<a href=\"https://docs.vendor.example\" target=\"_blank\" rel=\"noopener noreferrer\">Vendor docs</a>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/help",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<a href=\"/terms\">Terms</a>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1401"
+  ]
+}

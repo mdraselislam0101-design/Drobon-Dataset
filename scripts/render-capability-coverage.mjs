@@ -24,13 +24,23 @@ lines.push('');
 lines.push('Generated from `docs/CAPABILITY_COVERAGE_MATRIX.json` by `scripts/render-capability-coverage.mjs`.');
 lines.push('Do not edit by hand; edit the JSON and re-render.');
 lines.push('');
-lines.push(`As of **${m.asOf}**. Main App reference: \`${m.app.repo}\` @ \`${m.app.commit}\` (read-only; ${m.app.verificationMethod}).`);
+lines.push(`As of **${m.asOf}**. Main App reference: \`${m.app.repo}\` @ \`${m.app.commit}\` (${m.app.verificationMethod}).`);
 lines.push('');
 lines.push('> ' + m.note);
 lines.push('');
+const BUCKETS = [
+  ['coveredVerified', 'COVERED_VERIFIED'],
+  ['partial', 'PARTIAL'],
+  ['missing', 'MISSING'],
+  ['appIntegrationBlocked', 'APP_INTEGRATION_BLOCKED'],
+  ['rightsBlocked', 'RIGHTS_BLOCKED'],
+  ['ownerDecisionBlocked', 'OWNER_DECISION_BLOCKED'],
+  ['notAssessed', 'NOT_ASSESSED'],
+  ['notApplicable', 'NOT_APPLICABLE'],
+];
 lines.push(`Rows: **${m.counts.capabilities}** · Dataset-relevant: **${m.counts.datasetRelevant}** · ` +
-  `COVERED_VERIFIED **${m.counts.coveredVerified}** · APP_INTEGRATION_BLOCKED **${m.counts.appIntegrationBlocked}** · ` +
-  `RIGHTS_BLOCKED **${m.counts.rightsBlocked}** · NOT_APPLICABLE **${m.counts.notApplicable}**`);
+  BUCKETS.filter(([k]) => Number(m.counts[k] ?? 0) > 0)
+    .map(([k, label]) => `${label} **${m.counts[k]}**`).join(' · '));
 lines.push('');
 lines.push('Status vocabulary (closed): `' + m.statusVocabulary.join('`, `') + '`.');
 lines.push('');

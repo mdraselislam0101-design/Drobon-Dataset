@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-318",
+  "title": "macOS .DS_Store metadata served from the web root",
+  "description": "The response carries the .DS_Store file header. The file records the names of every entry in the directory it was created in, including entries that were later deleted or are not linked, so serving it can expose a directory listing that the web server was configured to hide.",
+  "severity": "LOW",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Block dot-files at the web server, remove .DS_Store from build artefacts, and add it to the ignore list of every deploy pipeline.",
+  "limitation": "One response body. The check recognises the file container; it does not parse the entry names it holds.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "Bud1\\x00{0,8}"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/.DS_Store",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/octet-stream"
+        },
+        "body": "Bud1\u0000\u0000\u0000\u0000\u0002\u0000\u0000\u0000"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/assets/.DS_Store",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/octet-stream"
+        },
+        "body": "\u0000\u0000\u0000\u0001Bud1\u0000\u0000\u0000\b"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/.DS_Store",
+        "status": 404,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body>Not found</body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/deploy",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<p>Our deploy step deletes .DS_Store before uploading.</p>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1387"
+  ]
+}

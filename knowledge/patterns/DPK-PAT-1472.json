@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1472",
+  "title": "Signal: Go expvar endpoint served",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-body-matches",
+      "valuePattern": "(?=[\\s\\S]*\"cmdline\")(?=[\\s\\S]*\"memstats\")"
+    }
+  },
+  "scope": "One response body containing the default expvar command-line and memory objects.",
+  "limitations": "One response body. The rule reads the default expvar objects; a custom metric with the same shape is not distinguished.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://api.example/debug/vars",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"cmdline\":[\"/app/server\",\"--db-url=postgres://db.internal/app\"],\"memstats\":{\"Alloc\":18432000,\"NumGC\":91}}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://api.example/debug/vars",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"cmdline\":[\"/srv/api\"],\"memstats\":{\"Alloc\":2048},\"requests\":1422}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://api.example/v1/items",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"items\":[],\"total\":0}"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://api.example/metrics",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "# HELP go_goroutines Number of goroutines\ngo_goroutines 42\n"
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A Prometheus metrics page is not reported, because the expvar object names are required.",
+  "linkedRules": [
+    "DPK-DAST-403"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:dast-debug-expvar:expvar-endpoint",
+  "validationStatus": "VALIDATED"
+}

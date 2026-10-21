@@ -1,0 +1,77 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1350",
+  "title": "Signal: Set-Cookie Max-Age exceeds the 400-day browser cap",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-header-matches",
+      "header": "Set-Cookie",
+      "valuePattern": ";\\s*max-age\\s*=\\s*(?:3[5-9][0-9]{6}|[4-9][0-9]{7}|[1-9][0-9]{8,})\\s*(?:;|$)"
+    }
+  },
+  "scope": "One Set-Cookie value whose Max-Age attribute is longer than 35,000,000 seconds.",
+  "limitations": "One Set-Cookie value. The check reports a declared lifetime above 35,000,000 seconds, which is the first value clearly beyond the 400-day cap; values between 34,560,000 and 35,000,000 are not reported, and no user-agent-specific cap is modelled.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "device=abc; Max-Age=63072000; Secure; HttpOnly"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "device=abc; max-age=3153600000; Secure"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "device=abc; Max-Age=34560000; Secure; HttpOnly"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "session=abc; Max-Age=3600; Secure; HttpOnly"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "device=abc; Expires=Wed, 21 Oct 2026 07:28:00 GMT; Secure"
+        }
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A cookie that is refreshed on every request does not need a long Max-Age and is reported anyway; the finding states the declared value, not the observed refresh behaviour.",
+  "linkedRules": [
+    "DPK-DAST-281"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:dast-cookie-maxage-cap:maxage-beyond-400-days",
+  "validationStatus": "VALIDATED"
+}

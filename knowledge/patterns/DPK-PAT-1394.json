@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1394",
+  "title": "Signal: Kubernetes Secret manifest served in a response",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-body-matches",
+      "valuePattern": "(?=[\\s\\S]*\\bkind:\\s*Secret\\b)(?=[\\s\\S]*(?:^|\\n)[ \\t]*(?:data|stringData)[ \\t]*:(?=[\\s\\S]*\\n[ \\t]{2,}[A-Za-z0-9._-]+[ \\t]*:[ \\t]*\\S))"
+    }
+  },
+  "scope": "One response body containing a Kubernetes Secret manifest with a data or stringData block.",
+  "limitations": "One response body. The check recognises the manifest shape; it does not decode or use the values.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://ci.example/artifacts/app-secret.yaml",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/yaml"
+        },
+        "body": "apiVersion: v1\nkind: Secret\nmetadata:\n  name: db\n type: Opaque\ndata:\n  password: cGxhY2Vob2xkZXItdmFsdWU="
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://ci.example/artifacts/creds.yaml",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "kind: Secret\napiVersion: v1\nstringData:\n  token: placeholder-value\n  user: app"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://ci.example/artifacts/kubeconfig",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/yaml"
+        },
+        "body": "apiVersion: v1\nkind: Config\nclusters:\n  - name: prod\n    cluster:\n      server: https://k8s.example:6443"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://ci.example/artifacts/deploy.yaml",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/yaml"
+        },
+        "body": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: api\nspec:\n  replicas: 2"
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A kubeconfig, Deployment or ConfigMap manifest is not reported; a documentation page that shows a Secret skeleton without values is reported only when a data block with content is present.",
+  "linkedRules": [
+    "DPK-DAST-325"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:dast-body-k8s-secret-manifest:k8s-secret-manifest",
+  "validationStatus": "VALIDATED"
+}

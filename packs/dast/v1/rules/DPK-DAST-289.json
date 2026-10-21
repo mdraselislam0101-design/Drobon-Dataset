@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-289",
+  "title": "X-Runtime exposes per-request processing time",
+  "description": "The response carries the Rails-style X-Runtime header, a per-request processing duration. It fingerprints the framework without authentication and gives a timing oracle for every endpoint, so an attacker can compare responses to find which inputs reach expensive code paths.",
+  "severity": "LOW",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Disable the X-Runtime header in production (`config.action_dispatch.return_only_request_media_type_on_content_type` era middleware, or an edge rule that strips it) and keep timing details in server-side metrics.",
+  "limitation": "One header value. The check reports a numeric X-Runtime value; it does not attribute the timing to any component and it cannot tell a framework default from a hand-written header.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "X-Runtime",
+    "valuePattern": "^\\s*[0-9]+\\s*$|^\\s*[0-9]+\\.[0-9]+\\s*$"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/orders",
+        "status": 200,
+        "headers": {
+          "X-Runtime": "0.034221"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "x-runtime": "1"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "X-Runtime": "fast"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "X-Request-Id": "0.034221"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1358"
+  ]
+}

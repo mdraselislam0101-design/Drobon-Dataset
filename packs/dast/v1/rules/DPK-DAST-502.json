@@ -1,0 +1,101 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-502",
+  "title": "HTML comment carries a credential",
+  "description": "A comment in the served markup names a password, token or key and gives its value. Comments survive templating and are delivered to every visitor.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "data-exposure",
+  "remediation": "Strip development comments from deployed templates and rotate anything that appeared in one.",
+  "limitation": "One response body. The rule reads comment text with a credential marker and a value.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "<!--[\\s\\S]{0,200}?(?:password|passwd|token|api[_ -]?key|secret)\\s*[:=]\\s*\\S{4,}"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://shop.example/checkout",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "X-DNS-Prefetch-Control": "off",
+          "Origin-Agent-Cluster": "?1",
+          "Cache-Control": "no-store",
+          "NEL": "{\"report_to\":\"default\",\"max_age\":86400}",
+          "Report-To": "{\"group\":\"default\",\"max_age\":86400,\"endpoints\":[{\"url\":\"https://reports.example/csp\"}]}",
+          "Expect-CT": "max-age=86400, enforce"
+        },
+        "body": "<html><body><!-- password: dbpass-example (temp for staging) --><h1>Checkout</h1></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://shop.example/api-docs",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "X-DNS-Prefetch-Control": "off",
+          "Origin-Agent-Cluster": "?1",
+          "Cache-Control": "no-store",
+          "NEL": "{\"report_to\":\"default\",\"max_age\":86400}",
+          "Report-To": "{\"group\":\"default\",\"max_age\":86400,\"endpoints\":[{\"url\":\"https://reports.example/csp\"}]}",
+          "Expect-CT": "max-age=86400, enforce"
+        },
+        "body": "<html><body><!-- api_key = example-key-0123456789 --><h1>API</h1></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://shop.example/docs/comments",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "X-DNS-Prefetch-Control": "off",
+          "Origin-Agent-Cluster": "?1",
+          "Cache-Control": "no-store",
+          "NEL": "{\"report_to\":\"default\",\"max_age\":86400}",
+          "Report-To": "{\"group\":\"default\",\"max_age\":86400,\"endpoints\":[{\"url\":\"https://reports.example/csp\"}]}",
+          "Expect-CT": "max-age=86400, enforce"
+        },
+        "body": "<html><body><!-- build 1.4.2 --><p>Never leave a password in a comment.</p></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1571"
+  ]
+}

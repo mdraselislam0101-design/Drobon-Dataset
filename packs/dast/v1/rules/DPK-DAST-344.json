@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-344",
+  "title": "Meta refresh sends the browser to another origin",
+  "description": "The document carries a meta refresh whose target is an absolute URL on another origin. Unlike a redirect header, a meta refresh is written by the template, so a parameter that reaches it turns any page into an open redirect that survives header-level filters.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-601",
+  "category": "open-redirect",
+  "remediation": "Resolve the target server-side against an allow-list and render a relative path, or use a redirect handler that validates the destination.",
+  "limitation": "One response body. The rule reads the refresh target; it does not follow it or test whether the target is hostile.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "<meta[^>]{0,120}http-equiv\\s*=\\s*[\"']?refresh[\"']?[^>]{0,120}content\\s*=\\s*[\"']?\\s*\\d{1,3}\\s*;\\s*url\\s*=\\s*https://(?!(?:www\\.)?app\\.example)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/link",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><meta http-equiv=\"refresh\" content=\"0; url=https://partner.example/landing\"></head><body>Redirecting</body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/notice",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><meta http-equiv='refresh' content='5;URL=https://promo.example/offer'></head><body>Notice</body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/link",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><meta http-equiv=\"refresh\" content=\"0; url=/dashboard\"></head><body>Redirecting</body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/link",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><meta http-equiv=\"refresh\" content=\"0; url=https://app.example/home\"></head><body>Redirecting</body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1413"
+  ]
+}

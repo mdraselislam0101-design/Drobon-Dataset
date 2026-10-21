@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-328",
+  "title": "Redis INFO output served in a response",
+  "description": "The body is Redis INFO output: section headers such as # Server and # Clients followed by redis_version and connected_clients lines. It names the exact build, the memory ceiling and how many clients are attached, and it usually means the port is reachable from outside the application.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Bind Redis to the private interface, require authentication and an ACL, and never expose a diagnostics endpoint to the caller.",
+  "limitation": "One response body. The check reads the INFO section shape; it does not connect to the instance or run a command.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?:^|\\n)#\\s*Server(?:\\r?\\n[^\\n]{0,200}){0,12}?\\r?\\n\\s*redis_version:[0-9]"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/cache/info",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "# Server\r\nredis_version:7.2.4\r\nredis_mode:standalone\r\nos:Linux 6.1 x86_64\r\n# Clients\r\nconnected_clients:42"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/status",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "# Server\nredis_version:6.0.16\nuptime_in_days:31\n# Memory\nused_memory_human:812.44M"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/admin/monitoring",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<h2>Cache</h2><p>redis_version 7.2.4, 42 clients</p>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/healthz",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"cache\":\"ok\",\"db\":\"ok\",\"version\":\"1.4.0\"}"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1397"
+  ]
+}

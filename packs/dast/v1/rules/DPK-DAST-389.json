@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-389",
+  "title": ".travis.yml build definition served",
+  "description": "The response is a Travis CI definition: a language declaration with its script steps. It names the runtime version, the services the build starts and the commands that publish the result.",
+  "severity": "LOW",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Exclude CI definitions from the deployed tree and deny them at the server level.",
+  "limitation": "One response body. The rule reads the build definition; it does not run it.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*(?:^|\\n)language\\s*:\\s*[a-z]{2,20})(?=[\\s\\S]*(?:^|\\n)script\\s*:)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "language: node_js\nnode_js:\n  - \"20\"\nscript:\n  - npm test\n  - npm run build\n"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "language: python\npython:\n  - \"3.12\"\nservices:\n  - postgresql\nscript:\n  - pytest\n"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "services:\n  web:\n    image: shop/web:4.2.1\n"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://docs.example/deploy",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Deployment guide</title></head><body><p>Declare the language and the script steps.</p></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1458"
+  ]
+}

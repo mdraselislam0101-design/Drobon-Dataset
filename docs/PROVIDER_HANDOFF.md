@@ -5,12 +5,25 @@ workstream needs from the separate Main App workstream before any
 production ingestion. It decides nothing on the app side and approves no
 ingestion; GATE-4 stays BLOCKED until the evidence below exists.
 
+> **Update 2026-10-21 (App `9360dd1`):** the app now ships the artifacts this
+> document asked for. `apps/api/src/scans/sca/filesystemProvider.ts` implements
+> `assess(coordinates)` over `DATASET_PATH`, `VULN_INTEL_PROVIDER` accepts
+> `none|filesystem` with a documented fail-closed config, and
+> `docs/DATASET_APP_CONNECTION.md` describes the zero-match surface. Matching was
+> verified against this tree (`fast-jwt@6.2.4` → 6 advisories; 16/16 vectors).
+> GATE-2 (licence), GATE-1 (stage approval) and GATE-3 (review capacity) are still
+> open, so ingestion is still blocked; see
+> `docs/APP_CONNECTION_VERIFICATION_2026-10-21.md` for the evidence and defects.
+
 ## 1. The dependency
 
 Ingested advisories need a verified app consumer: an SCA provider that
 reads Dataset records, matches them against inventories, and reports
-findings. Today the app side has a locked Null provider and no loader, so
-ingested data would have no contract to satisfy. Shipping data without a
+findings. At the time of writing the app had a locked Null provider and no
+loader. **As of App `9360dd1` (2026-10-20) the loader exists** (filesystem
+provider + `apps/api/src/external/`); the remaining conditions are the licence
+and the post-connection conformance items (GAP-040…GAP-048), not the consumer's
+existence. Shipping data without a
 consumer contract risks schema drift, silent zero-matches, and unverified
 range semantics.
 

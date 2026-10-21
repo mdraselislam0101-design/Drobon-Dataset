@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1398",
+  "title": "Signal: Script is loaded from another origin without an integrity hash",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-body-matches",
+      "valuePattern": "<script\\b[^>]{0,300}src\\s*=\\s*[\"']https://(?!(?:www\\.)?app\\.example)[^\"']+[\"'][^>]{0,200}>"
+    }
+  },
+  "scope": "One script element whose src is an absolute https URL on another registrable host with no integrity attribute.",
+  "limitations": "One response body. The check reads static markup; scripts injected by a bundler at runtime are not seen, and an integrity hash does not protect a same-origin path.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<script src=\"https://cdn.vendor.example/lib.js\"></script>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<script defer src='https://analytics.vendor.example/a.js'></script>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<script src=\"/assets/app.js\"></script>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<script>window.__booted=true;</script>"
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A same-origin script, or a cross-origin script that carries an integrity hash, is not reported. Scripts that are intentionally unversioned (analytics loaders) are still reported, because the missing hash is the fact.",
+  "linkedRules": [
+    "DPK-DAST-329"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:dast-body-script-no-integrity:cross-origin-script",
+  "validationStatus": "VALIDATED"
+}

@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-292",
+  "title": "Framework data-layer query exception disclosed in a response",
+  "description": "The response renders a data-layer exception from Laravel, Rails, Django or Doctrine. Each of these classes wraps the database message with the query and the bindings, so a public response that contains one discloses the schema, the parameter values and the framework version in a single string.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-209",
+  "category": "debug-exposure",
+  "remediation": "Handle data-layer exceptions in the framework error handler and return a generic page. Set debug mode off in production so the exception renderer is never selected.",
+  "limitation": "One response body. The check recognises the exception class name; it does not decide whether the query was user-influenced.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?:Illuminate\\\\Database\\\\QueryException|ActiveRecord::StatementInvalid|django\\.db\\.utils\\.ProgrammingError|Doctrine\\\\DBAL\\\\Exception)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/invoices",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "Illuminate\\Database\\QueryException: SQLSTATE[42S22]: Column not found (SQL: select * from invoices)"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/invoices",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "django.db.utils.ProgrammingError: column \"total\" does not exist"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/invoices",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body>We could not load your invoices.</body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/docs/errors",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<h2>Database errors</h2><p>Wrap queries in a transaction handler.</p>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1361"
+  ]
+}

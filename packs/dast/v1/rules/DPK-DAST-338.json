@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-338",
+  "title": "Dockerfile served from the web root",
+  "description": "The response is a Dockerfile: build instructions starting with FROM and continuing into RUN steps. It names the base image and its tag, the packages installed, the build arguments and the paths the image writes.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Exclude build files from the deployed tree (.dockerignore at build time and a deny rule on the server), and rebuild the image if a build argument carried a secret.",
+  "limitation": "One response body. The rule reads the build instruction shape; it does not resolve the base image or prove that a build argument in it is still valid.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*(?:^|\\n)FROM\\s+[a-z0-9])(?=[\\s\\S]*(?:^|\\n)RUN\\s)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/Dockerfile",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "FROM node:20-alpine\nWORKDIR /app\nCOPY package.json ./\nRUN npm ci --omit=dev\nCOPY . .\nCMD [\"node\",\"server.js\"]"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/build/Dockerfile",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "FROM python:3.12-slim\nARG PIP_INDEX_URL\nRUN pip install -r requirements.txt\nCOPY app /app"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/docs/deploy",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<p>Write a Dockerfile with a pinned base image and a single RUN layer.</p>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/docker-compose.yml",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "services:\n  web:\n    image: shop/web:4.2.1\n    ports:\n      - \"8080:8080\""
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1407"
+  ]
+}

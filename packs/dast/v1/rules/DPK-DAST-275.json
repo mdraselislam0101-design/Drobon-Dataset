@@ -1,0 +1,66 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-275",
+  "title": "Meta refresh navigates an HTTPS page to a plaintext URL",
+  "description": "The page carries a `<meta http-equiv=\"refresh\">` element whose target URL uses the http scheme. On an HTTPS response the browser happily follows the refresh, so the user leaves a protected page and continues on a plaintext one, where every subsequent request and the session that follows are open to the network.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-319",
+  "category": "mixed-content",
+  "remediation": "Point the meta refresh at an HTTPS URL, or remove the element and navigate from application code where the target scheme can be checked.",
+  "limitation": "One response body. The check reports a meta refresh element whose URL starts with http on a page fetched over https; it does not follow redirect chains, so an https target that later redirects to http is not reported.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "<meta\\b[^>]*http-equiv\\s*=\\s*[\"']?refresh[\"']?[^>]*url\\s*=\\s*[\"']?\\s*http://",
+    "requireScheme": "https"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {},
+        "body": "<meta http-equiv=\"refresh\" content=\"0; url=http://app.example/dashboard\">"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {},
+        "body": "<META HTTP-EQUIV=\"Refresh\" CONTENT=\"5;URL=http://legacy.example/portal\">"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {},
+        "body": "<meta http-equiv=\"refresh\" content=\"0; url=https://app.example/dashboard\">"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {},
+        "body": "<meta http-equiv=\"refresh\" content=\"30\">"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "http://app.example/",
+        "status": 200,
+        "headers": {},
+        "body": "<meta http-equiv=\"refresh\" content=\"0; url=http://app.example/dashboard\">"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1344"
+  ]
+}

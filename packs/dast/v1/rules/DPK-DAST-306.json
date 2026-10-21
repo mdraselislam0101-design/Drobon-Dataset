@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-306",
+  "title": "Served source map embeds the original source code",
+  "description": "The response is a source map whose sourcesContent field carries the original files. A map with only file names helps debugging; a map with sourcesContent publishes the pre-build source to anyone who opens the developer tools, including comments and internal URLs.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-540",
+  "category": "information-disclosure",
+  "remediation": "Build production maps without sourcesContent, serve maps only to authenticated users, or omit the maps from the public build.",
+  "limitation": "One response body. The check proves the source text is embedded; it does not read the application code or decide whether that code is sensitive.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "\"sourcesContent\"\\s*:\\s*\\["
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/assets/app.js.map",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"version\":3,\"sources\":[\"app.js\"],\"sourcesContent\":[\"const api=\\\"https://internal.example/v1\\\";\"],\"mappings\":\"AAAA\"}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/static/main.js.map",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"version\":3,\"sources\":[\"main.ts\"],\"sourcesContent\": [\"export const key = \\\"x\\\";\"],\"names\":[]}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/assets/app.js.map",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"version\":3,\"sources\":[\"app.js\"],\"names\":[\"a\",\"b\"],\"mappings\":\"AAAA\"}"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/docs/build",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<p>Set devtool to hidden-source-map to drop the source reference from the bundle.</p>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1375"
+  ]
+}

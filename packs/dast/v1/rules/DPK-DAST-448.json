@@ -1,0 +1,101 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-448",
+  "title": "bcrypt password hash served in a response",
+  "description": "The response carries a bcrypt hash with its cost parameter. The cost and salt are public by design, but the hash is the credential record and is crackable offline once it leaves the database.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-522",
+  "category": "credential-exposure",
+  "remediation": "Never serialise credential columns; if a hash must be shown for support, show only the algorithm and cost.",
+  "limitation": "One response body. The rule recognises the modular crypt format and does not attempt cracking.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "\\$2[aby]\\$[0-9]{2}\\$[A-Za-z0-9./]{22}[A-Za-z0-9./]{20,}"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://admin.example/users",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "X-DNS-Prefetch-Control": "off",
+          "Origin-Agent-Cluster": "?1",
+          "Cache-Control": "no-store",
+          "NEL": "{\"report_to\":\"default\",\"max_age\":86400}",
+          "Report-To": "{\"group\":\"default\",\"max_age\":86400,\"endpoints\":[{\"url\":\"https://reports.example/csp\"}]}",
+          "Expect-CT": "max-age=86400, enforce"
+        },
+        "body": "{\"user\":44,\"password_hash\":\"$2b$12$KIXQ8Vh5Yw3vG0Q0aZ0bXuL0m4r0dQv0hZ0jZ0hZ0jZ0hZ0jZ0hZ0\"}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://admin.example/users/44",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "X-DNS-Prefetch-Control": "off",
+          "Origin-Agent-Cluster": "?1",
+          "Cache-Control": "no-store",
+          "NEL": "{\"report_to\":\"default\",\"max_age\":86400}",
+          "Report-To": "{\"group\":\"default\",\"max_age\":86400,\"endpoints\":[{\"url\":\"https://reports.example/csp\"}]}",
+          "Expect-CT": "max-age=86400, enforce"
+        },
+        "body": "<html><body><h1>User 44</h1><p>$2y$10$abcdefghijklmnopqrstuuuuuuuuuuuuuuuuuuuuuuuuuuuuu</p></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://admin.example/help/hashing",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "X-DNS-Prefetch-Control": "off",
+          "Origin-Agent-Cluster": "?1",
+          "Cache-Control": "no-store",
+          "NEL": "{\"report_to\":\"default\",\"max_age\":86400}",
+          "Report-To": "{\"group\":\"default\",\"max_age\":86400,\"endpoints\":[{\"url\":\"https://reports.example/csp\"}]}",
+          "Expect-CT": "max-age=86400, enforce"
+        },
+        "body": "<html><body><h1>Password storage</h1><p>We use bcrypt with a cost of 12. Hashes never leave the database.</p></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1517"
+  ]
+}

@@ -1,0 +1,101 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-447",
+  "title": "Basic authentication credential served in a response body",
+  "description": "The body carries an Authorization header with a Basic value. Basic credentials are base64-encoded, not encrypted, so the user name and password are recoverable by anyone who reads the page.",
+  "severity": "HIGH",
+  "cwe": "CWE-522",
+  "category": "credential-exposure",
+  "remediation": "Keep outbound credentials server-side, use scoped tokens instead of Basic auth, and never render the header.",
+  "limitation": "One response body. The rule matches the header form and the base64 payload length; it does not decode the pair.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?:authorization|auth)[\"']?\\s*[:=]\\s*[\"']?basic\\s+[A-Za-z0-9+/=]{16,}"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://proxy.example/debug/last-request",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "X-DNS-Prefetch-Control": "off",
+          "Origin-Agent-Cluster": "?1",
+          "Cache-Control": "no-store",
+          "NEL": "{\"report_to\":\"default\",\"max_age\":86400}",
+          "Report-To": "{\"group\":\"default\",\"max_age\":86400,\"endpoints\":[{\"url\":\"https://reports.example/csp\"}]}",
+          "Expect-CT": "max-age=86400, enforce"
+        },
+        "body": "GET /api/v1/orders\nAuthorization: Basic cmFoaW06aHVudGVyMi1leGFtcGxl\nAccept: application/json"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://proxy.example/api/echo",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "X-DNS-Prefetch-Control": "off",
+          "Origin-Agent-Cluster": "?1",
+          "Cache-Control": "no-store",
+          "NEL": "{\"report_to\":\"default\",\"max_age\":86400}",
+          "Report-To": "{\"group\":\"default\",\"max_age\":86400,\"endpoints\":[{\"url\":\"https://reports.example/csp\"}]}",
+          "Expect-CT": "max-age=86400, enforce"
+        },
+        "body": "{\"headers\":{\"auth\":\"Basic a2FyaW06bGV0bWVpbi1leGFtcGxl\"}}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://proxy.example/docs/auth",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "X-DNS-Prefetch-Control": "off",
+          "Origin-Agent-Cluster": "?1",
+          "Cache-Control": "no-store",
+          "NEL": "{\"report_to\":\"default\",\"max_age\":86400}",
+          "Report-To": "{\"group\":\"default\",\"max_age\":86400,\"endpoints\":[{\"url\":\"https://reports.example/csp\"}]}",
+          "Expect-CT": "max-age=86400, enforce"
+        },
+        "body": "<html><body><h1>Authentication</h1><p>Send an Authorization header with the Basic scheme followed by the base64 pair.</p></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1516"
+  ]
+}

@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-382",
+  "title": "Gemfile.lock dependency lockfile served",
+  "description": "The response is a Bundler lockfile: the GEM section with its remote and the exact resolved versions. It pins every Ruby dependency and its source, which is a precise inventory of what the application runs.",
+  "severity": "LOW",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Exclude lockfiles from the deployed tree and deny them at the server level.",
+  "limitation": "One response body. The rule reads the lockfile shape; it does not query a vulnerability database for the versions.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*(?:^|\\n)GEM\\n)(?=[\\s\\S]*(?:^|\\n)  remote:)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "GEM\n  remote: https://rubygems.org/\n  specs:\n    rails (7.1.3)\n    puma (6.4.2)\n\nPLATFORMS\n  ruby\n"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "GEM\n  remote: https://gems.internal/\n  specs:\n    shop-core (1.2.0)\n"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "source 'https://rubygems.org'\ngem 'rails', '7.1.3'\n"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://docs.example/deploy",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Deployment guide</title></head><body><p>Commit the lockfile and install with bundle install.</p></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1451"
+  ]
+}

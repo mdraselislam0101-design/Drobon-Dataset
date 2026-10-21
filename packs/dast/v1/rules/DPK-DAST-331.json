@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-331",
+  "title": "Stripe live secret key served in a response",
+  "description": "The body contains a Stripe live secret key, recognised by its sk_live_ prefix. The key authorises the account's full API surface, including charges and refunds, and it is only ever meant to exist server-side.",
+  "severity": "HIGH",
+  "cwe": "CWE-798",
+  "category": "information-disclosure",
+  "remediation": "Revoke and rotate the key in the provider dashboard, remove it from the served content, and load it at runtime from the secret store.",
+  "limitation": "One response body. The check reads the key prefix and length; it does not call the provider to confirm the key is active.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "\\bsk_live_[A-Za-z0-9]{16,}"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/admin/config",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<pre>STRIPE_SECRET=sk_live_51H8xQ2abcdefghijklmnop</pre>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/static/app.js",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/javascript"
+        },
+        "body": "const k=\"sk_live_51J9yR3zyxwvutsrqponmlk\";"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/admin/config",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "STRIPE_SECRET=sk_test_51H8xQ2abcdefghijklmnop"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/checkout",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<script>Stripe(\"pk_live_51H8xQ2abcdefghijklmnop\")</script>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1400"
+  ]
+}

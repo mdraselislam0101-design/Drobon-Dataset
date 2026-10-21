@@ -1,0 +1,77 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1354",
+  "title": "Signal: Permissions-Policy grants the Payment Request API to every origin",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-header-matches",
+      "header": "Permissions-Policy",
+      "valuePattern": "(?:^|[,;])\\s*payment\\s*=\\s*\\(?\\s*\\*"
+    }
+  },
+  "scope": "One Permissions-Policy value whose payment feature carries the `*` allowlist token.",
+  "limitations": "One header value. The check reads the declared allowlist for payment; it does not observe whether a payment sheet is ever opened, and it cannot tell an embedded first-party frame from a third-party one.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://shop.example/",
+        "status": 200,
+        "headers": {
+          "Permissions-Policy": "payment=*"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://shop.example/",
+        "status": 200,
+        "headers": {
+          "Permissions-Policy": "camera=(self), payment=*; geolocation=()"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://shop.example/",
+        "status": 200,
+        "headers": {
+          "Permissions-Policy": "payment=(self)"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://shop.example/",
+        "status": 200,
+        "headers": {
+          "Permissions-Policy": "payment=(self \"https://checkout.example\")"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://shop.example/",
+        "status": 200,
+        "headers": {
+          "Permissions-Policy": "camera=*"
+        }
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A storefront that intentionally delegates payment to a hosted checkout frame is reported; the finding is the delegation to every origin, not the existence of a payment frame.",
+  "linkedRules": [
+    "DPK-DAST-285"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:dast-policy-payment-wildcard:payment-wildcard",
+  "validationStatus": "VALIDATED"
+}

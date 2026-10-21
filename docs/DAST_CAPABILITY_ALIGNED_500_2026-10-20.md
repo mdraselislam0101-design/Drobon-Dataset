@@ -272,3 +272,182 @@ Decisions needed, in order:
 6. **Engineering — next DAST tranche**: families C, F and H have thin coverage (COOP/COEP value
    sets, cache directives, `WWW-Authenticate` schemes). They are the honest place to continue;
    none of them reaches 500 on its own, and none should be stretched to.
+
+---
+
+## Appendix — 2026-10-21 update (defensive batch, DAST 263 → 280)
+
+This section is appended; nothing above it was rewritten, because the 2026-10-20
+figures were correct for the tree of that day.
+
+| Item | 2026-10-20 (as written above) | 2026-10-21 (this batch) |
+|---|---|---|
+| DAST rules | 263 | **280** |
+| Patterns / records / remediation | 1 310 each | **1 327 each** |
+| Declared DAST tests | 1 292 | **1 371** (+79) |
+| DAST evaluation cases | 509 | **528** (+19) |
+| Check types | 7 (closed) | 7 (unchanged) |
+| `run-eval` true positives | 1 336 | **1 353** |
+| Distance to the 500 target | 237 | **220** |
+
+The batch target was not "reach 500 faster" but "make the pack answer the question the
+App asks of every response: is it hardened, and does it leak". Seventeen rules were
+added across 7 families, two candidates were withdrawn with their IDs reserved, and one
+was rejected before ID allocation (a 784-character pattern against a 500-character schema
+limit). Full method, rule table, rejection reasons and measured outputs:
+`docs/DAST_DEFENSIVE_BATCH_2026-10-21.md`.
+
+What did **not** change, deliberately: the check vocabulary, the passive-observation
+contract, the overlap policy (349 checks, 130 subset pairs, 0 unreviewed), the licence
+position (still no `LICENSE`, BLK-001), and the 15 App-evaluator divergences recorded in
+GAP-041. A larger pack is not a more integrated one.
+
+---
+
+## Appendix 2 — 2026-10-21 (app-surface batch, DAST 280 → 292)
+
+Appended again; the figures above and in Appendix 1 remain correct for their own tree
+state.
+
+| Item | Appendix 1 (defensive batch) | Now (app-surface batch) |
+|---|---|---|
+| DAST rules | 280 | **292** |
+| Patterns / records / remediation | 1 327 each | **1 339 each** |
+| Declared DAST tests | 1 371 | **1 419** (+48) |
+| DAST evaluation cases | 528 | **542** (+14) |
+| `run-eval` true positives | 1 353 | **1 365** |
+| Distance to the 500 target | 220 | **208** |
+| Rules evaluable inside the App | not measured before this batch | **219 of 292 (75 %)** |
+
+The second number is the one that matters. Reading the App's DAST engines
+(`apps/api/src/scans/dast/engine.ts`, `activeEngine.ts` at `9360dd1`) showed that the pack
+evaluator receives only 11 response headers and the body, clipped at 32 768 bytes. The
+batch therefore added only body- and allowlisted-header rules, and it produced a new
+gate that records which existing rules can never fire in the product:
+`interop/app-dast-reachability.json` (73 rules across 47 headers), checked by
+`scripts/validate-app-dast-reachability.mjs` inside `npm test`.
+
+That gate changes the shape of the remaining work honestly: adding another
+`Permissions-Policy` or CORP rule would raise the rule count without raising App
+coverage. Until the App forwards those headers, the reachable ceiling is 219 plus
+whatever new body/`Set-Cookie`/`Location` evidence can be defended. Full method and
+rule table: `docs/DAST_APP_ALIGNED_BATCH_2026-10-21.md`.
+
+---
+
+## Appendix 3 — 2026-10-21 (app-surface batch 2, DAST 292 → 306)
+
+| Item | Appendix 2 | Now |
+|---|---|---|
+| DAST rules | 292 | **306** |
+| Patterns / records / remediation | 1 339 each | **1 353 each** |
+| Declared DAST tests | 1 419 | **1 478** (+59) |
+| DAST evaluation cases | 542 | **558** (+16) |
+| `run-eval` true positives | 1 365 | **1 379** |
+| Distance to the 500 target | 208 | **194** |
+| Rules evaluable inside the App | 219 of 292 (75 %) | **233 of 306 (76.1 %)** |
+
+Four areas that had no rule at all are now covered: debug output left in a response
+(Xdebug, Symfony VarDumper, ASP.NET trace viewer, Node.js inspector), cookie attribute
+contracts (misspelt names, public-suffix `Domain`, `Partitioned` without `Secure`),
+policies delivered through a `meta` element (where `frame-ancestors` is ignored), and host
+/ frame disclosure. Every rule was checked against every existing rule's positive
+observations before it was written; none of the 14 is a restatement, and the overlap gate
+did not move. Full method: `docs/DAST_APP_SURFACE_BATCH_2_2026-10-21.md`.
+
+The ceiling has not moved: 73 rules remain unreachable until the App forwards their
+headers, so the next honest tranche is body evidence plus the 11 forwarded names — not
+another header family that the product cannot see.
+
+---
+
+## Appendix 4 — 2026-10-21 (app-surface batch 3, DAST 306 → 325)
+
+| Item | Appendix 3 | Now |
+|---|---|---|
+| DAST rules | 306 | **325** |
+| Patterns / records / remediation | 1 353 each | **1 372 each** |
+| Declared DAST tests | 1 478 | **1 554** (+76) |
+| DAST evaluation cases | 558 | **579** (+21) |
+| `run-eval` true positives | 1 379 | **1 398** |
+| Distance to the 500 target | 194 | **175** |
+| Rules evaluable inside the App | 233 of 306 (76.1 %) | **252 of 325 (77.5 %)** |
+
+This tranche added no header-reading rule at all: markup trust decisions (`data:` anchor,
+cross-origin script without an integrity hash, `target="_blank"` without `rel=noopener`),
+credential-form placement (third-party password `action`, `GET` password form), secrets
+that exist only as text (Django `SECRET_KEY`, GCP service-account JSON, Kubernetes
+`Secret` manifest, Stripe live key, unsigned JWT, incoming webhook URL), deployment
+artefacts and diagnostics (`.DS_Store`, `.htaccess`, Redis `INFO`, webpack dev client, JSON
+stack field, internal address with port, presigned object URL) and one cookie lifetime
+(`Expires` beyond the 400-day cap, the attribute form of DPK-DAST-281).
+
+Five candidates were dropped instead of ledgered because their evidence was a strict
+subset of an existing rule's positive fixture, or because the ReDoS lint rejected the
+pattern. That is the honest cost of not padding: the three dropped evidence-subset
+families are still only visible through a neighbouring rule. Full method:
+`docs/DAST_APP_SURFACE_BATCH_3_2026-10-21.md`.
+
+The ceiling still has not moved: the same 73 rules remain unreachable until the App
+forwards their headers, so the remaining 175 rules cannot come from header families the
+product cannot see. What would close the distance: (1) more body evidence that does not
+restate an existing rule, and (2) an owner decision to widen the 11-header allowlist in
+`apps/api/src/scans/dast/{rules,engine}.ts`, which is worth 47 further headers and the 73
+rules behind them.
+
+---
+
+## Appendix 5 — 2026-10-21 (app-surface batch 4, DAST 325 → 367)
+
+| Item | Appendix 4 | Now |
+|---|---|---|
+| DAST rules | 325 | **367** |
+| Patterns / records / remediation | 1 372 each | **1 414 each** |
+| Declared DAST tests | 1 554 | **1 722** (+168) |
+| DAST evaluation cases | 579 | **623** (+44) |
+| `run-eval` true positives | 1 398 | **1 440** |
+| Distance to the 500 target | 175 | **133** |
+| Rules evaluable inside the App | 252 of 325 (77.5 %) | **294 of 367 (80.1 %)** |
+
+The largest single tranche since the capability-aligned pump, built from the same reading of
+the App: 21 administrative-console fingerprints, 9 framework debug surfaces, 8 served
+artefacts, 2 markup rules that complement the plaintext `base`/`meta refresh` rules, and 2
+cookie `Domain` contracts. Every rule reads the body or `Set-Cookie`, so the unreachable set
+did not move: 73 rules across 47 filtered headers remain frozen.
+
+Honest characterisation: the console family is breadth inside one existing class, not a new
+class. The batch raises the number of distinct interfaces the pack recognises; it does not
+raise the semantic ceiling, which is fixed by the seven closed check types.
+
+The remaining 133 rules and their family-by-family candidates are recorded in
+`docs/DAST_500_GAP_PLAN_2026-10-21.md`. That plan states the one thing this appendix has
+said at every step: the *reachable* count cannot approach the *declared* count until the
+owner widens `ALLOWED_RESPONSE_HEADERS` in `apps/api/src/scans/dast/rules.ts`, because 73
+rules already need headers the App filters out before evaluation.
+
+---
+
+## Appendix 6 — 2026-10-21 (app-surface batch 5, DAST 367 → 398)
+
+| Item | Appendix 5 | Now |
+|---|---|---|
+| DAST rules | 367 | **398** |
+| Patterns / records / remediation | 1 414 each | **1 445 each** |
+| Declared DAST tests | 1 722 | **1 846** (+124) |
+| DAST evaluation cases | 623 | **656** (+33) |
+| `run-eval` true positives | 1 440 | **1 471** |
+| Distance to the 500 target | 133 | **102** |
+| Rules evaluable inside the App | 294 of 367 (80.1 %) | **325 of 398 (81.7 %)** |
+
+This batch is entirely body evidence: framework development surfaces (Django Debug
+Toolbar, Flask Debug Toolbar, Rails web-console, Next.js development build, Nuxt DevTools,
+Astro toolbar), two development consoles (Quarkus Dev UI, Spring Boot Admin), twelve
+orchestration and data-platform consoles, the dependency-lockfile family, and four served
+runtime files. Because nothing reads a header, the 73 header-blocked rules are untouched and
+the reachable share rises only because the denominator grew with reachable rules.
+
+The 102 rules that remain, and the families they can come from, are in
+`docs/DAST_500_GAP_PLAN_2026-10-21.md`. The one honest statement that has not changed: the
+*reachable* count cannot approach the *declared* count until the owner widens
+`ALLOWED_RESPONSE_HEADERS` in `apps/api/src/scans/dast/rules.ts`, because 73 rules already
+need headers the App filters out before evaluation.

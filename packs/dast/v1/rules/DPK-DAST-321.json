@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-321",
+  "title": "Google Cloud service account key JSON served in a response",
+  "description": "The body is a service account key document: type service_account together with private_key_id, client_email and a private_key value. The file is a complete credential that authenticates as the service account until the key is deleted.",
+  "severity": "HIGH",
+  "cwe": "CWE-798",
+  "category": "information-disclosure",
+  "remediation": "Delete the key in the cloud console, remove the file from the served path, and use workload identity or a secret manager instead of downloaded keys.",
+  "limitation": "One response body. The check recognises the key document; it does not parse the key or authenticate with it.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*\"type\"\\s*:\\s*\"service_account\")(?=[\\s\\S]*\"private_key_id\"\\s*:\\s*\"[A-Za-z0-9]{16,})(?=[\\s\\S]*\"private_key\"\\s*:\\s*\"[^\"\\n]{1,200}\")(?=[\\s\\S]*\"client_email\"\\s*:)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/.well-known/sa-key.json",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"type\": \"service_account\", \"project_id\": \"shop\", \"private_key_id\": \"a1b2c3d4e5f60718293a4b5c6d7e8f9012345678\", \"private_key\": \"[redacted key material]\", \"client_email\": \"ci@shop.iam.gserviceaccount.com\"}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/build/creds.json",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"private_key_id\": \"b2c3d4e5f60718293a4b5c6d7e8f901234567890\", \"private_key\": \"[redacted key material]\", \"type\": \"service_account\", \"client_email\": \"ci@shop.iam.gserviceaccount.com\"}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/build/adc.json",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"type\": \"authorized_user\", \"client_id\": \"abc.apps.googleusercontent.com\", \"refresh_token\": \"1//redacted\"}"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/docs/gcp",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<p>A key file contains a private_key_id and a private_key, and its type is service_account.</p>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1390"
+  ]
+}

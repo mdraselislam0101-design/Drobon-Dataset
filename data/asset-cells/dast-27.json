@@ -1,0 +1,2451 @@
+[
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-debug-django-toolbar",
+  "category": "debug-exposure",
+  "cwe": "CWE-215",
+  "severity": "MEDIUM",
+  "title": "Django Debug Toolbar disclosed",
+  "description": "The response carries the Django Debug Toolbar: its djDebug container together with the toolbar scripts. The panels show every SQL query of the request with its parameters, the settings, the headers and the template context.",
+  "remediation": "Install the toolbar only for local development (`SHOW_TOOLBAR_CALLBACK` false in production) and remove it from the deployed settings.",
+  "limitation": "One response body. The rule reports the toolbar container; it does not open a panel.",
+  "scopeT": "One response body containing the Django Debug Toolbar container and its script marker.",
+  "fp": "A page that mentions the toolbar in prose is not reported, because both the container name and the script marker are required.",
+  "recordDesc": "The SQL panel prints each query with its bound parameters, which is where identifiers, emails and tokens appear. The settings panel additionally prints configuration values that the application never renders on purpose.",
+  "applicability": "Responses from a Django deployment that keeps the toolbar in production settings.",
+  "risk": "The caller reads query parameters, settings values and the template context for every page that renders the toolbar.",
+  "why": "The body contains the Django Debug Toolbar container and scripts.",
+  "fix": [
+   "Disable the toolbar outside development.",
+   "Keep the settings and query logs server-side."
+  ],
+  "verifyT": "Load a page and confirm the response carries no djDebug markup.",
+  "cells": [
+   {
+    "suffix": "django-debug-toolbar",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*djDebug)(?=[\\s\\S]*djdt)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/orders",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><body><h1>Orders</h1><div id=\"djDebug\" class=\"djDebugPanelList\"><a href=\"#sql\">SQL</a><a href=\"#settings\">Settings</a></div><script>djdt.init({});</script></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/report",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<div id=\"djDebug\"><div id=\"djDebugSqlPanel\"><pre>SELECT * FROM orders WHERE user_id = 42</pre></div></div><script src=\"/static/debug_toolbar/js/djdt.js\"></script>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/orders",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><body><h1>Orders</h1><p>3 orders</p></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/guide",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Debugging guide</title></head><body><p>Install the toolbar only in development settings.</p></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-debug-flask-toolbar",
+  "category": "debug-exposure",
+  "cwe": "CWE-215",
+  "severity": "MEDIUM",
+  "title": "Flask Debug Toolbar disclosed",
+  "description": "The response carries the Flask Debug Toolbar: its flDebug container with the flt- panel markers. The panels list the SQL statements, the request variables, the configuration and the template variables of the request.",
+  "remediation": "Disable the toolbar outside development and keep its configuration out of the deployed settings.",
+  "limitation": "One response body. The rule reports the toolbar container; it does not open a panel.",
+  "scopeT": "One response body containing the Flask Debug Toolbar container and a panel marker.",
+  "fp": "A page that names the toolbar in prose is not reported, because the container and panel markers are both required.",
+  "recordDesc": "The Flask toolbar renders the configuration panel with application settings and the SQL panel with the statements and their parameters. Reaching it publishes both the schema and the values the application passes to the database.",
+  "applicability": "Responses from a Flask deployment that keeps the toolbar enabled.",
+  "risk": "The caller reads configuration values and query parameters for every page that renders the toolbar.",
+  "why": "The body contains the Flask Debug Toolbar containers.",
+  "fix": [
+   "Disable the toolbar in production.",
+   "Render diagnostics to logs instead of the page."
+  ],
+  "verifyT": "Load a page and confirm no flDebug markup is present.",
+  "cells": [
+   {
+    "suffix": "flask-debugtoolbar",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*flDebug)(?=[\\s\\S]*flt-)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/invoices",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><body><h1>Invoices</h1><div id=\"flDebug\" class=\"debug-toolbar\"><span id=\"flt-sql\"></span><span id=\"flt-config\"></span></div></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/search",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<div id=\"flDebug\"><div id=\"flt-sql-panel\"><pre>SELECT id FROM items LIMIT 20</pre></div></div>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/invoices",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><body><h1>Invoices</h1><p>No open invoices.</p></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/guide",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Flask guide</title></head><body><p>The toolbar is enabled only when DEBUG is true.</p></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-debug-rails-web-console",
+  "category": "debug-exposure",
+  "cwe": "CWE-489",
+  "severity": "HIGH",
+  "title": "Rails web-console rendered in a page",
+  "description": "The response carries the Rails web-console: its container with the console bindings. The console evaluates Ruby in the request context, so a reachable console is remote code execution with the application privileges.",
+  "remediation": "Add the web-console gem to the development group only, and never mount it in a production environment.",
+  "limitation": "One response body. The rule reports the console container; it does not send an expression to it.",
+  "scopeT": "One response body containing the Rails web-console container and its binding marker.",
+  "fp": "A page that names web-console in prose is not reported, because the container and binding markers are both required.",
+  "recordDesc": "The web-console is an interactive Ruby prompt bound to the current request. Any expression evaluated there can read the database credentials, write files and reach the network, so its presence in a production response is equivalent to an unauthenticated shell.",
+  "applicability": "Responses from a Rails application that renders the console outside development.",
+  "risk": "The caller evaluates arbitrary Ruby in the application process and can read secrets or write to the database.",
+  "why": "The body contains the Rails web-console container and bindings.",
+  "fix": [
+   "Restrict the gem to the development group.",
+   "Verify the console is absent from production responses."
+  ],
+  "verifyT": "Trigger an error in production and confirm the response carries no console container.",
+  "cells": [
+   {
+    "suffix": "rails-web-console",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*web-console)(?=[\\s\\S]*data-console-bindings)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/orders/1",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><body><h2>NoMethodError</h2><div id=\"console\" data-console-bindings=\"{&quot;session_id&quot;:&quot;abc&quot;}\"><pre>web-console</pre></div></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/checkout",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<div class=\"console\" data-console-bindings=\"{}\"><span>web-console</span></div>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/orders/1",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><body><h1>Something went wrong</h1></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/guide",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Rails guide</title></head><body><p>web-console is installed for the development group only.</p></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-debug-nextjs-development-build",
+  "category": "debug-exposure",
+  "cwe": "CWE-489",
+  "severity": "MEDIUM",
+  "title": "Next.js development build served",
+  "description": "The page loads its chunks from the Next.js development path. A development build ships the source maps, the error overlay and the hot-reload socket, and its error pages print the component stack with file paths.",
+  "remediation": "Deploy the production build (`next build` and `next start`) and remove development artefacts from the served tree.",
+  "limitation": "One response body. The rule reports the development chunk path; it does not fetch a source map from it.",
+  "scopeT": "One response body referencing the Next.js development chunk path together with the page data marker.",
+  "fp": "A production page that references hashed production chunks is not reported, because the development path segment is required.",
+  "recordDesc": "A development build serves the compiler output for every route, including the overlay that prints the failing component and the file that defines it. The hot-reload socket it opens also accepts connections from any origin that reaches the host.",
+  "applicability": "Responses from a Next.js deployment that runs the development server.",
+  "risk": "The caller reads component paths and source maps, and reaches a hot-reload socket that can be used to inject compiled output.",
+  "why": "The response references the Next.js development chunk path.",
+  "fix": [
+   "Run the production build.",
+   "Keep the development server off any reachable host."
+  ],
+  "verifyT": "Inspect the served HTML and confirm no /_next/static/development path appears.",
+  "cells": [
+   {
+    "suffix": "nextjs-development-build",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*/_next/static/development/)(?=[\\s\\S]*__NEXT_DATA__)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/shop",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><body><div id=\"__next\"></div><script src=\"/_next/static/development/_buildManifest.js\"></script><script id=\"__NEXT_DATA__\" type=\"application/json\">{\"page\":\"/shop\"}</script></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/cart",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<script src=\"/_next/static/development/_ssgManifest.js\"></script><script id=\"__NEXT_DATA__\" type=\"application/json\">{}</script>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/shop",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><body><div id=\"__next\"></div><script src=\"/_next/static/chunks/main-1f2a3b.js\"></script><script id=\"__NEXT_DATA__\" type=\"application/json\">{\"page\":\"/shop\"}</script></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/guide",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Deployment guide</title></head><body><p>Run next build before deploying.</p></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-debug-nuxt-devtools",
+  "category": "debug-exposure",
+  "cwe": "CWE-489",
+  "severity": "MEDIUM",
+  "title": "Nuxt DevTools overlay served",
+  "description": "The response carries the Nuxt DevTools overlay. It exposes the component tree, the Nuxt configuration, the server routes and the state of every composable, and in its default configuration it is reachable from any origin that can frame the page.",
+  "remediation": "Disable DevTools in the production build (`devtools: { enabled: false }`) and rebuild.",
+  "limitation": "One response body. The rule reports the overlay shell; it does not walk the component tree.",
+  "scopeT": "One response body containing the Nuxt DevTools overlay shell.",
+  "fp": "A page that mentions DevTools in prose is not reported, because the overlay marker is required.",
+  "recordDesc": "The DevTools overlay renders the Nuxt configuration and the runtime state, including the public runtime config that the application passes to the client. On a server-rendered page it also lists the server routes, which are the API surface.",
+  "applicability": "Responses from a Nuxt deployment built with DevTools enabled.",
+  "risk": "The caller reads the runtime configuration and the server route list, and inspects component state that may hold personal data.",
+  "why": "The body contains the Nuxt DevTools overlay.",
+  "fix": [
+   "Disable DevTools for the production build.",
+   "Rebuild and redeploy the artefact."
+  ],
+  "verifyT": "Load a page in production and confirm the overlay marker is absent.",
+  "cells": [
+   {
+    "suffix": "nuxt-devtools",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*nuxt-devtools)(?=[\\s\\S]*__NUXT_DEVTOOLS__)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/shop",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><body><div id=\"__nuxt\"></div><iframe class=\"nuxt-devtools-frame\" src=\"/_nuxt/devtools\" title=\"Nuxt DevTools\"></iframe><script>window.__NUXT_DEVTOOLS__ = 1;</script></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/_nuxt/devtools",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Nuxt DevTools</title><script>window.__NUXT_DEVTOOLS__ = {}</script></head><body><div class=\"nuxt-devtools-panel\"></div></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/shop",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><body><div id=\"__nuxt\"><h1>Shop</h1></div></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/guide",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Nuxt guide</title></head><body><p>Disable devtools before building for production.</p></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-debug-astro-dev-toolbar",
+  "category": "debug-exposure",
+  "cwe": "CWE-489",
+  "severity": "LOW",
+  "title": "Astro development toolbar served",
+  "description": "The response carries the Astro development toolbar. It lists the islands on the page, their hydration state and the audit results, and it injects a script that the production build omits entirely.",
+  "remediation": "Deploy the production build; the toolbar only exists in the development server output.",
+  "limitation": "One response body. The rule reports the toolbar element; it does not inspect the island data.",
+  "scopeT": "One response body containing the Astro toolbar element with the Astro marker.",
+  "fp": "A page that mentions the toolbar in prose is not reported, because the element is required.",
+  "recordDesc": "The toolbar reveals the island boundaries and the framework component names of the page, which is the component map of the application. Its presence also proves the response came from a development server rather than the build.",
+  "applicability": "Responses from an Astro development server reachable from outside.",
+  "risk": "The caller learns the component structure of the page and confirms a development server is exposed.",
+  "why": "The body contains the Astro development toolbar element.",
+  "fix": [
+   "Serve the production build.",
+   "Keep the development server on the loopback interface."
+  ],
+  "verifyT": "Inspect the served HTML in production and confirm the toolbar element is absent.",
+  "cells": [
+   {
+    "suffix": "astro-dev-toolbar",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*astro-dev-toolbar)(?=[\\s\\S]*astro)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><body><main><h1>Home</h1></main><astro-dev-toolbar><template shadowrootmode=\"open\"></template></astro-dev-toolbar></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/pricing",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<astro-dev-toolbar data-islands=\"2\"></astro-dev-toolbar><script type=\"module\" src=\"/@id/astro:scripts/page.js\"></script><p>astro</p>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><body><main><h1>Home</h1></main><script type=\"module\" src=\"/_astro/index.abc123.js\"></script></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/guide",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Astro guide</title></head><body><p>The toolbar appears only in the dev server.</p></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-console-quarkus-dev-ui",
+  "category": "debug-exposure",
+  "cwe": "CWE-489",
+  "severity": "MEDIUM",
+  "title": "Quarkus Dev UI served",
+  "description": "The response is the Quarkus Dev UI. It lists the extensions on the classpath, the configuration properties with their values and the dev services the application started, including the databases it provisioned.",
+  "remediation": "Run the production build (`quarkus.package.type` set and dev mode off) and never expose the dev-mode port.",
+  "limitation": "One response body. The rule reports the Dev UI shell; it does not read a configuration page.",
+  "scopeT": "One response body containing the Quarkus Dev UI shell.",
+  "fp": "A page that names Quarkus in prose is not reported, because the Dev UI marker is required.",
+  "recordDesc": "Dev UI prints the runtime configuration, which includes datasource URLs and often credentials, plus the extension list that identifies the exact framework surface. It exists only in dev mode, so seeing it also proves the deployment is a development build.",
+  "applicability": "Responses from a Quarkus application running in dev mode.",
+  "risk": "The caller reads configuration values and the extension list, and can reach the dev services the application started.",
+  "why": "The body is the Quarkus Dev UI shell.",
+  "fix": [
+   "Deploy the production build.",
+   "Keep the dev-mode port unreachable."
+  ],
+  "verifyT": "Request /q/dev and confirm the response is 404.",
+  "cells": [
+   {
+    "suffix": "quarkus-dev-ui",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*/q/dev)(?=[\\s\\S]*quarkus)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/q/dev-ui/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Dev UI</title></head><body><div id=\"quarkus-devui\"></div><a href=\"/q/dev-ui/extensions\">Extensions</a></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/q/dev-ui/configuration-form",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><body><h1>Configuration</h1><p>quarkus.datasource.jdbc.url=jdbc:postgresql://db.internal:5432/app</p><a href=\"/q/dev-ui/io.quarkus.quarkus-datasource\">datasource</a></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/api/items",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><body><h1>Items</h1></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/guide",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Framework guide</title></head><body><p>Development-mode extensions are listed under the dev UI.</p></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-console-spring-boot-admin",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "Spring Boot Admin console is reachable without authentication",
+  "description": "The response is the Spring Boot Admin shell. The server aggregates the actuators of every registered application, so its console shows environment values, heap dumps, thread dumps and log levels for the whole fleet.",
+  "remediation": "Require authentication on the admin server (and on every client actuator) and keep it on the administrative network.",
+  "limitation": "One response body. The rule reports the admin shell; it does not read an actuator endpoint.",
+  "scopeT": "One response body containing the Spring Boot Admin shell.",
+  "fp": "A page that names the project in prose is not reported, because the shell marker is required.",
+  "recordDesc": "The admin server is a fan-in for actuators: environment, heap dump, thread dump and loggers for each client. A reachable shell without authentication therefore exposes operational internals of every registered application at once.",
+  "applicability": "Responses from a Spring Boot Admin server reachable by ordinary users.",
+  "risk": "The caller reads environment properties and heap data from every registered application, which usually includes credentials.",
+  "why": "The body is the Spring Boot Admin shell.",
+  "fix": [
+   "Require authentication on the admin server.",
+   "Secure the actuator endpoints on each client."
+  ],
+  "verifyT": "Request the admin root anonymously and confirm it does not render.",
+  "cells": [
+   {
+    "suffix": "spring-boot-admin",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*spring-boot-admin)(?=[\\s\\S]*Spring Boot Admin)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://ops.example/admin/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Spring Boot Admin</title></head><body><div id=\"spring-boot-admin-root\"></div><script src=\"/assets/index.js\"></script></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://ops.example/admin/#/applications",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Applications · Spring Boot Admin</title></head><body><div class=\"spring-boot-admin-app\"></div></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/actuator/health",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/json"
+       },
+       "body": "{\"status\":\"UP\"}"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/guide",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Operations guide</title></head><body><p>The admin server aggregates registered applications.</p></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-debug-expvar",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "Go expvar endpoint served",
+  "description": "The response is the Go expvar handler: the cmdline and memstats objects that the runtime publishes by default. The command line names the flags the service was started with, and those flags routinely carry configuration paths and credentials.",
+  "remediation": "Do not register expvar on a public handler, or replace it with a metrics endpoint that exposes only counters.",
+  "limitation": "One response body. The rule reads the default expvar objects; a custom metric with the same shape is not distinguished.",
+  "scopeT": "One response body containing the default expvar command-line and memory objects.",
+  "fp": "A Prometheus metrics page is not reported, because the expvar object names are required.",
+  "recordDesc": "The cmdline object is the process argument list. Services pass database URLs, signing keys and feature flags there more often than teams expect, and the memstats object confirms the runtime so the reader knows the output is live.",
+  "applicability": "Responses from a Go service that imports net/http/pprof or expvar without removing the handler.",
+  "risk": "The caller reads the process command line, which frequently contains credentials, and the runtime memory profile.",
+  "why": "The body is the default expvar output.",
+  "fix": [
+   "Serve expvar on an internal listener or not at all.",
+   "Pass secrets through the environment rather than flags."
+  ],
+  "verifyT": "Request /debug/vars and confirm the response is 404.",
+  "cells": [
+   {
+    "suffix": "expvar-endpoint",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*\"cmdline\")(?=[\\s\\S]*\"memstats\")"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://api.example/debug/vars",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/json"
+       },
+       "body": "{\"cmdline\":[\"/app/server\",\"--db-url=postgres://db.internal/app\"],\"memstats\":{\"Alloc\":18432000,\"NumGC\":91}}"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://api.example/debug/vars",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/json"
+       },
+       "body": "{\"cmdline\":[\"/srv/api\"],\"memstats\":{\"Alloc\":2048},\"requests\":1422}"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://api.example/v1/items",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/json"
+       },
+       "body": "{\"items\":[],\"total\":0}"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://api.example/metrics",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "# HELP go_goroutines Number of goroutines\ngo_goroutines 42\n"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-console-tensorboard",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "TensorBoard is reachable without authentication",
+  "description": "The response is the TensorBoard interface. It reads the event files of a training run, so it publishes the experiment directory, the run names, the metrics and, through the text plugin, sample records of the training data.",
+  "remediation": "Bind TensorBoard to the training host or put an authenticating proxy in front of it.",
+  "limitation": "One response body. The rule reports the TensorBoard shell; it does not read a scalar or a text sample.",
+  "scopeT": "One response body containing the TensorBoard shell.",
+  "fp": "A page that mentions TensorBoard in prose is not reported, because the shell marker is required.",
+  "recordDesc": "TensorBoard is a file browser over a log directory: run names, checkpoint paths, hyper-parameters and text samples of the training set. On a shared training host that is the experiment inventory of the organisation.",
+  "applicability": "Responses from a training host that serves TensorBoard on a reachable interface.",
+  "risk": "The caller learns the experiment layout and reads sample training data and metrics.",
+  "why": "The body is the TensorBoard shell.",
+  "fix": [
+   "Bind TensorBoard to the training network.",
+   "Add an authenticating proxy when it must be shared."
+  ],
+  "verifyT": "Request the TensorBoard root anonymously and confirm it does not render.",
+  "cells": [
+   {
+    "suffix": "tensorboard",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "<title>[^<]{0,60}TensorBoard"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://ml.example:6006/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>TensorBoard</title></head><body><script>window.tensorboard = {};</script><div id=\"root\"></div></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://ml.example:6006/#runs",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>TensorBoard · runs</title></head><body><h3>Runs</h3><p>tensorboard reads /logs/exp-42</p></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/guide",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Training guide</title></head><body><p>TensorBoard reads event files from the log directory.</p></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/dashboard",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Dashboard</title></head><body><p>Model version 4 is live.</p></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-console-mlflow",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "MLflow tracking UI is reachable without authentication",
+  "description": "The response is the MLflow tracking UI. It lists experiments, runs, parameters and artefacts, and with artefact access it can download the model files the project registered.",
+  "remediation": "Enable MLflow authentication or put it behind a proxy, and keep the tracking server on the internal network.",
+  "limitation": "One response body. The rule reports the UI shell; it does not download an artefact.",
+  "scopeT": "One response body containing the MLflow UI shell.",
+  "fp": "A page that names MLflow in prose is not reported, because the shell marker is required.",
+  "recordDesc": "The tracking server is the experiment record: parameters, metrics, tags, source paths and artefact URIs. It frequently stores database connection strings in tags and model files in artefacts, so a public UI is a public model registry.",
+  "applicability": "Responses from an MLflow tracking server on a reachable host.",
+  "risk": "The caller enumerates experiments and downloads model artefacts, which are executable payloads in a deployment pipeline.",
+  "why": "The body is the MLflow UI shell.",
+  "fix": [
+   "Enable authentication or proxy the server.",
+   "Restrict the tracking server to the internal network."
+  ],
+  "verifyT": "Request the UI root anonymously and confirm it does not render.",
+  "cells": [
+   {
+    "suffix": "mlflow-ui",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "<title>[^<]{0,60}MLflow"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://ml.example/mlflow/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>MLflow</title></head><body><div id=\"root\" data-mlflow-version=\"2.11\"></div></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://ml.example/mlflow/#/experiments/1",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>MLflow · experiments</title></head><body><p>3 runs</p></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/guide",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>ML guide</title></head><body><p>Start the server with mlflow server.</p></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/predict",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/json"
+       },
+       "body": "{\"label\":\"ok\"}"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-console-prefect",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "Prefect UI is reachable without authentication",
+  "description": "The response is the Prefect orchestration UI. It shows flow definitions, deployments, schedules and the logs of each run, and its API accepts the commands that start them.",
+  "remediation": "Put Prefect behind its own authentication or an authenticating proxy, and keep the server internal.",
+  "limitation": "One response body. The rule reports the UI shell; it does not start a flow.",
+  "scopeT": "One response body containing the Prefect UI shell.",
+  "fp": "A page that names Prefect in prose is not reported, because the shell marker is required.",
+  "recordDesc": "An orchestration UI holds the flow code references, the schedules and the run logs, which name the storage and compute the pipeline touches. Its API also triggers runs, so exposure is both a disclosure and a way to move data.",
+  "applicability": "Responses from a self-hosted Prefect server on a reachable host.",
+  "risk": "The caller reads run logs that name internal storage, and can trigger deployments that move or transform data.",
+  "why": "The body is the Prefect UI shell.",
+  "fix": [
+   "Require authentication for the server.",
+   "Keep the orchestration host internal."
+  ],
+  "verifyT": "Request the UI root anonymously and confirm it does not render.",
+  "cells": [
+   {
+    "suffix": "prefect-ui",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "<title>[^<]{0,60}Prefect"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://flows.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Prefect</title></head><body><div id=\"app\" data-server=\"prefect\"></div></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://flows.example/runs",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Prefect · Flow runs</title></head><body><p>12 successful runs</p></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/guide",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Orchestration guide</title></head><body><p>Start the server with prefect server start.</p></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/jobs",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Jobs</title></head><body><p>All jobs completed.</p></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-console-dagster",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "Dagster UI is reachable without authentication",
+  "description": "The response is the Dagster asset UI. It renders the asset graph, the materialisation history, the partitions and the run logs of the pipeline, including the storage and compute definitions the jobs use.",
+  "remediation": "Put the Dagster webserver behind authentication and keep it on the internal network.",
+  "limitation": "One response body. The rule reports the UI shell; it does not launch a run.",
+  "scopeT": "One response body containing the Dagster UI shell.",
+  "fp": "A page that names Dagster in prose is not reported, because the shell marker is required.",
+  "recordDesc": "The asset graph is the data model of the platform, and the run logs name the storage layers and the code locations. The UI also launches runs, so a public webserver is both a map and a control surface.",
+  "applicability": "Responses from a Dagster webserver on a reachable host.",
+  "risk": "The caller reads the data model and run logs, and can launch jobs that write to the storage the assets point at.",
+  "why": "The body is the Dagster UI shell.",
+  "fix": [
+   "Require authentication in front of the webserver.",
+   "Keep the orchestration host internal."
+  ],
+  "verifyT": "Request the webserver root anonymously and confirm it does not render.",
+  "cells": [
+   {
+    "suffix": "dagster-ui",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "<title>[^<]{0,60}Dagster"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://data.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Dagster</title></head><body><div id=\"root\" data-dagster-version=\"1.6\"></div></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://data.example/assets",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Dagster · Assets</title></head><body><p>assets: 42</p></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/guide",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Data guide</title></head><body><p>The webserver serves the UI on port 3000.</p></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/reports",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Reports</title></head><body><p>Weekly report is ready.</p></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-console-flink-dashboard",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "Apache Flink dashboard is reachable without authentication",
+  "description": "The response is the Flink web dashboard. It lists the running jobs, their operators and checkpoints, and the task managers with their hosts and ports; its REST API also accepts job submission and cancellation.",
+  "remediation": "Put the dashboard behind an authenticating proxy and bind the REST endpoint to the cluster network.",
+  "limitation": "One response body. The rule reports the dashboard shell; it does not submit a job.",
+  "scopeT": "One response body containing the Flink dashboard shell.",
+  "fp": "A page that names Flink in prose is not reported, because the dashboard marker is required.",
+  "recordDesc": "The Flink dashboard names every task manager host and the jobs that run on them, and its REST endpoint is the same port. That combination lets the caller read the cluster layout and submit a job to it.",
+  "applicability": "Responses from a Flink cluster that serves the dashboard on a reachable interface.",
+  "risk": "The caller maps the cluster hosts and can submit a job that runs their code on a task manager.",
+  "why": "The body is the Flink dashboard shell.",
+  "fix": [
+   "Proxy the dashboard behind authentication.",
+   "Bind the REST endpoint to the cluster network."
+  ],
+  "verifyT": "Request the dashboard root anonymously and confirm it does not render.",
+  "cells": [
+   {
+    "suffix": "flink-dashboard",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "<title>[^<]{0,80}Flink"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://flink.example:8081/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Apache Flink Dashboard</title></head><body><h1>Flink Dashboard</h1><p>Available Task Managers: 3</p></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://flink.example:8081/#/overview",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Flink Dashboard</title></head><body><p>Running Jobs 2 · flink-1.18</p></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/guide",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Streaming guide</title></head><body><p>The dashboard is served on port 8081.</p></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/stream",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Stream</title></head><body><p>Streaming is healthy.</p></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-console-storm-ui",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "Apache Storm UI is reachable without authentication",
+  "description": "The response is the Storm UI: the topology summary together with the cluster summary. It lists the topologies, their executors, the supervisor hosts and the nimbus address of the cluster.",
+  "remediation": "Restrict the Storm UI to the cluster network and put it behind an authenticating proxy.",
+  "limitation": "One response body. The rule reports the UI summary; it does not open a topology.",
+  "scopeT": "One response body containing the Storm UI cluster summary.",
+  "fp": "A page that names Storm in prose is not reported, because the summary heading is required.",
+  "recordDesc": "The Storm summary names every supervisor host and the nimbus endpoint, plus the topology versions. That is the cluster inventory, and the nimbus endpoint it prints is the same one an operator would use to submit topologies.",
+  "applicability": "Responses from a Storm cluster that serves the UI on a reachable interface.",
+  "risk": "The caller maps the cluster and learns the nimbus endpoints, then reaches the same services directly.",
+  "why": "The body is the Storm UI cluster summary.",
+  "fix": [
+   "Restrict the UI to the cluster network.",
+   "Require authentication in front of it."
+  ],
+  "verifyT": "Request the UI root anonymously and confirm it does not render.",
+  "cells": [
+   {
+    "suffix": "storm-ui",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*Storm UI)(?=[\\s\\S]*topology summary)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://storm.example:8080/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Storm UI</title></head><body><h2>Cluster Summary</h2><h2>Topology summary</h2><p>Nimbus uptime 4d</p></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://storm.example:8080/topology.html?id=web",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><body><h1>Storm UI</h1><h2>Topology summary</h2><p>Supervisors 4</p></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/guide",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Streaming guide</title></head><body><p>The UI lists the topology summary for the cluster.</p></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/stream",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Stream</title></head><body><p>Streaming is healthy.</p></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-console-yarn-resourcemanager",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "YARN ResourceManager UI is reachable without authentication",
+  "description": "The response is the YARN ResourceManager interface. It lists the cluster nodes, the applications and their queues, and it exposes the scheduler view of the Hadoop cluster.",
+  "remediation": "Restrict the ResourceManager web interface to the cluster network, and enable Hadoop HTTP authentication if the interface must be shared.",
+  "limitation": "One response body. The rule reports the ResourceManager shell; it does not submit an application.",
+  "scopeT": "One response body containing the YARN ResourceManager shell.",
+  "fp": "A page that names YARN in prose is not reported, because the ResourceManager shell is required.",
+  "recordDesc": "The ResourceManager view is the scheduling map of the cluster: node addresses, queue names and the applications that own them. Queue names usually mirror the organisational structure, and the node list is the inventory of the Hadoop estate.",
+  "applicability": "Responses from a Hadoop cluster that serves the ResourceManager on a reachable interface.",
+  "risk": "The caller maps the cluster nodes and queues, and can reach the scheduler API that accepts applications.",
+  "why": "The body is the YARN ResourceManager shell.",
+  "fix": [
+   "Restrict the web interface to the cluster network.",
+   "Enable HTTP authentication where it must be shared."
+  ],
+  "verifyT": "Request the ResourceManager root anonymously and confirm it does not render.",
+  "cells": [
+   {
+    "suffix": "yarn-resourcemanager",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*ResourceManager)(?=[\\s\\S]*hadoop)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://yarn.example:8088/cluster",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>ResourceManager</title></head><body><p>Cluster ID: cluster-1 · Hadoop 3.3.6</p><table><tr><td>node01:8041</td></tr></table></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://yarn.example:8088/cluster/apps",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><body><h2>Applications</h2><p>ResourceManager state: RUNNING</p><small>Hadoop</small></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/guide",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Cluster guide</title></head><body><p>The scheduler web interface runs on port 8088.</p></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/cluster",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Cluster</title></head><body><p>Cluster is healthy.</p></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-artefact-yarnrc",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "LOW",
+  "title": ".yarnrc file served from the web root",
+  "description": "The response is a Yarn configuration file: registry and network settings at line starts. It names the registry the build used, any proxy it went through, and the registry scope overrides that reveal internal package namespaces.",
+  "remediation": "Exclude dotfiles from the deployed tree and deny them at the server level.",
+  "limitation": "One response body. The rule reads the configuration shape; it does not resolve the registries it names.",
+  "scopeT": "One response body containing Yarn configuration settings at line starts.",
+  "fp": "A page that shows a .yarnrc snippet is reported when it reproduces a registry line; a package.json file is covered by its own rule.",
+  "recordDesc": "The file names the registry and the proxy the build trusted, and its scope overrides publish the internal package namespaces. That is both a supply-chain hint and a list of internal names an attacker can target.",
+  "applicability": "Responses from a deployment that ships its build configuration.",
+  "risk": "The caller learns the package registry, the proxy host and the internal package scopes.",
+  "why": "The body is a Yarn configuration file.",
+  "fix": [
+   "Exclude dotfiles from the deployment.",
+   "Deny dotfile requests at the server."
+  ],
+  "verifyT": "Request /.yarnrc and confirm the response is 403 or 404.",
+  "cells": [
+   {
+    "suffix": "yarnrc-served",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*(?:^|\\n)registry\\s*[= ])(?=[\\s\\S]*(?:^|\\n)@[a-z0-9-]{1,40}:registry)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "registry \"https://npm.internal/repository/npm-group/\"\n@shop:registry \"https://npm.internal/repository/npm-shop/\"\nnetwork-timeout 600000\n"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "registry=https://npm.internal/\nproxy=http://proxy.internal:3128\n@platform:registry=https://npm.internal/platform/\n"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/json"
+       },
+       "body": "{\"name\":\"shop\",\"version\":\"1.4.0\",\"dependencies\":{\"express\":\"4.19.2\"}}\n"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/deploy",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Deployment guide</title></head><body><p>Point the registry at the internal mirror.</p></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-artefact-gemfile-lock",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "LOW",
+  "title": "Gemfile.lock dependency lockfile served",
+  "description": "The response is a Bundler lockfile: the GEM section with its remote and the exact resolved versions. It pins every Ruby dependency and its source, which is a precise inventory of what the application runs.",
+  "remediation": "Exclude lockfiles from the deployed tree and deny them at the server level.",
+  "limitation": "One response body. The rule reads the lockfile shape; it does not query a vulnerability database for the versions.",
+  "scopeT": "One response body containing a Bundler lockfile with its remote and resolved gems.",
+  "fp": "A page that quotes a lockfile fragment is reported when it reproduces the section header and the remote line.",
+  "recordDesc": "A lockfile is a version inventory with no ambiguity. It tells the caller exactly which gem versions are deployed, which is the input any exploit selection needs, and it names the private gem source.",
+  "applicability": "Responses from a Ruby deployment that ships the repository root.",
+  "risk": "The caller obtains an exact dependency inventory and the private gem source, then selects a matching known issue.",
+  "why": "The body is a Bundler lockfile.",
+  "fix": [
+   "Exclude lockfiles from the deployment.",
+   "Deny them at the server level."
+  ],
+  "verifyT": "Request /Gemfile.lock and confirm the response is 403 or 404.",
+  "cells": [
+   {
+    "suffix": "gemfile-lock-served",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*(?:^|\\n)GEM\\n)(?=[\\s\\S]*(?:^|\\n)  remote:)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "GEM\n  remote: https://rubygems.org/\n  specs:\n    rails (7.1.3)\n    puma (6.4.2)\n\nPLATFORMS\n  ruby\n"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "GEM\n  remote: https://gems.internal/\n  specs:\n    shop-core (1.2.0)\n"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "source 'https://rubygems.org'\ngem 'rails', '7.1.3'\n"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/deploy",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Deployment guide</title></head><body><p>Commit the lockfile and install with bundle install.</p></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-artefact-yarn-lock",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "LOW",
+  "title": "yarn.lock dependency lockfile served",
+  "description": "The response is a Yarn lockfile: the yarn lockfile header followed by resolved package entries with their integrity hashes. It is the exact dependency graph of the front end.",
+  "remediation": "Exclude lockfiles from the deployed tree and deny them at the server level.",
+  "limitation": "One response body. The rule reads the lockfile header; it does not resolve the package versions.",
+  "scopeT": "One response body containing a Yarn lockfile header and resolved entries.",
+  "fp": "A page that quotes the header alone is not reported, because a resolved entry is also required.",
+  "recordDesc": "The lockfile names every package and version the bundle was built from. For a front-end bundle that is otherwise minified, it restores the dependency list and the exact versions behind it.",
+  "applicability": "Responses from a JavaScript deployment that ships its repository root.",
+  "risk": "The caller reconstructs the dependency list and versions, then targets a known issue in one of them.",
+  "why": "The body is a Yarn lockfile.",
+  "fix": [
+   "Exclude lockfiles from the deployment.",
+   "Deny them at the server level."
+  ],
+  "verifyT": "Request /yarn.lock and confirm the response is 403 or 404.",
+  "cells": [
+   {
+    "suffix": "yarn-lock-served",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*# yarn lockfile v1)(?=[\\s\\S]*resolved\\s+\"https://)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "# THIS IS AN AUTOGENERATED FILE. DO NOT EDIT THIS FILE DIRECTLY.\n# yarn lockfile v1\n\n\nleft-pad@^1.3.0:\n  version \"1.3.0\"\n  resolved \"https://registry.yarnpkg.com/left-pad/-/left-pad-1.3.0.tgz#5b8a3a7765dfe001261dde915589e782f8c94d1e\"\n"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "# yarn lockfile v1\n\nms@2.1.3:\n  version \"2.1.3\"\n  resolved \"https://registry.yarnpkg.com/ms/-/ms-2.1.3.tgz#574c8138ce1d2b5861f0b44579dbadd60c6615b2\"\n"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/json"
+       },
+       "body": "{\"name\":\"shop\",\"lockfileVersion\":3,\"packages\":{}}\n"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/deploy",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Deployment guide</title></head><body><p>Run yarn install --frozen-lockfile in CI.</p></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-artefact-composer-lock",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "LOW",
+  "title": "composer.lock dependency lockfile served",
+  "description": "The response is a Composer lockfile: the packages array with its content hash. It lists every PHP package, its version and its source URL, which is the exact dependency set of the application.",
+  "remediation": "Exclude lockfiles from the deployed tree and deny them at the server level.",
+  "limitation": "One response body. The rule reads the JSON shape; it does not resolve the package versions.",
+  "scopeT": "One response body containing a Composer lockfile with its packages array.",
+  "fp": "A composer.json manifest is not reported, because the content hash marker is required.",
+  "recordDesc": "The lockfile pins every PHP package to a version and a source URL. Matching it against published advisories is mechanical, so publishing it converts vulnerability discovery into a diff.",
+  "applicability": "Responses from a PHP deployment that ships the repository root.",
+  "risk": "The caller obtains an exact package inventory and matches it against known issues without any guessing.",
+  "why": "The body is a Composer lockfile.",
+  "fix": [
+   "Exclude the lockfile from the deployment.",
+   "Deny it at the server level."
+  ],
+  "verifyT": "Request /composer.lock and confirm the response is 403 or 404.",
+  "cells": [
+   {
+    "suffix": "composer-lock-served",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*\"content-hash\"\\s*:)(?=[\\s\\S]*\"packages\"\\s*:)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/json"
+       },
+       "body": "{\"_readme\":[\"This file locks the dependencies\"],\"content-hash\":\"a1b2c3d4\",\"packages\":[{\"name\":\"monolog/monolog\",\"version\":\"3.5.0\"}],\"packages-dev\":[]}\n"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/json"
+       },
+       "body": "{\"packages\":[{\"name\":\"shop/core\",\"version\":\"1.2.0\",\"source\":{\"url\":\"https://git.internal/shop/core.git\"}}],\"content-hash\":\"ffff0000\"}"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/json"
+       },
+       "body": "{\"require\":{\"php\":\">=8.1\",\"monolog/monolog\":\"^3.5\"}}\n"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/deploy",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Deployment guide</title></head><body><p>Commit composer.lock and install with --no-dev.</p></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-artefact-poetry-lock",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "LOW",
+  "title": "poetry.lock dependency lockfile served",
+  "description": "The response is a Poetry lockfile: repeated package tables with their names, versions and file hashes. It is the resolved dependency set of the Python environment.",
+  "remediation": "Exclude lockfiles from the deployed tree and deny them at the server level.",
+  "limitation": "One response body. The rule reads the table shape; it does not resolve the versions.",
+  "scopeT": "One response body containing Poetry package tables with resolved names.",
+  "fp": "A pyproject.toml manifest is not reported, because the lockfile table marker is required.",
+  "recordDesc": "The lockfile records the exact wheel or sdist of every dependency. That is the input for an advisory match, and the private indexes it names are internal services the caller can then look for.",
+  "applicability": "Responses from a Python deployment that ships the repository root.",
+  "risk": "The caller obtains an exact dependency inventory and the private index names.",
+  "why": "The body is a Poetry lockfile.",
+  "fix": [
+   "Exclude the lockfile from the deployment.",
+   "Deny it at the server level."
+  ],
+  "verifyT": "Request /poetry.lock and confirm the response is 403 or 404.",
+  "cells": [
+   {
+    "suffix": "poetry-lock-served",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*(?:^|\\n)\\[\\[package\\]\\])(?=[\\s\\S]*\\nname = \"[a-z0-9-]{2,40}\")"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "[[package]]\nname = \"requests\"\nversion = \"2.31.0\"\ndescription = \"Python HTTP for Humans.\"\n\n[[package]]\nname = \"urllib3\"\nversion = \"2.2.1\"\n"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "[[package]]\nname = \"shop-client\"\nversion = \"0.9.1\"\nsource = {type = \"legacy\", url = \"https://pypi.internal/simple\"}\n"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "[tool.poetry]\nname = \"shop\"\nversion = \"1.4.0\"\n"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/deploy",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Deployment guide</title></head><body><p>Run poetry install --no-root in the image.</p></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-artefact-go-mod",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "LOW",
+  "title": "go.mod module manifest served",
+  "description": "The response is a Go module manifest: the module path and its requirement block. It names the internal module path of the project, which is often the repository host, and pins every dependency version.",
+  "remediation": "Exclude module manifests from the deployed tree and deny them at the server level.",
+  "limitation": "One response body. The rule reads the module declaration; it does not resolve the dependency versions.",
+  "scopeT": "One response body containing a Go module declaration with its requirements.",
+  "fp": "A page that quotes a go.mod snippet is reported when it reproduces the module line and a requirement block; a go.sum checksum file is not reported.",
+  "recordDesc": "The module path discloses the internal repository layout, and the requirement block pins the exact dependency versions the binary was built from. Both are precise and both are useful to an attacker deciding where to look next.",
+  "applicability": "Responses from a Go deployment that ships its source tree.",
+  "risk": "The caller learns the internal module path and an exact dependency inventory.",
+  "why": "The body is a Go module manifest.",
+  "fix": [
+   "Exclude the manifest from the deployment.",
+   "Deny it at the server level."
+  ],
+  "verifyT": "Request /go.mod and confirm the response is 403 or 404.",
+  "cells": [
+   {
+    "suffix": "go-mod-served",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*(?:^|\\n)module\\s+[a-z0-9._/-]{3,80}(?:\\n|$))(?=[\\s\\S]*(?:^|\\n)require\\s)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "module git.internal/shop/api\n\ngo 1.22\n\nrequire (\n\tgithub.com/gin-gonic/gin v1.9.1\n)\n"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "module github.com/shop/service\n\ngo 1.21\n\nrequire github.com/lib/pq v1.10.9\n\nreplace github.com/shop/core => ../core\n"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "github.com/gin-gonic/gin v1.9.1 h1:4idE4kt1qBfFKf0VMsrOYw4qJYQaM6bGkFQ1kC1h0h0=\n"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/deploy",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Deployment guide</title></head><body><p>Declare the module path at the top of go.mod.</p></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-artefact-terraform-lock",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "LOW",
+  "title": ".terraform.lock.hcl provider lockfile served",
+  "description": "The response is a Terraform provider lockfile: provider blocks that name registry addresses and pinned versions with their hashes. It reveals which cloud providers the infrastructure targets and the exact plugin builds they use.",
+  "remediation": "Exclude the .terraform directory and the lockfile from the deployed tree.",
+  "limitation": "One response body. The rule reads the provider block; it does not query the registry.",
+  "scopeT": "One response body containing Terraform provider blocks with registry addresses.",
+  "fp": "A page that quotes a single provider line is reported when it also carries a version constraint; a Terraform state file is covered by its own rule.",
+  "recordDesc": "The lockfile names the registries and provider builds the infrastructure depends on. Combined with a repository that serves it, it also confirms that the deployment shipped its infrastructure working directory.",
+  "applicability": "Responses from a deployment that ships the Terraform working directory.",
+  "risk": "The caller fingerprints the cloud posture of the estate and the exact provider builds.",
+  "why": "The body is a Terraform provider lockfile.",
+  "fix": [
+   "Exclude .terraform and the lockfile from the deployment.",
+   "Deny hidden directories at the server."
+  ],
+  "verifyT": "Request /.terraform.lock.hcl and confirm the response is 403 or 404.",
+  "cells": [
+   {
+    "suffix": "terraform-lock-served",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*(?:^|\\n)provider\\s+\"registry\\.terraform\\.io/)(?=[\\s\\S]*version\\s*=)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "provider \"registry.terraform.io/hashicorp/aws\" {\n  version     = \"5.44.0\"\n  constraints = \"~> 5.0\"\n  hashes = [\n    \"h1:abc123=\",\n  ]\n}\n"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "provider \"registry.terraform.io/hashicorp/google\" {\n  version = \"5.24.0\"\n}\n"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/json"
+       },
+       "body": "{\"version\":4,\"terraform_version\":\"1.7.5\",\"resources\":[{\"type\":\"aws_s3_bucket\"}]}\n"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/deploy",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Deployment guide</title></head><body><p>Commit the lockfile so provider versions stay pinned.</p></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-artefact-jenkinsfile",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "Jenkinsfile served from the web root",
+  "description": "The response is a Jenkins pipeline definition: the pipeline block with its agent and stages. It names the credentials bindings, the registry pushes and the deployment targets of the delivery pipeline.",
+  "remediation": "Exclude pipeline definitions from the deployed tree and deny them at the server level.",
+  "limitation": "One response body. The rule reads the pipeline structure; it does not run a stage.",
+  "scopeT": "One response body containing a declarative pipeline with an agent and a stage.",
+  "fp": "A page that quotes a pipeline snippet is reported when it reproduces the pipeline block and an agent directive.",
+  "recordDesc": "A pipeline definition maps the delivery path: which registry receives the image, which cluster receives the deployment and which credential id each step uses. That is the road map for a supply-chain attempt.",
+  "applicability": "Responses from a deployment that ships its CI definitions.",
+  "risk": "The caller learns the deployment targets and the credential identifiers the pipeline uses.",
+  "why": "The body is a Jenkins pipeline definition.",
+  "fix": [
+   "Exclude CI definitions from the deployment.",
+   "Deny them at the server level."
+  ],
+  "verifyT": "Request /Jenkinsfile and confirm the response is 403 or 404.",
+  "cells": [
+   {
+    "suffix": "jenkinsfile-served",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*(?:^|\\n)pipeline\\s*\\{)(?=[\\s\\S]*\\n\\s+agent\\s)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "pipeline {\n  agent any\n  stages {\n    stage(\"build\") {\n      steps { sh \"docker build -t registry.internal/shop:${env.BUILD_ID} .\" }\n    }\n  }\n}\n"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "pipeline {\n  agent { label \"docker\" }\n  environment {\n    REGISTRY_CRED = credentials(\"registry-internal\")\n  }\n}\n"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "#!/bin/sh\nset -eu\ndocker build -t shop:latest .\n"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/deploy",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Deployment guide</title></head><body><p>Keep the pipeline block in a Jenkinsfile at the repository root.</p></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-artefact-gitlab-ci",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": ".gitlab-ci.yml pipeline definition served",
+  "description": "The response is a GitLab CI pipeline definition: a stages list with job blocks. It names the images, the registries and the deploy targets of the pipeline, and often the variables that select them.",
+  "remediation": "Exclude CI definitions from the deployed tree and deny them at the server level.",
+  "limitation": "One response body. The rule reads the pipeline structure; it does not run a job.",
+  "scopeT": "One response body containing a GitLab CI stages list and a job script.",
+  "fp": "A page that shows a pipeline snippet is reported when it reproduces the stages list and a script block.",
+  "recordDesc": "The pipeline names the base image, the registry it pushes to and the environment it deploys into. Those three facts describe the production path, and the variables in the file often name the tokens that unlock it.",
+  "applicability": "Responses from a deployment that ships its CI definitions.",
+  "risk": "The caller learns the deployment path and the variable names that gate it.",
+  "why": "The body is a GitLab CI pipeline definition.",
+  "fix": [
+   "Exclude CI definitions from the deployment.",
+   "Deny them at the server level."
+  ],
+  "verifyT": "Request /.gitlab-ci.yml and confirm the response is 403 or 404.",
+  "cells": [
+   {
+    "suffix": "gitlab-ci-served",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*(?:^|\\n)stages\\s*:)(?=[\\s\\S]*\\n\\s+script\\s*:)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "stages:\n  - build\n  - deploy\n\nbuild:\n  stage: build\n  script:\n    - docker build -t registry.internal/shop .\n"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "stages:\n  - test\n\ntest:\n  variables:\n    DB_HOST: db.internal\n  script:\n    - pytest -q\n"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/yaml"
+       },
+       "body": "server:\n  port: 8080\nlogging:\n  level: info\n"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/deploy",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Deployment guide</title></head><body><p>Define stages at the top of the file.</p></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-artefact-travis-config",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "LOW",
+  "title": ".travis.yml build definition served",
+  "description": "The response is a Travis CI definition: a language declaration with its script steps. It names the runtime version, the services the build starts and the commands that publish the result.",
+  "remediation": "Exclude CI definitions from the deployed tree and deny them at the server level.",
+  "limitation": "One response body. The rule reads the build definition; it does not run it.",
+  "scopeT": "One response body containing a Travis language declaration and a script list.",
+  "fp": "A page that shows a CI snippet is reported when it reproduces the language line and a script step.",
+  "recordDesc": "The file discloses the build environment and the publish step, including the registry or bucket the artefact lands in. It also pins the runtime version, which narrows the known issues for the toolchain.",
+  "applicability": "Responses from a deployment that ships its CI definitions.",
+  "risk": "The caller learns the build runtime and the publish target of the artefact.",
+  "why": "The body is a Travis CI definition.",
+  "fix": [
+   "Exclude CI definitions from the deployment.",
+   "Deny them at the server level."
+  ],
+  "verifyT": "Request /.travis.yml and confirm the response is 403 or 404.",
+  "cells": [
+   {
+    "suffix": "travis-config-served",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*(?:^|\\n)language\\s*:\\s*[a-z]{2,20})(?=[\\s\\S]*(?:^|\\n)script\\s*:)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "language: node_js\nnode_js:\n  - \"20\"\nscript:\n  - npm test\n  - npm run build\n"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "language: python\npython:\n  - \"3.12\"\nservices:\n  - postgresql\nscript:\n  - pytest\n"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "services:\n  web:\n    image: shop/web:4.2.1\n"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/deploy",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Deployment guide</title></head><body><p>Declare the language and the script steps.</p></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-artefact-apache-server-info",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "Apache server-info page served",
+  "description": "The response is the Apache server-info handler: the Server Settings and module list that the server generates for its own configuration. It names the loaded modules, their versions, the virtual hosts and the configuration files.",
+  "remediation": "Disable the server-info handler, or restrict it to the administrative network.",
+  "limitation": "One response body. The rule reports the handler output; it does not read the configuration files it names.",
+  "scopeT": "One response body containing the Apache server-info headings.",
+  "fp": "The mod_status page is covered by its own rule; a page that mentions server-info in prose is not reported.",
+  "recordDesc": "server-info prints the module list with versions and the paths of the configuration files. Combined with mod_status it also reveals the traffic of each virtual host, so the pair is a configuration audit of the server performed by the caller.",
+  "applicability": "Responses from an Apache host that leaves the info handler enabled.",
+  "risk": "The caller learns the loaded modules and their versions, and the configuration layout of the host.",
+  "why": "The body is the Apache server-info output.",
+  "fix": [
+   "Disable the handler.",
+   "Restrict it to the administrative network if it is needed."
+  ],
+  "verifyT": "Request /server-info and confirm the response is 403 or 404.",
+  "cells": [
+   {
+    "suffix": "apache-server-info",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*Apache Server Information)(?=[\\s\\S]*Server Settings)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/server-info",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Apache Server Information</title></head><body><h1>Apache Server Information</h1><h2>Server Settings</h2><p>Server Version: Apache/2.4.58</p></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/server-info?list",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<h1>Apache Server Information</h1><h2>Server Settings</h2><h3>Loaded Modules</h3><p>mod_ssl (shared)</p>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/server-status",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><body><h1>Apache Server Status for app.example</h1><p>Server uptime: 4 days</p></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/deploy",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Deployment guide</title></head><body><p>The server-info handler is disabled by default.</p></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-artefact-local-settings-json",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "Azure Functions local.settings.json served",
+  "description": "The response is a Functions local settings file: the IsEncrypted flag with its Values block. That block holds the storage connection string, the service bus keys and the application settings the function needs at runtime.",
+  "remediation": "Exclude local.settings.json from the deployed tree and rotate every value it exposes.",
+  "limitation": "One response body. The rule reads the file shape; it does not use the values.",
+  "scopeT": "One response body containing a local settings document with a values block.",
+  "fp": "An appsettings.json file without the IsEncrypted marker is covered by its own rule; a documentation page that shows the schema is reported when a values block is present.",
+  "recordDesc": "The Values block is where a Functions project keeps its connection strings, because the local runtime reads them from this file. Serving it publishes the storage account and the service bus credentials in one request.",
+  "applicability": "Responses from a Functions deployment that ships its local settings.",
+  "risk": "The caller obtains storage and messaging credentials for the function app.",
+  "why": "The body is a Functions local settings file with a values block.",
+  "fix": [
+   "Exclude the file from the deployment.",
+   "Rotate the exposed values."
+  ],
+  "verifyT": "Request /local.settings.json and confirm the response is 403 or 404.",
+  "cells": [
+   {
+    "suffix": "local-settings-json",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*\"IsEncrypted\"\\s*:)(?=[\\s\\S]*\"Values\"\\s*:)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/local.settings.json",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/json"
+       },
+       "body": "{\n  \"IsEncrypted\": false,\n  \"Values\": {\n    \"AzureWebJobsStorage\": \"UseDevelopmentStorage=true\",\n    \"FUNCTIONS_WORKER_RUNTIME\": \"node\"\n  }\n}\n"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/api/local.settings.json",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/json"
+       },
+       "body": "{\"IsEncrypted\":false,\"Values\":{\"ServiceBusConnection\":\"Endpoint=sb://shop.servicebus.windows.net/;SharedAccessKeyName=send\"}}\n"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/appsettings.json",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/json"
+       },
+       "body": "{\"App\":{\"Name\":\"shop\"},\"Logging\":{\"LogLevel\":{\"Default\":\"Information\"}}}\n"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/deploy",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Deployment guide</title></head><body><p>Set IsEncrypted to false for local runs only.</p></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-artefact-appsettings-development",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "appsettings.Development.json served",
+  "description": "The response is the ASP.NET Core development settings file: a DetailedErrors flag together with a connection strings block. It holds the development database credentials and turns on the error detail the framework otherwise hides.",
+  "remediation": "Exclude environment-specific settings from the deployment and rotate the credentials they carry.",
+  "limitation": "One response body. The rule reads the file shape; it does not connect to the database it names.",
+  "scopeT": "One response body containing the development settings file with its connection strings.",
+  "fp": "A production appsettings.json without the development marker is not reported, because the DetailedErrors key is required.",
+  "recordDesc": "The development settings file is the one that is committed with real credentials, because it is meant for a developer machine. Serving it publishes both the database endpoint and the flag that makes error pages verbose.",
+  "applicability": "Responses from an ASP.NET Core deployment that ships its development settings.",
+  "risk": "The caller obtains development database credentials and confirms that detailed errors are enabled.",
+  "why": "The body is the ASP.NET Core development settings file.",
+  "fix": [
+   "Exclude the file from the deployment.",
+   "Rotate the credentials it carries."
+  ],
+  "verifyT": "Request /appsettings.Development.json and confirm the response is 403 or 404.",
+  "cells": [
+   {
+    "suffix": "appsettings-development",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*\"DetailedErrors\"\\s*:\\s*true)(?=[\\s\\S]*\"ConnectionStrings\"\\s*:)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/appsettings.Development.json",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/json"
+       },
+       "body": "{\n  \"DetailedErrors\": true,\n  \"ConnectionStrings\": {\n    \"Default\": \"Server=db.internal;Database=shop;User Id=app;\"\n  }\n}\n"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/appsettings.Development.json",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/json"
+       },
+       "body": "{\"DetailedErrors\":true,\"ConnectionStrings\":{\"Redis\":\"cache.internal:6379\"},\"Logging\":{\"LogLevel\":{\"Default\":\"Debug\"}}}"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/appsettings.json",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/json"
+       },
+       "body": "{\"Logging\":{\"LogLevel\":{\"Default\":\"Warning\"}},\"AllowedHosts\":\"*\"}\n"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/deploy",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Deployment guide</title></head><body><p>DetailedErrors should stay false outside development.</p></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-artefact-bash-history",
+  "category": "information-disclosure",
+  "cwe": "CWE-532",
+  "severity": "MEDIUM",
+  "title": "Shell history file served from the web root",
+  "description": "The response is a shell history: command lines that include directory changes and the operational tools the host runs. History files record the commands an administrator typed, including the ones that carried a token on the command line.",
+  "remediation": "Keep history files out of the document root, and pass secrets through a file descriptor or an environment variable rather than an argument.",
+  "limitation": "One response body. The rule recognises the history shape; a single line of text is not reported.",
+  "scopeT": "One response body containing a shell history with directory changes and operational commands.",
+  "fp": "A page that shows a command example is reported only when several command lines appear at line starts.",
+  "recordDesc": "A history file is a transcript of administration: which hosts were reached, which databases were dumped and which tokens were passed on the command line. It is the fastest way to learn how the host is operated.",
+  "applicability": "Responses that serve a home directory or a backup of one.",
+  "risk": "The caller learns the administration commands, the internal hosts they target and any secret passed as an argument.",
+  "why": "The body is a shell history file.",
+  "fix": [
+   "Move history files out of the served tree.",
+   "Avoid passing secrets as command arguments."
+  ],
+  "verifyT": "Request /.bash_history and confirm the response is 403 or 404.",
+  "cells": [
+   {
+    "suffix": "bash-history-served",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*(?:^|\\n)cd\\s+[a-z0-9._/-]{1,60})(?=[\\s\\S]*\\n(?:sudo|docker|kubectl|mysql|psql|curl|ssh)\\s)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "cd /var/www/shop\nsudo systemctl restart nginx\nkubectl get pods -n shop\n"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "cd /srv\nmysqldump -h db.internal -u app shop > dump.sql\ncurl -s http://cache.internal:6379/ping\n"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/deploy",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Deployment guide</title></head><body><p>Run the commands in order and restart the service afterwards.</p></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/deploy",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Deployment guide</title></head><body><p>Run the migrations before restarting the service.</p></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-artefact-authorized-keys",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "SSH authorized_keys file served",
+  "description": "The response is an SSH authorized_keys file: public key entries with their comments. The comments usually name the people or the automation accounts that can log in, and the key types narrow the client versions they use.",
+  "remediation": "Keep the SSH configuration out of the document root and deny the .ssh directory at the server level.",
+  "limitation": "One response body. The rule reads public key entries; it does not attempt a login.",
+  "scopeT": "One response body containing SSH public key entries with their comments.",
+  "fp": "A page that shows one public key as an example is not reported, because two entries at line starts are required.",
+  "recordDesc": "The file lists the identities that may log in to the host, with comments that name teams and automation. It tells the caller which accounts exist and which of them are machine accounts, which are usually the least monitored.",
+  "applicability": "Responses that serve a home directory or a configuration backup.",
+  "risk": "The caller enumerates the accounts that can reach the host, and the key types they use.",
+  "why": "The body is an SSH authorized_keys file.",
+  "fix": [
+   "Move SSH configuration out of the served tree.",
+   "Deny .ssh at the server level."
+  ],
+  "verifyT": "Request /.ssh/authorized_keys and confirm the response is 403 or 404.",
+  "cells": [
+   {
+    "suffix": "authorized-keys-served",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*(?:^|\\n)ssh-(?:rsa|ed25519)\\s+AAAA)(?=[\\s\\S]*\\nssh-(?:rsa|ed25519)\\s+AAAA)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleKeyBody deploy@ci\nssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgExampleKeyBody alice@laptop\n"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "from=\"10.0.0.0/8\" ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgExampleKeyBody backup@host\nssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleKeyBody ops@bastion\n"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/deploy",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Deployment guide</title></head><body><p>Add the line ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleKeyBody to authorized_keys.</p></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "server:\n  host: 0.0.0.0\n  port: 8080\n"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ }
+]

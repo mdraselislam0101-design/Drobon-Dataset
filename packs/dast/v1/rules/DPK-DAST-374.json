@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-374",
+  "title": "Phoenix LiveDashboard disclosed",
+  "description": "The response is the Phoenix LiveDashboard: the LiveDashboard title served together with the Phoenix live-view runtime markers. The dashboard lists processes, ETS tables, the running applications and the metrics of the node.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-215",
+  "category": "debug-exposure",
+  "remediation": "Remove the dashboard route from the production router, or gate it behind an administrative plug.",
+  "limitation": "One response body. The rule reports the dashboard shell; it does not subscribe to a live view.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*LiveDashboard)(?=[\\s\\S]*phoenix_live_view)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/dashboard",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>LiveDashboard · app</title></head><body><div data-phx-main=\"true\" id=\"phx-F1a2\"></div><p>Powered by phoenix_live_view</p></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/admin/dashboard/home",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body><h1>LiveDashboard</h1><p>Processes 812 · Ports 4</p><p>phoenix_live_view 0.20.14</p></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/shop",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Shop</title></head><body><h1>Shop</h1></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/docs/ops",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<p>The dashboard is available on the admin host.</p>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1443"
+  ]
+}

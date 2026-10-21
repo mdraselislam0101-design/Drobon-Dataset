@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-322",
+  "title": "Apache .htaccess file served as a response",
+  "description": "The response is an .htaccess file: rewrite and IfModule directives at line starts. It names the internal routing, the modules the host loads and often the paths of protected files, and it is a reliable first step for reaching what it was written to guard.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Deny access to dotfiles at the server level, remove the file from the served directory, and keep deployment rules outside the document root.",
+  "limitation": "One response body. The check reads directive lines; it does not apply the rules or test whether they would be enforced.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?:^|\\n)\\s*(?:<IfModule\\b|RewriteEngine\\s+On|Options\\s+[-+]|Order\\s+(?:allow|deny)\\b|AuthType\\s+Basic)[\\s\\S]{0,600}\\n\\s*(?:<IfModule\\b|RewriteRule\\b|Require\\s+valid-user|AuthUserFile\\b|Deny\\s+from)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/.htaccess",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "RewriteEngine On\nRewriteRule ^admin/(.*)$ /internal/admin/$1 [L]\nAuthType Basic\nAuthUserFile /var/www/.htpasswd\nRequire valid-user"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/app/.htaccess",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "<IfModule mod_rewrite.c>\nOptions -Indexes\nRewriteRule ^config/(.*)$ /blocked [R=403,L]\n</IfModule>\nOrder deny,allow\nDeny from all"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/docs",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<p>Enable pretty URLs with RewriteEngine On in your server configuration.</p>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/nginx.conf",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "server {\n  listen 80;\n  root /var/www;\n  location / { try_files $uri /index.html; }\n}"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1391"
+  ]
+}

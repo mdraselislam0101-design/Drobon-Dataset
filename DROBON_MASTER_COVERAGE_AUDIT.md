@@ -1,3 +1,14 @@
+> **Superseded in part — 2026-10-21.** This audit was taken at App `c32c797`
+> (2026-10-14) and reports "no loader / not integrated" for every pack, knowledge
+> and audience row. The App has since landed the runtime connection at
+> `9360dd1abdf940cc1bffd942aab0702703aaaaef`: all nine dataset categories load from
+> `DATASET_PATH` and SCA matching was verified against this tree. The figures below
+> are **kept unchanged as the historical baseline** — they were not re-scored,
+> because a re-score needs a full ledger recompute against the new revision. For the
+> verified current state read `docs/APP_CONNECTION_VERIFICATION_2026-10-21.md` and
+> `docs/CAPABILITY_COVERAGE_MATRIX.md`; the underlying blockers (no `LICENSE`,
+> production lock, 0/100,000 records) are unchanged.
+
 # DROBON MASTER COVERAGE AUDIT — Dataset vs Main App capability matrix vs paid tools
 
 **Audit date:** 2026-10-16 (Asia/Dhaka)

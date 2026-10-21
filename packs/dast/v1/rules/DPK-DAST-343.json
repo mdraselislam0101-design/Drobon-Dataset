@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-343",
+  "title": "Base element points at another origin",
+  "description": "The document carries a base element whose href is an absolute URL on another origin. Every relative link, form action and script path in the page then resolves against that origin, so the page hands its own navigation to a host the application does not control.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1021",
+  "category": "content-injection",
+  "remediation": "Emit a base href that is a same-origin absolute path, or omit the element and use absolute paths.",
+  "limitation": "One response body. The rule reads the base target; it does not resolve the links that follow it.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "<base\\b[^>]{0,120}href\\s*=\\s*[\"']?https://(?!(?:www\\.)?app\\.example)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/shop",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><base href=\"https://cdn.partner.example/shop/\"><title>Shop</title></head><body><a href=\"cart\">Cart</a></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/shop",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><base href='https://assets.example:8443/'></head><body><img src='logo.png'></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/shop",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><base href=\"/shop/\"></head><body><a href=\"cart\">Cart</a></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/shop",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><link rel=\"canonical\" href=\"https://www.example.com/shop\"></head><body></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1412"
+  ]
+}

@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1395",
+  "title": "Signal: Response body embeds a presigned object-storage URL",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-body-matches",
+      "valuePattern": "(?:X-Amz-Signature|X-Amz-Credential)=|\\bsig=[A-Za-z0-9%]{20,}"
+    }
+  },
+  "scope": "One response body containing an object-storage signature parameter.",
+  "limitations": "One response body. The check sees the signature parameters; it cannot tell whether the URL is still valid, and it does not fetch it.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/files",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<a href=\"https://bucket.s3.amazonaws.com/report.pdf?X-Amz-Signature=abc123def456&amp;X-Amz-Expires=3600\">Report</a>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/files",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"url\":\"https://acct.blob.core.windows.net/c/report.pdf?sv=2023-01-03&sig=Zm9vYmFyYmF6cXV4MTIzNDU2Nzg5MA%3D\"}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/files",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"url\":\"https://acct.blob.core.windows.net/c/report.pdf\"}"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/files",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"policy\":\"signed-url\",\"state\":\"ready\"}"
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A documentation page that shows the parameter names in a code sample is reported; a plain object URL without a signature is not.",
+  "linkedRules": [
+    "DPK-DAST-326"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:dast-body-presigned-object-url:presigned-url",
+  "validationStatus": "VALIDATED"
+}

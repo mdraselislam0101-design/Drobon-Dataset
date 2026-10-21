@@ -1,0 +1,65 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-334",
+  "title": "Set-Cookie Expires date exceeds the 400-day browser cap",
+  "description": "A cookie sets an Expires date more than 400 days away. Browsers cap persistent cookie lifetime at 400 days, so the stored expiry differs from the declared one; a value in a far future year usually also means the author copied a placeholder such as 2099 without deciding a real lifetime.",
+  "severity": "LOW",
+  "cwe": "CWE-613",
+  "category": "cookie-flags",
+  "remediation": "Set Expires or Max-Age to the lifetime the application actually needs (typically minutes to 30 days) instead of a far-future placeholder.",
+  "limitation": "One Set-Cookie value. The check reads the declared year; it does not clamp the value the way a specific browser would, and it does not decide whether a long-lived cookie is acceptable for that data.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Set-Cookie",
+    "valuePattern": ";\\s*expires\\s*=\\s*[a-z]{3},\\s*\\d{1,2}\\s+[a-z]{3}\\s+(?:20[3-9]\\d|2[1-9]\\d\\d)\\s+\\d{2}:\\d{2}:\\d{2}"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Expires=Wed, 01 Jan 2099 00:00:00 GMT; Path=/; Secure"
+        },
+        "body": ""
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/prefs",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "theme=dark; Expires=Mon, 15 Mar 2035 10:00:00 GMT; Path=/"
+        },
+        "body": ""
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Expires=Fri, 01 Jan 2027 00:00:00 GMT; Path=/; Secure"
+        },
+        "body": ""
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Path=/; Secure; HttpOnly"
+        },
+        "body": ""
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1403"
+  ]
+}

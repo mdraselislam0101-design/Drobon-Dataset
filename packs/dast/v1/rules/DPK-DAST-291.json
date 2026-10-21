@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-291",
+  "title": "MySQL server or driver error text disclosed in a response",
+  "description": "The response carries a MySQL or MariaDB error raised by the server or by the PHP driver: a refused connection, a dropped connection, or a driver exception class. Unlike a syntax error, these messages name the database host, the driver version and often the credentials path, so a caller learns the deployment shape without sending an injection payload.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-209",
+  "category": "information-disclosure",
+  "remediation": "Catch driver exceptions at the application boundary and return a generic error page with a correlation id. Disable display_errors and mysqli exception reporting in production; log the original message server-side only.",
+  "limitation": "One response body. The check reads the message text; it does not confirm that the database is reachable from the network, and it cannot tell an operator-facing health page from a public one.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?:Can't connect to (?:local )?MySQL server|mysqli_sql_exception|mysqli::__construct\\(\\)|MySQL server has gone away|mysql_connect\\(\\)\\s*:)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/api/items?id=1",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<b>Warning</b>: mysqli::__construct(): (HY000/2002): Connection refused in /var/www/html/db.php"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/api/items",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "Can't connect to MySQL server on 'db' (111)"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/api/items",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<h1>Something went wrong</h1><p>Reference: 4f2c1d</p>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://db.example/docs/errors",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<h1>Error codes</h1><p>ER_ACCESS_DENIED_ERROR (1045)</p>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1360"
+  ]
+}

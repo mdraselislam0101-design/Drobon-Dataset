@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-376",
+  "title": "Yii debugger toolbar disclosed",
+  "description": "The response carries the Yii debugger toolbar: the yii-debug container together with the debugger title. Its panels show the request, the database queries, the logs and the application configuration for that page.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-215",
+  "category": "debug-exposure",
+  "remediation": "Remove the debug module from the production configuration and keep the yii-debug route disabled outside development.",
+  "limitation": "One response body. The rule reports the toolbar shell; it does not open the stored request history.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*yii-debug)(?=[\\s\\S]*Yii Debugger)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/shop",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body><h1>Shop</h1><div id=\"yii-debug-toolbar\"><span>Yii Debugger</span></div></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/cart",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<div id=\"yii-debug\"><a href=\"/debug/default/index\">Yii Debugger</a><a href=\"/debug/default/view?id=abc\">Last request</a></div>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/shop",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body><h1>Shop</h1><p>Free delivery this week.</p></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/docs/debug",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<p>Enable the debug module only on development hosts.</p>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1445"
+  ]
+}

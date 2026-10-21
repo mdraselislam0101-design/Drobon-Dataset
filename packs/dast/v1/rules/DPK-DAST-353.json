@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-353",
+  "title": "Kiali console is reachable without authentication",
+  "description": "The Kiali service-mesh console is served without authentication. It renders the topology of the mesh: every namespace, workload, route and the traffic between them, measured from the sidecars.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Enable the Kiali login strategy (token, OpenID or header) and expose the console only inside the mesh.",
+  "limitation": "One response body. The rule recognises the Kiali shell; it does not read the mesh graph.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "<title>[^<]{0,40}Kiali"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://mesh.example/kiali/console",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Kiali</title><script>window.KIALI_CONFIG={version:\"1.84\"}</script></head><body><div id=\"root\"></div></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://mesh.example/kiali/console/graph/namespaces",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Kiali · Graph</title></head><body><div class=\"kiali-graph\"></div></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/shop",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Shop</title></head><body><p>Shop home</p></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://docs.example/mesh",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Mesh guide</title></head><body><p>Kiali shows the traffic graph.</p></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1422"
+  ]
+}

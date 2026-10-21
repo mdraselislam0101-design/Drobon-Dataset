@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1397",
+  "title": "Signal: Redis INFO output served in a response",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-body-matches",
+      "valuePattern": "(?:^|\\n)#\\s*Server(?:\\r?\\n[^\\n]{0,200}){0,12}?\\r?\\n\\s*redis_version:[0-9]"
+    }
+  },
+  "scope": "One response body containing Redis INFO section headers and their metric lines.",
+  "limitations": "One response body. The check reads the INFO section shape; it does not connect to the instance or run a command.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/cache/info",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "# Server\r\nredis_version:7.2.4\r\nredis_mode:standalone\r\nos:Linux 6.1 x86_64\r\n# Clients\r\nconnected_clients:42"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/status",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "# Server\nredis_version:6.0.16\nuptime_in_days:31\n# Memory\nused_memory_human:812.44M"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/admin/monitoring",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<h2>Cache</h2><p>redis_version 7.2.4, 42 clients</p>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/healthz",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"cache\":\"ok\",\"db\":\"ok\",\"version\":\"1.4.0\"}"
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A monitoring dashboard that labels a chart with redis_version is not reported, because the rule needs INFO section headers at line starts. A general status page without the section format is not reported.",
+  "linkedRules": [
+    "DPK-DAST-328"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:dast-body-redis-info-output:redis-info",
+  "validationStatus": "VALIDATED"
+}

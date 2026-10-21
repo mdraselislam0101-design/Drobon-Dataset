@@ -1,0 +1,71 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1382",
+  "title": "Signal: Meta tag delivers a CSP frame-ancestors directive a browser ignores",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-body-matches",
+      "valuePattern": "<meta[^>]{0,400}http-equiv\\s*=\\s*[\"']?content-security-policy[^>]{0,400}content\\s*=\\s*(?:\"[^\"]{0,300}frame-ancestors|'[^']{0,300}frame-ancestors)"
+    }
+  },
+  "scope": "One meta element whose http-equiv is Content-Security-Policy and whose content carries frame-ancestors.",
+  "limitations": "One response body. The check reads the meta tag; it cannot see a header that the App header allowlist may have dropped, and it does not test framing behaviour.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/dashboard",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><meta http-equiv=\"Content-Security-Policy\" content=\"frame-ancestors 'none'\"></head><body>ok</body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/dashboard",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<meta http-equiv='content-security-policy' content='default-src self; frame-ancestors https://partner.example'>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/dashboard",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html",
+          "Content-Security-Policy": "frame-ancestors 'none'"
+        },
+        "body": "<html><body>ok</body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/dashboard",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'self'; img-src 'self' data:\">"
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A meta CSP without frame-ancestors is not reported; a page that documents the restriction in prose is not reported unless the meta element is present.",
+  "linkedRules": [
+    "DPK-DAST-313"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:dast-meta-csp-frame-ancestors:meta-csp-frame-ancestors",
+  "validationStatus": "VALIDATED"
+}

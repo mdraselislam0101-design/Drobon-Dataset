@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-379",
+  "title": "SSH authorized_keys file served",
+  "description": "The response is an SSH authorized_keys file: public key entries with their comments. The comments usually name the people or the automation accounts that can log in, and the key types narrow the client versions they use.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Keep the SSH configuration out of the document root and deny the .ssh directory at the server level.",
+  "limitation": "One response body. The rule reads public key entries; it does not attempt a login.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*(?:^|\\n)ssh-(?:rsa|ed25519)\\s+AAAA)(?=[\\s\\S]*\\nssh-(?:rsa|ed25519)\\s+AAAA)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleKeyBody deploy@ci\nssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgExampleKeyBody alice@laptop\n"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "from=\"10.0.0.0/8\" ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgExampleKeyBody backup@host\nssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleKeyBody ops@bastion\n"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://docs.example/deploy",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Deployment guide</title></head><body><p>Add the line ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleKeyBody to authorized_keys.</p></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "server:\n  host: 0.0.0.0\n  port: 8080\n"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1448"
+  ]
+}

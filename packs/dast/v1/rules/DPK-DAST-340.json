@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-340",
+  "title": "Mercurial .hg/hgrc file served",
+  "description": "The response is a Mercurial repository configuration: a [paths] section that names the default repository, and often a [web] section that sets the push policy. It reveals the repository host and the branch the deployment tracks.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Deploy without the .hg directory and deny it at the server level.",
+  "limitation": "One response body. The rule reads the configuration shape; it does not contact the repository it names.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*(?:^|\\n)\\[paths\\]\\s*(?:\\n|$))(?=[\\s\\S]*(?:^|\\n)default\\s*=)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/.hg/hgrc",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "[paths]\ndefault = ssh://hg.internal/shop\n[web]\nallow_push = *\n"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/.hg/hgrc",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "[paths]\ndefault = https://hg.internal/shop\n[ui]\nusername = deploy\n"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/.git/config",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "[core]\n\trepositoryformatversion = 0\n[remote \"origin\"]\n\turl = https://git.internal/shop.git\n"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/docs/deploy",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "Set the default path in the [paths] section of your hgrc."
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1409"
+  ]
+}

@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1359",
+  "title": "Signal: SQL Server client exception text disclosed in a response",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-body-matches",
+      "valuePattern": "(?:System\\.Data\\.SqlClient\\.SqlException|Microsoft OLE DB Provider for SQL Server|SqlException: (?:Incorrect syntax|Invalid object name|Incorrect column name))"
+    }
+  },
+  "scope": "One response body containing a SqlClient or OLE DB SQL Server exception string.",
+  "limitations": "One response body. The check reads the message text; it does not evaluate whether the connection string is reachable from the scanning host.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/orders",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "System.Data.SqlClient.SqlException: A network-related or instance-specific error occurred"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/orders",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "Microsoft OLE DB Provider for SQL Server error '80040e14'"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/orders",
+        "status": 500,
+        "headers": {
+          "Content-Type": "application/problem+json"
+        },
+        "body": "{\"type\":\"about:blank\",\"title\":\"Internal Server Error\",\"traceId\":\"00-8f2a\"}"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/orders",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body><h1>Runtime Error</h1></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A documentation page that quotes the exception is reported; an API returning a problem+json detail without SQL text is not.",
+  "linkedRules": [
+    "DPK-DAST-290"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:dast-body-mssql-client-error:mssql-client-error",
+  "validationStatus": "VALIDATED"
+}

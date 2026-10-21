@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1444",
+  "title": "Signal: Sidekiq web dashboard disclosed",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-body-matches",
+      "valuePattern": "(?=[\\s\\S]*<title>Sidekiq)(?=[\\s\\S]*Enqueued)"
+    }
+  },
+  "scope": "One response body containing the Sidekiq dashboard shell and its queue navigation.",
+  "limitations": "One response body. The rule reports the dashboard shell; it does not enqueue or retry a job.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/sidekiq",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Sidekiq</title></head><body><nav><a href=\"/sidekiq/queues\">Queues</a><a href=\"/sidekiq/retries\">Retries</a></nav><p>Enqueued 14</p></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/sidekiq/morgue",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Sidekiq</title></head><body><h2>Dead Jobs</h2><pre>{\"jid\":\"abc\",\"args\":[\"user@example.test\",12]}</pre><p>Enqueued 0</p></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/jobs",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Jobs</title></head><body><p>Background jobs are running normally.</p></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/docs/queues",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<p>Mount the dashboard under an admin constraint.</p>"
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A page that mentions Sidekiq in prose is not reported, because the dashboard title and queue links are both required.",
+  "linkedRules": [
+    "DPK-DAST-375"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:dast-page-sidekiq-web:sidekiq-web",
+  "validationStatus": "VALIDATED"
+}

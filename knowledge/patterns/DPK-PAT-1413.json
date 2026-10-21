@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1413",
+  "title": "Signal: Meta refresh sends the browser to another origin",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-body-matches",
+      "valuePattern": "<meta[^>]{0,120}http-equiv\\s*=\\s*[\"']?refresh[\"']?[^>]{0,120}content\\s*=\\s*[\"']?\\s*\\d{1,3}\\s*;\\s*url\\s*=\\s*https://(?!(?:www\\.)?app\\.example)"
+    }
+  },
+  "scope": "One response body containing a meta refresh that points at another origin.",
+  "limitations": "One response body. The rule reads the refresh target; it does not follow it or test whether the target is hostile.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/link",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><meta http-equiv=\"refresh\" content=\"0; url=https://partner.example/landing\"></head><body>Redirecting</body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/notice",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><meta http-equiv='refresh' content='5;URL=https://promo.example/offer'></head><body>Notice</body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/link",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><meta http-equiv=\"refresh\" content=\"0; url=/dashboard\"></head><body>Redirecting</body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/link",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><meta http-equiv=\"refresh\" content=\"0; url=https://app.example/home\"></head><body>Redirecting</body></html>"
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A refresh that targets a relative path or the same host is not reported. The plaintext http:// form is DPK-DAST-275, so this rule reads only a secure cross-origin target; the Location header form has its own rules.",
+  "linkedRules": [
+    "DPK-DAST-344"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:dast-body-meta-refresh-cross-origin:meta-refresh-cross-origin",
+  "validationStatus": "VALIDATED"
+}

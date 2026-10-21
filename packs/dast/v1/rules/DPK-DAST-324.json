@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-324",
+  "title": "Response body contains a token with an unsigned alg value",
+  "description": "The body carries a JWT-shaped string whose header decodes to \"alg\":\"none\". A token issued that way has no signature at all, so any consumer that honours it accepts a body the caller can write, and the presence of such a token in a response means the application issues them.",
+  "severity": "HIGH",
+  "cwe": "CWE-347",
+  "category": "information-disclosure",
+  "remediation": "Reject alg none in every verifier and stop issuing unsigned tokens; pin the accepted algorithms to a fixed allow-list.",
+  "limitation": "One response body. The check reads the base64url header of a token-shaped string; it does not decode the payload or test a verifier.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "eyJ[A-Za-z0-9_-]{0,80}(?:ImlhbGciOiJub25lI|ImlhbGciOiJOb25lI|bGciOiJub25lI)[A-Za-z0-9_-]{0,400}\\.eyJ[A-Za-z0-9_-]{4,}"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/api/debug/token",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"token\":\"eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiIxMjM0In0.\"}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/account",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<code>eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiJhZG1pbiIsInJvbGUiOiJhZG1pbiJ9.</code>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/api/debug/token",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"token\":\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0In0.abcdefghijklmnopqrstuvwx\"}"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/account",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"session\":\"6f1d2c3b4a5968778695a4b3c2d1e0f9\"}"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1393"
+  ]
+}

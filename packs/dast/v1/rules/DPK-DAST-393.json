@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-393",
+  "title": "Apache Flink dashboard is reachable without authentication",
+  "description": "The response is the Flink web dashboard. It lists the running jobs, their operators and checkpoints, and the task managers with their hosts and ports; its REST API also accepts job submission and cancellation.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Put the dashboard behind an authenticating proxy and bind the REST endpoint to the cluster network.",
+  "limitation": "One response body. The rule reports the dashboard shell; it does not submit a job.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "<title>[^<]{0,80}Flink"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://flink.example:8081/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Apache Flink Dashboard</title></head><body><h1>Flink Dashboard</h1><p>Available Task Managers: 3</p></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://flink.example:8081/#/overview",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Flink Dashboard</title></head><body><p>Running Jobs 2 · flink-1.18</p></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://docs.example/guide",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Streaming guide</title></head><body><p>The dashboard is served on port 8081.</p></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/stream",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Stream</title></head><body><p>Streaming is healthy.</p></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1462"
+  ]
+}

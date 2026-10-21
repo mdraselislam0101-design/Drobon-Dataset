@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1400",
+  "title": "Signal: Stripe live secret key served in a response",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-body-matches",
+      "valuePattern": "\\bsk_live_[A-Za-z0-9]{16,}"
+    }
+  },
+  "scope": "One response body containing a live secret API key with the provider prefix.",
+  "limitations": "One response body. The check reads the key prefix and length; it does not call the provider to confirm the key is active.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/admin/config",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<pre>STRIPE_SECRET=sk_live_51H8xQ2abcdefghijklmnop</pre>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/static/app.js",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/javascript"
+        },
+        "body": "const k=\"sk_live_51J9yR3zyxwvutsrqponmlk\";"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/admin/config",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "STRIPE_SECRET=sk_test_51H8xQ2abcdefghijklmnop"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/checkout",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<script>Stripe(\"pk_live_51H8xQ2abcdefghijklmnop\")</script>"
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A test-mode key (sk_test_) is not reported, nor is a publishable key (pk_live_), because neither carries the same authority; a documentation placeholder is reported when it keeps the prefix and the full token length.",
+  "linkedRules": [
+    "DPK-DAST-331"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:dast-body-stripe-live-secret-key:stripe-live-key",
+  "validationStatus": "VALIDATED"
+}

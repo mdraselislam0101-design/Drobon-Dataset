@@ -1,0 +1,66 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-271",
+  "title": "Base element points relative URLs at a plaintext origin",
+  "description": "The page declares a `<base href>` with a plaintext HTTP URL on a response served over HTTPS. Every relative script, style, form action and link in the document resolves against that base, so the document’s own relative references are fetched over an unprotected channel and can be rewritten in transit.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-319",
+  "category": "mixed-content",
+  "remediation": "Point the base element at an HTTPS URL on the same origin, and avoid a base element entirely when relative URLs already resolve correctly.",
+  "limitation": "One response body. The check reports a base href whose scheme is http on an HTTPS response; it does not follow the resolved URLs and it does not compare hosts.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "<base\\b[^>]*\\shref\\s*=\\s*[\"\\']?\\s*http://",
+    "requireScheme": "https"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {},
+        "body": "<base href=\"http://app.example/\">"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {},
+        "body": "<base href='http://static.example/assets/'>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {},
+        "body": "<base href=\"https://app.example/\">"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {},
+        "body": "<base href=\"/assets/\">"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "http://app.example/",
+        "status": 200,
+        "headers": {},
+        "body": "<base href=\"http://app.example/\">"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1340"
+  ]
+}

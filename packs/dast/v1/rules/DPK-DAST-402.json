@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-402",
+  "title": "Django Debug Toolbar disclosed",
+  "description": "The response carries the Django Debug Toolbar: its djDebug container together with the toolbar scripts. The panels show every SQL query of the request with its parameters, the settings, the headers and the template context.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-215",
+  "category": "debug-exposure",
+  "remediation": "Install the toolbar only for local development (`SHOW_TOOLBAR_CALLBACK` false in production) and remove it from the deployed settings.",
+  "limitation": "One response body. The rule reports the toolbar container; it does not open a panel.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*djDebug)(?=[\\s\\S]*djdt)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/orders",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body><h1>Orders</h1><div id=\"djDebug\" class=\"djDebugPanelList\"><a href=\"#sql\">SQL</a><a href=\"#settings\">Settings</a></div><script>djdt.init({});</script></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/report",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<div id=\"djDebug\"><div id=\"djDebugSqlPanel\"><pre>SELECT * FROM orders WHERE user_id = 42</pre></div></div><script src=\"/static/debug_toolbar/js/djdt.js\"></script>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/orders",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body><h1>Orders</h1><p>3 orders</p></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://docs.example/guide",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Debugging guide</title></head><body><p>Install the toolbar only in development settings.</p></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1471"
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-278",
+  "title": "Selenium Grid status endpoint disclosed",
+  "description": "The response body is a Selenium Grid status document: a ready flag plus the list of registered nodes. A reachable Grid accepts sessions that run arbitrary browser automation, so an anonymous caller can drive a real browser from inside the network the nodes sit on.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "debug-exposure",
+  "remediation": "Do not expose the Grid hub or router beyond CI networks; enable Grid authentication and restrict /status and /session to the orchestrator.",
+  "limitation": "One response body. The marker identifies a Grid status document; the check does not attempt to create a session, so it proves disclosure and not command execution.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*[\"\\']ready[\"\\']\\s*:\\s*(?:true|false))(?=[\\s\\S]*[\"\\']nodes[\"\\'])"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://ci.example/wd/hub/status",
+        "status": 200,
+        "headers": {},
+        "body": "{\"value\":{\"ready\":true,\"message\":\"Selenium Grid ready.\",\"nodes\":[{\"id\":\"node-1\",\"uri\":\"http://10.0.0.5:5555\"}]}}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://ci.example/status",
+        "status": 200,
+        "headers": {},
+        "body": "{\"value\": {\"ready\": false, \"nodes\": []}}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://ci.example/",
+        "status": 200,
+        "headers": {},
+        "body": "{\"status\":\"ok\"}"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://ci.example/api/workers",
+        "status": 200,
+        "headers": {},
+        "body": "{\"workers\":1,\"state\":\"ok\"}"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1347"
+  ]
+}

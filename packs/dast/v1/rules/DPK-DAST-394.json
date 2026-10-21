@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-394",
+  "title": "MLflow tracking UI is reachable without authentication",
+  "description": "The response is the MLflow tracking UI. It lists experiments, runs, parameters and artefacts, and with artefact access it can download the model files the project registered.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Enable MLflow authentication or put it behind a proxy, and keep the tracking server on the internal network.",
+  "limitation": "One response body. The rule reports the UI shell; it does not download an artefact.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "<title>[^<]{0,60}MLflow"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://ml.example/mlflow/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>MLflow</title></head><body><div id=\"root\" data-mlflow-version=\"2.11\"></div></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://ml.example/mlflow/#/experiments/1",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>MLflow · experiments</title></head><body><p>3 runs</p></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://docs.example/guide",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>ML guide</title></head><body><p>Start the server with mlflow server.</p></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/predict",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"label\":\"ok\"}"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1463"
+  ]
+}

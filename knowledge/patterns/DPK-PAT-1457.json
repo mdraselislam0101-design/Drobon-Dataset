@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1457",
+  "title": "Signal: .terraform.lock.hcl provider lockfile served",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-body-matches",
+      "valuePattern": "(?=[\\s\\S]*(?:^|\\n)provider\\s+\"registry\\.terraform\\.io/)(?=[\\s\\S]*version\\s*=)"
+    }
+  },
+  "scope": "One response body containing Terraform provider blocks with registry addresses.",
+  "limitations": "One response body. The rule reads the provider block; it does not query the registry.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "provider \"registry.terraform.io/hashicorp/aws\" {\n  version     = \"5.44.0\"\n  constraints = \"~> 5.0\"\n  hashes = [\n    \"h1:abc123=\",\n  ]\n}\n"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "provider \"registry.terraform.io/hashicorp/google\" {\n  version = \"5.24.0\"\n}\n"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"version\":4,\"terraform_version\":\"1.7.5\",\"resources\":[{\"type\":\"aws_s3_bucket\"}]}\n"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://docs.example/deploy",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Deployment guide</title></head><body><p>Commit the lockfile so provider versions stay pinned.</p></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A page that quotes a single provider line is reported when it also carries a version constraint; a Terraform state file is covered by its own rule.",
+  "linkedRules": [
+    "DPK-DAST-388"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:dast-artefact-terraform-lock:terraform-lock-served",
+  "validationStatus": "VALIDATED"
+}

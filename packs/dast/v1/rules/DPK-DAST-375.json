@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-375",
+  "title": "Sidekiq web dashboard disclosed",
+  "description": "The response is the Sidekiq web dashboard: the Sidekiq title with the queue navigation. The dashboard can retry, delete and enqueue jobs, and each job view shows the arguments the job was called with.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-215",
+  "category": "debug-exposure",
+  "remediation": "Mount the Sidekiq web interface behind the admin authentication or drop the route from the production router.",
+  "limitation": "One response body. The rule reports the dashboard shell; it does not enqueue or retry a job.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*<title>Sidekiq)(?=[\\s\\S]*Enqueued)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/sidekiq",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Sidekiq</title></head><body><nav><a href=\"/sidekiq/queues\">Queues</a><a href=\"/sidekiq/retries\">Retries</a></nav><p>Enqueued 14</p></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/sidekiq/morgue",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Sidekiq</title></head><body><h2>Dead Jobs</h2><pre>{\"jid\":\"abc\",\"args\":[\"user@example.test\",12]}</pre><p>Enqueued 0</p></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/jobs",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Jobs</title></head><body><p>Background jobs are running normally.</p></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/docs/queues",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<p>Mount the dashboard under an admin constraint.</p>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1444"
+  ]
+}

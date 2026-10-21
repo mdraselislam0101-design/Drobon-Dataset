@@ -1,5 +1,7 @@
 # SCOPE.md — what lives in this repo, and why (app-seam inventory)
 
+> **Superseded in part (2026-10-21).** The table below is the original inventory at App `c32c797` (2026-10-14). A re-inventory at App `9360dd1` (`§ Re-inventory 2026-10-21` at the end of this file) found that rows 3–7 and 12–18 now have real dataset consumers: the App gained `apps/api/src/external/` plus a filesystem SCA provider. Read both sections together; the original rows are kept as history, not as the current verdict.
+
 This document proves the dataset surface is **complete**: every place in the Drobon app that could consume external data was inventoried. Exactly one seam needs vulnerability intelligence (row 1); rows 12–19 cover rule packs and audience datasets for documented future loaders. Anything proposed for this repo outside these rows must cite a new app seam — otherwise it belongs in the app repo (logic) or the database repo (persistence schemas).
 
 Method: cloned `Drobon` (`main` @ `c32c797a549453802bd6d82c5673d2a1728457a3`, 2026-10-14) and searched `apps/*/src` + `packages/shared/src` for data seams (`dataset`, `vuln-intel`, `provider`, `catalog`, `advisory`, `CVE/GHSA/OSV/NVD/KEV/EPSS`, JSON imports, file reads, `fetch(`). Runtime `readFileSync` hits were triaged one by one: all are operational stores (user/scans/projects state), not datasets.
@@ -41,3 +43,38 @@ Method: cloned `Drobon` (`main` @ `c32c797a549453802bd6d82c5673d2a1728457a3`, 20
 ## What "100%" means here
 
 For the app's needs, this repo is complete when: the format mirrors the provider contract exactly (FORMAT.md), real verified data flows with provenance (importer + seed), matching behavior is pinned (interop vectors), and every change is machine-checked (validator + CI). That is the bar this repo holds itself to — not record count, which honestly grows over time and never claims completeness.
+
+---
+
+## Re-inventory 2026-10-21 (App `9360dd1abdf940cc1bffd942aab0702703aaaaef`)
+
+Method: shallow clone of the App, `npm ci` + `npm run build --workspace @drobon/shared`
+(both exit 0), seams re-searched for `DATASET_PATH`, `dataset`, `external/`, `provider`,
+`packs`; then an executable probe mounted this repository at `DATASET_PATH` and read
+`docs/APP_CONNECTION_VERIFICATION_2026-10-21.md`'s results (dataset status, merged rule
+counts, SCA `assess` results, converter parity over every declared pack test).
+
+| # (original) | Old verdict | Verdict at `9360dd1` | Evidence |
+|---|---|---|---|
+| 1 SCA provider | DATASET (seam) | **DATASET — INTEGRATED** (`Null` default kept, filesystem provider added) | `apps/api/src/scans/sca/filesystemProvider.ts`, `apps/api/src/external/service.ts` |
+| 3 Student lessons | NOT data — hardcoded | **DATASET — integrated** (`LESSONS = []`, merged from `learning/lessons`) | `apps/api/src/student/lessons.ts:34`, `external/lessonProvider.ts` |
+| 4 Remediation guidance | NOT data — hardcoded | **DATASET — loaded, not surfaced** (still returns `UNAVAILABLE`) | `apps/api/src/external/knowledge.ts` (no caller), `scans/remediationGuidance.ts` |
+| 5 SAST rules | NOT data — matcher code | **DATASET — integrated** (`SAST_RULES = []`, packs loaded per scan) | `scans/sast/rules.ts:48`, `scans/sast/engine.ts:239-244` |
+| 6 Secrets rules | NOT data — matcher code | **DATASET — integrated** (`SECRETS_RULES = []`) | `scans/secrets/rules.ts:97`, `scans/secrets/engine.ts:367-369` |
+| 7 DAST rules | NOT data — rule logic | **DATASET — integrated** (`evaluateDastObservation` returns `[]`) | `scans/dast/rules.ts`, `scans/dast/engine.ts:313-325` |
+| 12–14 Rule packs | DATA, "future loader" | **DATA — consumed today** (950 / 97 / 263) | `external/packProvider.ts`, `external/packIntegration.ts` |
+| 15 Remediation knowledge | DATA, "future loader" | **DATA — loaded (1310), unused** | `external/service.ts` |
+| 16 Lessons | DATA, "future loader" | **DATA — consumed (6)** | `external/lessonProvider.ts` |
+| 17 Assessment templates | DATA, "future loader" | **DATA — loaded (3), status surface only** | `internal/routes.ts` `/dataset/status` |
+| 18 Engagement templates | DATA, "future loader" | **DATA — loaded (2), status surface only** | same |
+| 19 CWE knowledge | DATA | **DATA — loaded (68), resolver unused** | `external/knowledge.ts` |
+| **new** | — | **Active DAST + payload catalog added in the App** (`activeEngine.ts`, `crawler.ts`, `payloads.ts`), which contradicts the passive-only boundary this document and `PACKS.md` assert | `apps/api/src/scans/dast/*`; owner decision GAP-045 |
+
+Consequences for this repository:
+
+- Rows 3–7 are no longer "app logic only": the app now holds engines and this repo holds
+  the rules. The split is real and must be described that way in `README.md`/`PACKS.md`.
+- The completeness statement above still holds for the *directory set*; what changed is
+  that the consumers exist, so the bar is now conformance (declared tests, ReDoS,
+  language reachability vertical) instead of contract-readiness.
+- A new top-level directory still needs a new App seam, a row here, and the same tests.

@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1448",
+  "title": "Signal: SSH authorized_keys file served",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-body-matches",
+      "valuePattern": "(?=[\\s\\S]*(?:^|\\n)ssh-(?:rsa|ed25519)\\s+AAAA)(?=[\\s\\S]*\\nssh-(?:rsa|ed25519)\\s+AAAA)"
+    }
+  },
+  "scope": "One response body containing SSH public key entries with their comments.",
+  "limitations": "One response body. The rule reads public key entries; it does not attempt a login.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleKeyBody deploy@ci\nssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgExampleKeyBody alice@laptop\n"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "from=\"10.0.0.0/8\" ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgExampleKeyBody backup@host\nssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleKeyBody ops@bastion\n"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://docs.example/deploy",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Deployment guide</title></head><body><p>Add the line ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExampleKeyBody to authorized_keys.</p></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "server:\n  host: 0.0.0.0\n  port: 8080\n"
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A page that shows one public key as an example is not reported, because two entries at line starts are required.",
+  "linkedRules": [
+    "DPK-DAST-379"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:dast-artefact-authorized-keys:authorized-keys-served",
+  "validationStatus": "VALIDATED"
+}

@@ -1,0 +1,71 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-285",
+  "title": "Permissions-Policy grants the Payment Request API to every origin",
+  "description": "The Permissions-Policy value sets `payment=*`, which delegates the Payment Request API to every frame the page can embed, including third-party content. An embedded frame can then open the payment sheet against the top-level origin, and consent screens shown to the user are no longer attributable to the code the application itself ships.",
+  "severity": "LOW",
+  "cwe": "CWE-693",
+  "category": "security-headers",
+  "remediation": "Restrict payment to the origins that need it (`payment=(self)`) and add an explicit allowlist only for first-party payment frames.",
+  "limitation": "One header value. The check reads the declared allowlist for payment; it does not observe whether a payment sheet is ever opened, and it cannot tell an embedded first-party frame from a third-party one.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Permissions-Policy",
+    "valuePattern": "(?:^|[,;])\\s*payment\\s*=\\s*\\(?\\s*\\*"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://shop.example/",
+        "status": 200,
+        "headers": {
+          "Permissions-Policy": "payment=*"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://shop.example/",
+        "status": 200,
+        "headers": {
+          "Permissions-Policy": "camera=(self), payment=*; geolocation=()"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://shop.example/",
+        "status": 200,
+        "headers": {
+          "Permissions-Policy": "payment=(self)"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://shop.example/",
+        "status": 200,
+        "headers": {
+          "Permissions-Policy": "payment=(self \"https://checkout.example\")"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://shop.example/",
+        "status": 200,
+        "headers": {
+          "Permissions-Policy": "camera=*"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1354"
+  ]
+}

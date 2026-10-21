@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-288",
+  "title": "X-B3-TraceId exposes internal tracing identifiers",
+  "description": "The response echoes a Zipkin B3 trace identifier. Trace ids are safe to correlate inside one platform and unsafe to publish: they reveal that requests pass through a particular tracing stack, let an attacker stitch responses from different tenants into one trace, and often appear again in internal dashboards whose URLs assume the id is private.",
+  "severity": "LOW",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Generate a request id for the client at the edge and keep B3 headers inside the service mesh; do not return X-B3-* headers on public responses.",
+  "limitation": "One header value. The check validates the hex shape of a B3 trace id; it does not prove that logs or dashboards are reachable, and a trace id alone is not an exploit.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "X-B3-TraceId",
+    "valuePattern": "^\\s*[0-9a-f]{16}(?:[0-9a-f]{16})?\\s*$"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://api.example/v1/items",
+        "status": 200,
+        "headers": {
+          "X-B3-TraceId": "a3ce929d0e0e4736"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://api.example/v1/items",
+        "status": 200,
+        "headers": {
+          "x-b3-traceid": "a3ce929d0e0e4736ffa1b2c3d4e5f607"
+        }
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://api.example/",
+        "status": 200,
+        "headers": {
+          "X-B3-TraceId": "a3ce929d"
+        }
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://api.example/",
+        "status": 200,
+        "headers": {
+          "X-Request-Id": "req-1234"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1357"
+  ]
+}

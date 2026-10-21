@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-392",
+  "title": "Dagster UI is reachable without authentication",
+  "description": "The response is the Dagster asset UI. It renders the asset graph, the materialisation history, the partitions and the run logs of the pipeline, including the storage and compute definitions the jobs use.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Put the Dagster webserver behind authentication and keep it on the internal network.",
+  "limitation": "One response body. The rule reports the UI shell; it does not launch a run.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "<title>[^<]{0,60}Dagster"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://data.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Dagster</title></head><body><div id=\"root\" data-dagster-version=\"1.6\"></div></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://data.example/assets",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Dagster · Assets</title></head><body><p>assets: 42</p></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://docs.example/guide",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Data guide</title></head><body><p>The webserver serves the UI on port 3000.</p></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/reports",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Reports</title></head><body><p>Weekly report is ready.</p></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1461"
+  ]
+}

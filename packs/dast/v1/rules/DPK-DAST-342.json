@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-342",
+  "title": "Subversion .svn/entries file served",
+  "description": "The response is the Subversion administrative entries file: the format version, the entry type and the repository URL it points at. It gives the working-copy layout and the repository host that the deployment was checked out from.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Deploy without .svn directories (svn export rather than checkout) and deny the directory at the server level.",
+  "limitation": "One response body. The rule reads the entries format; it does not list the rest of the directory.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*(?:^|\\n)12\\n(?:dir|file)\\n)(?=[\\s\\S]*svn://)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/.svn/entries",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "12\ndir\n3831\nsvn://repo.internal/shop/trunk\n2024-05-11T09:14:02.000000Z\n"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/assets/.svn/entries",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "12\ndir\n1180\nsvn://repo.internal/shop/trunk/assets\n"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/docs/deploy",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "Export the tree with svn export so the metadata stays out of production."
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/.git/config",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "[core]\n\trepositoryformatversion = 0\n[remote \"origin\"]\n\turl = https://git.internal/shop.git\n"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1411"
+  ]
+}
