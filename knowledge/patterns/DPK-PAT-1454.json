@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1454",
+  "title": "Signal: Jenkinsfile served from the web root",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-body-matches",
+      "valuePattern": "(?=[\\s\\S]*(?:^|\\n)pipeline\\s*\\{)(?=[\\s\\S]*\\n\\s+agent\\s)"
+    }
+  },
+  "scope": "One response body containing a declarative pipeline with an agent and a stage.",
+  "limitations": "One response body. The rule reads the pipeline structure; it does not run a stage.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "pipeline {\n  agent any\n  stages {\n    stage(\"build\") {\n      steps { sh \"docker build -t registry.internal/shop:${env.BUILD_ID} .\" }\n    }\n  }\n}\n"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "pipeline {\n  agent { label \"docker\" }\n  environment {\n    REGISTRY_CRED = credentials(\"registry-internal\")\n  }\n}\n"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "#!/bin/sh\nset -eu\ndocker build -t shop:latest .\n"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://docs.example/deploy",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Deployment guide</title></head><body><p>Keep the pipeline block in a Jenkinsfile at the repository root.</p></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A page that quotes a pipeline snippet is reported when it reproduces the pipeline block and an agent directive.",
+  "linkedRules": [
+    "DPK-DAST-385"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:dast-artefact-jenkinsfile:jenkinsfile-served",
+  "validationStatus": "VALIDATED"
+}

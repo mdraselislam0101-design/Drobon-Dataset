@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-407",
+  "title": "Rails web-console rendered in a page",
+  "description": "The response carries the Rails web-console: its container with the console bindings. The console evaluates Ruby in the request context, so a reachable console is remote code execution with the application privileges.",
+  "severity": "HIGH",
+  "cwe": "CWE-489",
+  "category": "debug-exposure",
+  "remediation": "Add the web-console gem to the development group only, and never mount it in a production environment.",
+  "limitation": "One response body. The rule reports the console container; it does not send an expression to it.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*web-console)(?=[\\s\\S]*data-console-bindings)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/orders/1",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body><h2>NoMethodError</h2><div id=\"console\" data-console-bindings=\"{&quot;session_id&quot;:&quot;abc&quot;}\"><pre>web-console</pre></div></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/checkout",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<div class=\"console\" data-console-bindings=\"{}\"><span>web-console</span></div>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/orders/1",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body><h1>Something went wrong</h1></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://docs.example/guide",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Rails guide</title></head><body><p>web-console is installed for the development group only.</p></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1476"
+  ]
+}

@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-397",
+  "title": "Spring Boot Admin console is reachable without authentication",
+  "description": "The response is the Spring Boot Admin shell. The server aggregates the actuators of every registered application, so its console shows environment values, heap dumps, thread dumps and log levels for the whole fleet.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Require authentication on the admin server (and on every client actuator) and keep it on the administrative network.",
+  "limitation": "One response body. The rule reports the admin shell; it does not read an actuator endpoint.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*spring-boot-admin)(?=[\\s\\S]*Spring Boot Admin)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://ops.example/admin/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Spring Boot Admin</title></head><body><div id=\"spring-boot-admin-root\"></div><script src=\"/assets/index.js\"></script></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://ops.example/admin/#/applications",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Applications · Spring Boot Admin</title></head><body><div class=\"spring-boot-admin-app\"></div></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/actuator/health",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"status\":\"UP\"}"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://docs.example/guide",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Operations guide</title></head><body><p>The admin server aggregates registered applications.</p></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1466"
+  ]
+}

@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-384",
+  "title": "go.mod module manifest served",
+  "description": "The response is a Go module manifest: the module path and its requirement block. It names the internal module path of the project, which is often the repository host, and pins every dependency version.",
+  "severity": "LOW",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Exclude module manifests from the deployed tree and deny them at the server level.",
+  "limitation": "One response body. The rule reads the module declaration; it does not resolve the dependency versions.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*(?:^|\\n)module\\s+[a-z0-9._/-]{3,80}(?:\\n|$))(?=[\\s\\S]*(?:^|\\n)require\\s)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "module git.internal/shop/api\n\ngo 1.22\n\nrequire (\n\tgithub.com/gin-gonic/gin v1.9.1\n)\n"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "module github.com/shop/service\n\ngo 1.21\n\nrequire github.com/lib/pq v1.10.9\n\nreplace github.com/shop/core => ../core\n"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "github.com/gin-gonic/gin v1.9.1 h1:4idE4kt1qBfFKf0VMsrOYw4qJYQaM6bGkFQ1kC1h0h0=\n"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://docs.example/deploy",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Deployment guide</title></head><body><p>Declare the module path at the top of go.mod.</p></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1453"
+  ]
+}

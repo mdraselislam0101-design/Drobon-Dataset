@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-403",
+  "title": "Go expvar endpoint served",
+  "description": "The response is the Go expvar handler: the cmdline and memstats objects that the runtime publishes by default. The command line names the flags the service was started with, and those flags routinely carry configuration paths and credentials.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Do not register expvar on a public handler, or replace it with a metrics endpoint that exposes only counters.",
+  "limitation": "One response body. The rule reads the default expvar objects; a custom metric with the same shape is not distinguished.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*\"cmdline\")(?=[\\s\\S]*\"memstats\")"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://api.example/debug/vars",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"cmdline\":[\"/app/server\",\"--db-url=postgres://db.internal/app\"],\"memstats\":{\"Alloc\":18432000,\"NumGC\":91}}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://api.example/debug/vars",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"cmdline\":[\"/srv/api\"],\"memstats\":{\"Alloc\":2048},\"requests\":1422}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://api.example/v1/items",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"items\":[],\"total\":0}"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://api.example/metrics",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "# HELP go_goroutines Number of goroutines\ngo_goroutines 42\n"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1472"
+  ]
+}

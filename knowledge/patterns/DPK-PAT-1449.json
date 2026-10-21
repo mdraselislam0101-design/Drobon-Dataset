@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1449",
+  "title": "Signal: Shell history file served from the web root",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-body-matches",
+      "valuePattern": "(?=[\\s\\S]*(?:^|\\n)cd\\s+[a-z0-9._/-]{1,60})(?=[\\s\\S]*\\n(?:sudo|docker|kubectl|mysql|psql|curl|ssh)\\s)"
+    }
+  },
+  "scope": "One response body containing a shell history with directory changes and operational commands.",
+  "limitations": "One response body. The rule recognises the history shape; a single line of text is not reported.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "cd /var/www/shop\nsudo systemctl restart nginx\nkubectl get pods -n shop\n"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "cd /srv\nmysqldump -h db.internal -u app shop > dump.sql\ncurl -s http://cache.internal:6379/ping\n"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://docs.example/deploy",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Deployment guide</title></head><body><p>Run the commands in order and restart the service afterwards.</p></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://docs.example/deploy",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Deployment guide</title></head><body><p>Run the migrations before restarting the service.</p></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A page that shows a command example is reported only when several command lines appear at line starts.",
+  "linkedRules": [
+    "DPK-DAST-380"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:dast-artefact-bash-history:bash-history-served",
+  "validationStatus": "VALIDATED"
+}

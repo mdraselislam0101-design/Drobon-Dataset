@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-388",
+  "title": ".terraform.lock.hcl provider lockfile served",
+  "description": "The response is a Terraform provider lockfile: provider blocks that name registry addresses and pinned versions with their hashes. It reveals which cloud providers the infrastructure targets and the exact plugin builds they use.",
+  "severity": "LOW",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Exclude the .terraform directory and the lockfile from the deployed tree.",
+  "limitation": "One response body. The rule reads the provider block; it does not query the registry.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*(?:^|\\n)provider\\s+\"registry\\.terraform\\.io/)(?=[\\s\\S]*version\\s*=)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "provider \"registry.terraform.io/hashicorp/aws\" {\n  version     = \"5.44.0\"\n  constraints = \"~> 5.0\"\n  hashes = [\n    \"h1:abc123=\",\n  ]\n}\n"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "provider \"registry.terraform.io/hashicorp/google\" {\n  version = \"5.24.0\"\n}\n"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"version\":4,\"terraform_version\":\"1.7.5\",\"resources\":[{\"type\":\"aws_s3_bucket\"}]}\n"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://docs.example/deploy",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Deployment guide</title></head><body><p>Commit the lockfile so provider versions stay pinned.</p></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1457"
+  ]
+}

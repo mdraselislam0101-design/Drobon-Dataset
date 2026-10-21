@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1450",
+  "title": "Signal: composer.lock dependency lockfile served",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-body-matches",
+      "valuePattern": "(?=[\\s\\S]*\"content-hash\"\\s*:)(?=[\\s\\S]*\"packages\"\\s*:)"
+    }
+  },
+  "scope": "One response body containing a Composer lockfile with its packages array.",
+  "limitations": "One response body. The rule reads the JSON shape; it does not resolve the package versions.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"_readme\":[\"This file locks the dependencies\"],\"content-hash\":\"a1b2c3d4\",\"packages\":[{\"name\":\"monolog/monolog\",\"version\":\"3.5.0\"}],\"packages-dev\":[]}\n"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"packages\":[{\"name\":\"shop/core\",\"version\":\"1.2.0\",\"source\":{\"url\":\"https://git.internal/shop/core.git\"}}],\"content-hash\":\"ffff0000\"}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"require\":{\"php\":\">=8.1\",\"monolog/monolog\":\"^3.5\"}}\n"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://docs.example/deploy",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Deployment guide</title></head><body><p>Commit composer.lock and install with --no-dev.</p></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A composer.json manifest is not reported, because the content hash marker is required.",
+  "linkedRules": [
+    "DPK-DAST-381"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:dast-artefact-composer-lock:composer-lock-served",
+  "validationStatus": "VALIDATED"
+}

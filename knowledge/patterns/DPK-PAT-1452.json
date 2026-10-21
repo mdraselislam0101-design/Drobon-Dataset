@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1452",
+  "title": "Signal: .gitlab-ci.yml pipeline definition served",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-body-matches",
+      "valuePattern": "(?=[\\s\\S]*(?:^|\\n)stages\\s*:)(?=[\\s\\S]*\\n\\s+script\\s*:)"
+    }
+  },
+  "scope": "One response body containing a GitLab CI stages list and a job script.",
+  "limitations": "One response body. The rule reads the pipeline structure; it does not run a job.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "stages:\n  - build\n  - deploy\n\nbuild:\n  stage: build\n  script:\n    - docker build -t registry.internal/shop .\n"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "stages:\n  - test\n\ntest:\n  variables:\n    DB_HOST: db.internal\n  script:\n    - pytest -q\n"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/yaml"
+        },
+        "body": "server:\n  port: 8080\nlogging:\n  level: info\n"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://docs.example/deploy",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Deployment guide</title></head><body><p>Define stages at the top of the file.</p></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A page that shows a pipeline snippet is reported when it reproduces the stages list and a script block.",
+  "linkedRules": [
+    "DPK-DAST-383"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:dast-artefact-gitlab-ci:gitlab-ci-served",
+  "validationStatus": "VALIDATED"
+}

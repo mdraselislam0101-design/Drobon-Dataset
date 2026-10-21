@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-401",
+  "title": "Astro development toolbar served",
+  "description": "The response carries the Astro development toolbar. It lists the islands on the page, their hydration state and the audit results, and it injects a script that the production build omits entirely.",
+  "severity": "LOW",
+  "cwe": "CWE-489",
+  "category": "debug-exposure",
+  "remediation": "Deploy the production build; the toolbar only exists in the development server output.",
+  "limitation": "One response body. The rule reports the toolbar element; it does not inspect the island data.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*astro-dev-toolbar)(?=[\\s\\S]*astro)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body><main><h1>Home</h1></main><astro-dev-toolbar><template shadowrootmode=\"open\"></template></astro-dev-toolbar></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/pricing",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<astro-dev-toolbar data-islands=\"2\"></astro-dev-toolbar><script type=\"module\" src=\"/@id/astro:scripts/page.js\"></script><p>astro</p>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body><main><h1>Home</h1></main><script type=\"module\" src=\"/_astro/index.abc123.js\"></script></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://docs.example/guide",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Astro guide</title></head><body><p>The toolbar appears only in the dev server.</p></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1470"
+  ]
+}

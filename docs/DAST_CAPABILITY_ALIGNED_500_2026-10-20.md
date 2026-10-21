@@ -424,3 +424,30 @@ The remaining 133 rules and their family-by-family candidates are recorded in
 said at every step: the *reachable* count cannot approach the *declared* count until the
 owner widens `ALLOWED_RESPONSE_HEADERS` in `apps/api/src/scans/dast/rules.ts`, because 73
 rules already need headers the App filters out before evaluation.
+
+---
+
+## Appendix 6 — 2026-10-21 (app-surface batch 5, DAST 367 → 398)
+
+| Item | Appendix 5 | Now |
+|---|---|---|
+| DAST rules | 367 | **398** |
+| Patterns / records / remediation | 1 414 each | **1 445 each** |
+| Declared DAST tests | 1 722 | **1 846** (+124) |
+| DAST evaluation cases | 623 | **656** (+33) |
+| `run-eval` true positives | 1 440 | **1 471** |
+| Distance to the 500 target | 133 | **102** |
+| Rules evaluable inside the App | 294 of 367 (80.1 %) | **325 of 398 (81.7 %)** |
+
+This batch is entirely body evidence: framework development surfaces (Django Debug
+Toolbar, Flask Debug Toolbar, Rails web-console, Next.js development build, Nuxt DevTools,
+Astro toolbar), two development consoles (Quarkus Dev UI, Spring Boot Admin), twelve
+orchestration and data-platform consoles, the dependency-lockfile family, and four served
+runtime files. Because nothing reads a header, the 73 header-blocked rules are untouched and
+the reachable share rises only because the denominator grew with reachable rules.
+
+The 102 rules that remain, and the families they can come from, are in
+`docs/DAST_500_GAP_PLAN_2026-10-21.md`. The one honest statement that has not changed: the
+*reachable* count cannot approach the *declared* count until the owner widens
+`ALLOWED_RESPONSE_HEADERS` in `apps/api/src/scans/dast/rules.ts`, because 73 rules already
+need headers the App filters out before evaluation.

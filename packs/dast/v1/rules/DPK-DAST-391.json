@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-391",
+  "title": ".yarnrc file served from the web root",
+  "description": "The response is a Yarn configuration file: registry and network settings at line starts. It names the registry the build used, any proxy it went through, and the registry scope overrides that reveal internal package namespaces.",
+  "severity": "LOW",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Exclude dotfiles from the deployed tree and deny them at the server level.",
+  "limitation": "One response body. The rule reads the configuration shape; it does not resolve the registries it names.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*(?:^|\\n)registry\\s*[= ])(?=[\\s\\S]*(?:^|\\n)@[a-z0-9-]{1,40}:registry)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "registry \"https://npm.internal/repository/npm-group/\"\n@shop:registry \"https://npm.internal/repository/npm-shop/\"\nnetwork-timeout 600000\n"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "registry=https://npm.internal/\nproxy=http://proxy.internal:3128\n@platform:registry=https://npm.internal/platform/\n"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"name\":\"shop\",\"version\":\"1.4.0\",\"dependencies\":{\"express\":\"4.19.2\"}}\n"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://docs.example/deploy",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Deployment guide</title></head><body><p>Point the registry at the internal mirror.</p></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1460"
+  ]
+}

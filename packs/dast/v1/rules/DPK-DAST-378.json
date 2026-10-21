@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-378",
+  "title": "appsettings.Development.json served",
+  "description": "The response is the ASP.NET Core development settings file: a DetailedErrors flag together with a connection strings block. It holds the development database credentials and turns on the error detail the framework otherwise hides.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Exclude environment-specific settings from the deployment and rotate the credentials they carry.",
+  "limitation": "One response body. The rule reads the file shape; it does not connect to the database it names.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*\"DetailedErrors\"\\s*:\\s*true)(?=[\\s\\S]*\"ConnectionStrings\"\\s*:)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/appsettings.Development.json",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\n  \"DetailedErrors\": true,\n  \"ConnectionStrings\": {\n    \"Default\": \"Server=db.internal;Database=shop;User Id=app;\"\n  }\n}\n"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/appsettings.Development.json",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"DetailedErrors\":true,\"ConnectionStrings\":{\"Redis\":\"cache.internal:6379\"},\"Logging\":{\"LogLevel\":{\"Default\":\"Debug\"}}}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/appsettings.json",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"Logging\":{\"LogLevel\":{\"Default\":\"Warning\"}},\"AllowedHosts\":\"*\"}\n"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://docs.example/deploy",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Deployment guide</title></head><body><p>DetailedErrors should stay false outside development.</p></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1447"
+  ]
+}

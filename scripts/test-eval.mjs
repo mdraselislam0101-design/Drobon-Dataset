@@ -106,12 +106,13 @@ assert(
   'invariant: UNASSESSED cases contribute no TP, FP, FN and execute no detector',
   JSON.stringify(unassessed.filter((r) => r.falsePositives !== 0 || r.falseNegatives !== 0 || r.actual.length !== 0).map((r) => r.id)),
 );
-// Re-pinned 2026-10-21 (1336 -> 1353 -> 1365 -> 1379 -> 1398 -> 1440, +42 app-surface-4 positives) after the defensive DAST batch added 17
+// Re-pinned 2026-10-21 (1336 -> 1353 -> 1365 -> 1379 -> 1398 -> 1440 -> 1471, +31 app-surface-5
+// positives) after the defensive DAST batch added 17
 // independent positive cases and 2 ordinary-response controls; recomputed value
 // comes from `node scripts/run-eval.mjs`, never from an edited expectation.
 assert(
-    report.counts.truePositives === 1440 && report.counts.falseNegatives === 0 && report.counts.falsePositives === 1,
-    'metrics: population counts pinned (1440 TP / 0 FN / 1 documented FP — additive SAST/DAST breadth totals)',
+    report.counts.truePositives === 1471 && report.counts.falseNegatives === 0 && report.counts.falsePositives === 1,
+    'metrics: population counts pinned (1471 TP / 0 FN / 1 documented FP — additive SAST/DAST breadth totals)',
   JSON.stringify(report.counts),
 );
 

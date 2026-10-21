@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-377",
+  "title": "Apache server-info page served",
+  "description": "The response is the Apache server-info handler: the Server Settings and module list that the server generates for its own configuration. It names the loaded modules, their versions, the virtual hosts and the configuration files.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Disable the server-info handler, or restrict it to the administrative network.",
+  "limitation": "One response body. The rule reports the handler output; it does not read the configuration files it names.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*Apache Server Information)(?=[\\s\\S]*Server Settings)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/server-info",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Apache Server Information</title></head><body><h1>Apache Server Information</h1><h2>Server Settings</h2><p>Server Version: Apache/2.4.58</p></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/server-info?list",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<h1>Apache Server Information</h1><h2>Server Settings</h2><h3>Loaded Modules</h3><p>mod_ssl (shared)</p>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/server-status",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body><h1>Apache Server Status for app.example</h1><p>Server uptime: 4 days</p></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://docs.example/deploy",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Deployment guide</title></head><body><p>The server-info handler is disabled by default.</p></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1446"
+  ]
+}

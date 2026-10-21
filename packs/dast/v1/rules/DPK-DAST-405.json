@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-405",
+  "title": "Next.js development build served",
+  "description": "The page loads its chunks from the Next.js development path. A development build ships the source maps, the error overlay and the hot-reload socket, and its error pages print the component stack with file paths.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-489",
+  "category": "debug-exposure",
+  "remediation": "Deploy the production build (`next build` and `next start`) and remove development artefacts from the served tree.",
+  "limitation": "One response body. The rule reports the development chunk path; it does not fetch a source map from it.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*/_next/static/development/)(?=[\\s\\S]*__NEXT_DATA__)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/shop",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body><div id=\"__next\"></div><script src=\"/_next/static/development/_buildManifest.js\"></script><script id=\"__NEXT_DATA__\" type=\"application/json\">{\"page\":\"/shop\"}</script></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/cart",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<script src=\"/_next/static/development/_ssgManifest.js\"></script><script id=\"__NEXT_DATA__\" type=\"application/json\">{}</script>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/shop",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body><div id=\"__next\"></div><script src=\"/_next/static/chunks/main-1f2a3b.js\"></script><script id=\"__NEXT_DATA__\" type=\"application/json\">{\"page\":\"/shop\"}</script></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://docs.example/guide",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Deployment guide</title></head><body><p>Run next build before deploying.</p></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1474"
+  ]
+}

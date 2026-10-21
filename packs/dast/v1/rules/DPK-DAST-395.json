@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-395",
+  "title": "Prefect UI is reachable without authentication",
+  "description": "The response is the Prefect orchestration UI. It shows flow definitions, deployments, schedules and the logs of each run, and its API accepts the commands that start them.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Put Prefect behind its own authentication or an authenticating proxy, and keep the server internal.",
+  "limitation": "One response body. The rule reports the UI shell; it does not start a flow.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "<title>[^<]{0,60}Prefect"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://flows.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Prefect</title></head><body><div id=\"app\" data-server=\"prefect\"></div></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://flows.example/runs",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Prefect · Flow runs</title></head><body><p>12 successful runs</p></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://docs.example/guide",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Orchestration guide</title></head><body><p>Start the server with prefect server start.</p></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/jobs",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Jobs</title></head><body><p>All jobs completed.</p></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1464"
+  ]
+}

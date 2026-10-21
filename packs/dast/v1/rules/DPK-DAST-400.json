@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-400",
+  "title": "YARN ResourceManager UI is reachable without authentication",
+  "description": "The response is the YARN ResourceManager interface. It lists the cluster nodes, the applications and their queues, and it exposes the scheduler view of the Hadoop cluster.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Restrict the ResourceManager web interface to the cluster network, and enable Hadoop HTTP authentication if the interface must be shared.",
+  "limitation": "One response body. The rule reports the ResourceManager shell; it does not submit an application.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*ResourceManager)(?=[\\s\\S]*hadoop)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://yarn.example:8088/cluster",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>ResourceManager</title></head><body><p>Cluster ID: cluster-1 · Hadoop 3.3.6</p><table><tr><td>node01:8041</td></tr></table></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://yarn.example:8088/cluster/apps",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body><h2>Applications</h2><p>ResourceManager state: RUNNING</p><small>Hadoop</small></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://docs.example/guide",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Cluster guide</title></head><body><p>The scheduler web interface runs on port 8088.</p></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/cluster",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Cluster</title></head><body><p>Cluster is healthy.</p></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1469"
+  ]
+}
