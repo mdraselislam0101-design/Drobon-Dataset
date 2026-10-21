@@ -155,10 +155,14 @@ const dimensions = [
     denominator: 500,
     unit: 'checks',
     pct: Math.round((counts.dastRules / 500) * 1000) / 10,
-    status: 'PARTIAL',
-    blocker: 'EVIDENCE_GATED',
-    detail: `The check vocabulary is closed at seven types; every new check must be semantically distinct, tested against observations and independently evaluated. ${500 - counts.dastRules} remain.`,
-    nextAction: 'Author the next capability-aligned batch inside the closed check vocabulary (docs/DAST_CAPABILITY_ALIGNED_500_2026-10-20.md pattern), never as variants of one question.',
+    status: counts.dastRules >= 500 ? 'COMPLETE' : 'PARTIAL',
+    blocker: counts.dastRules >= 500 ? null : 'EVIDENCE_GATED',
+    detail: counts.dastRules >= 500
+      ? 'The 500-check planning target is authored: 500 rule files, each with a pattern, record, remediation entry, a declared positive and a declared negative observation test, and an independent evaluation case. This dimension counts authoring only; the App-side reachability limit is measured separately (`app.dast-reachability`) and is not offset by this number.'
+      : `The check vocabulary is closed at seven types; every new check must be semantically distinct, tested against observations and independently evaluated. ${500 - counts.dastRules} remain.`,
+    nextAction: counts.dastRules >= 500
+      ? 'Keep the pack frozen at 500 unless a genuinely distinct, App-reachable question is found; the open work is App-side (GAP-048 header allowlist).'
+      : 'Author the next capability-aligned batch inside the closed check vocabulary (docs/DAST_CAPABILITY_ALIGNED_500_2026-10-20.md pattern), never as variants of one question.',
     verification: 'npm run validate:packs',
   }),
   dim('packs.secrets', 'Secrets rule pack', {
@@ -502,8 +506,9 @@ md.push('2. **App-side conformance** (`app.*`) lives in the other repository: th
 md.push('   catalog, the loader checklist, the DAST evaluator parity and the remediation');
 md.push('   resolver are App code. This repository measures them and publishes the failing set');
 md.push('   (`interop/app-conformance.json`) so the App workstream has a precise target.');
-md.push('3. **Rule breadth** (`packs.sast`, `packs.dast`) is evidence-gated by policy: the');
-md.push('   remaining rules must come from published evidence, not from padding.');
+md.push('3. **Rule breadth** is evidence-gated by policy: the');
+md.push('   remaining rules must come from published evidence, not from padding. DAST is at its');
+md.push('   500-check target; SAST still has 50 rules against its 1000-rule target.');
 md.push('');
 md.push('What *is* closed, and enforced on every push: the knowledge graph, CWE coverage,');
 md.push('declared pack tests, every universal rule\'s positive + negative evaluation,');
