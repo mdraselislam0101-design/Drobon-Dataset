@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-327",
+  "title": "Network error text discloses an internal address and port",
+  "description": "A connection or proxy failure message is rendered to the caller together with the private address and port it tried to reach, as in \"dial tcp 10.2.3.4:5432: connect: connection refused\". The pair names an internal service and proves the caller can observe the internal network topology through the error path.",
+  "severity": "LOW",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Remove internal addresses from every user-visible string and route health and diagnostic output to a network segment that is not public.",
+  "limitation": "One response body. The check cannot tell a documentation example from a live address, and it does not probe the address.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?:dial tcp|connect: connection refused|upstream connect error|no route to host|connection to server at)[^\\n]{0,120}?(?:10\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|192\\.168\\.\\d{1,3}\\.\\d{1,3}|172\\.(?:1[6-9]|2\\d|3[01])\\.\\d{1,3}\\.\\d{1,3}):\\d{2,5}"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/api/report",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "upstream connect error or disconnect/reset before headers: 10.24.8.19:8080"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/health",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "pool exhausted: connect: connection refused while dialling 172.18.0.3:6379"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/status",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "pool exhausted: connect: connection refused while dialling 203.0.113.10:6379"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/status",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "build 10.24.8 released"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1396"
+  ]
+}

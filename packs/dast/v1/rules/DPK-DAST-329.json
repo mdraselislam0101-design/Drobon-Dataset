@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-329",
+  "title": "Script is loaded from another origin without an integrity hash",
+  "description": "A script element points at an absolute cross-origin URL and carries no integrity attribute. The page therefore executes whatever that origin serves at request time, so the third party, its CDN or anyone who can modify the response runs code in this origin.",
+  "severity": "LOW",
+  "cwe": "CWE-829",
+  "category": "content-injection",
+  "remediation": "Add a Subresource Integrity hash (integrity=\"sha384-…\") to every cross-origin script, or self-host the file.",
+  "limitation": "One response body. The check reads static markup; scripts injected by a bundler at runtime are not seen, and an integrity hash does not protect a same-origin path.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "<script\\b[^>]{0,300}src\\s*=\\s*[\"']https://(?!(?:www\\.)?app\\.example)[^\"']+[\"'][^>]{0,200}>"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<script src=\"https://cdn.vendor.example/lib.js\"></script>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<script defer src='https://analytics.vendor.example/a.js'></script>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<script src=\"/assets/app.js\"></script>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<script>window.__booted=true;</script>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1398"
+  ]
+}

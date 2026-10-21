@@ -1,0 +1,71 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1403",
+  "title": "Signal: Set-Cookie Expires date exceeds the 400-day browser cap",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-header-matches",
+      "header": "Set-Cookie",
+      "valuePattern": ";\\s*expires\\s*=\\s*[a-z]{3},\\s*\\d{1,2}\\s+[a-z]{3}\\s+(?:20[3-9]\\d|2[1-9]\\d\\d)\\s+\\d{2}:\\d{2}:\\d{2}"
+    }
+  },
+  "scope": "One Set-Cookie value whose Expires date falls in 2030 or later.",
+  "limitations": "One Set-Cookie value. The check reads the declared year; it does not clamp the value the way a specific browser would, and it does not decide whether a long-lived cookie is acceptable for that data.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Expires=Wed, 01 Jan 2099 00:00:00 GMT; Path=/; Secure"
+        },
+        "body": ""
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/prefs",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "theme=dark; Expires=Mon, 15 Mar 2035 10:00:00 GMT; Path=/"
+        },
+        "body": ""
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Expires=Fri, 01 Jan 2027 00:00:00 GMT; Path=/; Secure"
+        },
+        "body": ""
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Path=/; Secure; HttpOnly"
+        },
+        "body": ""
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A cookie whose expiry is inside the cap is not reported; the Max-Age form of the same defect is reported by DPK-DAST-281, so this rule reads only Expires.",
+  "linkedRules": [
+    "DPK-DAST-334"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:dast-cookie-expires-beyond-cap:expires-beyond-cap",
+  "validationStatus": "VALIDATED"
+}

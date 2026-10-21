@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1386",
+  "title": "Signal: Django SECRET_KEY value served in a response",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-body-matches",
+      "valuePattern": "\\bSECRET_KEY\\s*=\\s*[\"']?[A-Za-z0-9_\\-!@#$%^&*()+=]{32,}[\"']?"
+    }
+  },
+  "scope": "One response body containing a SECRET_KEY assignment with a long literal value.",
+  "limitations": "One response body. The check reads the assignment shape; it does not reconstruct a signed cookie from the value.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/__debug__/settings",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<pre>SECRET_KEY = 'django-insecure-4f8a1c9e2b7d6f0a3c5e8b1d4f7a9c2e'\nDEBUG = True</pre>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/static/settings.py",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "DEBUG = True\nSECRET_KEY = 'x9F2kLm4Qp7Rt1Vw3Yz6Bc8Df0Gh2Jk5'"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/static/settings.py",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "SECRET_KEY = os.environ[\"DJANGO_SECRET_KEY\"]"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/docs/settings",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<code>SECRET_KEY = \"changeme\"</code>"
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A configuration snippet that assigns the value from the environment is not reported, and a short placeholder such as changeme is not reported because the value must look like a real key.",
+  "linkedRules": [
+    "DPK-DAST-317"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:dast-body-django-secret-key:django-secret-key",
+  "validationStatus": "VALIDATED"
+}

@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-326",
+  "title": "Response body embeds a presigned object-storage URL",
+  "description": "The body contains a presigned URL: an X-Amz-Signature, X-Amz-Credential or Azure SAS signature parameter. Until it expires, anyone holding that string reads the object, and it is frequently written into a page, a log or a chat message where it is copied far beyond the browser.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Serve objects through a short-lived, user-bound endpoint instead of presigning into HTML, keep the signature out of the DOM, and set the shortest workable expiry.",
+  "limitation": "One response body. The check sees the signature parameters; it cannot tell whether the URL is still valid, and it does not fetch it.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?:X-Amz-Signature|X-Amz-Credential)=|\\bsig=[A-Za-z0-9%]{20,}"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/files",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<a href=\"https://bucket.s3.amazonaws.com/report.pdf?X-Amz-Signature=abc123def456&amp;X-Amz-Expires=3600\">Report</a>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/files",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"url\":\"https://acct.blob.core.windows.net/c/report.pdf?sv=2023-01-03&sig=Zm9vYmFyYmF6cXV4MTIzNDU2Nzg5MA%3D\"}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/files",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"url\":\"https://acct.blob.core.windows.net/c/report.pdf\"}"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/files",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"policy\":\"signed-url\",\"state\":\"ready\"}"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1395"
+  ]
+}

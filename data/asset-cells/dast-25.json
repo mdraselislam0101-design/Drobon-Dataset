@@ -1,0 +1,1504 @@
+[
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-body-target-blank-noopener",
+  "category": "content-injection",
+  "cwe": "CWE-693",
+  "severity": "LOW",
+  "title": "Anchor opens a new tab without rel=noopener",
+  "description": "An anchor carries target=\"_blank\" and no rel=\"noopener\" or rel=\"noreferrer\". The opened document keeps a live window.opener reference, so a page the site links to can navigate the original tab to any origin and phish the user from a trusted starting point.",
+  "remediation": "Add rel=\"noopener noreferrer\" to every target=\"_blank\" anchor, or use rel=\"noopener\" alone when referrer information must be kept.",
+  "limitation": "One response body. The check reads static markup; anchors created by script at runtime are invisible, and a rel value added by a framework helper is only seen if it is rendered into the HTML.",
+  "scopeT": "One anchor element carrying target=\"_blank\" whose rel attribute is absent or lacks noopener and noreferrer.",
+  "fp": "An anchor whose rel contains noopener or noreferrer is not reported. Modern browsers imply noopener for target=\"_blank\", so the finding is hardening, not an exploitable state — the rule says so in its own text.",
+  "recordDesc": "A target=\"_blank\" link without rel=noopener hands the opened page a live window.opener reference. That page can redirect the tab the user trusts, which turns any outbound link into a phishing pivot; the reverse-tabnabbing class survives in browsers and frameworks that do not imply noopener.",
+  "applicability": "Responses that contain HTML anchors opened in a new browsing context.",
+  "risk": "A linked third-party page can navigate the original tab to an attacker origin, so the user continues from a trusted URL into a controlled page.",
+  "why": "An anchor uses target=\"_blank\" without rel=noopener or rel=noreferrer.",
+  "fix": [
+   "Add rel=\"noopener noreferrer\" to every anchor that opens a new tab.",
+   "Render the attribute from one shared helper so it cannot be forgotten."
+  ],
+  "verifyT": "Inspect every target=\"_blank\" anchor in the rendered page and confirm each carries noopener.",
+  "cells": [
+   {
+    "suffix": "blank-no-noopener",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "<a\\b(?![^>]{0,400}noopener)(?![^>]{0,400}noreferrer)[^>]{0,300}target\\s*=\\s*[\"']_blank[\"']"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/help",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<a href=\"https://docs.vendor.example\" target=\"_blank\">Vendor docs</a>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/help",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<a target='_blank' rel='nofollow' href='/terms'>Terms</a>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/help",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<a href=\"https://docs.vendor.example\" target=\"_blank\" rel=\"noopener noreferrer\">Vendor docs</a>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/help",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<a href=\"/terms\">Terms</a>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-body-script-no-integrity",
+  "category": "content-injection",
+  "cwe": "CWE-829",
+  "severity": "LOW",
+  "title": "Script is loaded from another origin without an integrity hash",
+  "description": "A script element points at an absolute cross-origin URL and carries no integrity attribute. The page therefore executes whatever that origin serves at request time, so the third party, its CDN or anyone who can modify the response runs code in this origin.",
+  "remediation": "Add a Subresource Integrity hash (integrity=\"sha384-…\") to every cross-origin script, or self-host the file.",
+  "limitation": "One response body. The check reads static markup; scripts injected by a bundler at runtime are not seen, and an integrity hash does not protect a same-origin path.",
+  "scopeT": "One script element whose src is an absolute https URL on another registrable host with no integrity attribute.",
+  "fp": "A same-origin script, or a cross-origin script that carries an integrity hash, is not reported. Scripts that are intentionally unversioned (analytics loaders) are still reported, because the missing hash is the fact.",
+  "recordDesc": "A cross-origin script without an integrity hash means the page executes whatever that host returns at that moment. Compromising the third party, its CDN or a response in transit then yields script execution in this origin, with access to the session and the DOM.",
+  "applicability": "Responses that load JavaScript from a third-party origin.",
+  "risk": "An attacker who controls or can modify the third-party response executes arbitrary script in the application origin.",
+  "why": "A cross-origin script element carries no integrity attribute.",
+  "fix": [
+   "Add a sha384 integrity hash to every cross-origin script.",
+   "Self-host versioned copies of third-party libraries where possible."
+  ],
+  "verifyT": "List every script src and confirm each cross-origin entry carries an integrity attribute.",
+  "cells": [
+   {
+    "suffix": "cross-origin-script",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "<script\\b[^>]{0,300}src\\s*=\\s*[\"']https://(?!(?:www\\.)?app\\.example)[^\"']+[\"'][^>]{0,200}>"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<script src=\"https://cdn.vendor.example/lib.js\"></script>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<script defer src='https://analytics.vendor.example/a.js'></script>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<script src=\"/assets/app.js\"></script>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<script>window.__booted=true;</script>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-body-form-cross-origin-password",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "Password form submits to a third-party origin",
+  "description": "A form contains a password input and posts it to an absolute URL on another registrable host. Credentials the user types here are delivered to that host, and because the page is the application's own origin the user has no way to notice the destination changed.",
+  "remediation": "Post credentials only to the application origin (or a documented identity provider), and keep the action relative so a compromised template cannot redirect it.",
+  "limitation": "One response body. The check reads the form markup; it cannot tell an intentional federation redirect from an exfiltration form, which is why the finding names the destination rather than asserting an attack.",
+  "scopeT": "One form element that contains a password input and whose action is an absolute URL on another registrable host.",
+  "fp": "A form that posts to the same origin, or to a host the page documents as its identity provider, is not reported here unless it is cross-origin — the rule has no allow-list, so a genuine federation form is also reported and is stated as a known false positive.",
+  "recordDesc": "A password form whose action points at another origin sends what the user types to a host the application does not control. The page looks normal, the URL bar belongs to the real site, and the credentials leave before any server can validate them.",
+  "applicability": "Responses that render a form containing a password field.",
+  "risk": "User credentials are delivered to a third-party or attacker-controlled host, and the user cannot see the destination from the page they trust.",
+  "why": "A password form posts to an absolute URL on another host.",
+  "fix": [
+   "Post credentials to the application origin or a documented identity provider.",
+   "Keep the form action relative so a template cannot redirect it elsewhere."
+  ],
+  "verifyT": "Submit the form in a test build and confirm the request goes to the application origin.",
+  "cells": [
+   {
+    "suffix": "password-form-cross-origin",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "<form\\b[^>]{0,300}\\baction\\s*=\\s*[\"']https://(?!(?:www\\.)?app\\.example)[^\"']*[\"'](?=[\\s\\S]{0,800}type\\s*=\\s*[\"']password)|type\\s*=\\s*[\"']password[\"'][\\s\\S]{0,300}<form\\b[^>]{0,300}\\baction\\s*=\\s*[\"']https://(?!(?:www\\.)?app\\.example)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/login",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<form method=\"post\" action=\"https://collector.example/collect\"><input type=\"password\" name=\"pw\"></form>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/login",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<input type=\"password\" name=\"pw\"><form action=\"https://sso.other.example/auth\" method=\"post\"></form>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/login",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<form method=\"post\" action=\"/login\"><input type=\"password\" name=\"pw\"></form>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/login",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<form action=\"https://search.example/q\"><input type=\"text\" name=\"q\"></form>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-body-form-get-password",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "Password form submits with GET, placing the secret in the URL",
+  "description": "A form contains a password input and has no method, or method=\"get\". The browser then serialises the password into the URL, where it lands in history, the Referer header of later requests, proxy logs and server access logs.",
+  "remediation": "Use method=\"post\" for every form that carries a password, and reject any credential that arrives in a query string at the server.",
+  "limitation": "One response body. The check reads the form markup; it does not observe the resulting request or the logs that keep the URL.",
+  "scopeT": "One form element that contains a password input and whose method is absent or get.",
+  "fp": "A form with method=\"post\" is not reported. A password field inside a form that is submitted by script is reported when no method is declared, because the markup still defaults to GET.",
+  "recordDesc": "A GET form puts every field into the query string, so a password appears in browser history, in the Referer of subsequent requests and in every proxy and access log on the path. The secret then survives the session it belonged to.",
+  "applicability": "Responses that render a login or password-change form.",
+  "risk": "The password is written into URLs that are logged, shared and cached, so it persists far longer than the request and leaks to anyone who can read those logs.",
+  "why": "A form with a password field submits with GET or with no method at all.",
+  "fix": [
+   "Declare method=\"post\" on every form that carries a password.",
+   "Reject credentials received in a query string at the server."
+  ],
+  "verifyT": "Submit the form and confirm the password never appears in the request URL or the access log.",
+  "cells": [
+   {
+    "suffix": "password-form-get",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "<form\\b(?![^>]{0,300}\\bmethod\\s*=\\s*[\"']?post)[^>]{0,300}>[\\s\\S]{0,400}type\\s*=\\s*[\"']password|<form\\b[^>]{0,300}\\bmethod\\s*=\\s*[\"']?get[^>]{0,300}>[\\s\\S]{0,400}type\\s*=\\s*[\"']password"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/login",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<form action=\"/login\"><input type=\"password\" name=\"pw\"></form>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/login",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<form method=\"get\" action=\"/login\"><label>Password</label><input name=\"pw\" type=\"password\"></form>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/login",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<form method=\"post\" action=\"/login\"><input type=\"password\" name=\"pw\"></form>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/search",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<form method=\"get\" action=\"/search\"><input type=\"search\" name=\"q\"></form>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-body-data-uri-anchor",
+  "category": "content-injection",
+  "cwe": "CWE-79",
+  "severity": "LOW",
+  "title": "Anchor navigates to a data: URI",
+  "description": "An anchor points at a data: URI. Browsers treat the resulting document as a new origin-less page, and script inside it runs from an opaque origin that inherits the opener in some engines; the construct is also a routine way to hide a payload from link scanners.",
+  "remediation": "Serve the target as a real resource and link to it with https, and block data: in link href values at render time.",
+  "limitation": "One response body. The check reads static markup; it does not execute the URI and cannot see whether a script inside it would run in this browser.",
+  "scopeT": "One anchor element whose href is a data: URI.",
+  "fp": "An <img src=\"data:...\"> is not reported, because images do not create a navigable document; only anchors are inspected.",
+  "recordDesc": "A data: URI in an anchor turns a link into an inline document whose origin rules differ per engine, and it moves the payload out of any server-side destination log. It is the standard way to smuggle a script link past a review that only checks the href host.",
+  "applicability": "Responses that contain HTML anchors.",
+  "risk": "Clicking the link opens a document assembled from the page itself, which can display a forged form or run script depending on the engine, and leaves no external host to inspect.",
+  "why": "An anchor href is a data: URI.",
+  "fix": [
+   "Link to a real resource over https instead of a data: URI.",
+   "Block data: in href values at render time."
+  ],
+  "verifyT": "Inspect every anchor href and confirm none begins with data:.",
+  "cells": [
+   {
+    "suffix": "data-anchor",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "<a\\b[^>]{0,300}href\\s*=\\s*[\"']\\s*data:"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/invoice",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<a href=\"data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==\">Open</a>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/invoice",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<a href='data:text/plain,hello'>Open</a>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/invoice",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<a href=\"https://files.example/invoice.pdf\">Download</a>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/invoice",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<img src=\"data:image/png;base64,iVBORw0KGgo=\" alt=\"logo\">"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-body-json-stack-field",
+  "category": "debug-exposure",
+  "cwe": "CWE-209",
+  "severity": "MEDIUM",
+  "title": "JSON response carries a stack trace field",
+  "description": "A JSON error object contains a \"stack\" or \"stackTrace\" member. Serialising the exception object is a common shortcut in Node, Java and .NET services, and the field publishes file paths, dependency versions and the call structure to every caller.",
+  "remediation": "Serialise errors through one mapper that emits a code, a message and a correlation id, and log the stack server-side.",
+  "limitation": "One response body. The check recognises the field name; it does not read the frames, and a deliberately published stack in a debug build is reported the same way.",
+  "scopeT": "One JSON response body containing a stack or stackTrace member.",
+  "fp": "A field named \"stack\" that holds a non-trace value is reported, because the check cannot type the value; a JSON error object without such a member is not.",
+  "recordDesc": "A serialised exception carries the stack, and the stack names absolute paths, framework versions and the internal call structure. Returning it to a client turns an API error into a map of the deployment, and it is usually a one-line mistake in an error handler.",
+  "applicability": "Responses generated by a service that serialises its exception objects.",
+  "risk": "The caller learns file paths, dependency versions and the internal call graph, which supports targeted exploitation and version-specific attacks.",
+  "why": "The JSON body includes a stack trace member.",
+  "fix": [
+   "Map exceptions to a fixed error shape before serialising.",
+   "Log the stack server-side and return a correlation id."
+  ],
+  "verifyT": "Force an exception and confirm the JSON body contains no stack member.",
+  "cells": [
+   {
+    "suffix": "json-stack-field",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "\"(?:stack|stackTrace)\"\\s*:\\s*\""
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/api/cart",
+       "status": 500,
+       "headers": {
+        "Content-Type": "application/json"
+       },
+       "body": "{\"error\":\"boom\",\"stack\":\"Error: boom\\n    at CartService.load (/srv/app/cart.js:42:13)\"}"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/api/cart",
+       "status": 500,
+       "headers": {
+        "Content-Type": "application/json"
+       },
+       "body": "{\"message\":\"failed\",\"stackTrace\":\"   at Cart.Load() in C:\\\\app\\\\Cart.cs:line 31\"}"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/api/cart",
+       "status": 500,
+       "headers": {
+        "Content-Type": "application/problem+json"
+       },
+       "body": "{\"type\":\"about:blank\",\"title\":\"Internal error\",\"traceId\":\"00-8f2a\"}"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/api/cart",
+       "status": 422,
+       "headers": {
+        "Content-Type": "application/json"
+       },
+       "body": "{\"errors\":[{\"field\":\"qty\",\"message\":\"must be positive\"}]}"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-body-private-ip-address",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "LOW",
+  "title": "Network error text discloses an internal address and port",
+  "description": "A connection or proxy failure message is rendered to the caller together with the private address and port it tried to reach, as in \"dial tcp 10.2.3.4:5432: connect: connection refused\". The pair names an internal service and proves the caller can observe the internal network topology through the error path.",
+  "remediation": "Remove internal addresses from every user-visible string and route health and diagnostic output to a network segment that is not public.",
+  "limitation": "One response body. The check cannot tell a documentation example from a live address, and it does not probe the address.",
+  "scopeT": "One response body containing a network-failure phrase immediately followed by a private IPv4 address and port.",
+  "fp": "A health or status page that lists private addresses without a failure phrase is not reported, because that is a deliberate diagnostic surface already covered by the console rules; a public address is not reported.",
+  "recordDesc": "A rendered connection error that names the private address and port it failed to reach tells the caller how the internal network is numbered and which service sits where. It is the one form of internal disclosure an unauthenticated caller can induce at will, because they only have to break a request.",
+  "applicability": "Responses from an application that sits behind a private network and renders error or diagnostic text.",
+  "risk": "The caller learns the internal addressing and the port of a backend service, and can usually induce the same error repeatedly, so the internal map can be built request by request.",
+  "why": "A network failure message in the body names a private IPv4 address and port.",
+  "fix": [
+   "Strip internal addresses from user-visible errors and diagnostics.",
+   "Keep health and diagnostic endpoints off the public listener."
+  ],
+  "verifyT": "Search production responses for RFC 1918 addresses and confirm none appear.",
+  "cells": [
+   {
+    "suffix": "private-ip",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?:dial tcp|connect: connection refused|upstream connect error|no route to host|connection to server at)[^\\n]{0,120}?(?:10\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|192\\.168\\.\\d{1,3}\\.\\d{1,3}|172\\.(?:1[6-9]|2\\d|3[01])\\.\\d{1,3}\\.\\d{1,3}):\\d{2,5}"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/api/report",
+       "status": 500,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "upstream connect error or disconnect/reset before headers: 10.24.8.19:8080"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/health",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "pool exhausted: connect: connection refused while dialling 172.18.0.3:6379"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/status",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "pool exhausted: connect: connection refused while dialling 203.0.113.10:6379"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/status",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "build 10.24.8 released"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-body-ds-store-served",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "LOW",
+  "title": "macOS .DS_Store metadata served from the web root",
+  "description": "The response carries the .DS_Store file header. The file records the names of every entry in the directory it was created in, including entries that were later deleted or are not linked, so serving it can expose a directory listing that the web server was configured to hide.",
+  "remediation": "Block dot-files at the web server, remove .DS_Store from build artefacts, and add it to the ignore list of every deploy pipeline.",
+  "limitation": "One response body. The check recognises the file container; it does not parse the entry names it holds.",
+  "scopeT": "One response body carrying the .DS_Store container header.",
+  "fp": "A page that discusses .DS_Store is not reported unless the binary container header is present.",
+  "recordDesc": ".DS_Store records the names of every entry in its directory, including files that are no longer linked. Serving it therefore restores a directory listing the server was configured to hide, and the file is routinely shipped by a build that copied a working tree.",
+  "applicability": "Responses served from a document root that was populated from a developer machine.",
+  "risk": "The caller recovers the names of unlinked or deleted files, which often include backups, configuration and staging artefacts.",
+  "why": "The body is a .DS_Store container rather than a web asset.",
+  "fix": [
+   "Block dot-files at the web server.",
+   "Exclude .DS_Store from build output and deploy artefacts."
+  ],
+  "verifyT": "Request /.DS_Store from a production deployment and confirm the server refuses it.",
+  "cells": [
+   {
+    "suffix": "ds-store-header",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "Bud1\\x00{0,8}"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/.DS_Store",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/octet-stream"
+       },
+       "body": "Bud1\u0000\u0000\u0000\u0000\u0002\u0000\u0000\u0000"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/assets/.DS_Store",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/octet-stream"
+       },
+       "body": "\u0000\u0000\u0000\u0001Bud1\u0000\u0000\u0000\b"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/.DS_Store",
+       "status": 404,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><body>Not found</body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/deploy",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<p>Our deploy step deletes .DS_Store before uploading.</p>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-body-presigned-object-url",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "Response body embeds a presigned object-storage URL",
+  "description": "The body contains a presigned URL: an X-Amz-Signature, X-Amz-Credential or Azure SAS signature parameter. Until it expires, anyone holding that string reads the object, and it is frequently written into a page, a log or a chat message where it is copied far beyond the browser.",
+  "remediation": "Serve objects through a short-lived, user-bound endpoint instead of presigning into HTML, keep the signature out of the DOM, and set the shortest workable expiry.",
+  "limitation": "One response body. The check sees the signature parameters; it cannot tell whether the URL is still valid, and it does not fetch it.",
+  "scopeT": "One response body containing an object-storage signature parameter.",
+  "fp": "A documentation page that shows the parameter names in a code sample is reported; a plain object URL without a signature is not.",
+  "recordDesc": "A presigned URL is a bearer credential with an expiry. Written into HTML it is copied into screenshots, support tickets and page caches, and until it expires anyone who holds the string can read the object whatever the application otherwise enforces.",
+  "applicability": "Responses generated by an application that stores files in S3-compatible or Azure storage.",
+  "risk": "The signature grants read access to the object for anyone who obtains the page, bypassing every authorisation check the application performs.",
+  "why": "The body embeds an object-storage signature parameter.",
+  "fix": [
+   "Proxy object reads through an authenticated endpoint with a short-lived redirect.",
+   "Keep signatures out of rendered HTML and logs."
+  ],
+  "verifyT": "Load the page and confirm the markup contains no signature parameter.",
+  "cells": [
+   {
+    "suffix": "presigned-url",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?:X-Amz-Signature|X-Amz-Credential)=|\\bsig=[A-Za-z0-9%]{20,}"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/files",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<a href=\"https://bucket.s3.amazonaws.com/report.pdf?X-Amz-Signature=abc123def456&amp;X-Amz-Expires=3600\">Report</a>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/files",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/json"
+       },
+       "body": "{\"url\":\"https://acct.blob.core.windows.net/c/report.pdf?sv=2023-01-03&sig=Zm9vYmFyYmF6cXV4MTIzNDU2Nzg5MA%3D\"}"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/files",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/json"
+       },
+       "body": "{\"url\":\"https://acct.blob.core.windows.net/c/report.pdf\"}"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/files",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/json"
+       },
+       "body": "{\"policy\":\"signed-url\",\"state\":\"ready\"}"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-body-webpack-dev-client",
+  "category": "debug-exposure",
+  "cwe": "CWE-489",
+  "severity": "MEDIUM",
+  "title": "webpack development client served in production",
+  "description": "The page loads the webpack-dev-server hot-reload client (/__webpack_hmr or a sockjs client on the dev port). A development server in front of real users rebuilds on change and serves unbundled modules, and its socket accepts connections from anyone who can reach it.",
+  "remediation": "Deploy only the production bundle, remove the dev-server client from the template, and keep the dev server off any network that reaches users.",
+  "limitation": "One response body. The check reads the served markup; it does not connect to the hot-reload socket.",
+  "scopeT": "One response body referencing the webpack dev-server client.",
+  "fp": "A production bundle that mentions webpack in a comment is not reported; the client path or the sockjs endpoint must appear.",
+  "recordDesc": "The webpack dev client keeps a rebuild socket open and serves modules from memory. Shipping that page means the build pipeline was bypassed for a deployment, so the artefact users are testing is not the artefact that was reviewed, and the socket is an unauthenticated channel into the build.",
+  "applicability": "Responses that serve a JavaScript application built with webpack.",
+  "risk": "Users receive unreviewed code from a development server, and the hot-reload socket gives anyone who reaches it a channel into the build process.",
+  "why": "The page references the webpack dev-server hot-reload client.",
+  "fix": [
+   "Deploy only the production bundle and remove the dev client from the template.",
+   "Keep the dev server off any user-facing network."
+  ],
+  "verifyT": "Load the production page and confirm no hot-reload client is requested in the network panel.",
+  "cells": [
+   {
+    "suffix": "webpack-hmr-client",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "/__webpack_hmr|webpack-dev-server/client|sockjs-node"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<script src=\"/__webpack_hmr\"></script><div id=\"root\"></div>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/app",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<script src=\"/assets/webpack-dev-server/client/index.js\"></script>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<script src=\"/assets/app.4f2c1d.js\" defer></script><div id=\"root\"></div>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/about",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<p>We build the front end with webpack and serve the hashed bundle.</p>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-cookie-expires-beyond-cap",
+  "category": "cookie-flags",
+  "cwe": "CWE-613",
+  "severity": "LOW",
+  "title": "Set-Cookie Expires date exceeds the 400-day browser cap",
+  "description": "A cookie sets an Expires date more than 400 days away. Browsers cap persistent cookie lifetime at 400 days, so the stored expiry differs from the declared one; a value in a far future year usually also means the author copied a placeholder such as 2099 without deciding a real lifetime.",
+  "remediation": "Set Expires or Max-Age to the lifetime the application actually needs (typically minutes to 30 days) instead of a far-future placeholder.",
+  "limitation": "One Set-Cookie value. The check reads the declared year; it does not clamp the value the way a specific browser would, and it does not decide whether a long-lived cookie is acceptable for that data.",
+  "scopeT": "One Set-Cookie value whose Expires date falls in 2030 or later.",
+  "fp": "A cookie whose expiry is inside the cap is not reported; the Max-Age form of the same defect is reported by DPK-DAST-281, so this rule reads only Expires.",
+  "recordDesc": "A far-future Expires is either a placeholder nobody revisited or an attempt to create a permanent cookie. Browsers cap the lifetime at 400 days anyway, so the declared value misleads reviewers about how long the credential lives, and the cookie outlives the session policy it was meant to follow.",
+  "applicability": "Responses that set cookies with an Expires attribute.",
+  "risk": "The credential persists far beyond the intended session window, which widens the period in which a stolen cookie is usable.",
+  "why": "The Expires date is in a year at or beyond 2030.",
+  "fix": [
+   "Declare the lifetime the application needs instead of a placeholder year.",
+   "Prefer Max-Age so the intent is explicit."
+  ],
+  "verifyT": "Inspect the stored cookie and confirm its expiry matches the declared lifetime.",
+  "cells": [
+   {
+    "suffix": "expires-beyond-cap",
+    "lang": "http",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Set-Cookie",
+     "valuePattern": ";\\s*expires\\s*=\\s*[a-z]{3},\\s*\\d{1,2}\\s+[a-z]{3}\\s+(?:20[3-9]\\d|2[1-9]\\d\\d)\\s+\\d{2}:\\d{2}:\\d{2}"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/login",
+       "status": 200,
+       "headers": {
+        "Set-Cookie": "sid=abc; Expires=Wed, 01 Jan 2099 00:00:00 GMT; Path=/; Secure"
+       },
+       "body": ""
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/prefs",
+       "status": 200,
+       "headers": {
+        "Set-Cookie": "theme=dark; Expires=Mon, 15 Mar 2035 10:00:00 GMT; Path=/"
+       },
+       "body": ""
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/login",
+       "status": 200,
+       "headers": {
+        "Set-Cookie": "sid=abc; Expires=Fri, 01 Jan 2027 00:00:00 GMT; Path=/; Secure"
+       },
+       "body": ""
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/login",
+       "status": 200,
+       "headers": {
+        "Set-Cookie": "sid=abc; Path=/; Secure; HttpOnly"
+       },
+       "body": ""
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-body-k8s-secret-manifest",
+  "category": "information-disclosure",
+  "cwe": "CWE-798",
+  "severity": "HIGH",
+  "title": "Kubernetes Secret manifest served in a response",
+  "description": "The body is a Kubernetes Secret object (kind: Secret with a data or stringData block). Secret values are base64-encoded rather than encrypted, so anything that serves this object publishes the credentials it holds to anyone who can request the path.",
+  "remediation": "Remove the manifest from any served path, revoke the exposed credentials, and deliver secrets through the cluster API or an external secret store rather than through build output.",
+  "limitation": "One response body. The check recognises the manifest shape; it does not decode or use the values.",
+  "scopeT": "One response body containing a Kubernetes Secret manifest with a data or stringData block.",
+  "fp": "A kubeconfig, Deployment or ConfigMap manifest is not reported; a documentation page that shows a Secret skeleton without values is reported only when a data block with content is present.",
+  "recordDesc": "Secret values in a Kubernetes manifest are base64, which is an encoding and not a protection. A served manifest therefore hands over the live credential, and because manifests travel through repositories and build output the exposure is usually wider than the single URL that answered.",
+  "applicability": "Responses from a cluster, a build artefact server or a misconfigured static path that serves Kubernetes manifests.",
+  "risk": "The caller obtains working credentials for the service the Secret belongs to, typically a database or an API token with cluster reach.",
+  "why": "The body is a Kubernetes Secret manifest carrying encoded values.",
+  "fix": [
+   "Remove manifests from served paths and rotate every exposed value.",
+   "Deliver secrets through the API or an external secret store."
+  ],
+  "verifyT": "Request the path and confirm the response contains no Secret object.",
+  "cells": [
+   {
+    "suffix": "k8s-secret-manifest",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*\\bkind:\\s*Secret\\b)(?=[\\s\\S]*(?:^|\\n)[ \\t]*(?:data|stringData)[ \\t]*:(?=[\\s\\S]*\\n[ \\t]{2,}[A-Za-z0-9._-]+[ \\t]*:[ \\t]*\\S))"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://ci.example/artifacts/app-secret.yaml",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/yaml"
+       },
+       "body": "apiVersion: v1\nkind: Secret\nmetadata:\n  name: db\n type: Opaque\ndata:\n  password: cGxhY2Vob2xkZXItdmFsdWU="
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://ci.example/artifacts/creds.yaml",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "kind: Secret\napiVersion: v1\nstringData:\n  token: placeholder-value\n  user: app"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://ci.example/artifacts/kubeconfig",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/yaml"
+       },
+       "body": "apiVersion: v1\nkind: Config\nclusters:\n  - name: prod\n    cluster:\n      server: https://k8s.example:6443"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://ci.example/artifacts/deploy.yaml",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/yaml"
+       },
+       "body": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: api\nspec:\n  replicas: 2"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-body-slack-webhook-url",
+  "category": "information-disclosure",
+  "cwe": "CWE-798",
+  "severity": "MEDIUM",
+  "title": "Incoming webhook URL with its secret token served in a response",
+  "description": "The body contains a chat-platform incoming webhook URL, whose path segment is the whole credential: anyone holding it can post messages into the channel. Webhook URLs are pasted into configuration files and are frequently printed by a settings page or a stack trace.",
+  "remediation": "Treat the webhook URL as a secret, keep it out of rendered pages and logs, and rotate it if it was served.",
+  "limitation": "One response body. The check recognises the webhook URL shape; it does not post to the endpoint or confirm the token is live.",
+  "scopeT": "One response body containing an incoming webhook URL with a token path segment.",
+  "fp": "A documentation page that shows a redacted webhook is not reported, because the token segment must have the full length the provider issues. A webhook host without a token path is not reported.",
+  "recordDesc": "A webhook URL authenticates with the URL alone: no header, no signature handled by the application. Serving it therefore grants posting rights into the channel, and the credential stays valid until somebody notices and regenerates it.",
+  "applicability": "Responses that render configuration, notification settings or an error that includes a request URL.",
+  "risk": "The caller posts messages as the application, which is usable for phishing inside the workspace and for testing what the team believes about the channel.",
+  "why": "The body contains a complete incoming webhook URL.",
+  "fix": [
+   "Move webhook URLs into the secret store and never render them.",
+   "Rotate the token that was served."
+  ],
+  "verifyT": "Search the rendered pages for the webhook host and confirm only redacted forms remain.",
+  "cells": [
+   {
+    "suffix": "webhook-url",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "https://hooks\\.slack\\.com/services/[A-Z0-9]{8,}/[A-Z0-9]{8,}/[A-Za-z0-9]{20,}"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/admin/notifications",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<input name=\"webhook\" value=\"https://hooks.slack.com/services/A0000000X/C0000000X/EXAMPLEEXAMPLEEXAMPLE1234\">"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/api/alerts",
+       "status": 500,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "notify failed for https://hooks.slack.com/services/A1111111X/C2222222X/EXAMPLEEXAMPLEEXAMPLE5678"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/docs",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<code>https://hooks.slack.com/services/T00000000/B00000000/****</code>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/docs",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<a href=\"https://api.slack.com/messaging/webhooks\">Set up a webhook</a>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-body-stripe-live-secret-key",
+  "category": "information-disclosure",
+  "cwe": "CWE-798",
+  "severity": "HIGH",
+  "title": "Stripe live secret key served in a response",
+  "description": "The body contains a Stripe live secret key, recognised by its sk_live_ prefix. The key authorises the account's full API surface, including charges and refunds, and it is only ever meant to exist server-side.",
+  "remediation": "Revoke and rotate the key in the provider dashboard, remove it from the served content, and load it at runtime from the secret store.",
+  "limitation": "One response body. The check reads the key prefix and length; it does not call the provider to confirm the key is active.",
+  "scopeT": "One response body containing a live secret API key with the provider prefix.",
+  "fp": "A test-mode key (sk_test_) is not reported, nor is a publishable key (pk_live_), because neither carries the same authority; a documentation placeholder is reported when it keeps the prefix and the full token length.",
+  "recordDesc": "A live secret key is complete authority over the payment account. Once it appears in a page it is in caches, in logs and in any screenshot of that page, so the only safe interpretation is that it has leaked and must be rotated.",
+  "applicability": "Responses that render configuration, a client-side bundle built with server variables, or an error that prints environment values.",
+  "risk": "The caller can create charges, issue refunds or read customer payment data against the live account.",
+  "why": "The body contains a live secret key with the provider prefix.",
+  "fix": [
+   "Rotate the key and remove it from every served artefact.",
+   "Load it from the secret store and keep it out of client bundles."
+  ],
+  "verifyT": "Rotate the key, then search the built assets for the prefix and confirm nothing matches.",
+  "cells": [
+   {
+    "suffix": "stripe-live-key",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "\\bsk_live_[A-Za-z0-9]{16,}"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/admin/config",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<pre>STRIPE_SECRET=sk_live_51H8xQ2abcdefghijklmnop</pre>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/static/app.js",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/javascript"
+       },
+       "body": "const k=\"sk_live_51J9yR3zyxwvutsrqponmlk\";"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/admin/config",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "STRIPE_SECRET=sk_test_51H8xQ2abcdefghijklmnop"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/checkout",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<script>Stripe(\"pk_live_51H8xQ2abcdefghijklmnop\")</script>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-body-jwt-alg-none",
+  "category": "information-disclosure",
+  "cwe": "CWE-347",
+  "severity": "HIGH",
+  "title": "Response body contains a token with an unsigned alg value",
+  "description": "The body carries a JWT-shaped string whose header decodes to \"alg\":\"none\". A token issued that way has no signature at all, so any consumer that honours it accepts a body the caller can write, and the presence of such a token in a response means the application issues them.",
+  "remediation": "Reject alg none in every verifier and stop issuing unsigned tokens; pin the accepted algorithms to a fixed allow-list.",
+  "limitation": "One response body. The check reads the base64url header of a token-shaped string; it does not decode the payload or test a verifier.",
+  "scopeT": "One response body containing a JWT whose base64url header declares an unsigned algorithm.",
+  "fp": "A token with a signed algorithm is not reported. A documentation sample that shows the unsigned header is reported, because the rule reads the shape rather than the provenance.",
+  "recordDesc": "A JWT with alg none carries claims and no signature. A verifier that trusts the header therefore accepts whatever the caller sends, which turns a read-only token into a write primitive for any field in the payload.",
+  "applicability": "Responses that issue, echo or debug tokens.",
+  "risk": "The caller forges a token for any subject or role the application trusts, provided one verifier honours the header value.",
+  "why": "A JWT in the body declares the unsigned algorithm in its header.",
+  "fix": [
+   "Reject alg none and pin the accepted algorithms.",
+   "Stop issuing unsigned tokens anywhere in the flow."
+  ],
+  "verifyT": "Send an unsigned token to each verifier and confirm it is rejected.",
+  "cells": [
+   {
+    "suffix": "jwt-alg-none",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "eyJ[A-Za-z0-9_-]{0,80}(?:ImlhbGciOiJub25lI|ImlhbGciOiJOb25lI|bGciOiJub25lI)[A-Za-z0-9_-]{0,400}\\.eyJ[A-Za-z0-9_-]{4,}"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/api/debug/token",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/json"
+       },
+       "body": "{\"token\":\"eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiIxMjM0In0.\"}"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/account",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<code>eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiJhZG1pbiIsInJvbGUiOiJhZG1pbiJ9.</code>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/api/debug/token",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/json"
+       },
+       "body": "{\"token\":\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0In0.abcdefghijklmnopqrstuvwx\"}"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/account",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/json"
+       },
+       "body": "{\"session\":\"6f1d2c3b4a5968778695a4b3c2d1e0f9\"}"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-body-gcp-service-account-key",
+  "category": "information-disclosure",
+  "cwe": "CWE-798",
+  "severity": "HIGH",
+  "title": "Google Cloud service account key JSON served in a response",
+  "description": "The body is a service account key document: type service_account together with private_key_id, client_email and a private_key value. The file is a complete credential that authenticates as the service account until the key is deleted.",
+  "remediation": "Delete the key in the cloud console, remove the file from the served path, and use workload identity or a secret manager instead of downloaded keys.",
+  "limitation": "One response body. The check recognises the key document; it does not parse the key or authenticate with it.",
+  "scopeT": "One response body containing a service account key document with an identifier and a private key block.",
+  "fp": "An application default credentials file without these fields is not reported. A documentation page that shows a complete JSON sample with a placeholder key is reported, because the rule reads the document shape rather than the key bytes.",
+  "recordDesc": "A downloaded service account key is a long-lived credential with no second factor and no user behind it. Served from a web path it is reachable by anyone who guesses the filename, which for build artefacts is usually a directory listing away.",
+  "applicability": "Responses that serve build output, CI artefacts or a misconfigured storage path.",
+  "risk": "The caller authenticates as the service account and inherits every permission bound to it, including data access and resource creation.",
+  "why": "The body is a complete service account key document.",
+  "fix": [
+   "Delete the key and remove the file from the served path.",
+   "Move to workload identity or a secret manager."
+  ],
+  "verifyT": "Request the artefact paths and confirm none returns a key document.",
+  "cells": [
+   {
+    "suffix": "gcp-service-account-key",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*\"type\"\\s*:\\s*\"service_account\")(?=[\\s\\S]*\"private_key_id\"\\s*:\\s*\"[A-Za-z0-9]{16,})(?=[\\s\\S]*\"private_key\"\\s*:\\s*\"[^\"\\n]{1,200}\")(?=[\\s\\S]*\"client_email\"\\s*:)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/.well-known/sa-key.json",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/json"
+       },
+       "body": "{\"type\": \"service_account\", \"project_id\": \"shop\", \"private_key_id\": \"a1b2c3d4e5f60718293a4b5c6d7e8f9012345678\", \"private_key\": \"[redacted key material]\", \"client_email\": \"ci@shop.iam.gserviceaccount.com\"}"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/build/creds.json",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/json"
+       },
+       "body": "{\"private_key_id\": \"b2c3d4e5f60718293a4b5c6d7e8f901234567890\", \"private_key\": \"[redacted key material]\", \"type\": \"service_account\", \"client_email\": \"ci@shop.iam.gserviceaccount.com\"}"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/build/adc.json",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/json"
+       },
+       "body": "{\"type\": \"authorized_user\", \"client_id\": \"abc.apps.googleusercontent.com\", \"refresh_token\": \"1//redacted\"}"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/docs/gcp",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<p>A key file contains a private_key_id and a private_key, and its type is service_account.</p>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-body-htaccess-file-served",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "Apache .htaccess file served as a response",
+  "description": "The response is an .htaccess file: rewrite and IfModule directives at line starts. It names the internal routing, the modules the host loads and often the paths of protected files, and it is a reliable first step for reaching what it was written to guard.",
+  "remediation": "Deny access to dotfiles at the server level, remove the file from the served directory, and keep deployment rules outside the document root.",
+  "limitation": "One response body. The check reads directive lines; it does not apply the rules or test whether they would be enforced.",
+  "scopeT": "One response body containing Apache per-directory configuration directives.",
+  "fp": "A page that quotes a single directive inside a code block is not reported, because the rule needs two directive lines at line starts. An nginx configuration served the same way is covered by its own shape.",
+  "recordDesc": "An .htaccess file discloses the routing table, the enabled modules and the protected paths, and it confirms that the server will honour an uploaded file of the same name. It is the map an attacker reads before trying anything else.",
+  "applicability": "Responses from Apache hosts that serve dotfiles or from a proxy that forwards them.",
+  "risk": "The caller learns which paths exist and which protections are configured, and can plan around them rather than probe blindly.",
+  "why": "The body is an .htaccess file with directive lines.",
+  "fix": [
+   "Deny dotfiles at the server level and remove the file from the document root.",
+   "Keep deployment rules outside the served directory."
+  ],
+  "verifyT": "Request /.htaccess and confirm the response is 403 or 404.",
+  "cells": [
+   {
+    "suffix": "htaccess-served",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?:^|\\n)\\s*(?:<IfModule\\b|RewriteEngine\\s+On|Options\\s+[-+]|Order\\s+(?:allow|deny)\\b|AuthType\\s+Basic)[\\s\\S]{0,600}\\n\\s*(?:<IfModule\\b|RewriteRule\\b|Require\\s+valid-user|AuthUserFile\\b|Deny\\s+from)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/.htaccess",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "RewriteEngine On\nRewriteRule ^admin/(.*)$ /internal/admin/$1 [L]\nAuthType Basic\nAuthUserFile /var/www/.htpasswd\nRequire valid-user"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/app/.htaccess",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "<IfModule mod_rewrite.c>\nOptions -Indexes\nRewriteRule ^config/(.*)$ /blocked [R=403,L]\n</IfModule>\nOrder deny,allow\nDeny from all"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/docs",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<p>Enable pretty URLs with RewriteEngine On in your server configuration.</p>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/nginx.conf",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "server {\n  listen 80;\n  root /var/www;\n  location / { try_files $uri /index.html; }\n}"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-body-django-secret-key",
+  "category": "information-disclosure",
+  "cwe": "CWE-798",
+  "severity": "HIGH",
+  "title": "Django SECRET_KEY value served in a response",
+  "description": "The body assigns a value to SECRET_KEY, the framework setting used to sign session cookies, password-reset tokens and any signed payload. With that value anyone can mint a session for any user, and the key cannot be rotated without invalidating every live session.",
+  "remediation": "Rotate the key, remove the settings dump from every served path, and load the value from the environment or a secret manager.",
+  "limitation": "One response body. The check reads the assignment shape; it does not reconstruct a signed cookie from the value.",
+  "scopeT": "One response body containing a SECRET_KEY assignment with a long literal value.",
+  "fp": "A configuration snippet that assigns the value from the environment is not reported, and a short placeholder such as changeme is not reported because the value must look like a real key.",
+  "recordDesc": "SECRET_KEY is the root of trust for every signed artefact the framework produces. A leaked key means forged session cookies and forged reset tokens, and the framework gives no way to distinguish a forged cookie from a genuine one after the fact.",
+  "applicability": "Responses that render framework settings, a debug configuration page or a traceback that includes settings.",
+  "risk": "The caller forges a signed session for an administrator account and signs any other payload the application trusts.",
+  "why": "The body contains a SECRET_KEY assignment with a literal value.",
+  "fix": [
+   "Rotate SECRET_KEY and invalidate live sessions.",
+   "Load it from the environment and never render settings."
+  ],
+  "verifyT": "Search served pages and artefacts for the assignment and confirm the value never appears.",
+  "cells": [
+   {
+    "suffix": "django-secret-key",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "\\bSECRET_KEY\\s*=\\s*[\"']?[A-Za-z0-9_\\-!@#$%^&*()+=]{32,}[\"']?"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/__debug__/settings",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<pre>SECRET_KEY = 'django-insecure-4f8a1c9e2b7d6f0a3c5e8b1d4f7a9c2e'\nDEBUG = True</pre>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/static/settings.py",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "DEBUG = True\nSECRET_KEY = 'x9F2kLm4Qp7Rt1Vw3Yz6Bc8Df0Gh2Jk5'"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/static/settings.py",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "SECRET_KEY = os.environ[\"DJANGO_SECRET_KEY\"]"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/docs/settings",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<code>SECRET_KEY = \"changeme\"</code>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-body-redis-info-output",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "Redis INFO output served in a response",
+  "description": "The body is Redis INFO output: section headers such as # Server and # Clients followed by redis_version and connected_clients lines. It names the exact build, the memory ceiling and how many clients are attached, and it usually means the port is reachable from outside the application.",
+  "remediation": "Bind Redis to the private interface, require authentication and an ACL, and never expose a diagnostics endpoint to the caller.",
+  "limitation": "One response body. The check reads the INFO section shape; it does not connect to the instance or run a command.",
+  "scopeT": "One response body containing Redis INFO section headers and their metric lines.",
+  "fp": "A monitoring dashboard that labels a chart with redis_version is not reported, because the rule needs INFO section headers at line starts. A general status page without the section format is not reported.",
+  "recordDesc": "Redis INFO reports the build version, uptime, connected clients, memory ceiling and eviction policy in one page. That is enough to pick the matching exploit path for the exact build and to judge how much load the instance will take before it degrades.",
+  "applicability": "Responses from a cache host, a proxy that forwards its port, or an application endpoint that shells out to redis-cli.",
+  "risk": "The caller fingerprints the exact Redis build and its limits, and confirms that the data store is reachable from their position.",
+  "why": "The body is Redis INFO output with section headers.",
+  "fix": [
+   "Bind Redis to the private interface and require ACLs.",
+   "Remove any endpoint that renders diagnostics."
+  ],
+  "verifyT": "From outside the cluster, confirm the port refuses connections and no page renders INFO.",
+  "cells": [
+   {
+    "suffix": "redis-info",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?:^|\\n)#\\s*Server(?:\\r?\\n[^\\n]{0,200}){0,12}?\\r?\\n\\s*redis_version:[0-9]"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/cache/info",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "# Server\r\nredis_version:7.2.4\r\nredis_mode:standalone\r\nos:Linux 6.1 x86_64\r\n# Clients\r\nconnected_clients:42"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/status",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "# Server\nredis_version:6.0.16\nuptime_in_days:31\n# Memory\nused_memory_human:812.44M"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/admin/monitoring",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<h2>Cache</h2><p>redis_version 7.2.4, 42 clients</p>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/healthz",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/json"
+       },
+       "body": "{\"cache\":\"ok\",\"db\":\"ok\",\"version\":\"1.4.0\"}"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ }
+]

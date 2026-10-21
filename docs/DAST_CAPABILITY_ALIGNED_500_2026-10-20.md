@@ -358,3 +358,39 @@ did not move. Full method: `docs/DAST_APP_SURFACE_BATCH_2_2026-10-21.md`.
 The ceiling has not moved: 73 rules remain unreachable until the App forwards their
 headers, so the next honest tranche is body evidence plus the 11 forwarded names — not
 another header family that the product cannot see.
+
+---
+
+## Appendix 4 — 2026-10-21 (app-surface batch 3, DAST 306 → 325)
+
+| Item | Appendix 3 | Now |
+|---|---|---|
+| DAST rules | 306 | **325** |
+| Patterns / records / remediation | 1 353 each | **1 372 each** |
+| Declared DAST tests | 1 478 | **1 554** (+76) |
+| DAST evaluation cases | 558 | **579** (+21) |
+| `run-eval` true positives | 1 379 | **1 398** |
+| Distance to the 500 target | 194 | **175** |
+| Rules evaluable inside the App | 233 of 306 (76.1 %) | **252 of 325 (77.5 %)** |
+
+This tranche added no header-reading rule at all: markup trust decisions (`data:` anchor,
+cross-origin script without an integrity hash, `target="_blank"` without `rel=noopener`),
+credential-form placement (third-party password `action`, `GET` password form), secrets
+that exist only as text (Django `SECRET_KEY`, GCP service-account JSON, Kubernetes
+`Secret` manifest, Stripe live key, unsigned JWT, incoming webhook URL), deployment
+artefacts and diagnostics (`.DS_Store`, `.htaccess`, Redis `INFO`, webpack dev client, JSON
+stack field, internal address with port, presigned object URL) and one cookie lifetime
+(`Expires` beyond the 400-day cap, the attribute form of DPK-DAST-281).
+
+Five candidates were dropped instead of ledgered because their evidence was a strict
+subset of an existing rule's positive fixture, or because the ReDoS lint rejected the
+pattern. That is the honest cost of not padding: the three dropped evidence-subset
+families are still only visible through a neighbouring rule. Full method:
+`docs/DAST_APP_SURFACE_BATCH_3_2026-10-21.md`.
+
+The ceiling still has not moved: the same 73 rules remain unreachable until the App
+forwards their headers, so the remaining 175 rules cannot come from header families the
+product cannot see. What would close the distance: (1) more body evidence that does not
+restate an existing rule, and (2) an owner decision to widen the 11-header allowlist in
+`apps/api/src/scans/dast/{rules,engine}.ts`, which is worth 47 further headers and the 73
+rules behind them.

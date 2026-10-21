@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1396",
+  "title": "Signal: Network error text discloses an internal address and port",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-body-matches",
+      "valuePattern": "(?:dial tcp|connect: connection refused|upstream connect error|no route to host|connection to server at)[^\\n]{0,120}?(?:10\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}|192\\.168\\.\\d{1,3}\\.\\d{1,3}|172\\.(?:1[6-9]|2\\d|3[01])\\.\\d{1,3}\\.\\d{1,3}):\\d{2,5}"
+    }
+  },
+  "scope": "One response body containing a network-failure phrase immediately followed by a private IPv4 address and port.",
+  "limitations": "One response body. The check cannot tell a documentation example from a live address, and it does not probe the address.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/api/report",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "upstream connect error or disconnect/reset before headers: 10.24.8.19:8080"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/health",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "pool exhausted: connect: connection refused while dialling 172.18.0.3:6379"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/status",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "pool exhausted: connect: connection refused while dialling 203.0.113.10:6379"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/status",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "build 10.24.8 released"
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A health or status page that lists private addresses without a failure phrase is not reported, because that is a deliberate diagnostic surface already covered by the console rules; a public address is not reported.",
+  "linkedRules": [
+    "DPK-DAST-327"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:dast-body-private-ip-address:private-ip",
+  "validationStatus": "VALIDATED"
+}

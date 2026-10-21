@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1390",
+  "title": "Signal: Google Cloud service account key JSON served in a response",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-body-matches",
+      "valuePattern": "(?=[\\s\\S]*\"type\"\\s*:\\s*\"service_account\")(?=[\\s\\S]*\"private_key_id\"\\s*:\\s*\"[A-Za-z0-9]{16,})(?=[\\s\\S]*\"private_key\"\\s*:\\s*\"[^\"\\n]{1,200}\")(?=[\\s\\S]*\"client_email\"\\s*:)"
+    }
+  },
+  "scope": "One response body containing a service account key document with an identifier and a private key block.",
+  "limitations": "One response body. The check recognises the key document; it does not parse the key or authenticate with it.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/.well-known/sa-key.json",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"type\": \"service_account\", \"project_id\": \"shop\", \"private_key_id\": \"a1b2c3d4e5f60718293a4b5c6d7e8f9012345678\", \"private_key\": \"[redacted key material]\", \"client_email\": \"ci@shop.iam.gserviceaccount.com\"}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/build/creds.json",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"private_key_id\": \"b2c3d4e5f60718293a4b5c6d7e8f901234567890\", \"private_key\": \"[redacted key material]\", \"type\": \"service_account\", \"client_email\": \"ci@shop.iam.gserviceaccount.com\"}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/build/adc.json",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"type\": \"authorized_user\", \"client_id\": \"abc.apps.googleusercontent.com\", \"refresh_token\": \"1//redacted\"}"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/docs/gcp",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<p>A key file contains a private_key_id and a private_key, and its type is service_account.</p>"
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "An application default credentials file without these fields is not reported. A documentation page that shows a complete JSON sample with a placeholder key is reported, because the rule reads the document shape rather than the key bytes.",
+  "linkedRules": [
+    "DPK-DAST-321"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:dast-body-gcp-service-account-key:gcp-service-account-key",
+  "validationStatus": "VALIDATED"
+}

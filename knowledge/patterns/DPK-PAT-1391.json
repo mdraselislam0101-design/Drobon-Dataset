@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1391",
+  "title": "Signal: Apache .htaccess file served as a response",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-body-matches",
+      "valuePattern": "(?:^|\\n)\\s*(?:<IfModule\\b|RewriteEngine\\s+On|Options\\s+[-+]|Order\\s+(?:allow|deny)\\b|AuthType\\s+Basic)[\\s\\S]{0,600}\\n\\s*(?:<IfModule\\b|RewriteRule\\b|Require\\s+valid-user|AuthUserFile\\b|Deny\\s+from)"
+    }
+  },
+  "scope": "One response body containing Apache per-directory configuration directives.",
+  "limitations": "One response body. The check reads directive lines; it does not apply the rules or test whether they would be enforced.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/.htaccess",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "RewriteEngine On\nRewriteRule ^admin/(.*)$ /internal/admin/$1 [L]\nAuthType Basic\nAuthUserFile /var/www/.htpasswd\nRequire valid-user"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/app/.htaccess",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "<IfModule mod_rewrite.c>\nOptions -Indexes\nRewriteRule ^config/(.*)$ /blocked [R=403,L]\n</IfModule>\nOrder deny,allow\nDeny from all"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/docs",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<p>Enable pretty URLs with RewriteEngine On in your server configuration.</p>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/nginx.conf",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "server {\n  listen 80;\n  root /var/www;\n  location / { try_files $uri /index.html; }\n}"
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A page that quotes a single directive inside a code block is not reported, because the rule needs two directive lines at line starts. An nginx configuration served the same way is covered by its own shape.",
+  "linkedRules": [
+    "DPK-DAST-322"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:dast-body-htaccess-file-served:htaccess-served",
+  "validationStatus": "VALIDATED"
+}

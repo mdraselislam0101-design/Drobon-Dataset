@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-330",
+  "title": "Incoming webhook URL with its secret token served in a response",
+  "description": "The body contains a chat-platform incoming webhook URL, whose path segment is the whole credential: anyone holding it can post messages into the channel. Webhook URLs are pasted into configuration files and are frequently printed by a settings page or a stack trace.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-798",
+  "category": "information-disclosure",
+  "remediation": "Treat the webhook URL as a secret, keep it out of rendered pages and logs, and rotate it if it was served.",
+  "limitation": "One response body. The check recognises the webhook URL shape; it does not post to the endpoint or confirm the token is live.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "https://hooks\\.slack\\.com/services/[A-Z0-9]{8,}/[A-Z0-9]{8,}/[A-Za-z0-9]{20,}"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/admin/notifications",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<input name=\"webhook\" value=\"https://hooks.slack.com/services/A0000000X/C0000000X/EXAMPLEEXAMPLEEXAMPLE1234\">"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/api/alerts",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "notify failed for https://hooks.slack.com/services/A1111111X/C2222222X/EXAMPLEEXAMPLEEXAMPLE5678"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/docs",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<code>https://hooks.slack.com/services/T00000000/B00000000/****</code>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/docs",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<a href=\"https://api.slack.com/messaging/webhooks\">Set up a webhook</a>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1399"
+  ]
+}

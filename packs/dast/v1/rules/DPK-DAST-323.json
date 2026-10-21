@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-323",
+  "title": "JSON response carries a stack trace field",
+  "description": "A JSON error object contains a \"stack\" or \"stackTrace\" member. Serialising the exception object is a common shortcut in Node, Java and .NET services, and the field publishes file paths, dependency versions and the call structure to every caller.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-209",
+  "category": "debug-exposure",
+  "remediation": "Serialise errors through one mapper that emits a code, a message and a correlation id, and log the stack server-side.",
+  "limitation": "One response body. The check recognises the field name; it does not read the frames, and a deliberately published stack in a debug build is reported the same way.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "\"(?:stack|stackTrace)\"\\s*:\\s*\""
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/api/cart",
+        "status": 500,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"error\":\"boom\",\"stack\":\"Error: boom\\n    at CartService.load (/srv/app/cart.js:42:13)\"}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/api/cart",
+        "status": 500,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"message\":\"failed\",\"stackTrace\":\"   at Cart.Load() in C:\\\\app\\\\Cart.cs:line 31\"}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/api/cart",
+        "status": 500,
+        "headers": {
+          "Content-Type": "application/problem+json"
+        },
+        "body": "{\"type\":\"about:blank\",\"title\":\"Internal error\",\"traceId\":\"00-8f2a\"}"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/api/cart",
+        "status": 422,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"errors\":[{\"field\":\"qty\",\"message\":\"must be positive\"}]}"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1392"
+  ]
+}

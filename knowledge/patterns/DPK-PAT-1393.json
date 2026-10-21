@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1393",
+  "title": "Signal: Response body contains a token with an unsigned alg value",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-body-matches",
+      "valuePattern": "eyJ[A-Za-z0-9_-]{0,80}(?:ImlhbGciOiJub25lI|ImlhbGciOiJOb25lI|bGciOiJub25lI)[A-Za-z0-9_-]{0,400}\\.eyJ[A-Za-z0-9_-]{4,}"
+    }
+  },
+  "scope": "One response body containing a JWT whose base64url header declares an unsigned algorithm.",
+  "limitations": "One response body. The check reads the base64url header of a token-shaped string; it does not decode the payload or test a verifier.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/api/debug/token",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"token\":\"eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiIxMjM0In0.\"}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/account",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<code>eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiJhZG1pbiIsInJvbGUiOiJhZG1pbiJ9.</code>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/api/debug/token",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"token\":\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0In0.abcdefghijklmnopqrstuvwx\"}"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/account",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"session\":\"6f1d2c3b4a5968778695a4b3c2d1e0f9\"}"
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A token with a signed algorithm is not reported. A documentation sample that shows the unsigned header is reported, because the rule reads the shape rather than the provenance.",
+  "linkedRules": [
+    "DPK-DAST-324"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:dast-body-jwt-alg-none:jwt-alg-none",
+  "validationStatus": "VALIDATED"
+}

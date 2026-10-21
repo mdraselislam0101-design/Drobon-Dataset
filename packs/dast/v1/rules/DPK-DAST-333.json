@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-333",
+  "title": "webpack development client served in production",
+  "description": "The page loads the webpack-dev-server hot-reload client (/__webpack_hmr or a sockjs client on the dev port). A development server in front of real users rebuilds on change and serves unbundled modules, and its socket accepts connections from anyone who can reach it.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-489",
+  "category": "debug-exposure",
+  "remediation": "Deploy only the production bundle, remove the dev-server client from the template, and keep the dev server off any network that reaches users.",
+  "limitation": "One response body. The check reads the served markup; it does not connect to the hot-reload socket.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "/__webpack_hmr|webpack-dev-server/client|sockjs-node"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<script src=\"/__webpack_hmr\"></script><div id=\"root\"></div>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/app",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<script src=\"/assets/webpack-dev-server/client/index.js\"></script>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<script src=\"/assets/app.4f2c1d.js\" defer></script><div id=\"root\"></div>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/about",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<p>We build the front end with webpack and serve the hashed bundle.</p>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1402"
+  ]
+}

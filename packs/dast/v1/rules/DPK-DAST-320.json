@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-320",
+  "title": "Password form submits with GET, placing the secret in the URL",
+  "description": "A form contains a password input and has no method, or method=\"get\". The browser then serialises the password into the URL, where it lands in history, the Referer header of later requests, proxy logs and server access logs.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Use method=\"post\" for every form that carries a password, and reject any credential that arrives in a query string at the server.",
+  "limitation": "One response body. The check reads the form markup; it does not observe the resulting request or the logs that keep the URL.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "<form\\b(?![^>]{0,300}\\bmethod\\s*=\\s*[\"']?post)[^>]{0,300}>[\\s\\S]{0,400}type\\s*=\\s*[\"']password|<form\\b[^>]{0,300}\\bmethod\\s*=\\s*[\"']?get[^>]{0,300}>[\\s\\S]{0,400}type\\s*=\\s*[\"']password"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<form action=\"/login\"><input type=\"password\" name=\"pw\"></form>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<form method=\"get\" action=\"/login\"><label>Password</label><input name=\"pw\" type=\"password\"></form>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<form method=\"post\" action=\"/login\"><input type=\"password\" name=\"pw\"></form>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/search",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<form method=\"get\" action=\"/search\"><input type=\"search\" name=\"q\"></form>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1389"
+  ]
+}

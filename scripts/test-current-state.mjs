@@ -111,7 +111,7 @@ const c = inv.counts;
   const trace = readCsv('DROBON_REQUIREMENT_TRACEABILITY.csv');
   const traceIds = new Set(trace.map((r) => r.reqId));
   const ids = rows.map((r) => r.gapId);
-  assert(rows.length === 43, `remaining-work: 43 rows (got ${rows.length})`);
+  assert(rows.length === 44, `remaining-work: 44 rows (got ${rows.length})`);
   assert(new Set(ids).size === ids.length, 'remaining-work: every gapId is unique');
   assert(ids.every((id) => /^GAP-[0-9]{3}$/.test(id)), 'remaining-work: gapId grammar GAP-NNN');
   assert(rows.every((r) => traceIds.has(r.reqId)),

@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-325",
+  "title": "Kubernetes Secret manifest served in a response",
+  "description": "The body is a Kubernetes Secret object (kind: Secret with a data or stringData block). Secret values are base64-encoded rather than encrypted, so anything that serves this object publishes the credentials it holds to anyone who can request the path.",
+  "severity": "HIGH",
+  "cwe": "CWE-798",
+  "category": "information-disclosure",
+  "remediation": "Remove the manifest from any served path, revoke the exposed credentials, and deliver secrets through the cluster API or an external secret store rather than through build output.",
+  "limitation": "One response body. The check recognises the manifest shape; it does not decode or use the values.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*\\bkind:\\s*Secret\\b)(?=[\\s\\S]*(?:^|\\n)[ \\t]*(?:data|stringData)[ \\t]*:(?=[\\s\\S]*\\n[ \\t]{2,}[A-Za-z0-9._-]+[ \\t]*:[ \\t]*\\S))"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://ci.example/artifacts/app-secret.yaml",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/yaml"
+        },
+        "body": "apiVersion: v1\nkind: Secret\nmetadata:\n  name: db\n type: Opaque\ndata:\n  password: cGxhY2Vob2xkZXItdmFsdWU="
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://ci.example/artifacts/creds.yaml",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "kind: Secret\napiVersion: v1\nstringData:\n  token: placeholder-value\n  user: app"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://ci.example/artifacts/kubeconfig",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/yaml"
+        },
+        "body": "apiVersion: v1\nkind: Config\nclusters:\n  - name: prod\n    cluster:\n      server: https://k8s.example:6443"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://ci.example/artifacts/deploy.yaml",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/yaml"
+        },
+        "body": "apiVersion: apps/v1\nkind: Deployment\nmetadata:\n  name: api\nspec:\n  replicas: 2"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1394"
+  ]
+}

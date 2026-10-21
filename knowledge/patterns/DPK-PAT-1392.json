@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1392",
+  "title": "Signal: JSON response carries a stack trace field",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-body-matches",
+      "valuePattern": "\"(?:stack|stackTrace)\"\\s*:\\s*\""
+    }
+  },
+  "scope": "One JSON response body containing a stack or stackTrace member.",
+  "limitations": "One response body. The check recognises the field name; it does not read the frames, and a deliberately published stack in a debug build is reported the same way.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/api/cart",
+        "status": 500,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"error\":\"boom\",\"stack\":\"Error: boom\\n    at CartService.load (/srv/app/cart.js:42:13)\"}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/api/cart",
+        "status": 500,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"message\":\"failed\",\"stackTrace\":\"   at Cart.Load() in C:\\\\app\\\\Cart.cs:line 31\"}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/api/cart",
+        "status": 500,
+        "headers": {
+          "Content-Type": "application/problem+json"
+        },
+        "body": "{\"type\":\"about:blank\",\"title\":\"Internal error\",\"traceId\":\"00-8f2a\"}"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/api/cart",
+        "status": 422,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "{\"errors\":[{\"field\":\"qty\",\"message\":\"must be positive\"}]}"
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A field named \"stack\" that holds a non-trace value is reported, because the check cannot type the value; a JSON error object without such a member is not.",
+  "linkedRules": [
+    "DPK-DAST-323"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:dast-body-json-stack-field:json-stack-field",
+  "validationStatus": "VALIDATED"
+}
