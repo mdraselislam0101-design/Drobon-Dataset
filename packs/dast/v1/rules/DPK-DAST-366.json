@@ -1,0 +1,65 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-366",
+  "title": "Set-Cookie Domain is an IP address",
+  "description": "A cookie sets Domain to a literal IP address. Browsers match Domain against host names, so a cookie scoped to an address literal is not accepted for the host the user typed, and the session it was meant to carry disappears.",
+  "severity": "LOW",
+  "cwe": "CWE-16",
+  "category": "cookie-flags",
+  "remediation": "Omit Domain (host-only cookie) or set the host name the application is served from.",
+  "limitation": "One Set-Cookie value. The check reads the attribute; it does not test the cookie in a browser.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Set-Cookie",
+    "valuePattern": "^(?=[^\\n]*;\\s*domain\\s*=\\s*\\d{1,3}(?:\\.\\d{1,3}){3}\\s*(?:;|$))"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Domain=10.2.3.4; Path=/; Secure"
+        },
+        "body": ""
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Domain=203.0.113.10; Path=/; HttpOnly"
+        },
+        "body": ""
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Path=/; Secure; HttpOnly"
+        },
+        "body": ""
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Domain=app.example; Path=/; Secure"
+        },
+        "body": ""
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1435"
+  ]
+}

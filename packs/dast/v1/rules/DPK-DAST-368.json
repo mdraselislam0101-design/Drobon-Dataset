@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-368",
+  "title": "CakePHP Debug Kit toolbar disclosed",
+  "description": "The response carries the CakePHP Debug Kit toolbar. The toolbar links to panels that show every SQL query, the request variables, the session contents and the loaded configuration for the page that was just served.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-215",
+  "category": "debug-exposure",
+  "remediation": "Disable DebugKit outside local development (Debug false and the plugin not loaded), and keep the toolbar out of production responses.",
+  "limitation": "One response body. The rule reports the toolbar container; it does not follow its panel links.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*debug-kit-toolbar)(?=[\\s\\S]*CakePHP)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/invoices",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body><h1>Invoices</h1><div id=\"debug-kit-toolbar\" class=\"cakephp-debug-kit\"><span>CakePHP 4.4.10</span></div></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/reports",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<div id=\"debug-kit-toolbar\"><a href=\"/debug-kit/panels/view/sql-log\">Sql log</a><a href=\"/debug-kit/panels/view/variables\">Variables</a><small>CakePHP</small></div>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/invoices",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body><h1>Invoices</h1><p>3 open invoices.</p></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/docs/debug",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<p>Install the Debug Kit plugin only in development.</p>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1437"
+  ]
+}

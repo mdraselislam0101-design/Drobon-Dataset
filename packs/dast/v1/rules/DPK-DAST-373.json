@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-373",
+  "title": "Laravel Telescope dashboard disclosed",
+  "description": "The response is the Laravel Telescope dashboard: the Telescope shell with its request list. Telescope records every request, query, mail, notification and job payload the application handles, including their arguments.",
+  "severity": "HIGH",
+  "cwe": "CWE-215",
+  "category": "debug-exposure",
+  "remediation": "Register the Telescope service provider for local environments only, and gate the route behind the authorisation callback.",
+  "limitation": "One response body. The rule reports the dashboard shell; it does not open an individual entry.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*<title>Telescope)(?=[\\s\\S]*telescope)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/telescope",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Telescope</title></head><body><div id=\"telescope\"><a href=\"/telescope/requests\">Requests</a><a href=\"/telescope/mail\">Mail</a></div></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/telescope/requests",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Telescope · Requests</title></head><body><div class=\"telescope-entries\"><span>POST /login 200</span></div></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Sign in</title></head><body><form method=\"post\"><input name=\"email\"></form></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/docs/monitoring",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<p>Telescope is installed for local development only.</p>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1442"
+  ]
+}

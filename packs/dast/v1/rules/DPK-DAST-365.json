@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-365",
+  "title": "Apache Zeppelin console is reachable without authentication",
+  "description": "The Apache Zeppelin notebook server is served without authentication. Zeppelin notebooks execute code in the language interpreters the server has configured, which for a data deployment means shells against the cluster.",
+  "severity": "HIGH",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Enable Zeppelin authentication and shiro authorization, and never expose the notebook server outside the cluster.",
+  "limitation": "One response body. The rule recognises the Apache Zeppelin console shell from its document title; it does not attempt a login, so it shows that the interface is served, not which data the caller could read.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "<title>[^<]{0,70}Zeppelin[^<]{0,40}</title>"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://notebooks.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8"
+        },
+        "body": "<html><head><title>Zeppelin</title><meta charset=\"utf-8\"></head><body><div id=\"app\"></div><script src=\"/static/app.js\"></script></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://notebooks.example/login",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Sign in · Zeppelin</title></head><body><form method=\"post\" action=\"/login\"><input name=\"user\"><input type=\"password\" name=\"pass\"><button>Sign in</button></form></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://docs.example/guide",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Operations guide</title></head><body><h1>Connecting to Zeppelin</h1><p>Ask the platform team for access.</p></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://ops.example/ui",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Grafana</title></head><body><div id=\"app\"></div></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1434"
+  ]
+}

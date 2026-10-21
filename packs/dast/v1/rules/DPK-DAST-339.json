@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-339",
+  "title": "Apache error log served as a response",
+  "description": "The response is an Apache error log: bracketed timestamp, module and severity level, followed by the message. The messages name file paths, SQL failures and configuration problems the application never intended to publish.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-532",
+  "category": "information-disclosure",
+  "remediation": "Keep the error log outside the document root and deny log paths at the server level.",
+  "limitation": "One response body. The rule recognises the Apache error-log prefix; a framework log with a different format is not reported.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?:^|\\n)\\[[A-Z][a-z]{2} [A-Z][a-z]{2} +\\d{1,2} \\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})? \\d{4}\\] \\[[a-z0-9_-]{1,20}:(?:error|warn|notice|crit|info)\\]"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/logs/error.log",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "[Sun May 11 09:14:02.123456 2024] [core:error] [pid 812] [client 203.0.113.7] AH00037: Symbolic link not allowed or link target not accessible: /var/www/shop/uploads\n[Sun May 11 09:14:09.000111 2024] [php:warn] [pid 812] PHP Warning:  include(/var/www/shop/config.php): failed to open stream\n"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/error.log",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "[Sun May 11 10:02:44.442311 2024] [core:error] [pid 900] [client 10.1.2.3] script not found or unable to stat: /var/www/shop/admin/db.php\n"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/logs/app.log",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "2024-05-11T09:14:02Z ERROR order service unavailable\n"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/docs/logging",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<p>Error logs are written to /var/log/apache2.</p>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1408"
+  ]
+}

@@ -1,0 +1,3339 @@
+[
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-console-apache-druid",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "HIGH",
+  "title": "Apache Druid console is reachable without authentication",
+  "description": "The Apache Druid console is served without authentication. The console can submit SQL and native queries, ingest data and change datasource retention, so reaching it is reaching the analytical store itself.",
+  "remediation": "Require authentication in front of the Druid console (the router does not ship one), and bind it to the administrative network.",
+  "limitation": "One response body. The rule recognises the Apache Druid console shell from its document title; it does not attempt a login, so it shows that the interface is served, not which data the caller could read.",
+  "scopeT": "One response body whose document title names the Apache Druid console.",
+  "fp": "A documentation or marketing page whose title names Apache Druid is reported; a page that only mentions the product in its body is not, because the rule reads the title element.",
+  "recordDesc": "Druid is a query engine with an open SQL endpoint behind the same host; a reachable console usually means the broker is reachable too, so the caller can read any datasource and often write to it.",
+  "applicability": "Responses that serve an administrative or diagnostic interface from a host reachable by ordinary users.",
+  "risk": "The caller reads every ingested event and can rewrite retention or ingestion rules for the datasources the cluster holds.",
+  "why": "The document title identifies the Apache Druid console.",
+  "fix": [
+   "Put the console behind the same authentication as the data it governs.",
+   "Restrict it to an administrative network or a VPN.",
+   "Remove the route from the public host."
+  ],
+  "verifyT": "Request the console path from outside the administrative network and confirm it does not render.",
+  "cells": [
+   {
+    "suffix": "druid-console",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "<title>[^<]{0,70}Apache Druid[^<]{0,40}</title>"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://druid.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=utf-8"
+       },
+       "body": "<html><head><title>Apache Druid</title><meta charset=\"utf-8\"></head><body><div id=\"app\"></div><script src=\"/static/app.js\"></script></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://druid.example/login",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Sign in · Apache Druid</title></head><body><form method=\"post\" action=\"/login\"><input name=\"user\"><input type=\"password\" name=\"pass\"><button>Sign in</button></form></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/guide",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Operations guide</title></head><body><h1>Connecting to Apache Druid</h1><p>Ask the platform team for access.</p></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://ops.example/ui",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Grafana</title></head><body><div id=\"app\"></div></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-console-redash",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "Redash console is reachable without authentication",
+  "description": "The Redash console is served without authentication. Redash keeps the credentials of every connected data source server-side, so its UI is a front door to all of them at once.",
+  "remediation": "Enforce Redash authentication (or its SSO integration), and keep the instance on the internal network.",
+  "limitation": "One response body. The rule recognises the Redash console shell from its document title; it does not attempt a login, so it shows that the interface is served, not which data the caller could read.",
+  "scopeT": "One response body whose document title names the Redash console.",
+  "fp": "A documentation or marketing page whose title names Redash is reported; a page that only mentions the product in its body is not, because the rule reads the title element.",
+  "recordDesc": "A Redash instance holds the connection strings for each query runner. Reaching the UI is therefore a step away from running arbitrary statements against every attached warehouse, and from reading saved queries that name internal tables.",
+  "applicability": "Responses that serve an administrative or diagnostic interface from a host reachable by ordinary users.",
+  "risk": "The caller enumerates data sources and runs queries against them, then reads the saved queries that document the schema.",
+  "why": "The document title identifies the Redash console.",
+  "fix": [
+   "Put the console behind the same authentication as the data it governs.",
+   "Restrict it to an administrative network or a VPN.",
+   "Remove the route from the public host."
+  ],
+  "verifyT": "Request the console path from outside the administrative network and confirm it does not render.",
+  "cells": [
+   {
+    "suffix": "redash-console",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "<title>[^<]{0,70}Redash[^<]{0,40}</title>"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://redash.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=utf-8"
+       },
+       "body": "<html><head><title>Redash</title><meta charset=\"utf-8\"></head><body><div id=\"app\"></div><script src=\"/static/app.js\"></script></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://redash.example/login",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Sign in · Redash</title></head><body><form method=\"post\" action=\"/login\"><input name=\"user\"><input type=\"password\" name=\"pass\"><button>Sign in</button></form></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/guide",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Operations guide</title></head><body><h1>Connecting to Redash</h1><p>Ask the platform team for access.</p></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://ops.example/ui",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Grafana</title></head><body><div id=\"app\"></div></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-console-metabase",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "Metabase console is reachable without authentication",
+  "description": "The Metabase console is served without authentication. Its setup flow creates the first administrator, and its questions feature issues SQL against the configured warehouse.",
+  "remediation": "Complete the setup with a real administrator, disable public sharing, and restrict the instance to the internal network.",
+  "limitation": "One response body. The rule recognises the Metabase console shell from its document title; it does not attempt a login, so it shows that the interface is served, not which data the caller could read.",
+  "scopeT": "One response body whose document title names the Metabase console.",
+  "fp": "A documentation or marketing page whose title names Metabase is reported; a page that only mentions the product in its body is not, because the rule reads the title element.",
+  "recordDesc": "Metabase reaches every configured warehouse with stored credentials and exposes public links for dashboards. An unauthenticated console means the caller can either onboard as an administrator or read any dashboard that was shared publicly by accident.",
+  "applicability": "Responses that serve an administrative or diagnostic interface from a host reachable by ordinary users.",
+  "risk": "The caller reads business metrics, and on an unconfigured instance can take the administrator account before the team does.",
+  "why": "The document title identifies the Metabase console.",
+  "fix": [
+   "Put the console behind the same authentication as the data it governs.",
+   "Restrict it to an administrative network or a VPN.",
+   "Remove the route from the public host."
+  ],
+  "verifyT": "Request the console path from outside the administrative network and confirm it does not render.",
+  "cells": [
+   {
+    "suffix": "metabase-console",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "<title>[^<]{0,70}Metabase[^<]{0,40}</title>"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://metabase.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=utf-8"
+       },
+       "body": "<html><head><title>Metabase</title><meta charset=\"utf-8\"></head><body><div id=\"app\"></div><script src=\"/static/app.js\"></script></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://metabase.example/login",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Sign in · Metabase</title></head><body><form method=\"post\" action=\"/login\"><input name=\"user\"><input type=\"password\" name=\"pass\"><button>Sign in</button></form></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/guide",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Operations guide</title></head><body><h1>Connecting to Metabase</h1><p>Ask the platform team for access.</p></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://ops.example/ui",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Grafana</title></head><body><div id=\"app\"></div></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-console-superset",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "Superset console is reachable without authentication",
+  "description": "The Apache Superset console is served without authentication. Superset holds database connections and lets its users run SQL Lab queries through them.",
+  "remediation": "Require the Superset login or SSO, and keep Superset off the public host.",
+  "limitation": "One response body. The rule recognises the Superset console shell from its document title; it does not attempt a login, so it shows that the interface is served, not which data the caller could read.",
+  "scopeT": "One response body whose document title names the Superset console.",
+  "fp": "A documentation or marketing page whose title names Superset is reported; a page that only mentions the product in its body is not, because the rule reads the title element.",
+  "recordDesc": "Superset connects to the warehouse with stored credentials and exposes SQL Lab to anyone who signs in. An unauthenticated shell shows the instance was deployed without its authentication story finished, and the default admin credentials are the usual next guess.",
+  "applicability": "Responses that serve an administrative or diagnostic interface from a host reachable by ordinary users.",
+  "risk": "The caller reads dashboards and, once signed in, runs SQL against the warehouse with the service account Superset holds.",
+  "why": "The document title identifies the Superset console.",
+  "fix": [
+   "Put the console behind the same authentication as the data it governs.",
+   "Restrict it to an administrative network or a VPN.",
+   "Remove the route from the public host."
+  ],
+  "verifyT": "Request the console path from outside the administrative network and confirm it does not render.",
+  "cells": [
+   {
+    "suffix": "superset-console",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "<title>[^<]{0,70}Superset[^<]{0,40}</title>"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://superset.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=utf-8"
+       },
+       "body": "<html><head><title>Superset</title><meta charset=\"utf-8\"></head><body><div id=\"app\"></div><script src=\"/static/app.js\"></script></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://superset.example/login",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Sign in · Superset</title></head><body><form method=\"post\" action=\"/login\"><input name=\"user\"><input type=\"password\" name=\"pass\"><button>Sign in</button></form></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/guide",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Operations guide</title></head><body><h1>Connecting to Superset</h1><p>Ask the platform team for access.</p></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://ops.example/ui",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Grafana</title></head><body><div id=\"app\"></div></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-console-neo4j-browser",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "Neo4j Browser console is reachable without authentication",
+  "description": "The Neo4j Browser is served without authentication on the HTTP port. The browser runs Cypher in the same session the database authenticates, and its connect form accepts arbitrary bolt endpoints.",
+  "remediation": "Require authentication on the HTTP connector (or disable it), and restrict the bolt port to the application network.",
+  "limitation": "One response body. The rule recognises the Neo4j Browser console shell from its document title; it does not attempt a login, so it shows that the interface is served, not which data the caller could read.",
+  "scopeT": "One response body whose document title names the Neo4j Browser console.",
+  "fp": "A documentation or marketing page whose title names Neo4j Browser is reported; a page that only mentions the product in its body is not, because the rule reads the title element.",
+  "recordDesc": "Neo4j Browser is a Cypher console, not a read-only viewer. When it is reachable and its auth is disabled, the caller writes to the graph directly, and the connect form can be pointed at another instance to use the browser as a relay.",
+  "applicability": "Responses that serve an administrative or diagnostic interface from a host reachable by ordinary users.",
+  "risk": "The caller runs arbitrary Cypher against the graph, including writes, and can enumerate the whole dataset the application models.",
+  "why": "The document title identifies the Neo4j Browser console.",
+  "fix": [
+   "Put the console behind the same authentication as the data it governs.",
+   "Restrict it to an administrative network or a VPN.",
+   "Remove the route from the public host."
+  ],
+  "verifyT": "Request the console path from outside the administrative network and confirm it does not render.",
+  "cells": [
+   {
+    "suffix": "neo4j-browser",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "<title>[^<]{0,70}Neo4j Browser[^<]{0,40}</title>"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://graph.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=utf-8"
+       },
+       "body": "<html><head><title>Neo4j Browser</title><meta charset=\"utf-8\"></head><body><div id=\"app\"></div><script src=\"/static/app.js\"></script></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://graph.example/login",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Sign in · Neo4j Browser</title></head><body><form method=\"post\" action=\"/login\"><input name=\"user\"><input type=\"password\" name=\"pass\"><button>Sign in</button></form></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/guide",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Operations guide</title></head><body><h1>Connecting to Neo4j Browser</h1><p>Ask the platform team for access.</p></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://ops.example/ui",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Grafana</title></head><body><div id=\"app\"></div></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-console-influxdb-ui",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "InfluxDB UI console is reachable without authentication",
+  "description": "The InfluxDB user interface is served without authentication. The UI carries the organisation, bucket and token management screens, and the time-series data itself is one query away.",
+  "remediation": "Require authentication on the HTTP API before the UI is reachable, and keep the port internal.",
+  "limitation": "One response body. The rule recognises the InfluxDB UI console shell from its document title; it does not attempt a login, so it shows that the interface is served, not which data the caller could read.",
+  "scopeT": "One response body whose document title names the InfluxDB UI console.",
+  "fp": "A documentation or marketing page whose title names InfluxDB UI is reported; a page that only mentions the product in its body is not, because the rule reads the title element.",
+  "recordDesc": "InfluxDB 2.x serves its UI from the same port as the write and query API. If the UI loads without a login, the API behind it is usually unauthenticated as well, so the caller reads every bucket and can mint tokens.",
+  "applicability": "Responses that serve an administrative or diagnostic interface from a host reachable by ordinary users.",
+  "risk": "The caller reads metrics that often carry host and user identifiers, and can create an API token for later access.",
+  "why": "The document title identifies the InfluxDB UI console.",
+  "fix": [
+   "Put the console behind the same authentication as the data it governs.",
+   "Restrict it to an administrative network or a VPN.",
+   "Remove the route from the public host."
+  ],
+  "verifyT": "Request the console path from outside the administrative network and confirm it does not render.",
+  "cells": [
+   {
+    "suffix": "influxdb-ui",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "<title>[^<]{0,70}InfluxDB[^<]{0,40}</title>"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://metrics.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=utf-8"
+       },
+       "body": "<html><head><title>InfluxDB</title><meta charset=\"utf-8\"></head><body><div id=\"app\"></div><script src=\"/static/app.js\"></script></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://metrics.example/login",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Sign in · InfluxDB</title></head><body><form method=\"post\" action=\"/login\"><input name=\"user\"><input type=\"password\" name=\"pass\"><button>Sign in</button></form></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/guide",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Operations guide</title></head><body><h1>Connecting to InfluxDB</h1><p>Ask the platform team for access.</p></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://ops.example/ui",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Grafana</title></head><body><div id=\"app\"></div></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-console-chronograf",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "Chronograf console is reachable without authentication",
+  "description": "The Chronograf console is served without authentication. Chronograf stores InfluxDB connection details and, in its default deployment, finishes its own setup wizard on first access.",
+  "remediation": "Restrict Chronograf to the administrative network and complete its setup behind that boundary.",
+  "limitation": "One response body. The rule recognises the Chronograf console shell from its document title; it does not attempt a login, so it shows that the interface is served, not which data the caller could read.",
+  "scopeT": "One response body whose document title names the Chronograf console.",
+  "fp": "A documentation or marketing page whose title names Chronograf is reported; a page that only mentions the product in its body is not, because the rule reads the title element.",
+  "recordDesc": "Chronograf is the administrative front end for an InfluxDB estate, with saved connections and alert rules. An unauthenticated console lets the caller finish the setup as an administrator or reuse an existing connection if one is stored.",
+  "applicability": "Responses that serve an administrative or diagnostic interface from a host reachable by ordinary users.",
+  "risk": "The caller reaches the metrics store through Chronograf and can change alert rules that the operations team relies on.",
+  "why": "The document title identifies the Chronograf console.",
+  "fix": [
+   "Put the console behind the same authentication as the data it governs.",
+   "Restrict it to an administrative network or a VPN.",
+   "Remove the route from the public host."
+  ],
+  "verifyT": "Request the console path from outside the administrative network and confirm it does not render.",
+  "cells": [
+   {
+    "suffix": "chronograf-console",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "<title>[^<]{0,70}Chronograf[^<]{0,40}</title>"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://chronograf.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=utf-8"
+       },
+       "body": "<html><head><title>Chronograf</title><meta charset=\"utf-8\"></head><body><div id=\"app\"></div><script src=\"/static/app.js\"></script></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://chronograf.example/login",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Sign in · Chronograf</title></head><body><form method=\"post\" action=\"/login\"><input name=\"user\"><input type=\"password\" name=\"pass\"><button>Sign in</button></form></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/guide",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Operations guide</title></head><body><h1>Connecting to Chronograf</h1><p>Ask the platform team for access.</p></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://ops.example/ui",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Grafana</title></head><body><div id=\"app\"></div></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-console-zeppelin",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "HIGH",
+  "title": "Apache Zeppelin console is reachable without authentication",
+  "description": "The Apache Zeppelin notebook server is served without authentication. Zeppelin notebooks execute code in the language interpreters the server has configured, which for a data deployment means shells against the cluster.",
+  "remediation": "Enable Zeppelin authentication and shiro authorization, and never expose the notebook server outside the cluster.",
+  "limitation": "One response body. The rule recognises the Apache Zeppelin console shell from its document title; it does not attempt a login, so it shows that the interface is served, not which data the caller could read.",
+  "scopeT": "One response body whose document title names the Apache Zeppelin console.",
+  "fp": "A documentation or marketing page whose title names Apache Zeppelin is reported; a page that only mentions the product in its body is not, because the rule reads the title element.",
+  "recordDesc": "Zeppelin is a code execution surface: each paragraph runs in an interpreter bound to the cluster, and the default deployment ships with the anonymous role enabled. Reaching it is close to reaching a shell on a cluster node.",
+  "applicability": "Responses that serve an administrative or diagnostic interface from a host reachable by ordinary users.",
+  "risk": "The caller runs code with the privileges of the notebook server, reads every notebook, and pivots to the cluster the interpreters are bound to.",
+  "why": "The document title identifies the Apache Zeppelin console.",
+  "fix": [
+   "Put the console behind the same authentication as the data it governs.",
+   "Restrict it to an administrative network or a VPN.",
+   "Remove the route from the public host."
+  ],
+  "verifyT": "Request the console path from outside the administrative network and confirm it does not render.",
+  "cells": [
+   {
+    "suffix": "zeppelin-console",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "<title>[^<]{0,70}Zeppelin[^<]{0,40}</title>"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://notebooks.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=utf-8"
+       },
+       "body": "<html><head><title>Zeppelin</title><meta charset=\"utf-8\"></head><body><div id=\"app\"></div><script src=\"/static/app.js\"></script></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://notebooks.example/login",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Sign in · Zeppelin</title></head><body><form method=\"post\" action=\"/login\"><input name=\"user\"><input type=\"password\" name=\"pass\"><button>Sign in</button></form></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/guide",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Operations guide</title></head><body><h1>Connecting to Zeppelin</h1><p>Ask the platform team for access.</p></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://ops.example/ui",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Grafana</title></head><body><div id=\"app\"></div></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-console-jupyterhub",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "HIGH",
+  "title": "JupyterHub console is reachable without authentication",
+  "description": "The JupyterHub sign-in page is served publicly. JupyterHub provisions a notebook server per user, and any account that reaches it gets a shell with whatever mounts the spawner attaches.",
+  "remediation": "Keep JupyterHub behind the identity provider and the internal network; treat its sign-in page as an administrative surface, not a public page.",
+  "limitation": "One response body. The rule recognises the JupyterHub console shell from its document title; it does not attempt a login, so it shows that the interface is served, not which data the caller could read.",
+  "scopeT": "One response body whose document title names the JupyterHub console.",
+  "fp": "A documentation or marketing page whose title names JupyterHub is reported; a page that only mentions the product in its body is not, because the rule reads the title element.",
+  "recordDesc": "JupyterHub is an account-provisioning system: a successful login spawns a container with a shell, a home directory and often the cluster service-account token. A public hub therefore advertises a path to code execution that depends only on obtaining any account.",
+  "applicability": "Responses that serve an administrative or diagnostic interface from a host reachable by ordinary users.",
+  "risk": "The caller provisions a notebook server, explores mounts and, in a common configuration, reads the pod service-account token.",
+  "why": "The document title identifies the JupyterHub console.",
+  "fix": [
+   "Put the console behind the same authentication as the data it governs.",
+   "Restrict it to an administrative network or a VPN.",
+   "Remove the route from the public host."
+  ],
+  "verifyT": "Request the console path from outside the administrative network and confirm it does not render.",
+  "cells": [
+   {
+    "suffix": "jupyterhub-console",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "<title>[^<]{0,70}JupyterHub[^<]{0,40}</title>"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://hub.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=utf-8"
+       },
+       "body": "<html><head><title>JupyterHub</title><meta charset=\"utf-8\"></head><body><div id=\"app\"></div><script src=\"/static/app.js\"></script></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://hub.example/login",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Sign in · JupyterHub</title></head><body><form method=\"post\" action=\"/login\"><input name=\"user\"><input type=\"password\" name=\"pass\"><button>Sign in</button></form></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/guide",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Operations guide</title></head><body><h1>Connecting to JupyterHub</h1><p>Ask the platform team for access.</p></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://ops.example/ui",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Grafana</title></head><body><div id=\"app\"></div></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-console-kafdrop",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "HIGH",
+  "title": "Kafdrop console is reachable without authentication",
+  "description": "The Kafdrop console is served without authentication. Kafdrop lists every topic, shows message payloads and can create or delete topics on the cluster it is pointed at.",
+  "remediation": "Put Kafdrop behind an authenticating proxy or remove it; it has no built-in access control.",
+  "limitation": "One response body. The rule recognises the Kafdrop console shell from its document title; it does not attempt a login, so it shows that the interface is served, not which data the caller could read.",
+  "scopeT": "One response body whose document title names the Kafdrop console.",
+  "fp": "A documentation or marketing page whose title names Kafdrop is reported; a page that only mentions the product in its body is not, because the rule reads the title element.",
+  "recordDesc": "Kafdrop is a read-mostly view over a Kafka cluster but it also exposes topic administration, and its message browser renders raw payloads. A public instance therefore publishes the event stream and the topic layout in one page.",
+  "applicability": "Responses that serve an administrative or diagnostic interface from a host reachable by ordinary users.",
+  "risk": "The caller reads message contents, learns the topic schema, and can delete or create topics where the cluster ACLs allow it.",
+  "why": "The document title identifies the Kafdrop console.",
+  "fix": [
+   "Put the console behind the same authentication as the data it governs.",
+   "Restrict it to an administrative network or a VPN.",
+   "Remove the route from the public host."
+  ],
+  "verifyT": "Request the console path from outside the administrative network and confirm it does not render.",
+  "cells": [
+   {
+    "suffix": "kafdrop-console",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "<title>[^<]{0,70}Kafdrop[^<]{0,40}</title>"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://kafka-ui.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=utf-8"
+       },
+       "body": "<html><head><title>Kafdrop</title><meta charset=\"utf-8\"></head><body><div id=\"app\"></div><script src=\"/static/app.js\"></script></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://kafka-ui.example/login",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Sign in · Kafdrop</title></head><body><form method=\"post\" action=\"/login\"><input name=\"user\"><input type=\"password\" name=\"pass\"><button>Sign in</button></form></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/guide",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Operations guide</title></head><body><h1>Connecting to Kafdrop</h1><p>Ask the platform team for access.</p></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://ops.example/ui",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Grafana</title></head><body><div id=\"app\"></div></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-console-opensearch-dashboards",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "HIGH",
+  "title": "OpenSearch Dashboards console is reachable without authentication",
+  "description": "The OpenSearch Dashboards application is served without authentication. Dashboards ships with a dev-tools console that sends arbitrary requests to the search cluster from the browser.",
+  "remediation": "Enable the security plugin on both the cluster and Dashboards, and keep Dashboards on the internal network.",
+  "limitation": "One response body. The rule recognises the OpenSearch Dashboards console shell from its document title; it does not attempt a login, so it shows that the interface is served, not which data the caller could read.",
+  "scopeT": "One response body whose document title names the OpenSearch Dashboards console.",
+  "fp": "A documentation or marketing page whose title names OpenSearch Dashboards is reported; a page that only mentions the product in its body is not, because the rule reads the title element.",
+  "recordDesc": "Dashboards is a browser-side client for the cluster API, and its dev tools console forwards raw requests. A reachable shell without a login therefore means the cluster API behind it is reachable with the same lack of authentication, including index deletion.",
+  "applicability": "Responses that serve an administrative or diagnostic interface from a host reachable by ordinary users.",
+  "risk": "The caller queries every index, reads documents the application stores, and can delete indices through the dev tools console.",
+  "why": "The document title identifies the OpenSearch Dashboards console.",
+  "fix": [
+   "Put the console behind the same authentication as the data it governs.",
+   "Restrict it to an administrative network or a VPN.",
+   "Remove the route from the public host."
+  ],
+  "verifyT": "Request the console path from outside the administrative network and confirm it does not render.",
+  "cells": [
+   {
+    "suffix": "opensearch-dashboards",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "<title>[^<]{0,70}OpenSearch Dashboards[^<]{0,40}</title>"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://search.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=utf-8"
+       },
+       "body": "<html><head><title>OpenSearch Dashboards</title><meta charset=\"utf-8\"></head><body><div id=\"app\"></div><script src=\"/static/app.js\"></script></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://search.example/login",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Sign in · OpenSearch Dashboards</title></head><body><form method=\"post\" action=\"/login\"><input name=\"user\"><input type=\"password\" name=\"pass\"><button>Sign in</button></form></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/guide",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Operations guide</title></head><body><h1>Connecting to OpenSearch Dashboards</h1><p>Ask the platform team for access.</p></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://ops.example/ui",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Grafana</title></head><body><div id=\"app\"></div></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-console-phpldapadmin",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "HIGH",
+  "title": "phpLDAPadmin console is reachable without authentication",
+  "description": "The phpLDAPadmin interface is served without authentication. Its login form accepts a bind DN, and its tree editor writes to the directory once a bind succeeds.",
+  "remediation": "Restrict phpLDAPadmin to the administrative network and require client certificates or an authenticating proxy in front of it.",
+  "limitation": "One response body. The rule recognises the phpLDAPadmin console shell from its document title; it does not attempt a login, so it shows that the interface is served, not which data the caller could read.",
+  "scopeT": "One response body whose document title names the phpLDAPadmin console.",
+  "fp": "A documentation or marketing page whose title names phpLDAPadmin is reported; a page that only mentions the product in its body is not, because the rule reads the title element.",
+  "recordDesc": "phpLDAPadmin is a full directory editor: it can add entries, change passwords and modify group membership. Serving it publicly exposes the directory schema and gives the caller a ready-made client for any credential they obtain elsewhere.",
+  "applicability": "Responses that serve an administrative or diagnostic interface from a host reachable by ordinary users.",
+  "risk": "The caller enumerates users and groups, and with any directory credential can change passwords or grant themselves membership.",
+  "why": "The document title identifies the phpLDAPadmin console.",
+  "fix": [
+   "Put the console behind the same authentication as the data it governs.",
+   "Restrict it to an administrative network or a VPN.",
+   "Remove the route from the public host."
+  ],
+  "verifyT": "Request the console path from outside the administrative network and confirm it does not render.",
+  "cells": [
+   {
+    "suffix": "phpldapadmin-console",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "<title>[^<]{0,70}phpLDAPadmin[^<]{0,40}</title>"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://directory.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=utf-8"
+       },
+       "body": "<html><head><title>phpLDAPadmin</title><meta charset=\"utf-8\"></head><body><div id=\"app\"></div><script src=\"/static/app.js\"></script></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://directory.example/login",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Sign in · phpLDAPadmin</title></head><body><form method=\"post\" action=\"/login\"><input name=\"user\"><input type=\"password\" name=\"pass\"><button>Sign in</button></form></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/guide",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Operations guide</title></head><body><h1>Connecting to phpLDAPadmin</h1><p>Ask the platform team for access.</p></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://ops.example/ui",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Grafana</title></head><body><div id=\"app\"></div></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-console-gitea",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "Gitea console is reachable without authentication",
+  "description": "The Gitea web interface is served without authentication in a way that exposes the instance rather than the intended sign-in flow. Gitea carries repositories, issues, webhooks and the instance administration screens.",
+  "remediation": "Disable open registration, require the instance login for browsing if the code is private, and keep the administration routes off the public host.",
+  "limitation": "One response body. The rule recognises the Gitea console shell from its document title; it does not attempt a login, so it shows that the interface is served, not which data the caller could read.",
+  "scopeT": "One response body whose document title names the Gitea console.",
+  "fp": "A documentation or marketing page whose title names Gitea is reported; a page that only mentions the product in its body is not, because the rule reads the title element.",
+  "recordDesc": "A self-hosted forge holds source, CI webhook secrets and often package registries. An exposed instance with open registration lets the caller create an account, read whatever is public by default and reach the exploration API.",
+  "applicability": "Responses that serve an administrative or diagnostic interface from a host reachable by ordinary users.",
+  "risk": "The caller reads repository contents and the user list, and with open registration obtains an account inside the forge.",
+  "why": "The document title identifies the Gitea console.",
+  "fix": [
+   "Put the console behind the same authentication as the data it governs.",
+   "Restrict it to an administrative network or a VPN.",
+   "Remove the route from the public host."
+  ],
+  "verifyT": "Request the console path from outside the administrative network and confirm it does not render.",
+  "cells": [
+   {
+    "suffix": "gitea-console",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "<title>[^<]{0,70}Gitea[^<]{0,40}</title>"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://git.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=utf-8"
+       },
+       "body": "<html><head><title>Gitea</title><meta charset=\"utf-8\"></head><body><div id=\"app\"></div><script src=\"/static/app.js\"></script></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://git.example/login",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Sign in · Gitea</title></head><body><form method=\"post\" action=\"/login\"><input name=\"user\"><input type=\"password\" name=\"pass\"><button>Sign in</button></form></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/guide",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Operations guide</title></head><body><h1>Connecting to Gitea</h1><p>Ask the platform team for access.</p></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://ops.example/ui",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Grafana</title></head><body><div id=\"app\"></div></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-console-teamcity",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "HIGH",
+  "title": "TeamCity console is reachable without authentication",
+  "description": "The TeamCity web interface is served without authentication. TeamCity stores build configurations, VCS credentials and artifact publishing targets, and its agents run build scripts.",
+  "remediation": "Complete the TeamCity setup behind the internal network, disable guest access, and never expose the server port publicly.",
+  "limitation": "One response body. The rule recognises the TeamCity console shell from its document title; it does not attempt a login, so it shows that the interface is served, not which data the caller could read.",
+  "scopeT": "One response body whose document title names the TeamCity console.",
+  "fp": "A documentation or marketing page whose title names TeamCity is reported; a page that only mentions the product in its body is not, because the rule reads the title element.",
+  "recordDesc": "TeamCity is a build orchestrator: build steps are code, VCS roots carry credentials and artifacts are the deployable output. A public interface exposes the build topology, and an unconfigured instance lets the first visitor create the administrator.",
+  "applicability": "Responses that serve an administrative or diagnostic interface from a host reachable by ordinary users.",
+  "risk": "The caller takes the administrator account on an unconfigured server or, with guest access, reads build logs and artifact listings that name internal hosts.",
+  "why": "The document title identifies the TeamCity console.",
+  "fix": [
+   "Put the console behind the same authentication as the data it governs.",
+   "Restrict it to an administrative network or a VPN.",
+   "Remove the route from the public host."
+  ],
+  "verifyT": "Request the console path from outside the administrative network and confirm it does not render.",
+  "cells": [
+   {
+    "suffix": "teamcity-console",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "<title>[^<]{0,70}TeamCity[^<]{0,40}</title>"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://ci.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=utf-8"
+       },
+       "body": "<html><head><title>TeamCity</title><meta charset=\"utf-8\"></head><body><div id=\"app\"></div><script src=\"/static/app.js\"></script></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://ci.example/login",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Sign in · TeamCity</title></head><body><form method=\"post\" action=\"/login\"><input name=\"user\"><input type=\"password\" name=\"pass\"><button>Sign in</button></form></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/guide",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Operations guide</title></head><body><h1>Connecting to TeamCity</h1><p>Ask the platform team for access.</p></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://ops.example/ui",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Grafana</title></head><body><div id=\"app\"></div></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-console-concourse",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "Concourse console is reachable without authentication",
+  "description": "The Concourse web interface is served without authentication. Concourse pipelines declare every credential reference, registry path and deployment target they use.",
+  "remediation": "Enable the Concourse auth configuration for the web node and restrict the ATC port to the internal network.",
+  "limitation": "One response body. The rule recognises the Concourse console shell from its document title; it does not attempt a login, so it shows that the interface is served, not which data the caller could read.",
+  "scopeT": "One response body whose document title names the Concourse console.",
+  "fp": "A documentation or marketing page whose title names Concourse is reported; a page that only mentions the product in its body is not, because the rule reads the title element.",
+  "recordDesc": "Concourse renders each pipeline as a graph of resources and jobs, and its resource definitions name registries, buckets and deployment targets. A public UI therefore documents the delivery pipeline and the credentials it references.",
+  "applicability": "Responses that serve an administrative or diagnostic interface from a host reachable by ordinary users.",
+  "risk": "The caller maps the deployment pipeline and the internal systems it touches, and with an unauthenticated fly CLI can trigger jobs.",
+  "why": "The document title identifies the Concourse console.",
+  "fix": [
+   "Put the console behind the same authentication as the data it governs.",
+   "Restrict it to an administrative network or a VPN.",
+   "Remove the route from the public host."
+  ],
+  "verifyT": "Request the console path from outside the administrative network and confirm it does not render.",
+  "cells": [
+   {
+    "suffix": "concourse-console",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "<title>[^<]{0,70}Concourse[^<]{0,40}</title>"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://ci.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=utf-8"
+       },
+       "body": "<html><head><title>Concourse</title><meta charset=\"utf-8\"></head><body><div id=\"app\"></div><script src=\"/static/app.js\"></script></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://ci.example/login",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Sign in · Concourse</title></head><body><form method=\"post\" action=\"/login\"><input name=\"user\"><input type=\"password\" name=\"pass\"><button>Sign in</button></form></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/guide",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Operations guide</title></head><body><h1>Connecting to Concourse</h1><p>Ask the platform team for access.</p></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://ops.example/ui",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Grafana</title></head><body><div id=\"app\"></div></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-console-rancher",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "HIGH",
+  "title": "Rancher console is reachable without authentication",
+  "description": "The Rancher management interface is served without authentication. Rancher drives every downstream Kubernetes cluster it manages, including workload deployment and secret access.",
+  "remediation": "Restrict Rancher to the administrative network, require SSO, and treat its bootstrap password as a first-boot secret only.",
+  "limitation": "One response body. The rule recognises the Rancher console shell from its document title; it does not attempt a login, so it shows that the interface is served, not which data the caller could read.",
+  "scopeT": "One response body whose document title names the Rancher console.",
+  "fp": "A documentation or marketing page whose title names Rancher is reported; a page that only mentions the product in its body is not, because the rule reads the title element.",
+  "recordDesc": "Rancher is the control plane over multiple clusters: its API creates workloads, reads secrets and issues kubeconfigs. A reachable interface without a login is therefore the shortest path to every cluster the installation manages.",
+  "applicability": "Responses that serve an administrative or diagnostic interface from a host reachable by ordinary users.",
+  "risk": "The caller takes the bootstrap administrator account on a fresh install or, with weak auth, obtains cluster administration and secret access.",
+  "why": "The document title identifies the Rancher console.",
+  "fix": [
+   "Put the console behind the same authentication as the data it governs.",
+   "Restrict it to an administrative network or a VPN.",
+   "Remove the route from the public host."
+  ],
+  "verifyT": "Request the console path from outside the administrative network and confirm it does not render.",
+  "cells": [
+   {
+    "suffix": "rancher-console",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "<title>[^<]{0,70}Rancher[^<]{0,40}</title>"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://rancher.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=utf-8"
+       },
+       "body": "<html><head><title>Rancher</title><meta charset=\"utf-8\"></head><body><div id=\"app\"></div><script src=\"/static/app.js\"></script></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://rancher.example/login",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Sign in · Rancher</title></head><body><form method=\"post\" action=\"/login\"><input name=\"user\"><input type=\"password\" name=\"pass\"><button>Sign in</button></form></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/guide",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Operations guide</title></head><body><h1>Connecting to Rancher</h1><p>Ask the platform team for access.</p></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://ops.example/ui",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Grafana</title></head><body><div id=\"app\"></div></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-console-verdaccio",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "Verdaccio console is reachable without authentication",
+  "description": "The Verdaccio registry interface is served without authentication. Verdaccio holds private packages and, in its default configuration, allows anonymous publishing.",
+  "remediation": "Require authentication for publish and for private package reads, and keep the registry on the internal network.",
+  "limitation": "One response body. The rule recognises the Verdaccio console shell from its document title; it does not attempt a login, so it shows that the interface is served, not which data the caller could read.",
+  "scopeT": "One response body whose document title names the Verdaccio console.",
+  "fp": "A documentation or marketing page whose title names Verdaccio is reported; a page that only mentions the product in its body is not, because the rule reads the title element.",
+  "recordDesc": "A private npm registry is a supply-chain entry point: anonymous publish lets the caller place a package version that CI resolves by name. The interface also lists every private package name and its maintainers.",
+  "applicability": "Responses that serve an administrative or diagnostic interface from a host reachable by ordinary users.",
+  "risk": "The caller enumerates private package names and, with open publish, ships a version that the build pipeline will install.",
+  "why": "The document title identifies the Verdaccio console.",
+  "fix": [
+   "Put the console behind the same authentication as the data it governs.",
+   "Restrict it to an administrative network or a VPN.",
+   "Remove the route from the public host."
+  ],
+  "verifyT": "Request the console path from outside the administrative network and confirm it does not render.",
+  "cells": [
+   {
+    "suffix": "verdaccio-console",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "<title>[^<]{0,70}Verdaccio[^<]{0,40}</title>"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://npm.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=utf-8"
+       },
+       "body": "<html><head><title>Verdaccio</title><meta charset=\"utf-8\"></head><body><div id=\"app\"></div><script src=\"/static/app.js\"></script></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://npm.example/login",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Sign in · Verdaccio</title></head><body><form method=\"post\" action=\"/login\"><input name=\"user\"><input type=\"password\" name=\"pass\"><button>Sign in</button></form></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/guide",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Operations guide</title></head><body><h1>Connecting to Verdaccio</h1><p>Ask the platform team for access.</p></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://ops.example/ui",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Grafana</title></head><body><div id=\"app\"></div></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-page-codeigniter-exception",
+  "category": "debug-exposure",
+  "cwe": "CWE-209",
+  "severity": "MEDIUM",
+  "title": "CodeIgniter uncaught-exception page disclosed",
+  "description": "The response is the CodeIgniter exception template: the \"An uncaught Exception was encountered\" heading with a Filename and Line Number block. The page prints the absolute path of the application and the frame that raised the error.",
+  "remediation": "Set the environment to production so the framework renders its generic error view, and log the details server-side instead.",
+  "limitation": "One response body. The rule recognises the framework template; it does not prove that the path it prints is readable from outside.",
+  "scopeT": "One response body containing the CodeIgniter exception template with a file location block.",
+  "fp": "A generic 500 page is not reported. A documentation page that quotes the template is reported when it reproduces the heading and the location block together.",
+  "recordDesc": "The CodeIgniter exception view prints the failing file, the line and a stack of frames. That tells the caller the document root, the framework version layout and which controller raised the error, which is the map for the next request.",
+  "applicability": "Responses from a PHP application that leaves the development environment enabled.",
+  "risk": "The caller learns the filesystem layout and the code path, then targets the controller or parameter that raised the error.",
+  "why": "The body is the CodeIgniter exception template with a file location block.",
+  "fix": [
+   "Set ENVIRONMENT to production.",
+   "Log exceptions and render the generic error view."
+  ],
+  "verifyT": "Trigger a 500 from a handler and confirm the response carries no file path.",
+  "cells": [
+   {
+    "suffix": "codeigniter-exception",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*An uncaught Exception was encountered)(?=[\\s\\S]*\\bFilename\\s*:)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/orders/1",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<h1>An uncaught Exception was encountered</h1><p>Type: RuntimeException</p><p>Message: Order not found</p><p>Filename: /var/www/app/controllers/Orders.php</p><p>Line Number: 42</p>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/api/v1/items",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<div class=\"exception\"><h1>An uncaught Exception was encountered</h1><p>Filename: /srv/site/system/core/Common.php</p><p>Line Number: 573</p></div>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/orders/1",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<h1>Something went wrong</h1><p>Please try again later.</p>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/docs/errors",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<h1>Handling exceptions</h1><p>An uncaught exception should be logged and rendered as a generic page.</p>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-page-cakephp-debugkit",
+  "category": "debug-exposure",
+  "cwe": "CWE-215",
+  "severity": "MEDIUM",
+  "title": "CakePHP Debug Kit toolbar disclosed",
+  "description": "The response carries the CakePHP Debug Kit toolbar. The toolbar links to panels that show every SQL query, the request variables, the session contents and the loaded configuration for the page that was just served.",
+  "remediation": "Disable DebugKit outside local development (Debug false and the plugin not loaded), and keep the toolbar out of production responses.",
+  "limitation": "One response body. The rule reports the toolbar container; it does not follow its panel links.",
+  "scopeT": "One response body containing the Debug Kit toolbar container alongside the framework name.",
+  "fp": "A page that mentions DebugKit in prose is not reported, because the toolbar container id is required.",
+  "recordDesc": "DebugKit renders the query log and the session for the current request into the page. Anyone who loads a page with the toolbar can read the SQL that built it, including the bound parameters that carry identifiers and tokens.",
+  "applicability": "Responses from a CakePHP application deployed with debug mode on.",
+  "risk": "The caller reads the SQL and its bound values for every page, which exposes identifiers and often credentials held in the session.",
+  "why": "The body contains the Debug Kit toolbar container.",
+  "fix": [
+   "Set Debug to false in production and remove the plugin from the application bootstrap.",
+   "Treat the query log as server-side telemetry."
+  ],
+  "verifyT": "Load a page and confirm the response contains no debug toolbar markup.",
+  "cells": [
+   {
+    "suffix": "cakephp-debugkit",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*debug-kit-toolbar)(?=[\\s\\S]*CakePHP)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/invoices",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><body><h1>Invoices</h1><div id=\"debug-kit-toolbar\" class=\"cakephp-debug-kit\"><span>CakePHP 4.4.10</span></div></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/reports",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<div id=\"debug-kit-toolbar\"><a href=\"/debug-kit/panels/view/sql-log\">Sql log</a><a href=\"/debug-kit/panels/view/variables\">Variables</a><small>CakePHP</small></div>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/invoices",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><body><h1>Invoices</h1><p>3 open invoices.</p></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/docs/debug",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<p>Install the Debug Kit plugin only in development.</p>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-page-yii-debugger",
+  "category": "debug-exposure",
+  "cwe": "CWE-215",
+  "severity": "MEDIUM",
+  "title": "Yii debugger toolbar disclosed",
+  "description": "The response carries the Yii debugger toolbar: the yii-debug container together with the debugger title. Its panels show the request, the database queries, the logs and the application configuration for that page.",
+  "remediation": "Remove the debug module from the production configuration and keep the yii-debug route disabled outside development.",
+  "limitation": "One response body. The rule reports the toolbar shell; it does not open the stored request history.",
+  "scopeT": "One response body containing the Yii debugger container and its label.",
+  "fp": "A page that names the debugger in prose is not reported, because the container id is required.",
+  "recordDesc": "The Yii debugger keeps a per-request history that includes the SQL, the session and the configuration. Its toolbar in a response also means the history route is registered, and that route lists other users requests by id.",
+  "applicability": "Responses from a Yii application deployed with the debug module enabled.",
+  "risk": "The caller reads query text, application parameters and, through the history route, other users requests.",
+  "why": "The body contains the Yii debugger toolbar.",
+  "fix": [
+   "Drop the debug module from the production config.",
+   "Route debug output to logs instead of the page."
+  ],
+  "verifyT": "Load a page and confirm the toolbar and the debug route are both absent.",
+  "cells": [
+   {
+    "suffix": "yii-debugger",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*yii-debug)(?=[\\s\\S]*Yii Debugger)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/shop",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><body><h1>Shop</h1><div id=\"yii-debug-toolbar\"><span>Yii Debugger</span></div></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/cart",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<div id=\"yii-debug\"><a href=\"/debug/default/index\">Yii Debugger</a><a href=\"/debug/default/view?id=abc\">Last request</a></div>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/shop",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><body><h1>Shop</h1><p>Free delivery this week.</p></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/docs/debug",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<p>Enable the debug module only on development hosts.</p>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-page-jetty-error",
+  "category": "debug-exposure",
+  "cwe": "CWE-200",
+  "severity": "LOW",
+  "title": "Jetty default error page disclosed",
+  "description": "The response is the Jetty default error page: the HTTP error heading with the \"Powered by Jetty\" footer. It confirms the exact servlet container and its version line, which the application itself does not otherwise advertise.",
+  "remediation": "Configure a custom error page and remove the container version from the footer.",
+  "limitation": "One response body. The rule recognises the container template; the version it prints may be older than the running build.",
+  "scopeT": "One response body containing the Jetty default error template and its footer.",
+  "fp": "An application error page that mentions Jetty in a comment is not reported, because both the error heading and the footer are required.",
+  "recordDesc": "The default container page names the container and often its version, and it appears exactly when the application failed to handle the request. That combination tells the caller which container build they are dealing with at the moment the application is weakest.",
+  "applicability": "Responses from a Java servlet deployment that has no custom error page.",
+  "risk": "The caller fingerprints the container build and confirms that error handling is left at the default, which narrows the exploit choice for that version.",
+  "why": "The body is the Jetty default error page.",
+  "fix": [
+   "Register a custom error page.",
+   "Remove the container version from every generated page."
+  ],
+  "verifyT": "Request a missing path and confirm the response is the application error page.",
+  "cells": [
+   {
+    "suffix": "jetty-error-page",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*HTTP ERROR)(?=[\\s\\S]*Powered by Jetty)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/missing",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Error 404 Not Found</title></head><body><h2>HTTP ERROR 404 Not Found</h2><hr><i>Powered by Jetty:// 11.0.15</i></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/boom",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><body><h2>HTTP ERROR 500 Server Error</h2><hr><i>Powered by Jetty:// 9.4.51</i></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/missing",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><body><h1>Page not found</h1><a href=\"/\">Back to the shop</a></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/docs/errors",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<p>Set a custom error handler so the container does not render its default page.</p>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-page-iis-detailed-error",
+  "category": "debug-exposure",
+  "cwe": "CWE-209",
+  "severity": "MEDIUM",
+  "title": "IIS detailed error page disclosed",
+  "description": "The response is the IIS detailed error page: the Error Code heading followed by a Detailed Error Information table that names the module, the notification and the handler that failed.",
+  "remediation": "Set the httpErrors errorMode to Custom in web.config so IIS returns the application error page instead of the detail table.",
+  "limitation": "One response body. The rule recognises the detail table; it does not show whether the same detail is logged.",
+  "scopeT": "One response body containing the IIS detailed error table and the server product marker.",
+  "fp": "A generic IIS 404 page without the detail table is not reported. A documentation page that reproduces the table is reported, because the rule reads the table rather than its origin.",
+  "recordDesc": "The IIS detail table names the failing module and the physical path it was asked to serve. That converts a blind path guess into a confirmation of the directory layout and of which handler is installed.",
+  "applicability": "Responses from IIS hosts that leave detailed errors enabled.",
+  "risk": "The caller learns the physical path and the handler pipeline, and can target the module that failed.",
+  "why": "The body is the IIS detailed error page with its information table.",
+  "fix": [
+   "Set errorMode to Custom and a custom error page.",
+   "Keep detailed errors in the server log only."
+  ],
+  "verifyT": "Request a missing path and confirm the response carries no module or path table.",
+  "cells": [
+   {
+    "suffix": "iis-detailed-error",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*Detailed Error Information)(?=[\\s\\S]*Microsoft-IIS)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/app/missing.aspx",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><body><h2>HTTP Error 404.0 - Not Found</h2><h3>Detailed Error Information</h3><table><tr><th>Module</th><td>IIS Web Core</td></tr><tr><th>Physical Path</th><td>C:\\inetpub\\wwwroot\\app\\missing.aspx</td></tr></table><p>Microsoft-IIS/10.0</p></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/api/x",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><body><h2>HTTP Error 500.19 - Internal Server Error</h2><h3>Detailed Error Information</h3><table><tr><th>Module</th><td>WebDAVModule</td></tr></table><hr>Microsoft-IIS/10.0</body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/app/missing",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><body><h1>Not found</h1></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/docs/iis",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<p>Disable the detailed error table on production sites.</p>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-page-phoenix-live-dashboard",
+  "category": "debug-exposure",
+  "cwe": "CWE-215",
+  "severity": "MEDIUM",
+  "title": "Phoenix LiveDashboard disclosed",
+  "description": "The response is the Phoenix LiveDashboard: the LiveDashboard title served together with the Phoenix live-view runtime markers. The dashboard lists processes, ETS tables, the running applications and the metrics of the node.",
+  "remediation": "Remove the dashboard route from the production router, or gate it behind an administrative plug.",
+  "limitation": "One response body. The rule reports the dashboard shell; it does not subscribe to a live view.",
+  "scopeT": "One response body containing the LiveDashboard shell and the Phoenix runtime marker.",
+  "fp": "A page that links to the dashboard in prose is not reported, because the shell markup is required.",
+  "recordDesc": "LiveDashboard is a live view of the node: process counts, ETS tables, application supervision trees and, on an attached node, the metric history. It is also a LiveView endpoint, so the socket it opens carries the same reachability.",
+  "applicability": "Responses from a Phoenix application that mounts the dashboard in every environment.",
+  "risk": "The caller learns the supervision tree and the module names of the running release, then uses the socket to watch the node.",
+  "why": "The body is the LiveDashboard shell with the Phoenix runtime marker.",
+  "fix": [
+   "Mount the dashboard only for development and administrative environments.",
+   "Gate the route behind authentication."
+  ],
+  "verifyT": "Request the dashboard route in production and confirm it is not mounted.",
+  "cells": [
+   {
+    "suffix": "phoenix-live-dashboard",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*LiveDashboard)(?=[\\s\\S]*phoenix_live_view)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/dashboard",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>LiveDashboard · app</title></head><body><div data-phx-main=\"true\" id=\"phx-F1a2\"></div><p>Powered by phoenix_live_view</p></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/admin/dashboard/home",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><body><h1>LiveDashboard</h1><p>Processes 812 · Ports 4</p><p>phoenix_live_view 0.20.14</p></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/shop",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Shop</title></head><body><h1>Shop</h1></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/docs/ops",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<p>The dashboard is available on the admin host.</p>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-page-sidekiq-web",
+  "category": "debug-exposure",
+  "cwe": "CWE-215",
+  "severity": "MEDIUM",
+  "title": "Sidekiq web dashboard disclosed",
+  "description": "The response is the Sidekiq web dashboard: the Sidekiq title with the queue navigation. The dashboard can retry, delete and enqueue jobs, and each job view shows the arguments the job was called with.",
+  "remediation": "Mount the Sidekiq web interface behind the admin authentication or drop the route from the production router.",
+  "limitation": "One response body. The rule reports the dashboard shell; it does not enqueue or retry a job.",
+  "scopeT": "One response body containing the Sidekiq dashboard shell and its queue navigation.",
+  "fp": "A page that mentions Sidekiq in prose is not reported, because the dashboard title and queue links are both required.",
+  "recordDesc": "Sidekiq job arguments routinely carry user identifiers, email addresses and tokens, and the dashboard renders them for every failed job. The same page also carries the actions that retry or delete those jobs.",
+  "applicability": "Responses from a Ruby application that mounts Sidekiq::Web without authentication.",
+  "risk": "The caller reads failed job arguments and can retry or delete jobs, which changes application state from outside the application.",
+  "why": "The body is the Sidekiq dashboard shell with its queue navigation.",
+  "fix": [
+   "Wrap the mount in an authentication constraint.",
+   "Remove the route from production."
+  ],
+  "verifyT": "Request the mount path anonymously and confirm it does not render.",
+  "cells": [
+   {
+    "suffix": "sidekiq-web",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*<title>Sidekiq)(?=[\\s\\S]*Enqueued)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/sidekiq",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Sidekiq</title></head><body><nav><a href=\"/sidekiq/queues\">Queues</a><a href=\"/sidekiq/retries\">Retries</a></nav><p>Enqueued 14</p></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/sidekiq/morgue",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Sidekiq</title></head><body><h2>Dead Jobs</h2><pre>{\"jid\":\"abc\",\"args\":[\"user@example.test\",12]}</pre><p>Enqueued 0</p></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/jobs",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Jobs</title></head><body><p>Background jobs are running normally.</p></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/docs/queues",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<p>Mount the dashboard under an admin constraint.</p>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-page-laravel-telescope",
+  "category": "debug-exposure",
+  "cwe": "CWE-215",
+  "severity": "HIGH",
+  "title": "Laravel Telescope dashboard disclosed",
+  "description": "The response is the Laravel Telescope dashboard: the Telescope shell with its request list. Telescope records every request, query, mail, notification and job payload the application handles, including their arguments.",
+  "remediation": "Register the Telescope service provider for local environments only, and gate the route behind the authorisation callback.",
+  "limitation": "One response body. The rule reports the dashboard shell; it does not open an individual entry.",
+  "scopeT": "One response body containing the Telescope dashboard shell with its entry navigation.",
+  "fp": "A page that mentions Telescope in prose is not reported, because the shell markup is required.",
+  "recordDesc": "Telescope keeps full request and job payloads, including the headers and the mail bodies, and renders them in the dashboard. Reaching it publishes the traffic of the application, not just its configuration.",
+  "applicability": "Responses from a Laravel application that ships Telescope outside the local environment.",
+  "risk": "The caller reads request payloads, mail bodies and job arguments, which usually include credentials and personal data.",
+  "why": "The body is the Telescope dashboard shell.",
+  "fix": [
+   "Install Telescope for local use only.",
+   "Gate the route with the authorisation callback."
+  ],
+  "verifyT": "Request the Telescope path in production and confirm it returns not found.",
+  "cells": [
+   {
+    "suffix": "laravel-telescope",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*<title>Telescope)(?=[\\s\\S]*telescope)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/telescope",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Telescope</title></head><body><div id=\"telescope\"><a href=\"/telescope/requests\">Requests</a><a href=\"/telescope/mail\">Mail</a></div></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/telescope/requests",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Telescope · Requests</title></head><body><div class=\"telescope-entries\"><span>POST /login 200</span></div></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/login",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Sign in</title></head><body><form method=\"post\"><input name=\"email\"></form></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/docs/monitoring",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<p>Telescope is installed for local development only.</p>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-page-laravel-horizon",
+  "category": "debug-exposure",
+  "cwe": "CWE-215",
+  "severity": "MEDIUM",
+  "title": "Laravel Horizon dashboard disclosed",
+  "description": "The response is the Laravel Horizon dashboard: the Horizon shell with its queue metrics. Horizon shows the queues, the throughput, the failed jobs and their payloads, and it can retry or delete them.",
+  "remediation": "Restrict Horizon to the local environment or to an authorised gate, and keep the route off the public host.",
+  "limitation": "One response body. The rule reports the dashboard shell; it does not retry a job.",
+  "scopeT": "One response body containing the Horizon dashboard shell and its metrics label.",
+  "fp": "A page that names Horizon in prose is not reported, because the shell markup is required.",
+  "recordDesc": "Horizon renders failed job payloads with their arguments and the queue topology of the deployment. It also carries the controls that retry or delete those jobs, so the page is both a disclosure and a state-changing surface.",
+  "applicability": "Responses from a Laravel application that mounts Horizon without an authorisation gate.",
+  "risk": "The caller reads failed job arguments and can retry or delete jobs, changing application state.",
+  "why": "The body is the Horizon dashboard shell.",
+  "fix": [
+   "Register Horizon only for local use or behind a gate.",
+   "Remove the route from production."
+  ],
+  "verifyT": "Request the Horizon path anonymously and confirm it does not render.",
+  "cells": [
+   {
+    "suffix": "laravel-horizon",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*<title>Horizon)(?=[\\s\\S]*horizon)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/horizon",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Horizon</title></head><body><div id=\"horizon\"><span>Jobs per minute 142</span><a href=\"/horizon/failed\">Failed jobs</a></div></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/horizon/failed",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Horizon · Failed</title></head><body><div class=\"horizon-failed\"><pre>{\"uuid\":\"9b1\",\"payload\":\"orders.sync\"}</pre></div></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/queue",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Queue</title></head><body><p>All workers are healthy.</p></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/docs/queue",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<p>Horizon requires a gate before it is mounted in production.</p>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-artefact-dockerfile",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "Dockerfile served from the web root",
+  "description": "The response is a Dockerfile: build instructions starting with FROM and continuing into RUN steps. It names the base image and its tag, the packages installed, the build arguments and the paths the image writes.",
+  "remediation": "Exclude build files from the deployed tree (.dockerignore at build time and a deny rule on the server), and rebuild the image if a build argument carried a secret.",
+  "limitation": "One response body. The rule reads the build instruction shape; it does not resolve the base image or prove that a build argument in it is still valid.",
+  "scopeT": "One response body containing Dockerfile build instructions.",
+  "fp": "A page that shows a Dockerfile inside a documentation code block is reported when it reproduces two instruction lines at line starts; the rule reads the document shape rather than its origin.",
+  "recordDesc": "A Dockerfile discloses the exact base image, the package set and the build arguments. Build arguments are the usual place a token is passed at build time, and they are recorded in image history as well as in the file.",
+  "applicability": "Responses that serve the build context or a misconfigured static path from a container image.",
+  "risk": "The caller fingerprints the runtime, learns which packages and versions it carries, and reads any build argument that was passed.",
+  "why": "The body is a Dockerfile with build instructions at line starts.",
+  "fix": [
+   "Keep the build context out of the image and deny dotfiles and build files on the server.",
+   "Pass secrets at runtime, never as build arguments."
+  ],
+  "verifyT": "Request /Dockerfile and confirm the response is 403 or 404.",
+  "cells": [
+   {
+    "suffix": "dockerfile-served",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*(?:^|\\n)FROM\\s+[a-z0-9])(?=[\\s\\S]*(?:^|\\n)RUN\\s)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/Dockerfile",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "FROM node:20-alpine\nWORKDIR /app\nCOPY package.json ./\nRUN npm ci --omit=dev\nCOPY . .\nCMD [\"node\",\"server.js\"]"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/build/Dockerfile",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "FROM python:3.12-slim\nARG PIP_INDEX_URL\nRUN pip install -r requirements.txt\nCOPY app /app"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/docs/deploy",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<p>Write a Dockerfile with a pinned base image and a single RUN layer.</p>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/docker-compose.yml",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "services:\n  web:\n    image: shop/web:4.2.1\n    ports:\n      - \"8080:8080\""
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-artefact-svn-entries",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "Subversion .svn/entries file served",
+  "description": "The response is the Subversion administrative entries file: the format version, the entry type and the repository URL it points at. It gives the working-copy layout and the repository host that the deployment was checked out from.",
+  "remediation": "Deploy without .svn directories (svn export rather than checkout) and deny the directory at the server level.",
+  "limitation": "One response body. The rule reads the entries format; it does not list the rest of the directory.",
+  "scopeT": "One response body containing the Subversion entries file with its repository URL.",
+  "fp": "A page that mentions Subversion is not reported, because the entries-file structure is required. A modern working copy (format 31) uses a database file instead and is not covered by this rule.",
+  "recordDesc": "The entries file names the repository and records the working-copy revision, which tells the caller which code revision is deployed. Because the directory is served at all, the rest of the metadata usually is too.",
+  "applicability": "Responses from a deployment that was checked out instead of exported.",
+  "risk": "The caller learns the repository host and the deployed revision, and can request the other administrative files to reconstruct the source.",
+  "why": "The body is the Subversion entries file.",
+  "fix": [
+   "Deploy with svn export.",
+   "Deny .svn at the server level."
+  ],
+  "verifyT": "Request /.svn/entries and confirm the response is 403 or 404.",
+  "cells": [
+   {
+    "suffix": "svn-entries",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*(?:^|\\n)12\\n(?:dir|file)\\n)(?=[\\s\\S]*svn://)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/.svn/entries",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "12\ndir\n3831\nsvn://repo.internal/shop/trunk\n2024-05-11T09:14:02.000000Z\n"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/assets/.svn/entries",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "12\ndir\n1180\nsvn://repo.internal/shop/trunk/assets\n"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/docs/deploy",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "Export the tree with svn export so the metadata stays out of production."
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/.git/config",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "[core]\n\trepositoryformatversion = 0\n[remote \"origin\"]\n\turl = https://git.internal/shop.git\n"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-artefact-hg-hgrc",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "Mercurial .hg/hgrc file served",
+  "description": "The response is a Mercurial repository configuration: a [paths] section that names the default repository, and often a [web] section that sets the push policy. It reveals the repository host and the branch the deployment tracks.",
+  "remediation": "Deploy without the .hg directory and deny it at the server level.",
+  "limitation": "One response body. The rule reads the configuration shape; it does not contact the repository it names.",
+  "scopeT": "One response body containing a Mercurial configuration with a paths section.",
+  "fp": "A page that quotes an hgrc sample is reported when it reproduces the section header and a default path; a git config is covered by its own rule.",
+  "recordDesc": "The hgrc names the internal repository and records whether the web interface permits push. Together with a reachable .hg directory it usually means the filelog is downloadable, which reconstructs the source history.",
+  "applicability": "Responses from a deployment that copied the repository metadata into the web root.",
+  "risk": "The caller learns the repository host and, if the directory is browsable, reconstructs the source and its history.",
+  "why": "The body is a Mercurial configuration with a repository path.",
+  "fix": [
+   "Deploy from an archive, not from the working copy.",
+   "Deny .hg at the server level."
+  ],
+  "verifyT": "Request /.hg/hgrc and confirm the response is 403 or 404.",
+  "cells": [
+   {
+    "suffix": "hg-hgrc",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*(?:^|\\n)\\[paths\\]\\s*(?:\\n|$))(?=[\\s\\S]*(?:^|\\n)default\\s*=)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/.hg/hgrc",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "[paths]\ndefault = ssh://hg.internal/shop\n[web]\nallow_push = *\n"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/.hg/hgrc",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "[paths]\ndefault = https://hg.internal/shop\n[ui]\nusername = deploy\n"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/.git/config",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "[core]\n\trepositoryformatversion = 0\n[remote \"origin\"]\n\turl = https://git.internal/shop.git\n"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/docs/deploy",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "Set the default path in the [paths] section of your hgrc."
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-artefact-phpunit-config",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "LOW",
+  "title": "phpunit.xml test configuration served",
+  "description": "The response is a PHPUnit configuration: the phpunit root element with its testsuite definitions. It names the test directories, the bootstrap file and, in many projects, the environment variables the suite sets before running.",
+  "remediation": "Keep test configuration out of the deployed tree and deny *.xml that is not meant to be served.",
+  "limitation": "One response body. The rule reads the configuration shape; it does not show whether the test suite itself is reachable.",
+  "scopeT": "One response body containing a PHPUnit configuration with a testsuite definition.",
+  "fp": "A page that shows a phpunit.xml sample is reported when it reproduces both the root element and a testsuite; a coverage or PHPStan configuration is not reported.",
+  "recordDesc": "The PHPUnit configuration names the bootstrap and the test paths, and its environment block often carries the credentials the suite uses. It also confirms that the test tree is deployed, which is usually browsable.",
+  "applicability": "Responses from a PHP deployment that ships its test tree.",
+  "risk": "The caller learns the test layout and any environment values the suite sets, then requests the test files themselves.",
+  "why": "The body is a PHPUnit configuration with a testsuite definition.",
+  "fix": [
+   "Exclude test configuration and the test tree from the deployment.",
+   "Deny XML files that are not served intentionally."
+  ],
+  "verifyT": "Request /phpunit.xml and confirm the response is 403 or 404.",
+  "cells": [
+   {
+    "suffix": "phpunit-xml",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*<phpunit\\b)(?=[\\s\\S]*<testsuite\\b)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/phpunit.xml",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/xml"
+       },
+       "body": "<?xml version=\"1.0\"?>\n<phpunit bootstrap=\"vendor/autoload.php\" colors=\"true\">\n  <testsuites>\n    <testsuite name=\"unit\"><directory>tests/Unit</directory></testsuite>\n  </testsuites>\n</phpunit>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/phpunit.xml.dist",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/xml"
+       },
+       "body": "<phpunit>\n  <testsuite name=\"feature\"><directory>tests/Feature</directory></testsuite>\n  <php><env name=\"APP_ENV\" value=\"testing\"/></php>\n</phpunit>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/phpunit.xml",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/xml"
+       },
+       "body": "<?xml version=\"1.0\"?>\n<coverage><report><html outputDirectory=\"build/coverage\"/></report></coverage>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/docs/tests",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<p>Define the test directories in the testsuites element.</p>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-artefact-crossdomain-allow-all",
+  "category": "information-disclosure",
+  "cwe": "CWE-942",
+  "severity": "MEDIUM",
+  "title": "crossdomain.xml permits every origin",
+  "description": "The response is a cross-domain policy file whose allow-access-from rule names the wildcard origin. The file grants any Flash or Silverlight client on any site permission to read this host, and it is served to everyone who asks for it.",
+  "remediation": "Replace the wildcard with the specific origins that need access, or remove the policy file if nothing consumes it.",
+  "limitation": "One response body. The rule reads the policy; it does not test a client against it, and modern browsers no longer load these files.",
+  "scopeT": "One response body containing a cross-domain policy that allows every origin.",
+  "fp": "A restrictive policy that lists explicit domains is not reported, and the response header that names which policy files may load is a separate rule.",
+  "recordDesc": "The wildcard policy lets a malicious page read responses from this host through a legacy plugin bridge. Even where plugins are gone, the file confirms an allow-all posture that reviewers of the same estate should expect elsewhere.",
+  "applicability": "Responses that serve a cross-domain policy file from the web root.",
+  "risk": "A hostile page reads authenticated responses from this host through any client that still honours the policy.",
+  "why": "The policy file allows every origin.",
+  "fix": [
+   "List the origins that need access instead of the wildcard.",
+   "Remove the file when nothing consumes it."
+  ],
+  "verifyT": "Request /crossdomain.xml and confirm the response is absent or restrictive.",
+  "cells": [
+   {
+    "suffix": "crossdomain-allow-all",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*<cross-domain-policy>)(?=[\\s\\S]*allow-access-from[^>]{0,80}domain\\s*=\\s*\"\\*\")"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/crossdomain.xml",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/xml"
+       },
+       "body": "<?xml version=\"1.0\"?>\n<cross-domain-policy>\n  <allow-access-from domain=\"*\" />\n</cross-domain-policy>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/crossdomain.xml",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/xml"
+       },
+       "body": "<cross-domain-policy>\n  <site-control permitted-cross-domain-policies=\"all\"/>\n  <allow-access-from domain=\"*\" secure=\"false\"/>\n</cross-domain-policy>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/crossdomain.xml",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/xml"
+       },
+       "body": "<cross-domain-policy>\n  <allow-access-from domain=\"app.example\" />\n</cross-domain-policy>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/docs/policy",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<p>A cross-domain policy should list explicit domains.</p>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-artefact-clientaccesspolicy-allow-all",
+  "category": "information-disclosure",
+  "cwe": "CWE-942",
+  "severity": "MEDIUM",
+  "title": "clientaccesspolicy.xml permits every origin",
+  "description": "The response is a Silverlight client access policy whose access-policy grants the wildcard domain. The file tells every client that this host may be called cross-origin for any resource and any header.",
+  "remediation": "Restrict the policy to the origins that need access, and remove the file when nothing consumes it.",
+  "limitation": "One response body. The rule reads the policy; it does not exercise a Silverlight client against it.",
+  "scopeT": "One response body containing a client access policy that allows every domain.",
+  "fp": "A policy that lists explicit domains, or one that grants only specific paths, is not reported.",
+  "recordDesc": "Client access policies are the Silverlight counterpart of crossdomain.xml, and a wildcard there is the same grant: any origin can read this host through the plugin bridge. Enterprises that removed the plugins still leave these files behind, and they remain a reliable marker of an allow-all posture.",
+  "applicability": "Responses that serve clientaccesspolicy.xml from the web root.",
+  "risk": "Any origin reads authenticated responses from this host through a client that honours the policy.",
+  "why": "The policy file grants the wildcard domain.",
+  "fix": [
+   "List the origins and the paths that need access.",
+   "Remove the file when nothing consumes it."
+  ],
+  "verifyT": "Request /clientaccesspolicy.xml and confirm the response is absent or restrictive.",
+  "cells": [
+   {
+    "suffix": "clientaccesspolicy-allow-all",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*<access-policy>)(?=[\\s\\S]*<domain[^>]{0,40}uri\\s*=\\s*\"\\*\")"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/clientaccesspolicy.xml",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/xml"
+       },
+       "body": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<access-policy>\n  <cross-domain-access>\n    <policy>\n      <allow-from http-request-headers=\"*\"><domain uri=\"*\"/></allow-from>\n    </policy>\n  </cross-domain-access>\n</access-policy>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/clientaccesspolicy.xml",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/xml"
+       },
+       "body": "<access-policy><cross-domain-access><policy><allow-from><domain uri=\"*\" /></allow-from></policy></cross-domain-access></access-policy>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/clientaccesspolicy.xml",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/xml"
+       },
+       "body": "<access-policy><cross-domain-access><policy><allow-from><domain uri=\"https://app.example\"/></allow-from></policy></cross-domain-access></access-policy>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/docs/policy",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<p>Do not use a wildcard domain in a client access policy.</p>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-artefact-access-log-served",
+  "category": "information-disclosure",
+  "cwe": "CWE-532",
+  "severity": "MEDIUM",
+  "title": "Apache access log served as a response",
+  "description": "The response is an HTTP access log in the combined format: client address, timestamp, request line, status and user agent for each hit. Log files inside the web root are downloadable, and the requests in them record what other users asked for.",
+  "remediation": "Move logs outside the document root and deny the log paths at the server level, then review what the exposed window contained.",
+  "limitation": "One response body. The rule recognises the combined log format; a custom log format is not reported.",
+  "scopeT": "One response body containing combined-format access log lines.",
+  "fp": "A page that shows a single sample log line is reported when it is a complete combined line; a table of metrics derived from logs is not reported.",
+  "recordDesc": "The access log shows which endpoints exist and which ones failed, together with the client addresses and the user agents that reached them. It maps the application for the caller and, where query strings are logged, it records the parameters other users sent.",
+  "applicability": "Responses that serve a log directory from the web root.",
+  "risk": "The caller maps the application, learns which paths exist, and reads query strings that may carry tokens.",
+  "why": "The body is an access log in the combined format.",
+  "fix": [
+   "Write logs outside the document root.",
+   "Deny log extensions and directories at the server level."
+  ],
+  "verifyT": "Request /logs/access.log and confirm the response is 403 or 404.",
+  "cells": [
+   {
+    "suffix": "access-log-served",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?:^|\\n)\\d{1,3}(?:\\.\\d{1,3}){3}\\s+\\S{1,40}\\s+\\S{1,40}\\s+\\[[^\\]\\n]{8,40}\\]\\s+\"(?:GET|POST|HEAD|PUT|DELETE) [^\"\\n]{0,200} HTTP/1\\.[01]\"\\s+[1-5]\\d{2}\\s"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/logs/access.log",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "203.0.113.7 - - [11/May/2024:09:14:02 +0000] \"GET /login HTTP/1.1\" 200 5123 \"-\" \"Mozilla/5.0\"\n203.0.113.9 - - [11/May/2024:09:14:09 +0000] \"POST /api/orders?token=abc HTTP/1.1\" 201 88 \"-\" \"curl/8.4.0\"\n"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/access.log",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "10.1.2.3 - alice [11/May/2024:10:02:44 +0000] \"GET /admin/users HTTP/1.1\" 403 240 \"-\" \"Mozilla/5.0\"\n"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/admin/metrics",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "requests_total 18422\nrequests_failed 91\n"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/docs/logging",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<p>Logs use the combined format and live in /var/log.</p>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-artefact-error-log-served",
+  "category": "information-disclosure",
+  "cwe": "CWE-532",
+  "severity": "MEDIUM",
+  "title": "Apache error log served as a response",
+  "description": "The response is an Apache error log: bracketed timestamp, module and severity level, followed by the message. The messages name file paths, SQL failures and configuration problems the application never intended to publish.",
+  "remediation": "Keep the error log outside the document root and deny log paths at the server level.",
+  "limitation": "One response body. The rule recognises the Apache error-log prefix; a framework log with a different format is not reported.",
+  "scopeT": "One response body containing Apache error-log entries.",
+  "fp": "A page that quotes one log line is reported when the full prefix is present; a monitoring dashboard that summarises errors is not reported.",
+  "recordDesc": "Error log lines carry the failing path, the module that failed and the exception message. They are the most direct description of how the application breaks, and they often include the query or the file that could not be opened.",
+  "applicability": "Responses that serve the log directory from the web root.",
+  "risk": "The caller learns the filesystem layout and the failure modes of the application, which shortens the path to a working exploit.",
+  "why": "The body is an Apache error log.",
+  "fix": [
+   "Move logs outside the document root.",
+   "Deny log paths and rotate them off the served tree."
+  ],
+  "verifyT": "Request /logs/error.log and confirm the response is 403 or 404.",
+  "cells": [
+   {
+    "suffix": "error-log-served",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?:^|\\n)\\[[A-Z][a-z]{2} [A-Z][a-z]{2} +\\d{1,2} \\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})? \\d{4}\\] \\[[a-z0-9_-]{1,20}:(?:error|warn|notice|crit|info)\\]"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/logs/error.log",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "[Sun May 11 09:14:02.123456 2024] [core:error] [pid 812] [client 203.0.113.7] AH00037: Symbolic link not allowed or link target not accessible: /var/www/shop/uploads\n[Sun May 11 09:14:09.000111 2024] [php:warn] [pid 812] PHP Warning:  include(/var/www/shop/config.php): failed to open stream\n"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/error.log",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "[Sun May 11 10:02:44.442311 2024] [core:error] [pid 900] [client 10.1.2.3] script not found or unable to stat: /var/www/shop/admin/db.php\n"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/logs/app.log",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/plain"
+       },
+       "body": "2024-05-11T09:14:02Z ERROR order service unavailable\n"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/docs/logging",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<p>Error logs are written to /var/log/apache2.</p>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-cookie-domain-is-ip",
+  "category": "cookie-flags",
+  "cwe": "CWE-16",
+  "severity": "LOW",
+  "title": "Set-Cookie Domain is an IP address",
+  "description": "A cookie sets Domain to a literal IP address. Browsers match Domain against host names, so a cookie scoped to an address literal is not accepted for the host the user typed, and the session it was meant to carry disappears.",
+  "remediation": "Omit Domain (host-only cookie) or set the host name the application is served from.",
+  "limitation": "One Set-Cookie value. The check reads the attribute; it does not test the cookie in a browser.",
+  "scopeT": "One Set-Cookie value whose Domain attribute is an IPv4 literal.",
+  "fp": "A host-only cookie (no Domain) and a cookie scoped to a host name are not reported.",
+  "recordDesc": "A Domain attribute set to an address literal is a deployment artefact: the value was templated from the request host at a point where the host was an IP. The browser then refuses the cookie for the real host name, and the symptom is a login that works on one address and not on another.",
+  "applicability": "Responses from deployments that template the cookie domain from the request host.",
+  "risk": "The session cookie is silently dropped, so users on the canonical host name lose their session and are pushed toward the address-literal host.",
+  "why": "The Domain attribute is an IP literal rather than a host name.",
+  "fix": [
+   "Omit Domain so the cookie is host-only.",
+   "Template the domain from configuration, not from the request host."
+  ],
+  "verifyT": "Set the cookie from the canonical host and confirm Domain is absent or a host name.",
+  "cells": [
+   {
+    "suffix": "cookie-domain-is-ip",
+    "lang": "http",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Set-Cookie",
+     "valuePattern": "^(?=[^\\n]*;\\s*domain\\s*=\\s*\\d{1,3}(?:\\.\\d{1,3}){3}\\s*(?:;|$))"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/login",
+       "status": 200,
+       "headers": {
+        "Set-Cookie": "sid=abc; Domain=10.2.3.4; Path=/; Secure"
+       },
+       "body": ""
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/login",
+       "status": 200,
+       "headers": {
+        "Set-Cookie": "sid=abc; Domain=203.0.113.10; Path=/; HttpOnly"
+       },
+       "body": ""
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/login",
+       "status": 200,
+       "headers": {
+        "Set-Cookie": "sid=abc; Path=/; Secure; HttpOnly"
+       },
+       "body": ""
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/login",
+       "status": 200,
+       "headers": {
+        "Set-Cookie": "sid=abc; Domain=app.example; Path=/; Secure"
+       },
+       "body": ""
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-cookie-domain-trailing-dot",
+  "category": "cookie-flags",
+  "cwe": "CWE-16",
+  "severity": "LOW",
+  "title": "Set-Cookie Domain ends with a dot",
+  "description": "A cookie sets Domain with a trailing dot. The trailing dot is the fully-qualified form of the name, but browsers compare the attribute textually, so the value no longer matches the request host and the cookie is discarded.",
+  "remediation": "Emit the domain without the trailing dot, or omit Domain entirely.",
+  "limitation": "One Set-Cookie value. The check reads the attribute text; it does not test the cookie against a specific browser.",
+  "scopeT": "One Set-Cookie value whose Domain attribute ends with a dot.",
+  "fp": "A domain without the trailing dot is not reported, and an address literal is covered by the Domain-IP rule instead.",
+  "recordDesc": "The trailing dot comes from a fully-qualified name copied into configuration. Browsers do not normalise it, so the cookie silently stops applying, and the failure looks like a session bug rather than a configuration error.",
+  "applicability": "Responses that template the cookie domain from a fully-qualified host name.",
+  "risk": "The cookie is rejected, so the session it carries never reaches the browser on the canonical host.",
+  "why": "The Domain attribute ends with a dot.",
+  "fix": [
+   "Strip the trailing dot from the configured domain.",
+   "Prefer host-only cookies."
+  ],
+  "verifyT": "Set the cookie and confirm Domain carries no trailing dot.",
+  "cells": [
+   {
+    "suffix": "cookie-domain-trailing-dot",
+    "lang": "http",
+    "check": {
+     "type": "response-header-matches",
+     "header": "Set-Cookie",
+     "valuePattern": "^(?=[^\\n]*;\\s*domain\\s*=\\s*[a-z0-9](?:[a-z0-9.-]{0,60}[a-z0-9])?\\.\\s*(?:;|$))"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/login",
+       "status": 200,
+       "headers": {
+        "Set-Cookie": "sid=abc; Domain=app.example.; Path=/; Secure"
+       },
+       "body": ""
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/login",
+       "status": 200,
+       "headers": {
+        "Set-Cookie": "sid=abc; Domain=example.com.; Path=/; HttpOnly"
+       },
+       "body": ""
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/login",
+       "status": 200,
+       "headers": {
+        "Set-Cookie": "sid=abc; Domain=app.example; Path=/; Secure"
+       },
+       "body": ""
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/login",
+       "status": 200,
+       "headers": {
+        "Set-Cookie": "sid=abc; Path=/v1.; Secure"
+       },
+       "body": ""
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-console-nagios",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "Nagios Core console is reachable without authentication",
+  "description": "The Nagios Core interface is served without authentication. It lists every monitored host and service, their check commands and the last check output, which describes the internal estate in operational detail.",
+  "remediation": "Require authentication in the Nagios CGI configuration and restrict the interface to the monitoring network.",
+  "limitation": "One response body. The rule recognises the Nagios Core shell from its title and legend; it does not read the status data behind it.",
+  "scopeT": "One response body whose title names Nagios and whose legend identifies the Core interface.",
+  "fp": "A documentation page that names Nagios is not reported, because the interface legend is required alongside the title.",
+  "recordDesc": "A monitoring console is a map of the estate: host names, service names, check commands and the current state of each. It also shows which checks are failing, which is where an attacker would start.",
+  "applicability": "Responses that serve a monitoring interface from a host reachable by ordinary users.",
+  "risk": "The caller maps the internal hosts and services and sees which of them are degraded.",
+  "why": "The body is the Nagios Core interface shell.",
+  "fix": [
+   "Require authentication for the CGI interface.",
+   "Bind the console to the monitoring network."
+  ],
+  "verifyT": "Request the console anonymously and confirm it does not render.",
+  "cells": [
+   {
+    "suffix": "nagios-console",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*<title>[^<]{0,40}Nagios)(?=[\\s\\S]*Service Status Details)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://ops.example/nagios/cgi-bin/status.cgi",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Nagios Core 4.4.6</title></head><body><h1>Service Status Details</h1><table><tr><td>db01</td><td>Disk Usage</td></tr></table></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://ops.example/nagios/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Nagios</title></head><body><h2>Tactical Overview</h2><p>Service Status Details for all hosts</p></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/nagios",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Monitoring guide</title></head><body><h1>Nagios checks</h1></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://ops.example/ui",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Grafana</title></head><body><div id=\"app\"></div></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-console-sentry",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "Sentry console is reachable without authentication",
+  "description": "The Sentry application shell is served without authentication. Sentry stores every captured exception with its stack trace, request headers and user context, so the console is a searchable history of the credentials and paths that failed.",
+  "remediation": "Require the Sentry login or SSO for the organisation, and disable public project sharing.",
+  "limitation": "One response body. The rule recognises the Sentry shell; it does not read an event or a project.",
+  "scopeT": "One response body containing the Sentry application shell.",
+  "fp": "A page that mentions Sentry in an integration guide is not reported, because the shell markup is required.",
+  "recordDesc": "An error tracker concentrates the failures of an application: stack traces with file paths, request headers with cookies, and the user identifiers attached to each event. Reading it is reading what the application leaks when it breaks.",
+  "applicability": "Responses that serve a self-hosted error tracker on the application host.",
+  "risk": "The caller reads exception history with its request context, including headers and identifiers that were never meant to leave the server.",
+  "why": "The body is the Sentry application shell.",
+  "fix": [
+   "Require authentication for the organisation.",
+   "Serve the tracker from its own host."
+  ],
+  "verifyT": "Request the tracker anonymously and confirm the shell is not served.",
+  "cells": [
+   {
+    "suffix": "sentry-console",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*__SENTRY__)(?=[\\s\\S]*sentry)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/sentry/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Sentry</title><script>window.__SENTRY__={version:\"24.1.0\"}</script></head><body><div id=\"blk_1\"></div></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/sentry/organizations/shop/issues/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Issues · Sentry</title><script>window.__SENTRY__={}</script></head><body><div class=\"sentry-app\"></div></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/shop",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Shop</title></head><body><p>Shop home</p></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/errors",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Error tracking</title></head><body><p>Events are grouped per issue.</p></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-console-kiali",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "Kiali console is reachable without authentication",
+  "description": "The Kiali service-mesh console is served without authentication. It renders the topology of the mesh: every namespace, workload, route and the traffic between them, measured from the sidecars.",
+  "remediation": "Enable the Kiali login strategy (token, OpenID or header) and expose the console only inside the mesh.",
+  "limitation": "One response body. The rule recognises the Kiali shell; it does not read the mesh graph.",
+  "scopeT": "One response body containing the Kiali console shell.",
+  "fp": "A page that names Kiali in an operations guide is not reported, because the shell markup is required.",
+  "recordDesc": "The mesh topology is an architecture diagram of the platform: service names, namespaces and the request graph. It also carries the traffic rates, which tell the caller which service is busiest and therefore which one to target.",
+  "applicability": "Responses that serve a service-mesh console on a reachable host.",
+  "risk": "The caller reconstructs the internal service graph and its request volumes.",
+  "why": "The body is the Kiali console shell.",
+  "fix": [
+   "Configure a login strategy for Kiali.",
+   "Restrict the console to the mesh network."
+  ],
+  "verifyT": "Request the console anonymously and confirm it asks for a token.",
+  "cells": [
+   {
+    "suffix": "kiali-console",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "<title>[^<]{0,40}Kiali"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://mesh.example/kiali/console",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Kiali</title><script>window.KIALI_CONFIG={version:\"1.84\"}</script></head><body><div id=\"root\"></div></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://mesh.example/kiali/console/graph/namespaces",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Kiali · Graph</title></head><body><div class=\"kiali-graph\"></div></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/shop",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Shop</title></head><body><p>Shop home</p></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/mesh",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Mesh guide</title></head><body><p>Kiali shows the traffic graph.</p></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-console-drone",
+  "category": "information-disclosure",
+  "cwe": "CWE-200",
+  "severity": "MEDIUM",
+  "title": "Drone CI console is reachable without authentication",
+  "description": "The Drone CI interface is served without authentication. It lists repositories, pipeline definitions, the secrets each pipeline references and the logs of past builds.",
+  "remediation": "Require the Drone login for the instance and remove anonymous read access.",
+  "limitation": "One response body. The rule recognises the Drone shell; it does not read a build log.",
+  "scopeT": "One response body containing the Drone console shell.",
+  "fp": "A page that names Drone in an integration guide is not reported, because the shell markup is required.",
+  "recordDesc": "Build logs are the richest description a deployment publishes: they print the commands, the environment variable names, the registry paths and often the values that a step failed to mask.",
+  "applicability": "Responses that serve a CI interface on a reachable host.",
+  "risk": "The caller reads pipeline definitions and build logs that name registries, clusters and secrets.",
+  "why": "The body is the Drone console shell.",
+  "fix": [
+   "Require authentication for the instance.",
+   "Restrict the CI host to the internal network."
+  ],
+  "verifyT": "Request the console anonymously and confirm it redirects to a login.",
+  "cells": [
+   {
+    "suffix": "drone-console",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*drone-ui)(?=[\\s\\S]*Drone)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://ci.example/",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Drone</title><script>window.DRONE={version:\"2.20.0\"}</script></head><body><div id=\"drone-ui\"></div></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://ci.example/user/repos",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Drone · Repositories</title></head><body><div class=\"drone-ui builds\"></div></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/shop",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>Shop</title></head><body><p>Shop home</p></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://docs.example/ci",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><title>CI guide</title></head><body><p>Pipelines are declared in .drone.yml.</p></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-body-meta-refresh-cross-origin",
+  "category": "open-redirect",
+  "cwe": "CWE-601",
+  "severity": "MEDIUM",
+  "title": "Meta refresh sends the browser to another origin",
+  "description": "The document carries a meta refresh whose target is an absolute URL on another origin. Unlike a redirect header, a meta refresh is written by the template, so a parameter that reaches it turns any page into an open redirect that survives header-level filters.",
+  "remediation": "Resolve the target server-side against an allow-list and render a relative path, or use a redirect handler that validates the destination.",
+  "limitation": "One response body. The rule reads the refresh target; it does not follow it or test whether the target is hostile.",
+  "scopeT": "One response body containing a meta refresh that points at another origin.",
+  "fp": "A refresh that targets a relative path or the same host is not reported. The plaintext http:// form is DPK-DAST-275, so this rule reads only a secure cross-origin target; the Location header form has its own rules.",
+  "recordDesc": "A meta refresh is a redirect expressed in markup, so the usual protections on response headers do not see it. When the target is built from a request parameter the page becomes an open redirect, which is the standard first step of a phishing chain that starts on a trusted domain.",
+  "applicability": "Responses that render a refresh timer or a post-action hop.",
+  "risk": "The caller sends a link on the trusted domain that lands on a hostile page, which is usable for credential phishing.",
+  "why": "A meta refresh points at another origin.",
+  "fix": [
+   "Validate the target against an allow-list.",
+   "Render a relative path or fail closed."
+  ],
+  "verifyT": "Request the page with a foreign target parameter and confirm the refresh is not rendered.",
+  "cells": [
+   {
+    "suffix": "meta-refresh-cross-origin",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "<meta[^>]{0,120}http-equiv\\s*=\\s*[\"']?refresh[\"']?[^>]{0,120}content\\s*=\\s*[\"']?\\s*\\d{1,3}\\s*;\\s*url\\s*=\\s*https://(?!(?:www\\.)?app\\.example)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/link",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><meta http-equiv=\"refresh\" content=\"0; url=https://partner.example/landing\"></head><body>Redirecting</body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/notice",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><meta http-equiv='refresh' content='5;URL=https://promo.example/offer'></head><body>Notice</body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/link",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><meta http-equiv=\"refresh\" content=\"0; url=/dashboard\"></head><body>Redirecting</body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/link",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><meta http-equiv=\"refresh\" content=\"0; url=https://app.example/home\"></head><body>Redirecting</body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "dast-body-base-href-cross-origin",
+  "category": "content-injection",
+  "cwe": "CWE-1021",
+  "severity": "MEDIUM",
+  "title": "Base element points at another origin",
+  "description": "The document carries a base element whose href is an absolute URL on another origin. Every relative link, form action and script path in the page then resolves against that origin, so the page hands its own navigation to a host the application does not control.",
+  "remediation": "Emit a base href that is a same-origin absolute path, or omit the element and use absolute paths.",
+  "limitation": "One response body. The rule reads the base target; it does not resolve the links that follow it.",
+  "scopeT": "One response body containing a base element that points at another origin.",
+  "fp": "A same-origin base href is not reported. The plaintext http:// form is DPK-DAST-271, so this rule reads only a secure cross-origin target; a canonical link element with a foreign host is a different signal and is not covered here.",
+  "recordDesc": "The base element silently rewrites the resolution of every relative URL in the document, including form actions and script sources. A cross-origin base therefore turns the page into a delivery vehicle for the other host, and no per-link check in the page would notice.",
+  "applicability": "Responses that render a base element from configuration or from a request value.",
+  "risk": "The caller redirects the page navigation, form submissions and script loads to a host under their control.",
+  "why": "The base element targets another origin.",
+  "fix": [
+   "Emit a same-origin base href or none at all.",
+   "Build links from a configured origin."
+  ],
+  "verifyT": "Inspect the rendered base element and confirm it resolves inside the application origin.",
+  "cells": [
+   {
+    "suffix": "base-href-cross-origin",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "<base\\b[^>]{0,120}href\\s*=\\s*[\"']?https://(?!(?:www\\.)?app\\.example)"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://app.example/shop",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><base href=\"https://cdn.partner.example/shop/\"><title>Shop</title></head><body><a href=\"cart\">Cart</a></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/shop",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><base href='https://assets.example:8443/'></head><body><img src='logo.png'></body></html>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://app.example/shop",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><base href=\"/shop/\"></head><body><a href=\"cart\">Cart</a></body></html>"
+      },
+      "match": false
+     },
+     {
+      "observation": {
+       "url": "https://app.example/shop",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html"
+       },
+       "body": "<html><head><link rel=\"canonical\" href=\"https://www.example.com/shop\"></head><body></body></html>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ }
+]

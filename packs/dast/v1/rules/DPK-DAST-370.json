@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-370",
+  "title": "IIS detailed error page disclosed",
+  "description": "The response is the IIS detailed error page: the Error Code heading followed by a Detailed Error Information table that names the module, the notification and the handler that failed.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-209",
+  "category": "debug-exposure",
+  "remediation": "Set the httpErrors errorMode to Custom in web.config so IIS returns the application error page instead of the detail table.",
+  "limitation": "One response body. The rule recognises the detail table; it does not show whether the same detail is logged.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*Detailed Error Information)(?=[\\s\\S]*Microsoft-IIS)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/app/missing.aspx",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body><h2>HTTP Error 404.0 - Not Found</h2><h3>Detailed Error Information</h3><table><tr><th>Module</th><td>IIS Web Core</td></tr><tr><th>Physical Path</th><td>C:\\inetpub\\wwwroot\\app\\missing.aspx</td></tr></table><p>Microsoft-IIS/10.0</p></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/api/x",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body><h2>HTTP Error 500.19 - Internal Server Error</h2><h3>Detailed Error Information</h3><table><tr><th>Module</th><td>WebDAVModule</td></tr></table><hr>Microsoft-IIS/10.0</body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/app/missing",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body><h1>Not found</h1></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/docs/iis",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<p>Disable the detailed error table on production sites.</p>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1439"
+  ]
+}

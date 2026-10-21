@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-361",
+  "title": "Sentry console is reachable without authentication",
+  "description": "The Sentry application shell is served without authentication. Sentry stores every captured exception with its stack trace, request headers and user context, so the console is a searchable history of the credentials and paths that failed.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Require the Sentry login or SSO for the organisation, and disable public project sharing.",
+  "limitation": "One response body. The rule recognises the Sentry shell; it does not read an event or a project.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*__SENTRY__)(?=[\\s\\S]*sentry)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/sentry/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Sentry</title><script>window.__SENTRY__={version:\"24.1.0\"}</script></head><body><div id=\"blk_1\"></div></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/sentry/organizations/shop/issues/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Issues · Sentry</title><script>window.__SENTRY__={}</script></head><body><div class=\"sentry-app\"></div></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/shop",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Shop</title></head><body><p>Shop home</p></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://docs.example/errors",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Error tracking</title></head><body><p>Events are grouped per issue.</p></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1430"
+  ]
+}

@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-348",
+  "title": "Drone CI console is reachable without authentication",
+  "description": "The Drone CI interface is served without authentication. It lists repositories, pipeline definitions, the secrets each pipeline references and the logs of past builds.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Require the Drone login for the instance and remove anonymous read access.",
+  "limitation": "One response body. The rule recognises the Drone shell; it does not read a build log.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*drone-ui)(?=[\\s\\S]*Drone)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://ci.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Drone</title><script>window.DRONE={version:\"2.20.0\"}</script></head><body><div id=\"drone-ui\"></div></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://ci.example/user/repos",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Drone · Repositories</title></head><body><div class=\"drone-ui builds\"></div></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/shop",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Shop</title></head><body><p>Shop home</p></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://docs.example/ci",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>CI guide</title></head><body><p>Pipelines are declared in .drone.yml.</p></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1417"
+  ]
+}

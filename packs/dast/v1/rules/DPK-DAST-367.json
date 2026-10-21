@@ -1,0 +1,65 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-367",
+  "title": "Set-Cookie Domain ends with a dot",
+  "description": "A cookie sets Domain with a trailing dot. The trailing dot is the fully-qualified form of the name, but browsers compare the attribute textually, so the value no longer matches the request host and the cookie is discarded.",
+  "severity": "LOW",
+  "cwe": "CWE-16",
+  "category": "cookie-flags",
+  "remediation": "Emit the domain without the trailing dot, or omit Domain entirely.",
+  "limitation": "One Set-Cookie value. The check reads the attribute text; it does not test the cookie against a specific browser.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Set-Cookie",
+    "valuePattern": "^(?=[^\\n]*;\\s*domain\\s*=\\s*[a-z0-9](?:[a-z0-9.-]{0,60}[a-z0-9])?\\.\\s*(?:;|$))"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Domain=app.example.; Path=/; Secure"
+        },
+        "body": ""
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Domain=example.com.; Path=/; HttpOnly"
+        },
+        "body": ""
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Domain=app.example; Path=/; Secure"
+        },
+        "body": ""
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Path=/v1.; Secure"
+        },
+        "body": ""
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1436"
+  ]
+}

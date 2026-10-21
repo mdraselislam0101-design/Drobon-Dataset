@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-341",
+  "title": "phpunit.xml test configuration served",
+  "description": "The response is a PHPUnit configuration: the phpunit root element with its testsuite definitions. It names the test directories, the bootstrap file and, in many projects, the environment variables the suite sets before running.",
+  "severity": "LOW",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Keep test configuration out of the deployed tree and deny *.xml that is not meant to be served.",
+  "limitation": "One response body. The rule reads the configuration shape; it does not show whether the test suite itself is reachable.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*<phpunit\\b)(?=[\\s\\S]*<testsuite\\b)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/phpunit.xml",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/xml"
+        },
+        "body": "<?xml version=\"1.0\"?>\n<phpunit bootstrap=\"vendor/autoload.php\" colors=\"true\">\n  <testsuites>\n    <testsuite name=\"unit\"><directory>tests/Unit</directory></testsuite>\n  </testsuites>\n</phpunit>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/phpunit.xml.dist",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/xml"
+        },
+        "body": "<phpunit>\n  <testsuite name=\"feature\"><directory>tests/Feature</directory></testsuite>\n  <php><env name=\"APP_ENV\" value=\"testing\"/></php>\n</phpunit>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/phpunit.xml",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/xml"
+        },
+        "body": "<?xml version=\"1.0\"?>\n<coverage><report><html outputDirectory=\"build/coverage\"/></report></coverage>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/docs/tests",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<p>Define the test directories in the testsuites element.</p>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1410"
+  ]
+}

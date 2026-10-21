@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-358",
+  "title": "phpLDAPadmin console is reachable without authentication",
+  "description": "The phpLDAPadmin interface is served without authentication. Its login form accepts a bind DN, and its tree editor writes to the directory once a bind succeeds.",
+  "severity": "HIGH",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Restrict phpLDAPadmin to the administrative network and require client certificates or an authenticating proxy in front of it.",
+  "limitation": "One response body. The rule recognises the phpLDAPadmin console shell from its document title; it does not attempt a login, so it shows that the interface is served, not which data the caller could read.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "<title>[^<]{0,70}phpLDAPadmin[^<]{0,40}</title>"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://directory.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8"
+        },
+        "body": "<html><head><title>phpLDAPadmin</title><meta charset=\"utf-8\"></head><body><div id=\"app\"></div><script src=\"/static/app.js\"></script></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://directory.example/login",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Sign in · phpLDAPadmin</title></head><body><form method=\"post\" action=\"/login\"><input name=\"user\"><input type=\"password\" name=\"pass\"><button>Sign in</button></form></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://docs.example/guide",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Operations guide</title></head><body><h1>Connecting to phpLDAPadmin</h1><p>Ask the platform team for access.</p></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://ops.example/ui",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Grafana</title></head><body><div id=\"app\"></div></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1427"
+  ]
+}

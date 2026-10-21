@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-349",
+  "title": "Gitea console is reachable without authentication",
+  "description": "The Gitea web interface is served without authentication in a way that exposes the instance rather than the intended sign-in flow. Gitea carries repositories, issues, webhooks and the instance administration screens.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Disable open registration, require the instance login for browsing if the code is private, and keep the administration routes off the public host.",
+  "limitation": "One response body. The rule recognises the Gitea console shell from its document title; it does not attempt a login, so it shows that the interface is served, not which data the caller could read.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "<title>[^<]{0,70}Gitea[^<]{0,40}</title>"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://git.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8"
+        },
+        "body": "<html><head><title>Gitea</title><meta charset=\"utf-8\"></head><body><div id=\"app\"></div><script src=\"/static/app.js\"></script></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://git.example/login",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Sign in · Gitea</title></head><body><form method=\"post\" action=\"/login\"><input name=\"user\"><input type=\"password\" name=\"pass\"><button>Sign in</button></form></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://docs.example/guide",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Operations guide</title></head><body><h1>Connecting to Gitea</h1><p>Ask the platform team for access.</p></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://ops.example/ui",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Grafana</title></head><body><div id=\"app\"></div></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1418"
+  ]
+}

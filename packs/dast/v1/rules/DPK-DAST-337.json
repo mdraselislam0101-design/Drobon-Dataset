@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-337",
+  "title": "crossdomain.xml permits every origin",
+  "description": "The response is a cross-domain policy file whose allow-access-from rule names the wildcard origin. The file grants any Flash or Silverlight client on any site permission to read this host, and it is served to everyone who asks for it.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-942",
+  "category": "information-disclosure",
+  "remediation": "Replace the wildcard with the specific origins that need access, or remove the policy file if nothing consumes it.",
+  "limitation": "One response body. The rule reads the policy; it does not test a client against it, and modern browsers no longer load these files.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*<cross-domain-policy>)(?=[\\s\\S]*allow-access-from[^>]{0,80}domain\\s*=\\s*\"\\*\")"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/crossdomain.xml",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/xml"
+        },
+        "body": "<?xml version=\"1.0\"?>\n<cross-domain-policy>\n  <allow-access-from domain=\"*\" />\n</cross-domain-policy>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/crossdomain.xml",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/xml"
+        },
+        "body": "<cross-domain-policy>\n  <site-control permitted-cross-domain-policies=\"all\"/>\n  <allow-access-from domain=\"*\" secure=\"false\"/>\n</cross-domain-policy>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/crossdomain.xml",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/xml"
+        },
+        "body": "<cross-domain-policy>\n  <allow-access-from domain=\"app.example\" />\n</cross-domain-policy>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/docs/policy",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<p>A cross-domain policy should list explicit domains.</p>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1406"
+  ]
+}

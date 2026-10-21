@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-350",
+  "title": "InfluxDB UI console is reachable without authentication",
+  "description": "The InfluxDB user interface is served without authentication. The UI carries the organisation, bucket and token management screens, and the time-series data itself is one query away.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Require authentication on the HTTP API before the UI is reachable, and keep the port internal.",
+  "limitation": "One response body. The rule recognises the InfluxDB UI console shell from its document title; it does not attempt a login, so it shows that the interface is served, not which data the caller could read.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "<title>[^<]{0,70}InfluxDB[^<]{0,40}</title>"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://metrics.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8"
+        },
+        "body": "<html><head><title>InfluxDB</title><meta charset=\"utf-8\"></head><body><div id=\"app\"></div><script src=\"/static/app.js\"></script></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://metrics.example/login",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Sign in · InfluxDB</title></head><body><form method=\"post\" action=\"/login\"><input name=\"user\"><input type=\"password\" name=\"pass\"><button>Sign in</button></form></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://docs.example/guide",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Operations guide</title></head><body><h1>Connecting to InfluxDB</h1><p>Ask the platform team for access.</p></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://ops.example/ui",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Grafana</title></head><body><div id=\"app\"></div></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1419"
+  ]
+}

@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1407",
+  "title": "Signal: Dockerfile served from the web root",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-body-matches",
+      "valuePattern": "(?=[\\s\\S]*(?:^|\\n)FROM\\s+[a-z0-9])(?=[\\s\\S]*(?:^|\\n)RUN\\s)"
+    }
+  },
+  "scope": "One response body containing Dockerfile build instructions.",
+  "limitations": "One response body. The rule reads the build instruction shape; it does not resolve the base image or prove that a build argument in it is still valid.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/Dockerfile",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "FROM node:20-alpine\nWORKDIR /app\nCOPY package.json ./\nRUN npm ci --omit=dev\nCOPY . .\nCMD [\"node\",\"server.js\"]"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/build/Dockerfile",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "FROM python:3.12-slim\nARG PIP_INDEX_URL\nRUN pip install -r requirements.txt\nCOPY app /app"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/docs/deploy",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<p>Write a Dockerfile with a pinned base image and a single RUN layer.</p>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/docker-compose.yml",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/plain"
+        },
+        "body": "services:\n  web:\n    image: shop/web:4.2.1\n    ports:\n      - \"8080:8080\""
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A page that shows a Dockerfile inside a documentation code block is reported when it reproduces two instruction lines at line starts; the rule reads the document shape rather than its origin.",
+  "linkedRules": [
+    "DPK-DAST-338"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:dast-artefact-dockerfile:dockerfile-served",
+  "validationStatus": "VALIDATED"
+}

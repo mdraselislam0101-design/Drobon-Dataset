@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-372",
+  "title": "Laravel Horizon dashboard disclosed",
+  "description": "The response is the Laravel Horizon dashboard: the Horizon shell with its queue metrics. Horizon shows the queues, the throughput, the failed jobs and their payloads, and it can retry or delete them.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-215",
+  "category": "debug-exposure",
+  "remediation": "Restrict Horizon to the local environment or to an authorised gate, and keep the route off the public host.",
+  "limitation": "One response body. The rule reports the dashboard shell; it does not retry a job.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*<title>Horizon)(?=[\\s\\S]*horizon)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/horizon",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Horizon</title></head><body><div id=\"horizon\"><span>Jobs per minute 142</span><a href=\"/horizon/failed\">Failed jobs</a></div></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/horizon/failed",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Horizon · Failed</title></head><body><div class=\"horizon-failed\"><pre>{\"uuid\":\"9b1\",\"payload\":\"orders.sync\"}</pre></div></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/queue",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Queue</title></head><body><p>All workers are healthy.</p></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/docs/queue",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<p>Horizon requires a gate before it is mounted in production.</p>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1441"
+  ]
+}

@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-364",
+  "title": "Verdaccio console is reachable without authentication",
+  "description": "The Verdaccio registry interface is served without authentication. Verdaccio holds private packages and, in its default configuration, allows anonymous publishing.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Require authentication for publish and for private package reads, and keep the registry on the internal network.",
+  "limitation": "One response body. The rule recognises the Verdaccio console shell from its document title; it does not attempt a login, so it shows that the interface is served, not which data the caller could read.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "<title>[^<]{0,70}Verdaccio[^<]{0,40}</title>"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://npm.example/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8"
+        },
+        "body": "<html><head><title>Verdaccio</title><meta charset=\"utf-8\"></head><body><div id=\"app\"></div><script src=\"/static/app.js\"></script></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://npm.example/login",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Sign in · Verdaccio</title></head><body><form method=\"post\" action=\"/login\"><input name=\"user\"><input type=\"password\" name=\"pass\"><button>Sign in</button></form></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://docs.example/guide",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Operations guide</title></head><body><h1>Connecting to Verdaccio</h1><p>Ask the platform team for access.</p></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://ops.example/ui",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Grafana</title></head><body><div id=\"app\"></div></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1433"
+  ]
+}

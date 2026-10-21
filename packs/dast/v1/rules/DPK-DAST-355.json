@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-355",
+  "title": "Nagios Core console is reachable without authentication",
+  "description": "The Nagios Core interface is served without authentication. It lists every monitored host and service, their check commands and the last check output, which describes the internal estate in operational detail.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Require authentication in the Nagios CGI configuration and restrict the interface to the monitoring network.",
+  "limitation": "One response body. The rule recognises the Nagios Core shell from its title and legend; it does not read the status data behind it.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*<title>[^<]{0,40}Nagios)(?=[\\s\\S]*Service Status Details)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://ops.example/nagios/cgi-bin/status.cgi",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Nagios Core 4.4.6</title></head><body><h1>Service Status Details</h1><table><tr><td>db01</td><td>Disk Usage</td></tr></table></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://ops.example/nagios/",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Nagios</title></head><body><h2>Tactical Overview</h2><p>Service Status Details for all hosts</p></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://docs.example/nagios",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Monitoring guide</title></head><body><h1>Nagios checks</h1></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://ops.example/ui",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Grafana</title></head><body><div id=\"app\"></div></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1424"
+  ]
+}

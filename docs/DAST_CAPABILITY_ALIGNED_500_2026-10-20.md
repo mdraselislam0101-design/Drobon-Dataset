@@ -394,3 +394,33 @@ product cannot see. What would close the distance: (1) more body evidence that d
 restate an existing rule, and (2) an owner decision to widen the 11-header allowlist in
 `apps/api/src/scans/dast/{rules,engine}.ts`, which is worth 47 further headers and the 73
 rules behind them.
+
+---
+
+## Appendix 5 — 2026-10-21 (app-surface batch 4, DAST 325 → 367)
+
+| Item | Appendix 4 | Now |
+|---|---|---|
+| DAST rules | 325 | **367** |
+| Patterns / records / remediation | 1 372 each | **1 414 each** |
+| Declared DAST tests | 1 554 | **1 722** (+168) |
+| DAST evaluation cases | 579 | **623** (+44) |
+| `run-eval` true positives | 1 398 | **1 440** |
+| Distance to the 500 target | 175 | **133** |
+| Rules evaluable inside the App | 252 of 325 (77.5 %) | **294 of 367 (80.1 %)** |
+
+The largest single tranche since the capability-aligned pump, built from the same reading of
+the App: 21 administrative-console fingerprints, 9 framework debug surfaces, 8 served
+artefacts, 2 markup rules that complement the plaintext `base`/`meta refresh` rules, and 2
+cookie `Domain` contracts. Every rule reads the body or `Set-Cookie`, so the unreachable set
+did not move: 73 rules across 47 filtered headers remain frozen.
+
+Honest characterisation: the console family is breadth inside one existing class, not a new
+class. The batch raises the number of distinct interfaces the pack recognises; it does not
+raise the semantic ceiling, which is fixed by the seven closed check types.
+
+The remaining 133 rules and their family-by-family candidates are recorded in
+`docs/DAST_500_GAP_PLAN_2026-10-21.md`. That plan states the one thing this appendix has
+said at every step: the *reachable* count cannot approach the *declared* count until the
+owner widens `ALLOWED_RESPONSE_HEADERS` in `apps/api/src/scans/dast/rules.ts`, because 73
+rules already need headers the App filters out before evaluation.
