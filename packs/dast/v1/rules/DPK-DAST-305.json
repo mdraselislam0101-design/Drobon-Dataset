@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-305",
+  "title": "Node.js inspector debugging endpoint disclosed",
+  "description": "The response is the Node.js inspector target list: a JSON or HTML page carrying a webSocketDebuggerUrl. Anyone who can reach that URL attaches a debugger to the live process, reads memory and executes code in it, so this is not an information leak but remote code execution waiting to be used.",
+  "severity": "HIGH",
+  "cwe": "CWE-489",
+  "category": "debug-exposure",
+  "remediation": "Never bind the inspector to a public interface: start node with --inspect=127.0.0.1 (or omit it in production) and block the inspector port at the network boundary.",
+  "limitation": "One response body. The check proves the endpoint answered; it does not attach to the debugger or prove that the socket is still open.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "webSocketDebuggerUrl"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/json/list",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": "[{\"description\":\"node.js instance\",\"title\":\"app\",\"webSocketDebuggerUrl\":\"ws://127.0.0.1:9229/abc-123\"}]"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/json",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body><pre>{\"webSocketDebuggerUrl\":\"ws://0.0.0.0:9229/uuid\"}</pre></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/json/list",
+        "status": 404,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body>Cannot GET /json/list</body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/docs/debugging",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<p>Start the service with --inspect and attach your editor.</p>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1374"
+  ]
+}

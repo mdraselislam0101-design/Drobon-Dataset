@@ -1,0 +1,82 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1378",
+  "title": "Signal: Set-Cookie attribute name is misspelt so the browser ignores it",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-header-matches",
+      "header": "Set-Cookie",
+      "valuePattern": ";\\s*(?:http[-_]only|same[-_]site\\s*=|seccure\\s*(?:;|$))"
+    }
+  },
+  "scope": "One Set-Cookie value containing a misspelt Secure, HttpOnly or SameSite attribute name.",
+  "limitations": "One Set-Cookie value. The check reads the attribute name; it does not decide which protection the author intended.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Http-Only; Secure; SameSite=Lax"
+        },
+        "body": "<html><body>ok</body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Secure; HttpOnly; Same-Site=Strict"
+        },
+        "body": "<html><body>ok</body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; http_only; Secure"
+        },
+        "body": "<html><body>ok</body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Secure; HttpOnly; SameSite=Strict"
+        },
+        "body": "<html><body>ok</body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "pref=http_only_notice; Secure; HttpOnly"
+        },
+        "body": "<html><body>ok</body></html>"
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A correctly spelled Secure/HttpOnly/SameSite attribute is not reported; a cookie value that happens to contain these words after the first semicolon is unlikely but would be reported, which is why the pattern requires the attribute position.",
+  "linkedRules": [
+    "DPK-DAST-309"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:dast-cookie-attribute-misspelled:cookie-attribute-typo",
+  "validationStatus": "VALIDATED"
+}

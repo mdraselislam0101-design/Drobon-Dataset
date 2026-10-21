@@ -1,0 +1,76 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-312",
+  "title": "Server header names an internal host",
+  "description": "The Server header carries a private-suffix hostname such as app.internal, build.local or svc.corp rather than a product token. That names the internal naming scheme and often the environment, which is exactly what an attacker needs to guess the next host to reach.",
+  "severity": "LOW",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Suppress or normalise the Server header at the edge so it carries a product token or nothing, never an internal hostname.",
+  "limitation": "One Server header value. The check reads the name; it does not resolve it and cannot confirm the host exists.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Server",
+    "valuePattern": "\\b[\\w-]+\\.(?:internal|local|lan|corp|home\\.arpa|localdomain)\\b|localhost"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Server": "orders-api.prod.internal"
+        },
+        "body": "<html><body>ok</body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Server": "web01.corp:8080"
+        },
+        "body": "<html><body>ok</body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Server": "localhost"
+        },
+        "body": "<html><body>ok</body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Server": "nginx"
+        },
+        "body": "<html><body>ok</body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/",
+        "status": 200,
+        "headers": {
+          "Server": "cloudflare"
+        },
+        "body": "<html><body>ok</body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1381"
+  ]
+}

@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-303",
+  "title": "ASP.NET trace application disclosed in a response",
+  "description": "The response is the ASP.NET trace viewer: it names trace.axd and the Application Trace table. The viewer lists every recent request with its headers, session identifiers and form values, so an exposed instance discloses other users' data as well as the application internals.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-215",
+  "category": "debug-exposure",
+  "remediation": "Disable tracing in production (<trace enabled=\"false\" />) and block trace.axd at the web server. Treat every recorded request as disclosed.",
+  "limitation": "One response body. The check recognises the trace viewer; it does not enumerate the recorded requests.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*trace\\.axd)(?=[\\s\\S]*Application Trace)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/trace.axd",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Application Trace</title></head><body><a href=\"trace.axd\">trace.axd</a><table><tr><td>Request Details</td></tr></table></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/trace.axd?clear=1",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "Application Trace &mdash; Physical Directory: /app <!-- http://host/trace.axd -->"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/trace.axd",
+        "status": 404,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body><h1>404 - File or directory not found.</h1></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/docs",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<p>Disable trace.axd before going live.</p>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1372"
+  ]
+}

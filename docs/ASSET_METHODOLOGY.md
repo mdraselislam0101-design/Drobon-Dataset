@@ -1,6 +1,6 @@
-# ASSET_METHODOLOGY.md — how the generated intelligence set is authored (1339 pack rules, 1339 patterns, 1339 generated records)
+# ASSET_METHODOLOGY.md — how the generated intelligence set is authored (1353 pack rules, 1353 patterns, 1353 generated records)
 
-Date: 2026-10-15; counts refreshed 2026-10-20 from `docs/CURRENT_INVENTORY.json` (1,339 packs / 1,339 patterns / 1,339 records / 1,339 remediation / 68 CWE). The earlier 954/954/914 header was the 2026-10-18 state and is kept here only as history.
+Date: 2026-10-15; counts refreshed 2026-10-20 from `docs/CURRENT_INVENTORY.json` (1,353 packs / 1,353 patterns / 1,353 records / 1,353 remediation / 68 CWE). The earlier 954/954/914 header was the 2026-10-18 state and is kept here only as history.
 This document states the authoring method so an auditor
 can tell systematic original work from padding. The generator
 (`scripts/generate-assets.mjs`) is a deterministic compiler: every byte it

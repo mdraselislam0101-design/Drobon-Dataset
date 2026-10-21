@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-302",
+  "title": "Classic ASP.NET error page disclosed in a response",
+  "description": "The response carries the fixed heading of the classic ASP.NET unhandled-exception page. That page prints the exception message, the source line and a stack frame naming the assembly, and it is emitted by default outside a custom-errors configuration.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-209",
+  "category": "debug-exposure",
+  "remediation": "Set <customErrors mode=\"On\" /> (or On with a defaultRedirect) in Web.config and return a generic page with a correlation id.",
+  "limitation": "One response body. The check reads the page heading; it does not decide whether the stack below it names internal paths.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "Server Error in '/' Application"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/orders",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<h1>Server Error in '/' Application.</h1><h2>Runtime Error</h2>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/orders",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<title>Server Error in '/' Application.</title><p>Description: An unhandled exception occurred.</p>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/orders",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body><h1>Something went wrong</h1><p>Reference 1a2b3c</p></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/orders",
+        "status": 500,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "An unhandled exception occurred while processing the request. Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddleware"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1371"
+  ]
+}

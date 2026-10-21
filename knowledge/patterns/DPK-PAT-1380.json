@@ -1,0 +1,71 @@
+{
+  "schemaVersion": "drobon.knowledge.pattern/v1",
+  "id": "DPK-PAT-1380",
+  "title": "Signal: Set-Cookie Partitioned is sent without Secure",
+  "targets": [
+    "http"
+  ],
+  "signal": {
+    "kind": "check",
+    "check": {
+      "type": "response-header-matches",
+      "header": "Set-Cookie",
+      "valuePattern": "^(?=[\\s\\S]*;\\s*partitioned\\s*(?:;|$))(?!([\\s\\S]*;\\s*secure\\s*(?:;|$)))"
+    }
+  },
+  "scope": "One Set-Cookie value carrying Partitioned without Secure.",
+  "limitations": "One Set-Cookie value. The check reads the attributes; it does not test which user agents implement partitioned storage.",
+  "examples": [
+    {
+      "observation": {
+        "url": "https://shop.example/embed",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "__Host-ps=abc; Path=/; HttpOnly; Partitioned"
+        },
+        "body": "<html><body>ok</body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://shop.example/embed",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "ps=abc; Path=/; SameSite=None; Partitioned"
+        },
+        "body": "<html><body>ok</body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://shop.example/embed",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "__Host-ps=abc; Path=/; Secure; HttpOnly; SameSite=None; Partitioned"
+        },
+        "body": "<html><body>ok</body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://shop.example/embed",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Path=/; Secure; HttpOnly; SameSite=Lax"
+        },
+        "body": "<html><body>ok</body></html>"
+      },
+      "match": false
+    }
+  ],
+  "fpNotes": "A cookie with both Partitioned and Secure is not reported; a cookie using SameSite=None without Partitioned is covered by DPK-DAST-265 instead.",
+  "linkedRules": [
+    "DPK-DAST-311"
+  ],
+  "origin": "original-authored",
+  "cell": "dast:dast-cookie-partitioned-without-secure:partitioned-without-secure",
+  "validationStatus": "VALIDATED"
+}

@@ -1,0 +1,65 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-313",
+  "title": "Meta tag delivers a CSP frame-ancestors directive a browser ignores",
+  "description": "The page carries a Content-Security-Policy meta tag that declares frame-ancestors. Browsers ignore frame-ancestors when it arrives in a meta element, so the framing restriction the author wrote never applies and the page stays embeddable by any origin.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-693",
+  "category": "csp-weakness",
+  "remediation": "Send Content-Security-Policy as a response header; frame-ancestors and report-uri are only honoured there. Keep X-Frame-Options as a second layer.",
+  "limitation": "One response body. The check reads the meta tag; it cannot see a header that the App header allowlist may have dropped, and it does not test framing behaviour.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "<meta[^>]{0,400}http-equiv\\s*=\\s*[\"']?content-security-policy[^>]{0,400}content\\s*=\\s*(?:\"[^\"]{0,300}frame-ancestors|'[^']{0,300}frame-ancestors)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/dashboard",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><meta http-equiv=\"Content-Security-Policy\" content=\"frame-ancestors 'none'\"></head><body>ok</body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/dashboard",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<meta http-equiv='content-security-policy' content='default-src self; frame-ancestors https://partner.example'>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/dashboard",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html",
+          "Content-Security-Policy": "frame-ancestors 'none'"
+        },
+        "body": "<html><body>ok</body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/dashboard",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'self'; img-src 'self' data:\">"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1382"
+  ]
+}

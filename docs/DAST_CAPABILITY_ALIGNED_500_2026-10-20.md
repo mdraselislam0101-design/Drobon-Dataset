@@ -332,3 +332,29 @@ That gate changes the shape of the remaining work honestly: adding another
 coverage. Until the App forwards those headers, the reachable ceiling is 219 plus
 whatever new body/`Set-Cookie`/`Location` evidence can be defended. Full method and
 rule table: `docs/DAST_APP_ALIGNED_BATCH_2026-10-21.md`.
+
+---
+
+## Appendix 3 — 2026-10-21 (app-surface batch 2, DAST 292 → 306)
+
+| Item | Appendix 2 | Now |
+|---|---|---|
+| DAST rules | 292 | **306** |
+| Patterns / records / remediation | 1 339 each | **1 353 each** |
+| Declared DAST tests | 1 419 | **1 478** (+59) |
+| DAST evaluation cases | 542 | **558** (+16) |
+| `run-eval` true positives | 1 365 | **1 379** |
+| Distance to the 500 target | 208 | **194** |
+| Rules evaluable inside the App | 219 of 292 (75 %) | **233 of 306 (76.1 %)** |
+
+Four areas that had no rule at all are now covered: debug output left in a response
+(Xdebug, Symfony VarDumper, ASP.NET trace viewer, Node.js inspector), cookie attribute
+contracts (misspelt names, public-suffix `Domain`, `Partitioned` without `Secure`),
+policies delivered through a `meta` element (where `frame-ancestors` is ignored), and host
+/ frame disclosure. Every rule was checked against every existing rule's positive
+observations before it was written; none of the 14 is a restatement, and the overlap gate
+did not move. Full method: `docs/DAST_APP_SURFACE_BATCH_2_2026-10-21.md`.
+
+The ceiling has not moved: 73 rules remain unreachable until the App forwards their
+headers, so the next honest tranche is body evidence plus the 11 forwarded names — not
+another header family that the product cannot see.

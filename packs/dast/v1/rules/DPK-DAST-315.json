@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-315",
+  "title": "Meta referrer tag sends full URLs to every destination",
+  "description": "A meta referrer element sets unsafe-url, which sends the complete URL of the page to every destination, including cross-origin and plaintext ones. Query strings that carry tokens, identifiers and invitation keys then travel in the Referer header of every outbound request.",
+  "severity": "LOW",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Remove the meta tag and set Referrer-Policy: strict-origin-when-cross-origin as a response header, which is the browser default and cannot be overridden by page content.",
+  "limitation": "One response body. The check reads the meta element; it does not observe the Referer header the browser later sends.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "<meta[^>]{0,300}name\\s*=\\s*[\"']?referrer[^>]{0,300}content\\s*=\\s*[\"']\\s*unsafe-url"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/invite?token=abc",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><meta name=\"referrer\" content=\"unsafe-url\"></head><body>ok</body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/invite?token=abc",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<meta name='referrer' content='unsafe-url'/>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/invite?token=abc",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<meta name=\"referrer\" content=\"strict-origin-when-cross-origin\">"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/invite?token=abc",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><head><title>Invite</title></head><body>ok</body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1384"
+  ]
+}

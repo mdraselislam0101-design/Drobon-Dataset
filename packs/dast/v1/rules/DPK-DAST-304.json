@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-304",
+  "title": "iframe sandbox combines allow-scripts with allow-same-origin",
+  "description": "An iframe carries sandbox=\"allow-scripts allow-same-origin\". That pair is documented as equivalent to no sandbox: the framed document runs script in the parent origin, can read the parent DOM and can remove its own sandbox attribute.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-693",
+  "category": "content-injection",
+  "remediation": "Drop one of the two tokens. Serve untrusted content with allow-scripts only (and a separate origin), or with allow-same-origin only when no script is needed.",
+  "limitation": "One response body. The check reads the sandbox attribute; it does not execute the frame and cannot see attributes added at runtime.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "<iframe[^>]{0,400}sandbox\\s*=\\s*[\"'][^\"']{0,200}allow-scripts[^\"']{0,200}allow-same-origin|<iframe[^>]{0,400}sandbox\\s*=\\s*[\"'][^\"']{0,200}allow-same-origin[^\"']{0,200}allow-scripts"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/embed",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body><iframe src=\"https://widget.example/w\" sandbox=\"allow-scripts allow-same-origin\"></iframe></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/embed",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<iframe width='600' height='400' src='/preview' sandbox='allow-same-origin allow-scripts allow-forms'></iframe>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/embed",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<iframe src=\"https://widget.example/w\" sandbox=\"allow-scripts\"></iframe>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/embed",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<iframe src=\"/preview\" title=\"preview\"></iframe>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1373"
+  ]
+}

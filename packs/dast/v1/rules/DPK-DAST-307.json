@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-307",
+  "title": "Symfony VarDumper output disclosed in a response",
+  "description": "The response contains a Symfony VarDumper block. VarDumper prints the full value graph of whatever it is given, including object properties, request attributes and environment values, and it is normally removed before production.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-215",
+  "category": "debug-exposure",
+  "remediation": "Remove every dump/dd() call from a production build and disable the debug bundle outside development.",
+  "limitation": "One response body. The check recognises the dump markup; it does not enumerate which values were printed.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "class=\"sf-dump"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/cart",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body><pre class=\"sf-dump sf-dump-1234\"><span class=\"sf-dump-note\">Cart</span></pre></body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/cart/9",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<td><div class=\"sf-dump sf-dump-77\">array:1 [ 0 =&gt; \"x\" ]</div></td>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/cart",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body><h1>Your cart</h1><p>2 items</p></body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/cart",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html"
+        },
+        "body": "<html><body><div id=\"sf-toolbar\" class=\"sf-toolbar\">Symfony Profiler</div></body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1376"
+  ]
+}

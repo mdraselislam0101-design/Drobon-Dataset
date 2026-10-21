@@ -1,0 +1,76 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-310",
+  "title": "Set-Cookie Domain is a public suffix",
+  "description": "The Domain attribute names a public suffix such as com, co.uk or github.io. A browser rejects the cookie outright, and a client that accepts it would share the cookie with every site under that suffix, so the configuration either drops the session or leaks it.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-16",
+  "category": "cookie-flags",
+  "remediation": "Set Domain to the application host or to a registrable domain the organisation controls, or omit Domain so the cookie stays host-only.",
+  "limitation": "One Set-Cookie value. The check uses a fixed list of well-known public suffixes; a suffix outside that list is not detected.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Set-Cookie",
+    "valuePattern": ";\\s*domain\\s*=\\s*\\.?(?:com|net|org|co\\.uk|co\\.jp|co\\.in|com\\.au|com\\.br|github\\.io|herokuapp\\.com|s3\\.amazonaws\\.com|azurewebsites\\.net|cloudfront\\.net)\\s*(?:;|$)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://shop.example/login",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Domain=com; Path=/; Secure; HttpOnly"
+        },
+        "body": "<html><body>ok</body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://shop.example/login",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Domain=.github.io; Path=/; Secure"
+        },
+        "body": "<html><body>ok</body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://shop.example/login",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Domain=co.uk; Path=/"
+        },
+        "body": "<html><body>ok</body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://shop.example/login",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Domain=example.com; Path=/; Secure; HttpOnly"
+        },
+        "body": "<html><body>ok</body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://shop.example/login",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "__Host-sid=abc; Path=/; Secure; HttpOnly"
+        },
+        "body": "<html><body>ok</body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1379"
+  ]
+}

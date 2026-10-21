@@ -1,0 +1,76 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-309",
+  "title": "Set-Cookie attribute name is misspelt so the browser ignores it",
+  "description": "A Set-Cookie value spells a security attribute with a separator or a typo: Http-Only, http_only, Same-Site= or Seccure. Browsers match attribute names exactly, so the intended protection is silently absent while the header looks protected to a reviewer.",
+  "severity": "LOW",
+  "cwe": "CWE-16",
+  "category": "cookie-flags",
+  "remediation": "Emit the attribute names exactly as the specification defines them (Secure, HttpOnly, SameSite) and add a test that asserts the emitted header string.",
+  "limitation": "One Set-Cookie value. The check reads the attribute name; it does not decide which protection the author intended.",
+  "check": {
+    "type": "response-header-matches",
+    "header": "Set-Cookie",
+    "valuePattern": ";\\s*(?:http[-_]only|same[-_]site\\s*=|seccure\\s*(?:;|$))"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Http-Only; Secure; SameSite=Lax"
+        },
+        "body": "<html><body>ok</body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Secure; HttpOnly; Same-Site=Strict"
+        },
+        "body": "<html><body>ok</body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; http_only; Secure"
+        },
+        "body": "<html><body>ok</body></html>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "sid=abc; Secure; HttpOnly; SameSite=Strict"
+        },
+        "body": "<html><body>ok</body></html>"
+      },
+      "match": false
+    },
+    {
+      "observation": {
+        "url": "https://app.example/login",
+        "status": 200,
+        "headers": {
+          "Set-Cookie": "pref=http_only_notice; Secure; HttpOnly"
+        },
+        "body": "<html><body>ok</body></html>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1378"
+  ]
+}
