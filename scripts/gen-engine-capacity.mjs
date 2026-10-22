@@ -175,6 +175,25 @@ function build() {
   md.push('| 3 | SAST | new evidence-backed classes per batch | At target; further growth needs published evidence per class |');
   md.push('| 4 | SCA | **owner decision first** | Unblock the licence + production-data lock, or the engine has no dataset to load |');
   md.push('');
+  // Per-user-type lenses live in their own generator, but they belong on this page:
+  // the owner asked for "1,000 per engine" and counts the four audiences as engines.
+  const lensPath = join(ROOT, 'docs', 'USER_TYPE_LENSES.json');
+  if (existsSync(lensPath)) {
+    const lensDoc = JSON.parse(readFileSync(lensPath, 'utf8'));
+    md.push('## Per-user-type lenses (not engines)');
+    md.push('');
+    md.push('The four user types are audiences, not App engines: `engines.ts` closes `ScanType` to sast/sca/');
+    md.push('secrets/dast, so no per-audience pack can be loaded. Each audience therefore gets a *lens* — the');
+    md.push('1,000 most relevant rules from the shared packs, scored and recorded per rule. A lens adds no rule;');
+    md.push('counting it as new content would be padding. Source: `docs/USER_TYPE_LENSES.md`.');
+    md.push('');
+    md.push('| UserType | Selected | App-reachable | SAST | SCA | Secrets | DAST |');
+    md.push('|---|---|---|---|---|---|---|');
+    for (const l of lensDoc.lenses) {
+      md.push(`| ${l.userType} | **${l.selected}** / ${lensDoc.target} | ${l.reachable} | ${l.byKind.sast ?? 0} | ${l.byKind.sca ?? 0} | ${l.byKind.secrets ?? 0} | ${l.byKind.dast ?? 0} |`);
+    }
+    md.push('');
+  }
   md.push('---');
   md.push('');
   md.push('Verify: `node scripts/gen-engine-capacity.mjs --check`. Regenerate: `--write`.');

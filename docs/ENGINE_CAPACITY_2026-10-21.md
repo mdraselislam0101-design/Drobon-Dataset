@@ -43,6 +43,20 @@ This page states where each engine actually stands, what is left, and what stops
 | 3 | SAST | new evidence-backed classes per batch | At target; further growth needs published evidence per class |
 | 4 | SCA | **owner decision first** | Unblock the licence + production-data lock, or the engine has no dataset to load |
 
+## Per-user-type lenses (not engines)
+
+The four user types are audiences, not App engines: `engines.ts` closes `ScanType` to sast/sca/
+secrets/dast, so no per-audience pack can be loaded. Each audience therefore gets a *lens* — the
+1,000 most relevant rules from the shared packs, scored and recorded per rule. A lens adds no rule;
+counting it as new content would be padding. Source: `docs/USER_TYPE_LENSES.md`.
+
+| UserType | Selected | App-reachable | SAST | SCA | Secrets | DAST |
+|---|---|---|---|---|---|---|
+| DEVELOPER | **1000** / 1000 | 788 | 972 | 0 | 28 | 0 |
+| STUDENT | **1000** / 1000 | 891 | 812 | 0 | 59 | 129 |
+| SECURITY_PROFESSIONAL | **1000** / 1000 | 957 | 431 | 0 | 97 | 472 |
+| PENTESTER | **1000** / 1000 | 962 | 421 | 0 | 97 | 482 |
+
 ---
 
 Verify: `node scripts/gen-engine-capacity.mjs --check`. Regenerate: `--write`.
