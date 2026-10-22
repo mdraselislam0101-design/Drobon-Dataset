@@ -210,9 +210,9 @@ Catalog snapshot (Main App `apps/api/src/scans/sast/languages.ts`, commit `c32c7
 ```
 
 - Catalog: 53 ids. Dataset language ids: 108 (Pump 4, after `hcl` alias applied). Intersect: 41. Dataset ids not in catalog: 67.
-- SAST rules (950), counted per rule against analyzed catalog ids: fully reachable (every tag analyzed) 671; partially reachable 29; no analyzed tag 239; no `languages` field 11 (any-file convention: DPK-SAST-004 plus the 10 converted rules, Phase 4).
+- SAST rules (1000), counted per rule against analyzed catalog ids: fully reachable (every tag analyzed) 720; partially reachable 29; no analyzed tag 240; no `languages` field 11 (any-file convention: DPK-SAST-004 plus the 10 converted rules, Phase 4).
 
-reachability-counts: fully=671 partial=29 unreachable=239 noLanguages=11 ids=115 intersect=47
+reachability-counts: fully=720 partial=29 unreachable=240 noLanguages=11 ids=115 intersect=47
 
 
 ### Reachability reconciliation (2026-10-16, finalization pump)

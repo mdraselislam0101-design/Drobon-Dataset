@@ -11,7 +11,7 @@ Everything below is counted from the rule files, not from a previous report.
 
 | Measure | Value |
 |---|---|
-| SAST rules | 950 |
+| SAST rules | 1000 |
 | Universal rules (no `languages`, run on every file) | 11 |
 | Distinct language ids used by the packs | 115 |
 | …resolved directly by the App catalog | 47 |
@@ -23,7 +23,7 @@ Everything below is counted from the rule files, not from a previous report.
 
 | Dataset id | App id | Rules |
 |---|---|---|
-| `gha` | `github-actions` | 7 |
+| `gha` | `github-actions` | 8 |
 | `shell` | `shell-posix` | 29 |
 
 ## Ids that need a new App family (rules that cannot fire today)

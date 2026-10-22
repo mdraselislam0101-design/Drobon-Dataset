@@ -1,0 +1,217 @@
+[
+ {
+  "class": "c-stpcpy-overflow",
+  "kind": "sast",
+  "category": "buffer-overflow",
+  "cwe": "CWE-120",
+  "severity": "HIGH",
+  "framing": "call",
+  "title": "Unbounded string copy with stpcpy ({lang})",
+  "description": "The code copies with {sink}, which writes until the source terminator and returns a pointer to the end. There is no destination size, so a source longer than the buffer overwrites whatever follows it.",
+  "remediation": "Copy with an explicit bound, for example {safe}, and check that the result fits before writing.",
+  "limitation": "Lexical, line-based: matches the copy without tracking the destination size.",
+  "scopeT": "Single-line lexical match on unbounded string copies in {lang} code.",
+  "fp": "A copy into a buffer that provably exceeds the longest constant source is the common false positive.",
+  "recordDesc": "In {lang}, {sink} has no destination limit. Any source that is not a compile-time constant decides how much memory is written.",
+  "applicability": "Path and message assembly in C code.",
+  "risk": "Stack or heap corruption from attacker-sized input; HIGH severity.",
+  "why": "{lang} has no destination bound in the copy ({sink}).",
+  "fix": [
+   "Use a bounded copy and check the result ({safe}).",
+   "Keep the destination size beside the buffer."
+  ],
+  "verifyT": "Rescan shows no unbounded string copy.",
+  "sinks": {
+   "c:stpcpy": [
+    "stpcpy",
+    "stpcpy",
+    "snprintf with the destination size"
+   ]
+  }
+ },
+ {
+  "class": "c-wcscat-overflow",
+  "kind": "sast",
+  "category": "buffer-overflow",
+  "cwe": "CWE-120",
+  "severity": "HIGH",
+  "framing": "call",
+  "title": "Unbounded wide-string concatenation ({lang})",
+  "description": "The code appends a wide string with {sink}, which has no destination size and counts nothing. Repeated appends in a loop grow past the allocation without any single call looking wrong.",
+  "remediation": "Append with a bounded helper that takes the remaining element count, for example {safe}.",
+  "limitation": "Lexical, line-based: matches the append without tracking buffer growth across iterations.",
+  "scopeT": "Single-line lexical match on wide-string concatenation in {lang} code.",
+  "fp": "An append into a fixed buffer that is reset on every iteration is the common false positive.",
+  "recordDesc": "In {lang}, {sink} appends until the source terminator. A loop over attacker-controlled items therefore writes past the end at the item where the buffer fills.",
+  "applicability": "Wide-string message building in Windows-oriented C code.",
+  "risk": "Heap corruption in a loop that is easy to trigger remotely; HIGH severity.",
+  "why": "{lang} has no destination bound in the append ({sink}).",
+  "fix": [
+   "Use a bounded append with the remaining capacity ({safe}).",
+   "Reset or reallocate the buffer per iteration."
+  ],
+  "verifyT": "Rescan shows no unbounded wide-string append.",
+  "sinks": {
+   "c:wcscat": [
+    "wcscat",
+    "wcscat",
+    "a bounded append with the remaining capacity"
+   ]
+  }
+ },
+ {
+  "class": "c-lstrcpy-overflow",
+  "kind": "sast",
+  "category": "buffer-overflow",
+  "cwe": "CWE-120",
+  "severity": "HIGH",
+  "framing": "call",
+  "title": "Windows API string copy without a limit ({lang})",
+  "description": "The code copies a string with {sink}, the Windows API copy that has no destination size. The destination is always a fixed buffer in practice, so a longer source overwrites adjacent memory.",
+  "remediation": "Use the counted variant with an explicit destination size, for example {safe}.",
+  "limitation": "Lexical, line-based: matches the copy without checking the destination size.",
+  "scopeT": "Single-line lexical match on Windows API string copies in {lang} code.",
+  "fp": "Copies from a constant into a buffer larger than the constant are the common false positive.",
+  "recordDesc": "In {lang}, {sink} copies until the source terminator. Registry values and command-line arguments are the usual sources that exceed the buffer.",
+  "applicability": "Windows services, installers and registry handling in C.",
+  "risk": "Stack corruption from registry or command-line data; HIGH severity.",
+  "why": "{lang} has no destination size in the API ({sink}).",
+  "fix": [
+   "Use the counted variant ({safe}).",
+   "Validate source length before copying."
+  ],
+  "verifyT": "Rescan shows no unbounded Windows API copy.",
+  "sinks": {
+   "c:winstr": [
+    "lstrcpy|StrCpy",
+    "lstrcpy",
+    "the counted variant with a destination size"
+   ]
+  }
+ },
+ {
+  "class": "java-reflection-member",
+  "kind": "sast",
+  "category": "reflection",
+  "cwe": "CWE-470",
+  "severity": "MEDIUM",
+  "framing": "call",
+  "title": "Reflective member access in application code ({lang})",
+  "description": "The code reaches a member through {sink}. Reflection selects the method or field by name at runtime, so a name that comes from a request runs a member the developer never intended to expose.",
+  "remediation": "Keep reflective lookups on constant names, and gate any dynamic lookup behind an allowlist, for example {safe}.",
+  "limitation": "Lexical, line-based: matches the reflective call without tracing the name.",
+  "scopeT": "Single-line lexical match on reflective member access in {lang} code.",
+  "fp": "Framework and test code that reflects on a constant class name is the common false positive.",
+  "recordDesc": "In {lang}, {sink} resolves a member by string. Frameworks use this deliberately; application code that copies a request parameter into the name hands the caller the member selection.",
+  "applicability": "Serializers, mappers and plugin loaders in Java.",
+  "risk": "Invocation of unintended methods, including setters that change security state; MEDIUM severity.",
+  "why": "{lang} selects the member by name at runtime ({sink}).",
+  "fix": [
+   "Use constant names and an allowlist ({safe}).",
+   "Prefer interfaces over reflective dispatch."
+  ],
+  "verifyT": "Rescan shows reflective lookups restricted to constant names.",
+  "sinks": {
+   "java:reflect": [
+    "getMethod|setAccessible",
+    "obj.getMethod",
+    "an interface call on a typed object"
+   ]
+  }
+ },
+ {
+  "class": "php-base64-payload",
+  "kind": "sast",
+  "category": "code-execution",
+  "cwe": "CWE-95",
+  "severity": "MEDIUM",
+  "framing": "call",
+  "title": "Encoded payload decoded in application code ({lang})",
+  "description": "PHP code decodes a value with {sink}. Decoding is how packed payloads are hidden from string review, and when the result reaches an include or an eval it becomes code the reviewer never saw.",
+  "remediation": "Decode only in a reviewed location, validate the decoded content against a schema, and never pass the result to an interpreter, for example {safe}.",
+  "limitation": "Lexical, line-based: matches the decode without following the value.",
+  "scopeT": "Single-line lexical match on payload decoding in {lang} code.",
+  "fp": "Decoding a signed token or an image attachment is the common false positive.",
+  "recordDesc": "In {lang}, {sink} turns opaque text into content. In a codebase with any include or eval path, the decoded value is the shortest route from a request to execution.",
+  "applicability": "Upload handlers, plugin loaders and legacy modules in PHP.",
+  "risk": "Concealed code execution when the decoded value reaches an interpreter; MEDIUM severity.",
+  "why": "{lang} decoding hides the payload from review ({sink}).",
+  "fix": [
+   "Validate decoded content and keep it away from the interpreter ({safe}).",
+   "Prefer structured formats with explicit parsing."
+  ],
+  "verifyT": "Rescan shows decoded values never reaching include or eval.",
+  "sinks": {
+   "php:decode": [
+    "base64_decode",
+    "base64_decode",
+    "a structured decode with schema validation"
+   ]
+  }
+ },
+ {
+  "class": "decompression-bomb",
+  "kind": "sast",
+  "category": "resource-exhaustion",
+  "cwe": "CWE-409",
+  "severity": "MEDIUM",
+  "framing": "call",
+  "title": "Compressed input expanded without a size limit ({lang})",
+  "description": "The code expands compressed data with {sink}. A few kilobytes of crafted input expand to gigabytes, and the expansion happens before any check can run, so the worker dies with the request in flight.",
+  "remediation": "Bound the output size or stream the expansion with a byte budget, for example {safe}.",
+  "limitation": "Lexical, line-based: matches the expansion without knowing the output size.",
+  "scopeT": "Single-line lexical match on decompression in {lang} code.",
+  "fp": "Expanding an archive the service itself produced, with a known small size, is the common false positive.",
+  "recordDesc": "In {lang}, {sink} allocates according to the compressed stream's own claims. Nothing in the call compares that claim with the memory available.",
+  "applicability": "Upload handlers, backup importers and API endpoints that accept compressed bodies.",
+  "risk": "Denial of service from a small request; MEDIUM severity.",
+  "why": "{lang} trusts the expansion ratio in the stream ({sink}).",
+  "fix": [
+   "Cap the output at a documented maximum ({safe}).",
+   "Reject streams whose declared size exceeds the cap before expanding."
+  ],
+  "verifyT": "Rescan shows a size cap on every expansion path.",
+  "sinks": {
+   "php:zlib": [
+    "gzuncompress|gzdecode",
+    "gzuncompress",
+    "a streamed expansion with a byte budget"
+   ],
+   "python:zlib": [
+    "zlib\\.decompress|gzip\\.decompress",
+    "zlib.decompress",
+    "a streamed expansion with a maximum length"
+   ]
+  }
+ },
+ {
+  "class": "native-library-load",
+  "kind": "sast",
+  "category": "code-loading",
+  "cwe": "CWE-426",
+  "severity": "HIGH",
+  "framing": "call",
+  "title": "Native library loaded by name ({lang})",
+  "description": "The code loads a native library through {sink}. The name is resolved by the platform loader, which searches the working directory and the library path before trusted locations, so a planted file is loaded instead of the packaged one.",
+  "remediation": "Load a packaged library by absolute path, or verify its signature before loading, for example {safe}.",
+  "limitation": "Lexical, line-based: matches the load without resolving the name.",
+  "scopeT": "Single-line lexical match on native library loads in {lang} code.",
+  "fp": "Loads of a bundled library from a read-only directory are the common false positive.",
+  "recordDesc": "In {lang}, {sink} asks the platform to find a library by name. Any directory earlier in the search order can answer with a different file.",
+  "applicability": "JNI wrappers, desktop applications and services that load optional native code.",
+  "risk": "Arbitrary native code execution in the process; HIGH severity.",
+  "why": "{lang} resolves the library name through the platform search order ({sink}).",
+  "fix": [
+   "Load from an absolute packaged path ({safe}).",
+   "Keep the working directory non-writable and verify the library hash."
+  ],
+  "verifyT": "Rescan shows every native load using a resolved, verified path.",
+  "sinks": {
+   "java:jni": [
+    "loadLibrary|System\\.load",
+    "System.loadLibrary",
+    "an absolute path with a verified hash"
+   ]
+  }
+ }
+]

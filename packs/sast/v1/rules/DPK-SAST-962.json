@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "drobon.pack.sast/v1",
+  "id": "DPK-SAST-962",
+  "title": "Workflow checks out the pull-request head ref (gha)",
+  "description": "A gha workflow checks out the contributor's head ref (ref: ${{ github.event.pull_request.head.sha }}). When the workflow is also triggered by pull_request_target it runs with the base repository's secrets and a write token, so code from a fork executes with maintainer permissions; the checkout of the head is the step that introduces the untrusted code. This lexical rule flags that checkout; the reviewer removes it or switches to a two-step artifact hand-off.",
+  "severity": "HIGH",
+  "cwe": "CWE-94",
+  "category": "ci-security",
+  "remediation": "Use pull_request for untrusted code, or keep pull_request_target and never check out the head; when the head must be built, check out the base ref instead.",
+  "limitation": "Line-based on the workflow file: it flags a checkout step that names the pull-request head ref, not the job's trigger or the full job graph, so a head checkout in an unprivileged pull_request workflow is also reported.",
+  "languages": [
+    "gha"
+  ],
+  "patterns": [
+    {
+      "source": "\\b(?:ref:\\s*\\$\\{\\{\\s*github\\.event\\.pull_request\\.head\\.sha)"
+    }
+  ],
+  "tests": [
+    {
+      "line": "          ref: ${{ github.event.pull_request.head.sha }}",
+      "match": true
+    },
+    {
+      "line": "# audit:           ref: ${{ github.event.pull_request.head.sha }} present",
+      "match": true
+    },
+    {
+      "line": "          ref: ${{ github.sha }}",
+      "match": false
+    },
+    {
+      "line": "# verified:           ref: ${{ github.sha }}",
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1589"
+  ]
+}

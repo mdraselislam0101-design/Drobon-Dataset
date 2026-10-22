@@ -21,23 +21,23 @@ waiting on a legal decision rather than on engineering.
 
 | Dimension | Measured | Denominator | % | Status | Blocker |
 |---|---|---|---|---|---|
-| SAST rule pack against its planning target | 950 | 1000 | 95% | **PARTIAL** | EVIDENCE_GATED |
+| SAST rule pack against its planning target | 1000 | 1000 | 100% | **PARTIAL** | EVIDENCE_GATED |
 | DAST check pack against its 500 target | 510 | 500 | 100% | **COMPLETE** | — |
 | Secrets rule pack | 97 | — | — | **COMPLETE** | — |
-| Rule ↔ pattern ↔ record ↔ remediation graph | 1557 | 1557 | 100% | **COMPLETE** | — |
-| CWE reference coverage | 73 | 73 | 100% | **COMPLETE** | — |
-| Declared pack tests executed | 1557 | 1557 | 100% | **COMPLETE** | — |
-| Independent evaluation: rules with a positive case | 1549 | 1557 | 99.5% | **PARTIAL** | OWNER_DECISION_REQUIRED |
-| Independent evaluation: rules with a negative control | 1126 | 1557 | 72.3% | **PARTIAL** | EVIDENCE_GATED |
+| Rule ↔ pattern ↔ record ↔ remediation graph | 1607 | 1607 | 100% | **COMPLETE** | — |
+| CWE reference coverage | 82 | 82 | 100% | **COMPLETE** | — |
+| Declared pack tests executed | 1607 | 1607 | 100% | **COMPLETE** | — |
+| Independent evaluation: rules with a positive case | 1549 | 1607 | 96.4% | **PARTIAL** | OWNER_DECISION_REQUIRED |
+| Independent evaluation: rules with a negative control | 1126 | 1607 | 70.1% | **PARTIAL** | EVIDENCE_GATED |
 | Universal rules with both a positive case and a negative control | 11 | 11 | 100% | **COMPLETE** | — |
 | Evaluation outcome quality on assessed cases | — | — | — | **POLICY_BOUND** | POLICY_DECISION |
 | Production vulnerability intelligence | 84 | 100000 | 0.08% | **BLOCKED_OWNER** | LICENSE_AND_PRODUCTION_AUTH |
 | Licence grant | 0 | 1 | 0% | **BLOCKED_OWNER** | OWNER_DECISION_REQUIRED |
-| SAST rules reachable through the App language gate | 790 | 950 | 83.2% | **BLOCKED_APP** | APP_CATALOG |
+| SAST rules reachable through the App language gate | 840 | 1000 | 84% | **BLOCKED_APP** | APP_CATALOG |
 | DAST rules evaluable through the App response surface | 437 | 510 | 85.7% | **BLOCKED_APP** | APP_RESPONSE_SURFACE |
 | App loader checklist steps implemented | 2 | 6 | 33.3% | **BLOCKED_APP** | APP_LOADER |
 | DAST declared-test parity in the App evaluator | 2167 | 2182 | 99.3% | **BLOCKED_APP** | APP_EVALUATOR |
-| Remediation entries surfaced to users | 0 | 1557 | 0% | **BLOCKED_APP** | APP_LOADER |
+| Remediation entries surfaced to users | 0 | 1607 | 0% | **BLOCKED_APP** | APP_LOADER |
 | Deterministic generation and whole-tree digest | pass | — | — | **COMPLETE** | — |
 | Dataset test suite | pass | — | — | **COMPLETE** | — |
 | Committed generated artefacts reproduce from the tree | 5 | 5 | 100% | **COMPLETE** | — |
@@ -48,7 +48,7 @@ waiting on a legal decision rather than on engineering.
 ### packs.sast — SAST rule pack against its planning target
 
 - Status: **PARTIAL** (blocker: `EVIDENCE_GATED`)
-- Measured: 950 of 1000 rules (95%)
+- Measured: 1000 of 1000 rules (100%)
 - Why: Every added rule needs published evidence and its own tests; padding is forbidden by docs/PACKS.md. 50 rules remain against the 1000-rule planning target (docs/EVAL_ID_CAPACITY_AND_FINAL_GAP_CLOSURE_2026-10-19.md §H found no reachable candidate that is not padding).
 - Next action: Author the next evidence-backed batch (one cell file per batch, pos+neg tests, remediation + CWE), then regenerate.
 - Verify: `npm run validate:packs`
@@ -72,15 +72,15 @@ waiting on a legal decision rather than on engineering.
 ### knowledge.graph — Rule ↔ pattern ↔ record ↔ remediation graph
 
 - Status: **COMPLETE**
-- Measured: 1557 of 1557 entries (weakest of the three trees) (100%)
-- Why: patterns 1557 / records 1557 / remediation 1557 against 1557 rules: strict 1:1:1:1 in both directions, 0 orphans, enforced by the consistency suite.
+- Measured: 1607 of 1607 entries (weakest of the three trees) (100%)
+- Why: patterns 1607 / records 1607 / remediation 1607 against 1607 rules: strict 1:1:1:1 in both directions, 0 orphans, enforced by the consistency suite.
 - Next action: None.
 - Verify: `node scripts/test-consistency.mjs`
 
 ### cwe.reference — CWE reference coverage
 
 - Status: **COMPLETE**
-- Measured: 73 of 73 CWE ids required by the pack rules (100%)
+- Measured: 82 of 82 CWE ids required by the pack rules (100%)
 - Why: Every pack rule CWE resolves to a knowledge/cwe entry with a pinned MITRE URL and cweVersion.
 - Next action: None; a new CWE id is added with the rule that needs it.
 - Verify: `npm run validate:cwe`
@@ -88,15 +88,15 @@ waiting on a legal decision rather than on engineering.
 ### tests.pack-level — Declared pack tests executed
 
 - Status: **COMPLETE**
-- Measured: 1557 of 1557 rules (100%)
-- Why: 1557 of 1557 rules declare at least one positive and one negative test; 6466 declared tests execute in the validator, with ReDoS lint and CWE checks.
+- Measured: 1607 of 1607 rules (100%)
+- Why: 1607 of 1607 rules declare at least one positive and one negative test; 6666 declared tests execute in the validator, with ReDoS lint and CWE checks.
 - Next action: None.
 - Verify: `npm run validate:packs`
 
 ### eval.positive — Independent evaluation: rules with a positive case
 
 - Status: **PARTIAL** (blocker: `OWNER_DECISION_REQUIRED`)
-- Measured: 1549 of 1557 rules (99.5%)
+- Measured: 1549 of 1607 rules (96.4%)
 - Why: 8 SAST rules match 2–3 characters while the evidence contract requires mustContain >= 4, so no authored positive case can satisfy the validator (BLK-EVAL-01). Every other rule has one.
 - Next action: Owner picks: (a) allow the full match as evidence when it is shorter than 4 characters, (b) extend those 8 detectors with context, or (c) accept the gap in writing as a permanent limitation.
 - Verify: `npm run test:eval`
@@ -104,7 +104,7 @@ waiting on a legal decision rather than on engineering.
 ### eval.negative — Independent evaluation: rules with a negative control
 
 - Status: **PARTIAL** (blocker: `EVIDENCE_GATED`)
-- Measured: 1126 of 1557 rules (72.3%)
+- Measured: 1126 of 1607 rules (70.1%)
 - Why: A negative control has to be an authored fixture that the rule must not fire on; deriving them mechanically from each rule's own negative test would be circular and is explicitly not counted (counting rule in scripts/eval-coverage-report.mjs). Closed on 2026-10-21: all 11 universal rules (EVAL-SAST-256…264) and one ordinary-code control per language (EVAL-SAST-265…270: python, javascript, java, php, ruby, csharp), where every language-gated detector is named and must stay silent on benign, idiomatic code.
 - Next action: Continue in batches, highest false-positive risk first: high-severity lexical rules with short literals, then one control per category.
 - Verify: `npm run test:eval`
@@ -144,7 +144,7 @@ waiting on a legal decision rather than on engineering.
 ### app.reachability — SAST rules reachable through the App language gate
 
 - Status: **BLOCKED_APP** (blocker: `APP_CATALOG`)
-- Measured: 790 of 950 rules (83.2%)
+- Measured: 840 of 1000 rules (84%)
 - Why: 66 pack language ids have no App family (sshd, k8s, nginx, ini, properties, config formats), so 160 rules cannot fire. Two aliases (shell→shell-posix, gha→github-actions) are already declared and would restore 36 rules once the App accepts the dataset id.
 - Next action: App adds the config-format families or accepts the dataset ids; this repository keeps docs/APP_LANGUAGE_ID_MAPPING.md + the gate green.
 - Verify: `node scripts/validate-app-language-ids.mjs`
@@ -176,8 +176,8 @@ waiting on a legal decision rather than on engineering.
 ### app.remediation-surface — Remediation entries surfaced to users
 
 - Status: **BLOCKED_APP** (blocker: `APP_LOADER`)
-- Measured: 0 of 1557 entries (0%)
-- Why: All 1557 entries load into the App dataset service, but getRemediationMap has no caller and remediationGuidanceForFinding still returns UNAVAILABLE.
+- Measured: 0 of 1607 entries (0%)
+- Why: All 1607 entries load into the App dataset service, but getRemediationMap has no caller and remediationGuidanceForFinding still returns UNAVAILABLE.
 - Next action: App wires the resolver into findings, reports and the assistant (GAP-008).
 - Verify: `node scripts/test-consistency.mjs`
 
