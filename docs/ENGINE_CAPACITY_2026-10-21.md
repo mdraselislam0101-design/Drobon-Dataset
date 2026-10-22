@@ -10,10 +10,10 @@ This page states where each engine actually stands, what is left, and what stops
 | Engine | Rules | / 1,000 | Patterns | Records | Remediation | Remaining | Status |
 |---|---|---|---|---|---|---|---|
 | SAST | **1000** | 100% | 1000 | 1000 | 1000 | 0 | AT_TARGET |
-| DAST | **510** | 51% | 510 | 510 | 510 | 490 | IN_PROGRESS |
+| DAST | **520** | 52% | 520 | 520 | 520 | 480 | IN_PROGRESS |
 | SECRETS | **97** | 9.7% | 97 | 97 | 97 | 903 | IN_PROGRESS |
 | SCA | **0** | 0% | 0 | 0 | 0 | 1000 | BLOCKED_OWNER |
-| **Total** | **1607** | — | — | — | — | — | 1 of 4 at target |
+| **Total** | **1617** | — | — | — | — | — | 1 of 4 at target |
 
 ## What blocks each engine
 

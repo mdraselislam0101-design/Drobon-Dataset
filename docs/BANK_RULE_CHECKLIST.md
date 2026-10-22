@@ -4,7 +4,7 @@
 > `docs/BANK_RULE_CHECKLIST.csv` from `packs/dast/v1/rules`; `--check` fails when either drifts.
 > Reachability is read from `interop/app-dast-reachability.json` (App at `9360dd1`, 11 forwarded headers).
 
-**510 rules · 437 evaluable inside the Main App · 73 blocked by the response-header surface.**
+**520 rules · 447 evaluable inside the Main App · 73 blocked by the response-header surface.**
 
 This is an **audit checklist**, not a claim of protection: every row states what the rule observes in one
 synthetic-tested response and what to change. See `docs/BANK_THREAT_COVERAGE_2026-10-21.md` for what no
@@ -19,15 +19,15 @@ someone verified the observation on the target.
 
 | Tier | Focus | Rules | App-reachable |
 |---|---|---|---|
-| 1 | customer money and identity | 122 | 108 |
-| 2 | browser trust and interface contracts | 121 | 83 |
-| 3 | disclosure, fingerprints and debug surfaces | 267 | 246 |
+| 1 | customer money and identity | 126 | 112 |
+| 2 | browser trust and interface contracts | 124 | 86 |
+| 3 | disclosure, fingerprints and debug surfaces | 270 | 249 |
 
 ## Tier 1 — customer money and identity
 
 *These are the observations a fraud team would act on first: financial identifiers, card credentials, one-time codes, session tokens and transport protection. A finding here is worth an incident ticket, not a backlog item.*
 
-**122 rules, 108 evaluable today.**
+**126 rules, 112 evaluable today.**
 
 | Rule | Severity | CWE | What it observes | What to do (first step) | Reachable |
 |---|---|---|---|---|---|
@@ -153,12 +153,16 @@ someone verified the observation on the target.
 | `DPK-DAST-517` Session identifier carried in a URL | MEDIUM | CWE-598 | the response body (first 32,768 bytes) | Keep the session identifier in a cookie with Secure, HttpOnly and SameSite set, and disable URL rewriting for session tracking in the application server. | yes |
 | `DPK-DAST-518` Account statement exported as a CSV row set | MEDIUM | CWE-359 | the response body (first 32,768 bytes) | Require re-authentication for statement export, mask account identifiers, cap the export window and serve the file with Content-Disposition attachment and no-store. | yes |
 | `DPK-DAST-519` SWIFT/BIC code served with an account reference | MEDIUM | CWE-359 | the response body (first 32,768 bytes) | Show the BIC only on the confirmation screen the customer already authenticated into, and never in list, export or notification payloads. | yes |
+| `DPK-DAST-520` Azure storage account key in a response | HIGH | CWE-798 | the response body (first 32,768 bytes) | Rotate both storage keys, keep the connection string in the server-side secret store and give the browser a short-lived least-privilege SAS token or a backend proxy. | yes |
+| `DPK-DAST-522` Google API key in a response | MEDIUM | CWE-798 | the response body (first 32,768 bytes) | Remove the key from the response, restrict the replacement to the calling origin and one API, and prefer a backend call with a service account. | yes |
+| `DPK-DAST-526` PuTTY private key file in a response | HIGH | CWE-200 | the response body (first 32,768 bytes) | Remove the file, revoke the key from every authorized_keys entry and issue a replacement that stays in the operator's key store. | yes |
+| `DPK-DAST-529` Bearer token written to browser storage | MEDIUM | CWE-522 | the response body (first 32,768 bytes) | Keep refresh tokens in HttpOnly, Secure, SameSite cookies and hold access tokens in memory; | yes |
 
 ## Tier 2 — browser trust and interface contracts
 
 *Header, CSP and markup weaknesses do not move money by themselves, but they are the difference between a stolen session and a blocked one, and between a clickjackable login and a safe one.*
 
-**121 rules, 83 evaluable today.**
+**124 rules, 86 evaluable today.**
 
 | Rule | Severity | CWE | What it observes | What to do (first step) | Reachable |
 |---|---|---|---|---|---|
@@ -283,12 +287,15 @@ someone verified the observation on the target.
 | `DPK-DAST-476` Meta tag delivers a wildcard content security policy | MEDIUM | CWE-693 | the response body (first 32,768 bytes) | Deliver the policy as a response header with explicit origins. | yes |
 | `DPK-DAST-477` Plugin object loads a data URI document | MEDIUM | CWE-79 | the response body (first 32,768 bytes) | Remove the embed and render the content server-side, or isolate it in a sandboxed frame from another origin. | yes |
 | `DPK-DAST-503` Inline script assigns document.domain | LOW | CWE-693 | the response body (first 32,768 bytes) | Remove the assignment and use postMessage with an origin check or a shared subdomain. | yes |
+| `DPK-DAST-523` Authorization decision carried in a hidden field | HIGH | CWE-284 | the response body (first 32,768 bytes) | Derive authorization from the server-side session and never read a client-submitted role; | yes |
+| `DPK-DAST-530` Inline event handler shipped in markup | MEDIUM | CWE-79 | the response body (first 32,768 bytes) | Move the behaviour into an external script and attach listeners with addEventListener; | yes |
+| `DPK-DAST-531` Link carries an absolute return URL | MEDIUM | CWE-601 | the response body (first 32,768 bytes) | Accept only relative paths or an allowlist of destinations for return parameters, and resolve the value server-side before redirecting. | yes |
 
 ## Tier 3 — disclosure, fingerprints and debug surfaces
 
 *Artefacts, consoles and stack traces rarely cause a loss on their own; they shorten the attacker’s reconnaissance and are the cheapest findings to close.*
 
-**267 rules, 246 evaluable today.**
+**270 rules, 249 evaluable today.**
 
 | Rule | Severity | CWE | What it observes | What to do (first step) | Reachable |
 |---|---|---|---|---|---|
@@ -559,6 +566,9 @@ someone verified the observation on the target.
 | `DPK-DAST-505` JSP source served instead of a rendered page | HIGH | CWE-200 | the response body (first 32,768 bytes) | Serve JSP only through the container and deny direct access to source paths. | yes |
 | `DPK-DAST-508` PHP source served instead of an executed page | HIGH | CWE-200 | the response body (first 32,768 bytes) | Restore the PHP handler for the path and deny serving .php files as static content. | yes |
 | `DPK-DAST-509` Server-side include directive served unprocessed | MEDIUM | CWE-200 | the response body (first 32,768 bytes) | Enable SSI only where it is intended and never serve template sources. | yes |
+| `DPK-DAST-521` Link that turns on debug output | MEDIUM | CWE-489 | the response body (first 32,768 bytes) | Remove debug switches from production builds, gate diagnostics behind server-side authorisation and delete the generated links. | yes |
+| `DPK-DAST-524` Link to an exposed Java management console | MEDIUM | CWE-200 | the response body (first 32,768 bytes) | Remove the link, restrict the console to an administrative network and require strong authentication; | yes |
+| `DPK-DAST-528` Spring exception class printed in a response | MEDIUM | CWE-209 | the response body (first 32,768 bytes) | Return a generic error page with a correlation id and log the exception server-side; | yes |
 
 ## Appendix — the 73 rules the App cannot evaluate today
 

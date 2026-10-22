@@ -13,7 +13,7 @@ Date: 2026-10-16. Main App reference: `main` = `c32c797` (read-only).
 | Advisory records, verified production | **0** | `verifiedProductionCount` 0. |
 | Publish-ready | **0** | Release is NO-GO (licence and provenance gates BLOCKED). |
 
-The 84 advisory items are not included in the rule-pack total (SAST 950 + DAST 398 + SCA 0 = **1510** rule packs, recount 2026-10-21). Earlier drafts of this line cited "820", a mid-batch snapshot whose derivation is not reproducible from any committed count; it must never be read as a current verified total. `docs/CORPUS_TARGETS.json` is the only authoritative count source. Rule-pack totals count rule packs only.
+The 84 advisory items are not included in the rule-pack total (SAST 950 + DAST 398 + SCA 0 = **1520** rule packs, recount 2026-10-21). Earlier drafts of this line cited "820", a mid-batch snapshot whose derivation is not reproducible from any committed count; it must never be read as a current verified total. `docs/CORPUS_TARGETS.json` is the only authoritative count source. Rule-pack totals count rule packs only.
 
 ## 2. Why advisory records cannot reach the target now
 
