@@ -4,7 +4,7 @@
 > `docs/BANK_RULE_CHECKLIST.csv` from `packs/dast/v1/rules`; `--check` fails when either drifts.
 > Reachability is read from `interop/app-dast-reachability.json` (App at `9360dd1`, 11 forwarded headers).
 
-**543 rules · 470 evaluable inside the Main App · 73 blocked by the response-header surface.**
+**553 rules · 480 evaluable inside the Main App · 73 blocked by the response-header surface.**
 
 This is an **audit checklist**, not a claim of protection: every row states what the rule observes in one
 synthetic-tested response and what to change. See `docs/BANK_THREAT_COVERAGE_2026-10-21.md` for what no
@@ -19,15 +19,15 @@ someone verified the observation on the target.
 
 | Tier | Focus | Rules | App-reachable |
 |---|---|---|---|
-| 1 | customer money and identity | 131 | 117 |
-| 2 | browser trust and interface contracts | 129 | 91 |
-| 3 | disclosure, fingerprints and debug surfaces | 283 | 262 |
+| 1 | customer money and identity | 134 | 120 |
+| 2 | browser trust and interface contracts | 130 | 92 |
+| 3 | disclosure, fingerprints and debug surfaces | 289 | 268 |
 
 ## Tier 1 — customer money and identity
 
 *These are the observations a fraud team would act on first: financial identifiers, card credentials, one-time codes, session tokens and transport protection. A finding here is worth an incident ticket, not a backlog item.*
 
-**131 rules, 117 evaluable today.**
+**134 rules, 120 evaluable today.**
 
 | Rule | Severity | CWE | What it observes | What to do (first step) | Reachable |
 |---|---|---|---|---|---|
@@ -162,12 +162,15 @@ someone verified the observation on the target.
 | `DPK-DAST-539` Passport machine-readable zone in a response | HIGH | CWE-359 | the response body (first 32,768 bytes) | Remove the MRZ from every response, keep only the last four characters of the document number and store the scan in the encrypted document vault. | yes |
 | `DPK-DAST-551` npm registry token in a response | HIGH | CWE-798 | the response body (first 32,768 bytes) | Revoke the token, issue a read-only replacement and keep .npmrc out of the served tree. | yes |
 | `DPK-DAST-553` Password field allows autocomplete | LOW | CWE-522 | the response body (first 32,768 bytes) | Set autocomplete to current-password on login and new-password on change, and never to on for a credential field. | yes |
+| `DPK-DAST-556` Cookie written from script | MEDIUM | CWE-1004 | the response body (first 32,768 bytes) | Set cookies server-side with HttpOnly, Secure and SameSite, and keep script away from cookie state. | yes |
+| `DPK-DAST-561` Credential stored in IndexedDB | MEDIUM | CWE-522 | the response body (first 32,768 bytes) | Keep credentials in HttpOnly cookies or memory and store only non-sensitive cached data in IndexedDB. | yes |
+| `DPK-DAST-564` Service worker registered at the root scope | MEDIUM | CWE-693 | the response body (first 32,768 bytes) | Register the worker under the narrowest path that needs it and review the worker as production code. | yes |
 
 ## Tier 2 — browser trust and interface contracts
 
 *Header, CSP and markup weaknesses do not move money by themselves, but they are the difference between a stolen session and a blocked one, and between a clickjackable login and a safe one.*
 
-**129 rules, 91 evaluable today.**
+**130 rules, 92 evaluable today.**
 
 | Rule | Severity | CWE | What it observes | What to do (first step) | Reachable |
 |---|---|---|---|---|---|
@@ -300,12 +303,13 @@ someone verified the observation on the target.
 | `DPK-DAST-544` Vue v-html directive in served markup | MEDIUM | CWE-79 | the response body (first 32,768 bytes) | Use text interpolation or a sanitizer component, and never bind v-html to request data. | yes |
 | `DPK-DAST-549` iframe srcdoc carrying markup | MEDIUM | CWE-79 | the response body (first 32,768 bytes) | Render static markup from a separate origin, or pass content through a sandboxed frame with no allow-same-origin. | yes |
 | `DPK-DAST-550` jQuery .html() sink in served script | MEDIUM | CWE-79 | the response body (first 32,768 bytes) | Use .text() for text, or sanitise the value before it reaches .html(). | yes |
+| `DPK-DAST-558` eval applied to a decoded payload | HIGH | CWE-95 | the response body (first 32,768 bytes) | Remove the eval, load the logic as a static module and investigate how the payload reached the page. | yes |
 
 ## Tier 3 — disclosure, fingerprints and debug surfaces
 
 *Artefacts, consoles and stack traces rarely cause a loss on their own; they shorten the attacker’s reconnaissance and are the cheapest findings to close.*
 
-**283 rules, 262 evaluable today.**
+**289 rules, 268 evaluable today.**
 
 | Rule | Severity | CWE | What it observes | What to do (first step) | Reachable |
 |---|---|---|---|---|---|
@@ -592,6 +596,12 @@ someone verified the observation on the target.
 | `DPK-DAST-548` Jenkins stack trace in a response | MEDIUM | CWE-209 | the response body (first 32,768 bytes) | Show a generic error page and keep the stack in the Jenkins log; | yes |
 | `DPK-DAST-552` package-lock.json served in a response | LOW | CWE-200 | the response body (first 32,768 bytes) | Do not serve lock files; | yes |
 | `DPK-DAST-554` Link to a PostgreSQL web console | MEDIUM | CWE-200 | the response body (first 32,768 bytes) | Remove the link, keep the console off the application network and require strong authentication if it must exist. | yes |
+| `DPK-DAST-555` Azure blob SAS URL in a response | HIGH | CWE-200 | the response body (first 32,768 bytes) | Issue short-lived, least-privilege SAS tokens server-side per request and never embed them in a page that outlives the operation. | yes |
+| `DPK-DAST-557` Link to an environment file | HIGH | CWE-200 | the response body (first 32,768 bytes) | Remove the file from the web root, rotate every value it held and block dotfiles at the server. | yes |
+| `DPK-DAST-559` Firebase realtime database URL in a response | MEDIUM | CWE-200 | the response body (first 32,768 bytes) | Remove the host from client configuration the page does not need and set database rules to deny by default. | yes |
+| `DPK-DAST-560` Link to an IDE workspace directory | LOW | CWE-200 | the response body (first 32,768 bytes) | Remove IDE state from the deployed tree and block the directories at the server. | yes |
+| `DPK-DAST-562` Live-reload script in a production page | LOW | CWE-489 | the response body (first 32,768 bytes) | Remove development tooling from production builds and serve only the compiled bundle. | yes |
+| `DPK-DAST-563` ngrok tunnel URL in a response | MEDIUM | CWE-200 | the response body (first 32,768 bytes) | Remove the tunnel from the response, close it and route the integration through a reviewed staging endpoint. | yes |
 
 ## Appendix — the 73 rules the App cannot evaluate today
 

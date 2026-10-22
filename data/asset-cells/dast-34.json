@@ -1,0 +1,1012 @@
+[
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-dotenv-link",
+    "category": "exposed-interface",
+    "cwe": "CWE-200",
+    "severity": "HIGH",
+    "title": "Link to an environment file",
+    "description": "A link whose path ends at /.env appears in the response body. An environment file holds database passwords, API keys and signing secrets in plain text, and a link to it turns discovery into a single click.",
+    "remediation": "Remove the file from the web root, rotate every value it held and block dotfiles at the server.",
+    "limitation": "One response body. It matches the link target, not whether the file is still served.",
+    "scopeT": "One response body. It matches the link target, not whether the file is still served.",
+    "fp": "A page that explains the .env convention without linking to it is not reported.",
+    "recordDesc": "A link whose path ends at /.env in a response gives every reader the same view the bank has internally: An environment file holds database passwords, API keys and signing secrets in plain text, and a link to it turns discovery into a single click.",
+    "applicability": "Static hosting, framework debug pages and deployment trees that ship the repository root.",
+    "risk": "Every credential in the file becomes usable, and the file usually names the production database.",
+    "why": "An environment file is a credential store, never a web asset.",
+    "fix": [
+      "Delete the file from the deployed tree and rotate its contents.",
+      "Block dotfiles and return 404 for /.env at the edge."
+    ],
+    "verifyT": "Request /.env and confirm the server refuses it.",
+    "cells": [
+      {
+        "suffix": "body-dotenv-link",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "href\\s*=\\s*[\\\"'][^\\\"']{0,120}/\\.env\\b"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<a href=\"/.env\">Environment</a>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<a href=\"/app/.env.backup\">Config</a>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<a href=\"/docs/deployment\">Deployment guide</a>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-idea-workspace-link",
+    "category": "exposed-interface",
+    "cwe": "CWE-200",
+    "severity": "LOW",
+    "title": "Link to an IDE workspace directory",
+    "description": "A link into a .idea or .vscode project directory appears in the response body. IDE state names the project modules, local paths and sometimes data-source passwords, and serving it tells an attacker how the repository is laid out.",
+    "remediation": "Remove IDE state from the deployed tree and block the directories at the server.",
+    "limitation": "One response body. It matches the link target, not whether the directory still lists.",
+    "scopeT": "One response body. It matches the link target, not whether the directory still lists.",
+    "fp": "A page that documents the project structure without linking into the IDE directory is not reported.",
+    "recordDesc": "A link into a .idea or .vscode project directory in a response gives every reader the same view the bank has internally: IDE state names the project modules, local paths and sometimes data-source passwords, and serving it tells an attacker how the repository is laid out.",
+    "applicability": "Static exports, documentation sites and repository browsers.",
+    "risk": "Project layout and saved data-source credentials shorten the path to the database.",
+    "why": "IDE state is developer tooling, not site content.",
+    "fix": [
+      "Delete .idea and .vscode from the build output.",
+      "Block both directories at the server."
+    ],
+    "verifyT": "Request the linked directory and confirm it is refused.",
+    "cells": [
+      {
+        "suffix": "body-idea-workspace-link",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "href\\s*=\\s*[\\\"'][^\\\"']{0,160}(?:/\\.idea/|/\\.vscode/)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<a href=\"/.idea/workspace.xml\">Project</a>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<a href=\"/.vscode/settings.json\">Settings</a>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<a href=\"/docs/architecture\">Architecture</a>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-azure-blob-sas-url",
+    "category": "data-exposure",
+    "cwe": "CWE-200",
+    "severity": "HIGH",
+    "title": "Azure blob SAS URL in a response",
+    "description": "A blob storage URL that carries a shared-access signature appears in the response body. The signature authorises whoever holds it to read, write or delete the blob until it expires, and it travels in history, logs and Referer headers exactly like any other URL.",
+    "remediation": "Issue short-lived, least-privilege SAS tokens server-side per request and never embed them in a page that outlives the operation.",
+    "limitation": "One response body. It matches the signature parameters, not the token's expiry or permissions.",
+    "scopeT": "One response body. It matches the signature parameters, not the token's expiry or permissions.",
+    "fp": "A page that documents the SAS format without a signature value is not reported.",
+    "recordDesc": "A blob storage URL that carries a shared-access signature in a response gives every reader the same view the bank has internally: The signature authorises whoever holds it to read, write or delete the blob until it expires, and it travels in history, logs and Referer headers exactly like any other URL.",
+    "applicability": "Statement downloads, document previews and receipt archives.",
+    "risk": "A leaked write-capable signature lets an attacker replace a statement or delete records.",
+    "why": "The signature is a bearer credential in the URL, so the URL is the credential.",
+    "fix": [
+      "Issue per-request SAS tokens with read-only scope and minutes-long expiry.",
+      "Serve downloads through the backend so no signature reaches the page."
+    ],
+    "verifyT": "Confirm the page carries no SAS parameters and that downloads go through the backend.",
+    "cells": [
+      {
+        "suffix": "body-azure-blob-sas-url",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\\.blob\\.core\\.windows\\.net/[^\\s\\\"'<>]{0,200}[?&](?:sig|se|sp)="
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "href=\"https://bankstatements.blob.core.windows.net/2026/statement.pdf?sv=2024-05-04&sig=EXAMPLE\""
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"url\":\"https://docs.blob.core.windows.net/kyc/scan.pdf?sp=r&se=2026-10-23&sig=EXAMPLE2\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<a href=\"/statements/2026-09.pdf\">September statement</a>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-firebase-database-url",
+    "category": "data-exposure",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "Firebase realtime database URL in a response",
+    "description": "A Firebase realtime-database host name appears in the response body. A database host in a page points an attacker at the project; unless the rules deny reads, appending .json to the host returns the entire tree.",
+    "remediation": "Remove the host from client configuration the page does not need and set database rules to deny by default.",
+    "limitation": "One response body. It matches the host name, not the database rules, which a separate request would test.",
+    "scopeT": "One response body. It matches the host name, not the database rules, which a separate request would test.",
+    "fp": "A page that documents Firebase usage without a project host is not reported.",
+    "recordDesc": "A Firebase realtime-database host name in a response gives every reader the same view the bank has internally: A database host in a page points an attacker at the project; unless the rules deny reads, appending .json to the host returns the entire tree.",
+    "applicability": "Prototypes, support tools and client bundles that still use the realtime database.",
+    "risk": "A permissive ruleset turns the host into a full data dump of every collection in the project.",
+    "why": "The host is the address of the data; whether it answers is a rules question.",
+    "fix": [
+      "Move the project to deny-by-default rules and test anonymously.",
+      "Keep the host out of pages that do not read it."
+    ],
+    "verifyT": "Request the host with .json appended and confirm an anonymous read is denied.",
+    "cells": [
+      {
+        "suffix": "body-firebase-database-url",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\\b[a-z0-9-]{3,40}\\.firebaseio\\.com\\b"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<script>const db='https://bank-demo.firebaseio.com';</script>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<a href=\"https://bank-kyc.firebaseio.com/\">KYC console</a>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<p>Configuration is loaded from the server at run time.</p>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-ngrok-tunnel",
+    "category": "exposed-interface",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "ngrok tunnel URL in a response",
+    "description": "An ngrok tunnel host name appears in the response body. A tunnel exposes a developer machine to the internet under a public host that changes without review, and it bypasses the network controls the production path depends on.",
+    "remediation": "Remove the tunnel from the response, close it and route the integration through a reviewed staging endpoint.",
+    "limitation": "One response body. It matches the ngrok host shape, not whether the tunnel is still open.",
+    "scopeT": "One response body. It matches the ngrok host shape, not whether the tunnel is still open.",
+    "fp": "A documentation page that shows an example ngrok host is still reported; confirm the page is static.",
+    "recordDesc": "An ngrok tunnel host name in a response gives every reader the same view the bank has internally: A tunnel exposes a developer machine to the internet under a public host that changes without review, and it bypasses the network controls the production path depends on.",
+    "applicability": "Webhook callbacks, payment sandboxes and demo environments.",
+    "risk": "An open tunnel reaches a laptop with development credentials and no monitoring.",
+    "why": "A tunnel is an unmanaged ingress path; it must never be part of a bank's response.",
+    "fix": [
+      "Close the tunnel and delete the reference.",
+      "Route the integration through a reviewed staging host."
+    ],
+    "verifyT": "Confirm no response references an ngrok host and that the tunnel is closed.",
+    "cells": [
+      {
+        "suffix": "body-ngrok-tunnel",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "https://[a-z0-9-]{4,32}\\.ngrok\\.(?:io|app|dev)\\b"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<script>const hook='https://a1b2c3d4e5.ngrok.io/payments/callback';</script>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<p>Sandbox endpoint: https://bank-demo.ngrok.app/api</p>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<p>Callbacks go to the reviewed staging host.</p>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-eval-decoded",
+    "category": "content-injection",
+    "cwe": "CWE-95",
+    "severity": "HIGH",
+    "title": "eval applied to a decoded payload",
+    "description": "An eval call wrapped around a decode function appears in the response body. Evaluating decoded content executes whatever the string contains, and the decode step exists only to hide the payload from readers and filters; this is the shape of a web shell or a malicious snippet.",
+    "remediation": "Remove the eval, load the logic as a static module and investigate how the payload reached the page.",
+    "limitation": "One response body. It matches eval over a decode call, not other uses of eval with constant arguments.",
+    "scopeT": "One response body. It matches eval over a decode call, not other uses of eval with constant arguments.",
+    "fp": "A bundler that wraps eval around a constant, reviewed expression is a weaker finding.",
+    "recordDesc": "An eval call wrapped around a decode function in a response gives every reader the same view the bank has internally: Evaluating decoded content executes whatever the string contains, and the decode step exists only to hide the payload from readers and filters; this is the shape of a web shell or a malicious snippet.",
+    "applicability": "Compromised pages, injected widgets and third-party scripts.",
+    "risk": "The decoded payload runs with the page's full privileges, including session cookies and API calls.",
+    "why": "The decode step adds no safety; it only hides intent.",
+    "fix": [
+      "Remove the snippet and audit how it was injected.",
+      "Add a CSP without unsafe-eval so this shape cannot run."
+    ],
+    "verifyT": "Confirm the page contains no eval over decoded content and that the policy blocks eval.",
+    "cells": [
+      {
+        "suffix": "body-eval-decoded",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\\beval\\(\\s*(?:atob|decodeURIComponent|unescape)\\s*\\("
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<script>eval(atob('ZG9jdW1lbnQudGl0bGU9MTIz'))</script>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "eval(decodeURIComponent(payload));"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<script>const banner = decodeURIComponent(text);</script>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-document-cookie-write",
+    "category": "transport-security",
+    "cwe": "CWE-1004",
+    "severity": "MEDIUM",
+    "title": "Cookie written from script",
+    "description": "An assignment to document.cookie appears in the response body. A cookie set from script cannot carry HttpOnly, so the same script context that writes it can also read it, and any injected script inherits that access.",
+    "remediation": "Set cookies server-side with HttpOnly, Secure and SameSite, and keep script away from cookie state.",
+    "limitation": "One response body. It matches a script assignment, not the attributes on a cookie set by the server.",
+    "scopeT": "One response body. It matches a script assignment, not the attributes on a cookie set by the server.",
+    "fp": "A script that writes a non-sensitive preference without HttpOnly may be acceptable; confirm the value.",
+    "recordDesc": "An assignment to document.cookie in a response gives every reader the same view the bank has internally: A cookie set from script cannot carry HttpOnly, so the same script context that writes it can also read it, and any injected script inherits that access.",
+    "applicability": "Single-page apps, consent banners and session-refresh logic.",
+    "risk": "Cookies without HttpOnly are readable by any script on the origin, which turns one XSS into session theft.",
+    "why": "The HttpOnly attribute can only be set by the server.",
+    "fix": [
+      "Move cookie writes to the server with HttpOnly, Secure and SameSite.",
+      "Remove script access to session state."
+    ],
+    "verifyT": "Check the browser's cookie list and confirm session cookies are HttpOnly.",
+    "cells": [
+      {
+        "suffix": "body-document-cookie-write",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "document\\.cookie\\s*=[^;]{0,80}"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<script>document.cookie = 'theme=dark; path=/'</script>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "document.cookie=\"consent=1;max-age=31536000\";"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<script>localStorage.setItem('theme','dark')</script>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-indexeddb-credential",
+    "category": "credential-exposure",
+    "cwe": "CWE-522",
+    "severity": "MEDIUM",
+    "title": "Credential stored in IndexedDB",
+    "description": "An IndexedDB open call followed by a credential field name appears in the response body. IndexedDB is readable by any script on the origin and persists across sessions, so a token or password stored there survives the tab and is available to an injected script.",
+    "remediation": "Keep credentials in HttpOnly cookies or memory and store only non-sensitive cached data in IndexedDB.",
+    "limitation": "One response body. It matches the open call and a credential name within 80 characters, not the stored value.",
+    "scopeT": "One response body. It matches the open call and a credential name within 80 characters, not the stored value.",
+    "fp": "A store that names a credential field but writes only metadata is a false positive; confirm the schema.",
+    "recordDesc": "An IndexedDB open call followed by a credential field name in a response gives every reader the same view the bank has internally: IndexedDB is readable by any script on the origin and persists across sessions, so a token or password stored there survives the tab and is available to an injected script.",
+    "applicability": "Offline-first apps, mobile web shells and client caches.",
+    "risk": "Stored credentials give any injected script a durable session, not just the current page.",
+    "why": "Client storage is readable by every script on the origin and survives reloads.",
+    "fix": [
+      "Remove credentials from IndexedDB and clear existing stores.",
+      "Keep offline caches to non-sensitive data."
+    ],
+    "verifyT": "Inspect IndexedDB after login and confirm no token or password is stored.",
+    "cells": [
+      {
+        "suffix": "body-indexeddb-credential",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "indexedDB\\.open\\([\\s\\S]{0,80}?(?:token|credential|password|session)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<script>const db=indexedDB.open('vault');db.onsuccess=()=>store.put(token,'credential')</script>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "indexedDB.open('auth'); // stores password"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<script>const db=indexedDB.open('cache');db.onsuccess=()=>store.put(page,'offline-page')</script>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-service-worker-root-scope",
+    "category": "transport-security",
+    "cwe": "CWE-693",
+    "severity": "MEDIUM",
+    "title": "Service worker registered at the root scope",
+    "description": "A service worker registration that claims the root scope appears in the response body. A root-scoped worker intercepts every request the origin makes, so a compromised worker sees all traffic, including authenticated API calls, and can persist after the tab closes.",
+    "remediation": "Register the worker under the narrowest path that needs it and review the worker as production code.",
+    "limitation": "One response body. It matches the registration and its explicit root scope, not the worker's own logic.",
+    "scopeT": "One response body. It matches the registration and its explicit root scope, not the worker's own logic.",
+    "fp": "A worker registered at the root for a genuinely origin-wide offline shell is a design choice; confirm the review.",
+    "recordDesc": "A service worker registration that claims the root scope in a response gives every reader the same view the bank has internally: A root-scoped worker intercepts every request the origin makes, so a compromised worker sees all traffic, including authenticated API calls, and can persist after the tab closes.",
+    "applicability": "Progressive web apps and offline statement viewers.",
+    "risk": "One worker bug or injection gives an attacker a persistent position over every request in the origin.",
+    "why": "The service worker sits between the page and the network, which is the strongest position in the origin.",
+    "fix": [
+      "Scope the worker to the path that needs offline support.",
+      "Review worker changes like server code and pin its integrity."
+    ],
+    "verifyT": "Inspect the registration scope in the browser and confirm it is the narrowest path needed.",
+    "cells": [
+      {
+        "suffix": "body-service-worker-root-scope",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "serviceWorker\\.register\\([\\s\\S]{0,120}?scope\\s*:\\s*[\\\"']/[\\\"']"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<script>navigator.serviceWorker.register('/sw.js', {scope: '/'})</script>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "navigator.serviceWorker.register(\"/worker.js\",{scope:\"/\"});"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<script>navigator.serviceWorker.register('/statements/sw.js', {scope: '/statements/'})</script>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-livereload-script",
+    "category": "debug-exposure",
+    "cwe": "CWE-489",
+    "severity": "LOW",
+    "title": "Live-reload script in a production page",
+    "description": "A live-reload or hot-update client script appears in the response body. The reload client keeps a websocket to a development server, exposes the build machine and lets anyone who reaches that socket push changes into the page.",
+    "remediation": "Remove development tooling from production builds and serve only the compiled bundle.",
+    "limitation": "One response body. It matches the reload client script, not the build tool's configuration files.",
+    "scopeT": "One response body. It matches the reload client script, not the build tool's configuration files.",
+    "fp": "A staging environment that is intentionally served with reload is still reported; staging should not be public.",
+    "recordDesc": "A live-reload or hot-update client script in a response gives every reader the same view the bank has internally: The reload client keeps a websocket to a development server, exposes the build machine and lets anyone who reaches that socket push changes into the page.",
+    "applicability": "Static exports from a development server and reverse proxies that expose the dev port.",
+    "risk": "A reachable reload socket is a write path into the page from the build machine.",
+    "why": "Development tooling is an unauthenticated control channel and does not belong in production.",
+    "fix": [
+      "Strip the reload client from the production build.",
+      "Serve the compiled bundle from a static host."
+    ],
+    "verifyT": "Confirm the production page carries no reload client and that the dev port is closed.",
+    "cells": [
+      {
+        "suffix": "body-livereload-script",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "livereload\\.js|/__livereload|hot-update\\.json"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<script src=\"/__livereload/livereload.js\"></script>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<script src=\"/static/hot-update.json\"></script>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<script src=\"/static/app.min.js\"></script>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  }
+]

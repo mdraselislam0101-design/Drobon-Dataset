@@ -13,7 +13,7 @@ counts from the tree on every test run, so the ledger cannot go stale silently.
 | Input | Revision | Access |
 |---|---|---|
 | Main App (`Drobon`) | `c32c797a549453802bd6d82c5673d2a1728457a3` (main, merge PR#4) | read-only clone at `/home/user/Drobon-app-ref`; NEVER modified |
-| Dataset (`Drobon-Dataset`) | `arena/9fe99288-drobon-dataset` @ `fca2c39d1543bb76613d0821bf76e91ee5e8e868` | this repository |
+| Dataset (`Drobon-Dataset`) | `arena/9fe99288-drobon-dataset` @ `fca2c39d1553bb76613d0821bf76e91ee5e8e868` | this repository |
 | App capability audit | `docs/USER_TYPE_CAPABILITY_AUDIT.md` (Pump 22, revalidated 2026-09-29) | authoritative requirement source |
 | App engine docs | `docs/SAST.md` `SCA.md` `SECRETS.md` `DAST.md` `FINDINGS.md` `REPORTS.md` `ASSISTANT.md` `USERTYPES.md` `SECURITY.md` | requirement detail |
 | Dataset seam inventory | `docs/SCOPE.md` (21-row seam table), `docs/PROVIDER_MAPPING.md`, `docs/CAPABILITY_COVERAGE.md` | dataset-dependency classification |
