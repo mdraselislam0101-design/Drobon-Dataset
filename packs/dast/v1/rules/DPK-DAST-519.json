@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-519",
+  "title": "SWIFT/BIC code served with an account reference",
+  "description": "A response pairs a SWIFT/BIC code with an account reference. The pair identifies both the institution and the beneficiary account, which is what an attacker needs to prepare a fraudulent cross-border instruction that looks internally consistent.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-359",
+  "category": "privacy-exposure",
+  "remediation": "Show the BIC only on the confirmation screen the customer already authenticated into, and never in list, export or notification payloads.",
+  "limitation": "One response body. It requires both a BIC-shaped value and an account marker in the same payload.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?:account|beneficiary)[\\s\\S]{0,600}?\\b(?:swift|bic)(?:[ _]code)?\\b[\"\\']?\\s*[:=]\\s*[\"\\']?[A-Z]{6}[A-Z0-9]{2}(?:[A-Z0-9]{3})?"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://bank.example/api/beneficiaries",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "Cache-Control": "no-store"
+        },
+        "body": "<p>Beneficiary account number: 50100288177341</p><p>BIC: HDFCINBB445</p>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://bank.example/transfer/intl/receipt",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "Cache-Control": "no-store"
+        },
+        "body": "<p>Beneficiary account number: 50100288177341</p><p>BIC: HDFCINBB445</p>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://bank.example/help/incoming-swift",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "Cache-Control": "no-store"
+        },
+        "body": "<p>For incoming transfers our SWIFT code is DBBLBDDH. No account number is needed beyond the IBAN you already have.</p>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1588"
+  ]
+}

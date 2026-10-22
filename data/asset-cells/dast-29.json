@@ -1,0 +1,1012 @@
+[
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "bank-otp-in-response",
+  "category": "credential-exposure",
+  "cwe": "CWE-522",
+  "severity": "HIGH",
+  "title": "One-time passcode served in a response",
+  "description": "The response body carries a one-time passcode field together with its numeric value. An OTP that reaches the client in a payload can be replayed by anyone who can read that payload, including a proxy, a cache or a browser extension, which removes the second factor the bank relies on.",
+  "remediation": "Generate the OTP server-side, deliver it only through the out-of-band channel (SMS, push, hardware token) and never include its value in an HTTP response, log line or analytics event.",
+  "limitation": "One response body and the four-to-eight digit shape only. It cannot tell whether the value was already consumed, and it deliberately ignores base32 TOTP seeds, which the seed rule covers separately.",
+  "scopeT": "A response body that names a one-time passcode field and gives it a short numeric value.",
+  "fp": "A page that only says an OTP will be sent is not reported, because no numeric value follows the field name.",
+  "recordDesc": "An OTP in a response defeats the purpose of the second factor: whatever reaches the client can be copied before the customer types it, and the copy stays valid for the whole validity window.",
+  "applicability": "Login step-up, transaction confirmation, password reset and mobile-app API responses.",
+  "risk": "An attacker who can observe the response (shared device, proxy, cached API payload, malicious extension) completes the second factor without the customer's phone.",
+  "why": "The out-of-band channel is the whole security value of an OTP; putting it in-band removes it.",
+  "fix": [
+   "Remove the code from every response body, including debug and API variants.",
+   "Send it only over the out-of-band channel and expire it after one use."
+  ],
+  "verifyT": "Request the step-up endpoint and confirm the response contains no numeric passcode value.",
+  "cells": [
+   {
+    "suffix": "bank-otp-in-response",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*(?:otp|one[- ]time (?:password|passcode|code)|verification code))[\\s\\S]*?\\b(?:otp|otp[ _-]?code|verification[ _-]?code|one[_-]?time[_-]?code)\\b[\\\"']?\\s*[:=]\\s*[\\\"']?[0-9]{4,8}\\b"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://bank.example/api/step-up/start",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+        "Referrer-Policy": "no-referrer",
+        "Cross-Origin-Embedder-Policy": "require-corp",
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Resource-Policy": "same-origin",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+        "X-Permitted-Cross-Domain-Policies": "none",
+        "Cache-Control": "no-store"
+       },
+       "body": "{\"challenge_id\":\"ch_8812\",\"channel\":\"sms\",\"otp\":\"482913\",\"expires_in\":120}"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://bank.example/transfer/confirm",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+        "Referrer-Policy": "no-referrer",
+        "Cross-Origin-Embedder-Policy": "require-corp",
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Resource-Policy": "same-origin",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+        "X-Permitted-Cross-Domain-Policies": "none",
+        "Cache-Control": "no-store"
+       },
+       "body": "<p>Your verification code: 771204. It expires in 5 minutes.</p>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://bank.example/help/2fa",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+        "Referrer-Policy": "no-referrer",
+        "Cross-Origin-Embedder-Policy": "require-corp",
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Resource-Policy": "same-origin",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+        "X-Permitted-Cross-Domain-Policies": "none",
+        "Cache-Control": "no-store"
+       },
+       "body": "<h1>Two-factor authentication</h1><p>We send a one-time passcode to your registered mobile number by SMS. Enter the code on the confirmation screen.</p>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "bank-session-id-in-url",
+  "category": "credential-exposure",
+  "cwe": "CWE-598",
+  "severity": "MEDIUM",
+  "title": "Session identifier carried in a URL",
+  "description": "A URL in the response body carries the session identifier as a path parameter or query parameter. Session identifiers in URLs are copied into browser history, proxy logs, Referer headers and shared links, so a single click can hand an authenticated session to a third party.",
+  "remediation": "Keep the session identifier in a cookie with Secure, HttpOnly and SameSite set, and disable URL rewriting for session tracking in the application server.",
+  "limitation": "One response body. It reports the identifier appearing in a URL, not whether the session is currently valid.",
+  "scopeT": "A response body containing a URL with a jsessionid, phpsessid, sessionid or sid parameter.",
+  "fp": "A documentation page that shows the parameter name without a value is not reported, because the pattern requires at least eight identifier characters.",
+  "recordDesc": "URL rewriting puts the session credential in every place a URL is stored: history, bookmarks, access logs, analytics and the Referer header sent to third-party assets.",
+  "applicability": "Legacy servlet applications, mobile deep links and any app server still configured with URL-based session tracking.",
+  "risk": "Anyone who reads a log, a screenshot or a shared link inherits the session and can act as the customer until it expires.",
+  "why": "A cookie can be scoped and protected; a URL cannot.",
+  "fix": [
+   "Disable URL-based session tracking on the application server.",
+   "Issue the session cookie with Secure, HttpOnly and SameSite=Lax or Strict."
+  ],
+  "verifyT": "Browse the authenticated area and confirm no link or redirect carries a session identifier.",
+  "cells": [
+   {
+    "suffix": "bank-session-id-in-url",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "[?;&](?:jsessionid|phpsessid|sessionid|session_id|sid)=[A-Za-z0-9._-]{8,64}"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://bank.example/accounts",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+        "Referrer-Policy": "no-referrer",
+        "Cross-Origin-Embedder-Policy": "require-corp",
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Resource-Policy": "same-origin",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+        "X-Permitted-Cross-Domain-Policies": "none",
+        "Cache-Control": "no-store"
+       },
+       "body": "<a href=\"/accounts/summary;jsessionid=8F2A91CD44E7B1A0?lang=en\">Summary</a>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://bank.example/redirect",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+        "Referrer-Policy": "no-referrer",
+        "Cross-Origin-Embedder-Policy": "require-corp",
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Resource-Policy": "same-origin",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+        "X-Permitted-Cross-Domain-Policies": "none",
+        "Cache-Control": "no-store"
+       },
+       "body": "<meta http-equiv=\"refresh\" content=\"0;url=/portal/home?sessionid=Qk7dP2mZ91xLw4\"><p>Loading.</p>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://bank.example/docs/session",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+        "Referrer-Policy": "no-referrer",
+        "Cross-Origin-Embedder-Policy": "require-corp",
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Resource-Policy": "same-origin",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+        "X-Permitted-Cross-Domain-Policies": "none",
+        "Cache-Control": "no-store"
+       },
+       "body": "<h1>Session handling</h1><p>The session cookie must be Secure and HttpOnly. Do not enable URL rewriting.</p>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "bank-account-number-with-balance",
+  "category": "privacy-exposure",
+  "cwe": "CWE-359",
+  "severity": "HIGH",
+  "title": "Bank account number served together with a balance",
+  "description": "A JSON response pairs an account number with a balance value. Together they form a complete financial profile of the customer, which is far more useful to a fraudster than either field alone and is not something a page renderer needs in one payload.",
+  "remediation": "Return a masked account number (last four digits) with the balance, and keep the full number behind a step-up authenticated detail endpoint.",
+  "limitation": "One response body and the JSON key shapes only. A balance rendered without an account key is out of scope.",
+  "scopeT": "A JSON response with an account-number key and a balance key in the same payload.",
+  "fp": "A statement page that lists only masked numbers such as **** 8821 is not reported.",
+  "recordDesc": "Account number plus balance is the pair fraud teams use to pass identity checks and to target high-value accounts; a single leaked payload can expose thousands of them.",
+  "applicability": "Account summary APIs, mobile-app home screens and open-banking aggregation endpoints.",
+  "risk": "A leaked payload hands an attacker a list of live account numbers sorted by value, ready for social engineering or account takeover attempts.",
+  "why": "The renderer only needs the masked number and the amount.",
+  "fix": [
+   "Mask the account number to the last four digits in every list and summary payload.",
+   "Require step-up authentication for the full number."
+  ],
+  "verifyT": "Request the account summary and confirm the number is masked.",
+  "cells": [
+   {
+    "suffix": "bank-account-number-with-balance",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]*(?:balance|available))(?=[\\s\\S]*\\\"(?:account_number|accountNumber|acct_no)\\\")[\\s\\S]*?\\\"(?:account_number|accountNumber|acct_no)\\\"\\s*:\\s*\\\"?[0-9]{8,17}\\\"?"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://bank.example/api/accounts",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+        "Referrer-Policy": "no-referrer",
+        "Cross-Origin-Embedder-Policy": "require-corp",
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Resource-Policy": "same-origin",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+        "X-Permitted-Cross-Domain-Policies": "none",
+        "Cache-Control": "no-store"
+       },
+       "body": "{\"account_number\":\"0123456789012\",\"balance\":\"18420.55\",\"currency\":\"BDT\"}"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://bank.example/api/summary",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+        "Referrer-Policy": "no-referrer",
+        "Cross-Origin-Embedder-Policy": "require-corp",
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Resource-Policy": "same-origin",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+        "X-Permitted-Cross-Domain-Policies": "none",
+        "Cache-Control": "no-store"
+       },
+       "body": "{\"accounts\":[{\"acct_no\": 55100488291177, \"available\": 920.10}]}"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://bank.example/api/accounts/masked",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+        "Referrer-Policy": "no-referrer",
+        "Cross-Origin-Embedder-Policy": "require-corp",
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Resource-Policy": "same-origin",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+        "X-Permitted-Cross-Domain-Policies": "none",
+        "Cache-Control": "no-store"
+       },
+       "body": "{\"account_number\":\"****8821\",\"balance\":\"18420.55\",\"currency\":\"BDT\"}"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "bank-statement-csv",
+  "category": "privacy-exposure",
+  "cwe": "CWE-359",
+  "severity": "MEDIUM",
+  "title": "Account statement exported as a CSV row set",
+  "description": "The response is a comma-separated transaction statement with date, amount and balance columns. Bulk financial history served as one downloadable file is the highest-value single response a retail bank can emit, and it usually bypasses the masking the HTML views apply.",
+  "remediation": "Require re-authentication for statement export, mask account identifiers, cap the export window and serve the file with Content-Disposition attachment and no-store.",
+  "limitation": "One response body. It detects the CSV header shape rather than the file extension, so a renamed export is still reported.",
+  "scopeT": "A CSV header row combining a date column, an amount or debit/credit column and a balance column.",
+  "fp": "A merchant settlement report that carries only totals, with no balance column, is not reported.",
+  "recordDesc": "A statement export is a ready-made fraud dataset: it names every transaction, its amount and the resulting balance, and it is small enough to mail or drop into a paste site.",
+  "applicability": "Internet-banking statement downloads, call-centre exports and mobile-app CSV sharing.",
+  "risk": "One leaked export reveals spending patterns, salary timing and counterparties for the whole statement period.",
+  "why": "A statement can be rendered page by page under the session; a bulk file outlives the session.",
+  "fix": [
+   "Require step-up authentication and a short-lived token for exports.",
+   "Mask account identifiers and limit the period per export."
+  ],
+  "verifyT": "Request the export path without re-authentication and confirm it is refused.",
+  "cells": [
+   {
+    "suffix": "bank-statement-csv",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "\\b(?:date|transaction date)\\b[^\\r\\n]{0,80},[^\\r\\n]{0,80}\\b(?:debit|credit|amount)\\b[^\\r\\n]{0,80},[^\\r\\n]{0,80}\\bbalance\\b"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://bank.example/accounts/export.csv",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/csv; charset=utf-8",
+        "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+        "Referrer-Policy": "no-referrer",
+        "Cross-Origin-Embedder-Policy": "require-corp",
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Resource-Policy": "same-origin",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+        "X-Permitted-Cross-Domain-Policies": "none",
+        "Cache-Control": "no-store"
+       },
+       "body": "Transaction Date,Description,Debit,Credit,Balance\n2026-09-01,Salary,,42000.00,58120.55\n2026-09-02,ATM withdrawal,3000.00,,55120.55\n"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://bank.example/accounts/statement.csv",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/csv; charset=utf-8",
+        "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+        "Referrer-Policy": "no-referrer",
+        "Cross-Origin-Embedder-Policy": "require-corp",
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Resource-Policy": "same-origin",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+        "X-Permitted-Cross-Domain-Policies": "none",
+        "Cache-Control": "no-store"
+       },
+       "body": "date,reference,amount,balance\n2026-09-03,TXN8821,120.00,55000.55\n"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://bank.example/settlement/report.csv",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/csv; charset=utf-8",
+        "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+        "Referrer-Policy": "no-referrer",
+        "Cross-Origin-Embedder-Policy": "require-corp",
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Resource-Policy": "same-origin",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+        "X-Permitted-Cross-Domain-Policies": "none",
+        "Cache-Control": "no-store"
+       },
+       "body": "Settlement Date,Merchant,Total Fees,Net\n2026-09-03,Example Retail,18.20,8810.40\n"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "bank-card-form-uses-get",
+  "category": "credential-exposure",
+  "cwe": "CWE-598",
+  "severity": "MEDIUM",
+  "title": "Payment form submits card fields with GET",
+  "description": "A form that carries card number or card verification fields submits with method GET, so the values are appended to the URL. Card data then lands in browser history, proxy logs, server access logs and any Referer the next page sends.",
+  "remediation": "Submit every payment form with POST over HTTPS, keep card fields out of the query string and never echo them back in a redirect URL.",
+  "limitation": "One response body. It detects the form declaration and a card-shaped field name, not the values a user would type.",
+  "scopeT": "A form element with method GET that also declares a card, PAN or CVV field.",
+  "fp": "A search form that only has a free-text query field is not reported, because no card-shaped field name is present.",
+  "recordDesc": "A GET payment form writes card data into every layer that records URLs, which is precisely the data PCI DSS requires to be protected in transit and at rest.",
+  "applicability": "Checkout pages, saved-card management screens and legacy payment gateways.",
+  "risk": "Card values end up in access logs and shared URLs, where support staff and log exporters can read them.",
+  "why": "POST keeps the values in the request body; GET does not.",
+  "fix": [
+   "Change the form to method POST.",
+   "Reject any request that carries card fields in the query string."
+  ],
+  "verifyT": "Submit the payment form and confirm no card value appears in the resulting URL.",
+  "cells": [
+   {
+    "suffix": "bank-card-form-uses-get",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "<form(?=[^>]{0,300}method\\s*=\\s*[\\\"']?get)(?=[\\s\\S]{0,1500}?name\\s*=\\s*[\\\"'][^\\\"']{0,60}(?:card|cvv|cvc)[^\\\"']{0,60}[\\\"'])"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://bank.example/cards/pay",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+        "Referrer-Policy": "no-referrer",
+        "Cross-Origin-Embedder-Policy": "require-corp",
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Resource-Policy": "same-origin",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+        "X-Permitted-Cross-Domain-Policies": "none",
+        "Cache-Control": "no-store"
+       },
+       "body": "<form action=\"/cards/pay\" method=\"get\"><input name=\"card_number\"><input name=\"cvv\"><button>Pay</button></form>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://bank.example/checkout",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+        "Referrer-Policy": "no-referrer",
+        "Cross-Origin-Embedder-Policy": "require-corp",
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Resource-Policy": "same-origin",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+        "X-Permitted-Cross-Domain-Policies": "none",
+        "Cache-Control": "no-store"
+       },
+       "body": "<FORM METHOD=GET ACTION=\"/checkout\"><input name=\"cardholder_cvc\"></FORM>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://bank.example/search",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+        "Referrer-Policy": "no-referrer",
+        "Cross-Origin-Embedder-Policy": "require-corp",
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Resource-Policy": "same-origin",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+        "X-Permitted-Cross-Domain-Policies": "none",
+        "Cache-Control": "no-store"
+       },
+       "body": "<form action=\"/search\" method=\"get\"><input name=\"q\"><button>Search</button></form>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "bank-cvv-field-with-value",
+  "category": "privacy-exposure",
+  "cwe": "CWE-359",
+  "severity": "HIGH",
+  "title": "Card verification value rendered into a form field",
+  "description": "A card verification value is rendered as the value of an input field. The CVV must never be stored after authorisation, so a page that can print it back means the value was kept somewhere, which is a direct PCI DSS violation and a reusable card-not-present credential.",
+  "remediation": "Never store the CVV: authorise the payment in the same request that receives it and render the field empty on every later page.",
+  "limitation": "One response body and the input value shape only. A CVV typed by the customer into an empty field is not a finding.",
+  "scopeT": "An input whose name or id is cvv, cvc or security code and whose value is three or four digits.",
+  "fp": "A masked placeholder such as value=\"***\" is not reported, because the pattern requires digits.",
+  "recordDesc": "A stored CVV converts a partial card record into everything needed for a card-not-present charge, which is why the standard forbids keeping it at all.",
+  "applicability": "Saved-card screens, retry-payment pages and support-assisted checkout.",
+  "risk": "Anyone with read access to the page or its cache obtains a complete card credential set.",
+  "why": "Storing the CVV has no business value: it exists only to prove the physical card is present at authorisation time.",
+  "fix": [
+   "Drop the CVV from the datastore and from every template.",
+   "Render only the masked PAN."
+  ],
+  "verifyT": "Open the saved-card page and confirm no CVV value is present in the markup.",
+  "cells": [
+   {
+    "suffix": "bank-cvv-field-with-value",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "<input(?=[^>]{0,200}(?:name|id)\\s*=\\s*[\\\"'][^\\\"']{0,40}(?:cvv|cvc|security[_-]?code)[^\\\"']{0,40}[\\\"'])(?=[^>]{0,200}value\\s*=\\s*[\\\"'][0-9]{3,4}[\\\"'])"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://bank.example/cards/8842/edit",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+        "Referrer-Policy": "no-referrer",
+        "Cross-Origin-Embedder-Policy": "require-corp",
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Resource-Policy": "same-origin",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+        "X-Permitted-Cross-Domain-Policies": "none",
+        "Cache-Control": "no-store"
+       },
+       "body": "<label>CVV</label><input type=\"text\" name=\"cvv\" value=\"812\">"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://bank.example/cards/retry",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+        "Referrer-Policy": "no-referrer",
+        "Cross-Origin-Embedder-Policy": "require-corp",
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Resource-Policy": "same-origin",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+        "X-Permitted-Cross-Domain-Policies": "none",
+        "Cache-Control": "no-store"
+       },
+       "body": "<input id=\"security_code\" value=\"4412\" type=\"tel\">"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://bank.example/cards/8842/edit",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+        "Referrer-Policy": "no-referrer",
+        "Cross-Origin-Embedder-Policy": "require-corp",
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Resource-Policy": "same-origin",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+        "X-Permitted-Cross-Domain-Policies": "none",
+        "Cache-Control": "no-store"
+       },
+       "body": "<label>CVV</label><input type=\"text\" name=\"cvv\" value=\"\" autocomplete=\"off\">"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "bank-swift-bic-with-account",
+  "category": "privacy-exposure",
+  "cwe": "CWE-359",
+  "severity": "MEDIUM",
+  "title": "SWIFT/BIC code served with an account reference",
+  "description": "A response pairs a SWIFT/BIC code with an account reference. The pair identifies both the institution and the beneficiary account, which is what an attacker needs to prepare a fraudulent cross-border instruction that looks internally consistent.",
+  "remediation": "Show the BIC only on the confirmation screen the customer already authenticated into, and never in list, export or notification payloads.",
+  "limitation": "One response body. It requires both a BIC-shaped value and an account marker in the same payload.",
+  "scopeT": "A response naming a swift or bic field with an eight or eleven character code beside an account field.",
+  "fp": "A help page that prints a bank's own BIC for incoming transfers, with no account field, is not reported.",
+  "recordDesc": "Beneficiary account plus BIC is the identifying pair behind an international transfer; together they let a fraudster pre-fill a payment order that matches the customer's real beneficiary.",
+  "applicability": "International transfer receipts, beneficiary management screens and SWIFT confirmation emails rendered as HTML.",
+  "risk": "A leaked pair enables convincing payment-diversion fraud against the customer and the bank.",
+  "why": "A BIC alone is public; a BIC bound to the customer's beneficiary account is not.",
+  "fix": [
+   "Keep the BIC on the authenticated confirmation step only.",
+   "Mask beneficiary account numbers in lists and exports."
+  ],
+  "verifyT": "List saved international beneficiaries and confirm no full account number is shown.",
+  "cells": [
+   {
+    "suffix": "bank-swift-bic-with-account",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?:account|beneficiary)[\\s\\S]{0,600}?\\b(?:swift|bic)(?:[ _]code)?\\b[\"\\']?\\s*[:=]\\s*[\"\\']?[A-Z]{6}[A-Z0-9]{2}(?:[A-Z0-9]{3})?"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://bank.example/api/beneficiaries",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+        "Referrer-Policy": "no-referrer",
+        "Cross-Origin-Embedder-Policy": "require-corp",
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Resource-Policy": "same-origin",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+        "X-Permitted-Cross-Domain-Policies": "none",
+        "Cache-Control": "no-store"
+       },
+       "body": "<p>Beneficiary account number: 50100288177341</p><p>BIC: HDFCINBB445</p>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://bank.example/transfer/intl/receipt",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+        "Referrer-Policy": "no-referrer",
+        "Cross-Origin-Embedder-Policy": "require-corp",
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Resource-Policy": "same-origin",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+        "X-Permitted-Cross-Domain-Policies": "none",
+        "Cache-Control": "no-store"
+       },
+       "body": "<p>Beneficiary account number: 50100288177341</p><p>BIC: HDFCINBB445</p>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://bank.example/help/incoming-swift",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+        "Referrer-Policy": "no-referrer",
+        "Cross-Origin-Embedder-Policy": "require-corp",
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Resource-Policy": "same-origin",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+        "X-Permitted-Cross-Domain-Policies": "none",
+        "Cache-Control": "no-store"
+       },
+       "body": "<p>For incoming transfers our SWIFT code is DBBLBDDH. No account number is needed beyond the IBAN you already have.</p>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "bank-pin-in-response",
+  "category": "credential-exposure",
+  "cwe": "CWE-522",
+  "severity": "HIGH",
+  "title": "Card PIN value served in a response",
+  "description": "A response gives a card PIN together with a card or account marker. PIN mailers exist precisely because the PIN must travel outside the banking session; a PIN in an HTTP payload is readable by anyone who can see the response and cannot be rotated without reissuing the card.",
+  "remediation": "Deliver or reset the PIN only through an approved out-of-band channel (printed mailer, ATM, IVR) and never include it in a response payload or a notification.",
+  "limitation": "One response body. It requires a card or ATM marker in the same payload as the PIN field.",
+  "scopeT": "A response naming a pin field with a four to six digit value beside a card, ATM or debit marker.",
+  "fp": "A page that explains how to change the PIN, with no numeric value, is not reported.",
+  "recordDesc": "A PIN is the weakest and least rotatable credential a bank issues; once exposed it stays valid until the card is replaced, and customers reuse it across cards.",
+  "applicability": "Card-issuance portals, PIN-reset APIs and branch-assisted services.",
+  "risk": "An attacker with the PAN and the PIN can withdraw cash at any ATM without further authentication.",
+  "why": "The PIN is only secret if it never enters a channel the customer's device can read back.",
+  "fix": [
+   "Remove the PIN from every API response.",
+   "Route PIN issuance through the approved mailer or ATM channel."
+  ],
+  "verifyT": "Request the PIN-reset endpoint and confirm the value is never returned.",
+  "cells": [
+   {
+    "suffix": "bank-pin-in-response",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "(?=[\\s\\S]{0,1500}(?:debit card|credit card|atm|cardholder|card))[\\s\\S]{0,1500}?\\bpin\\b[\\\"']?\\s*[:=]\\s*[\\\"']?[0-9]{4,6}\\b"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://bank.example/api/cards/8842/pin",
+       "status": 200,
+       "headers": {
+        "Content-Type": "application/json; charset=utf-8",
+        "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+        "Referrer-Policy": "no-referrer",
+        "Cross-Origin-Embedder-Policy": "require-corp",
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Resource-Policy": "same-origin",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+        "X-Permitted-Cross-Domain-Policies": "none",
+        "Cache-Control": "no-store"
+       },
+       "body": "{\"card\":\"**** 4242\",\"pin\":\"4917\",\"channel\":\"branch\"}"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://bank.example/cards/issues",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+        "Referrer-Policy": "no-referrer",
+        "Cross-Origin-Embedder-Policy": "require-corp",
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Resource-Policy": "same-origin",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+        "X-Permitted-Cross-Domain-Policies": "none",
+        "Cache-Control": "no-store"
+       },
+       "body": "<p>Debit card issued.</p><p>PIN: 550218</p>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://bank.example/help/pin",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+        "Referrer-Policy": "no-referrer",
+        "Cross-Origin-Embedder-Policy": "require-corp",
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Resource-Policy": "same-origin",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+        "X-Permitted-Cross-Domain-Policies": "none",
+        "Cache-Control": "no-store"
+       },
+       "body": "<h2>Debit card PIN</h2><p>Change your PIN at any ATM using the card and your current PIN.</p>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "bank-security-answer-with-value",
+  "category": "credential-exposure",
+  "cwe": "CWE-522",
+  "severity": "MEDIUM",
+  "title": "Security answer rendered into a form field",
+  "description": "A knowledge-based recovery answer is rendered as an input value. The answer is a shared secret used to reset the account, so once it is readable in markup it no longer proves anything, and customers reuse the same answer across banks.",
+  "remediation": "Never render a stored security answer; ask the question and compare a hash server-side, and prefer an out-of-band recovery channel.",
+  "limitation": "One response body. It matches the input name and a short literal value, not the answer's correctness.",
+  "scopeT": "An input named security answer, secret answer or mother's maiden name that carries a literal value.",
+  "fp": "A page that shows the question with an empty answer field is not reported.",
+  "recordDesc": "A recovery answer bypasses the password, the OTP or both; it is often the single weakest link in an otherwise well-defended retail banking login.",
+  "applicability": "Profile, recovery-question setup and call-centre identity-verification pages.",
+  "risk": "Anyone who reads the page can reset the password later without the customer's device.",
+  "why": "The answer must be compared, never displayed.",
+  "fix": [
+   "Render the question with an empty field.",
+   "Move recovery to an out-of-band channel and hash any answer that must be stored."
+  ],
+  "verifyT": "Open the recovery-question page and confirm the field is empty.",
+  "cells": [
+   {
+    "suffix": "bank-security-answer-with-value",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "<input(?=[^>]{0,200}(?:name|id)\\s*=\\s*[\\\"'][^\\\"']{0,50}(?:security[ _-]?answer|secret[ _-]?answer|mothers?[ _-]?maiden)[^\\\"']{0,50}[\\\"'])(?=[^>]{0,200}value\\s*=\\s*[\\\"'][^\\\"']{2,80}[\\\"'])"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://bank.example/profile/recovery",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+        "Referrer-Policy": "no-referrer",
+        "Cross-Origin-Embedder-Policy": "require-corp",
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Resource-Policy": "same-origin",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+        "X-Permitted-Cross-Domain-Policies": "none",
+        "Cache-Control": "no-store"
+       },
+       "body": "<label>First school</label><input name=\"security_answer\" value=\"Greenfield\">"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://bank.example/profile/recovery",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+        "Referrer-Policy": "no-referrer",
+        "Cross-Origin-Embedder-Policy": "require-corp",
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Resource-Policy": "same-origin",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+        "X-Permitted-Cross-Domain-Policies": "none",
+        "Cache-Control": "no-store"
+       },
+       "body": "<input id=\"mothers_maiden_name\" value=\"Chowdhury\" type=\"text\">"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://bank.example/profile/recovery",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+        "Referrer-Policy": "no-referrer",
+        "Cross-Origin-Embedder-Policy": "require-corp",
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Resource-Policy": "same-origin",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+        "X-Permitted-Cross-Domain-Policies": "none",
+        "Cache-Control": "no-store"
+       },
+       "body": "<input name=\"security_answer\" value=\"\" type=\"text\">"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "kind": "dast",
+  "framing": "custom",
+  "class": "bank-account-in-link",
+  "category": "credential-exposure",
+  "cwe": "CWE-598",
+  "severity": "MEDIUM",
+  "title": "Account number carried in a link URL",
+  "description": "A link in the response carries an account number as a query parameter. Every such link is written to browser history, access logs and the Referer header of any third-party asset on the next page, so an account identifier leaks even though the page itself shows a masked number.",
+  "remediation": "Address accounts by an opaque server-side reference instead of the account number, and authorise the lookup against the session.",
+  "limitation": "One response body. It matches the link parameter shape, not whether the linked page is authorised.",
+  "scopeT": "An href whose query string carries an account, acct or acc parameter with eight or more digits.",
+  "fp": "A link that carries an opaque reference such as acc=9f2c does not match, because the pattern requires digits.",
+  "recordDesc": "An account number in a URL is a persistent identifier that survives the session and appears in third-party analytics, which turns one shared screenshot into a valid target list.",
+  "applicability": "Account switchers, statement downloads, support-console links and email templates.",
+  "risk": "Account identifiers leak into logs and third-party services, enabling targeted social engineering.",
+  "why": "The server already knows the session; the URL does not need the account number.",
+  "fix": [
+   "Replace the account number in links with an opaque reference.",
+   "Set Referrer-Policy to no-referrer on pages that link out."
+  ],
+  "verifyT": "Inspect the account switcher links and confirm no account number appears in them.",
+  "cells": [
+   {
+    "suffix": "bank-account-in-link",
+    "lang": "http",
+    "check": {
+     "type": "response-body-matches",
+     "valuePattern": "href\\s*=\\s*[\\\"'][^\\\"']{0,300}[?&](?:account|acct|acc)(?:_?(?:number|no|id))?=[0-9]{8,17}[^\\\"']{0,100}[\\\"']"
+    },
+    "tests": [
+     {
+      "observation": {
+       "url": "https://bank.example/accounts",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+        "Referrer-Policy": "no-referrer",
+        "Cross-Origin-Embedder-Policy": "require-corp",
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Resource-Policy": "same-origin",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+        "X-Permitted-Cross-Domain-Policies": "none",
+        "Cache-Control": "no-store"
+       },
+       "body": "<a href=\"/statement/download?account=0123456789012&period=2026-09\">Download</a>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://bank.example/home",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+        "Referrer-Policy": "no-referrer",
+        "Cross-Origin-Embedder-Policy": "require-corp",
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Resource-Policy": "same-origin",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+        "X-Permitted-Cross-Domain-Policies": "none",
+        "Cache-Control": "no-store"
+       },
+       "body": "<a href=\"/cards/manage?acct_no=55100488291177\">Manage card</a>"
+      },
+      "match": true
+     },
+     {
+      "observation": {
+       "url": "https://bank.example/accounts",
+       "status": 200,
+       "headers": {
+        "Content-Type": "text/html; charset=utf-8",
+        "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+        "Referrer-Policy": "no-referrer",
+        "Cross-Origin-Embedder-Policy": "require-corp",
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Resource-Policy": "same-origin",
+        "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+        "X-Permitted-Cross-Domain-Policies": "none",
+        "Cache-Control": "no-store"
+       },
+       "body": "<a href=\"/statement/download?account=9f2c71ba&period=2026-09\">Download</a>"
+      },
+      "match": false
+     }
+    ]
+   }
+  ]
+ }
+]

@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-510",
+  "title": "Account number carried in a link URL",
+  "description": "A link in the response carries an account number as a query parameter. Every such link is written to browser history, access logs and the Referer header of any third-party asset on the next page, so an account identifier leaks even though the page itself shows a masked number.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-598",
+  "category": "credential-exposure",
+  "remediation": "Address accounts by an opaque server-side reference instead of the account number, and authorise the lookup against the session.",
+  "limitation": "One response body. It matches the link parameter shape, not whether the linked page is authorised.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "href\\s*=\\s*[\\\"'][^\\\"']{0,300}[?&](?:account|acct|acc)(?:_?(?:number|no|id))?=[0-9]{8,17}[^\\\"']{0,100}[\\\"']"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://bank.example/accounts",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "Cache-Control": "no-store"
+        },
+        "body": "<a href=\"/statement/download?account=0123456789012&period=2026-09\">Download</a>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://bank.example/home",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "Cache-Control": "no-store"
+        },
+        "body": "<a href=\"/cards/manage?acct_no=55100488291177\">Manage card</a>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://bank.example/accounts",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "Cache-Control": "no-store"
+        },
+        "body": "<a href=\"/statement/download?account=9f2c71ba&period=2026-09\">Download</a>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1579"
+  ]
+}
