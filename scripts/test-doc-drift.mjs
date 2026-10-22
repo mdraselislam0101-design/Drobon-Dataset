@@ -358,10 +358,10 @@ if (existsSync(join(ROOT, 'DROBON_COVERAGE_EVIDENCE.json'))) {
     // Audit claims re-pinned 2026-10-21: DAST 306 -> 325 -> 367 -> 398 -> 500, knowledge trees
     // 1353 -> 1372 -> 1445 -> 1557 after app-surface batches 3, 4, 5 and 6. The pin is the *claim being audited*, so it moves only
     // when the tree moves and the ledger is updated in the same commit.
-    ['dast rules', countFiles('packs/dast/v1/rules', /^DPK-.*\.json$/), 533],
-    ['patterns', countFiles('knowledge/patterns', /^DPK-PAT-.*\.json$/), 1630],
-    ['records', countFiles('knowledge/records', /^DPK-REC-.*\.json$/), 1630],
-    ['remediation', countFiles('knowledge/remediation', /^DPK-.*\.json$/), 1630],
+    ['dast rules', countFiles('packs/dast/v1/rules', /^DPK-.*\.json$/), 543],
+    ['patterns', countFiles('knowledge/patterns', /^DPK-PAT-.*\.json$/), 1640],
+    ['records', countFiles('knowledge/records', /^DPK-REC-.*\.json$/), 1640],
+    ['remediation', countFiles('knowledge/remediation', /^DPK-.*\.json$/), 1640],
     ['cwe', countFiles('knowledge/cwe', /\.json$/), 82],
     ['lessons', countFiles('learning/lessons', /\.json$/), 6],
     ['templates', countFiles('assessments/templates', /\.json$/), 3],
