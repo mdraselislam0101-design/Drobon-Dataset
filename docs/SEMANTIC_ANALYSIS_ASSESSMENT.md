@@ -10,7 +10,7 @@ statements are backed by the current repository tree and its test suites.
 
 | Layer | State | Evidence |
 |---|---|---|
-| Lexical detectors | **Implemented + verified** | 1617 rules (`packs/*/v1/rules`) with executable pos/neg tests; `test-packs` 5,962/5,594 (2026-10-21) |
+| Lexical detectors | **Implemented + verified** | 1630 rules (`packs/*/v1/rules`) with executable pos/neg tests; `test-packs` 5,962/5,594 (2026-10-21) |
 | Line/observation evaluation | **Implemented + verified** (Phase 6; breadth extended 2026-10-19) | `scripts/eval-foundation.mjs` + `data/eval-cases` (1,390 synthetic cases, 1,192 distinct rules in positive detections: 942 SAST / 97 secrets / 153 DAST); `test-eval` 43/43; breadth report `npm run eval:coverage` |
 | Evidence source-mapping | **Implemented + verified** (Phase 6, small milestone) | `scripts/finding-evidence.mjs` `extractEvidence` (line-range/excerpt/context computed from actual text); `test-finding-evidence` 31/31 |
 | Parser / AST | **NOT IMPLEMENTED** | no parser, grammar, or AST code anywhere in `scripts/`; no tests |

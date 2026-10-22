@@ -1,0 +1,1315 @@
+[
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-nominee-details",
+    "category": "privacy-exposure",
+    "cwe": "CWE-359",
+    "severity": "HIGH",
+    "title": "Nominee or next-of-kin details in a response",
+    "description": "A nominee block naming a person together with a relation or date of birth appears in the response body. That combination identifies a third party who never consented to the disclosure, and it is enough to answer knowledge-based identity questions about the account holder.",
+    "remediation": "Return only the masked nominee name to the authenticated owner, keep relation and date of birth server-side and log the access.",
+    "limitation": "One response body. It matches a nominee-style block followed by person fields within 120 characters, not whether the fields were masked elsewhere.",
+    "scopeT": "A response that names the nominee block with no person fields after it is not reported.",
+    "fp": "Account detail, KYC review and beneficiary pages in retail banking.",
+    "recordDesc": "A nominee block naming a person together with a relation or date of birth in a response gives every reader of that response the same information the bank holds internally: That combination identifies a third party who never consented to the disclosure, and it is enough to answer knowledge-based identity questions about the account holder.",
+    "applicability": "A relative's identity and relationship are reusable facts: they unlock call-centre verification and social-engineering scripts.",
+    "risk": "Nominee data is third-party personal data; the account holder is not the only data subject involved.",
+    "why": "Open the account page as the customer and confirm only a masked nominee name is returned.",
+    "fix": [
+      "Mask the nominee name and drop relation and date of birth from the response.",
+      "Log every view of nominee data with the acting user and the account."
+    ],
+    "verifyT": "\\b(?:nominee|next[_ -]?of[_ -]?kin|legal[_ -]?heir)\\b[\\s\\S]{0,120}?\\b(?:name|relation|dob|date[_ -]?of[_ -]?birth)\\b",
+    "cells": [
+      {
+        "suffix": "body-nominee-details",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\\b(?:[Nn]ominee|next[_ -]?of[_ -]?kin|[Ll]egal[_ -]?heir)\\b[\\s\\S]{0,120}?\\b(?:name|relation|dob|date[_ -]?of[_ -]?birth)\\b"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<dl><dt>Nominee</dt><dd>name: R. Ahmed, relation: spouse, dob: 1984-06-12</dd></dl>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"beneficiary\":{\"nominee\":\"S. Khatun\",\"relation\":\"daughter\"}}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<dl><dt>Nominee</dt><dd>Registered. Contact the branch to change it.</dd></dl>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-credit-score-value",
+    "category": "privacy-exposure",
+    "cwe": "CWE-359",
+    "severity": "MEDIUM",
+    "title": "Credit score served in a response",
+    "description": "A credit score or bureau rating value attached to a borrower record appears in the response body. A bureau score is licensed data with contractual handling limits, and in a page or API payload it can be scraped at scale to build a profile the bureau never authorised.",
+    "remediation": "Serve the score only inside the authenticated bureau view, never cache it, and return a band rather than the raw value where the product allows.",
+    "limitation": "One response body. It matches a score or rating field with a numeric or letter-grade value, not the bureau's own portal.",
+    "scopeT": "A page that explains how the score is used, with no value, is not reported.",
+    "fp": "Loan application, credit-limit review and pre-approved-offer pages.",
+    "recordDesc": "A credit score or bureau rating value attached to a borrower record in a response gives every reader of that response the same information the bank holds internally: A bureau score is licensed data with contractual handling limits, and in a page or API payload it can be scraped at scale to build a profile the bureau never authorised.",
+    "applicability": "Bulk score exposure supports discrimination, targeted fraud and identity takeover planning.",
+    "risk": "Credit data carries licence terms and privacy obligations that a cached payload cannot honour.",
+    "why": "Request the endpoint and confirm the raw score requires the bureau session and is not cached.",
+    "fix": [
+      "Return a band or omit the score outside the bureau session.",
+      "Set Cache-Control: no-store and audit every read."
+    ],
+    "verifyT": "\\b(?:cib|credit[_ -]?(?:score|rating)|bureau[_ -]?score)\\b[\\\"']?\\s*[:=]\\s*[\\\"']?(?:[0-9]{3}|[A-D][+-]?)\\b",
+    "cells": [
+      {
+        "suffix": "body-credit-score-value",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\\b(?:[Cc][Ii][Bb]|[Cc]redit|[Bb]ureau)[_ -]?(?:[Ss]core|[Rr]ating)\\b[\\\"']?\\s*[:=]\\s*[\\\"']?(?:[0-9]{3}|[A-D][+-]?)\\b"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<div class=\"score\">CIB score: 742</div>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"applicant\":{\"credit_score\":\"A-\"}}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<p>Your CIB score is requested from the bureau only when you apply.</p>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-passport-mrz",
+    "category": "privacy-exposure",
+    "cwe": "CWE-359",
+    "severity": "HIGH",
+    "title": "Passport machine-readable zone in a response",
+    "description": "A passport machine-readable zone line (P&lt; followed by an issuing-state code) appears in the response body. The MRZ encodes name, document number, nationality, date of birth and expiry in a fixed format that any reader can parse, and it is accepted as proof of identity by many services.",
+    "remediation": "Remove the MRZ from every response, keep only the last four characters of the document number and store the scan in the encrypted document vault.",
+    "limitation": "One response body. It matches the two-character document code and issuing state of an MRZ line, not the passport number alone.",
+    "scopeT": "A page that shows a sample MRZ in documentation is still reported; confirm the value is synthetic.",
+    "fp": "KYC upload confirmation, onboarding review and branch-assisted account opening.",
+    "recordDesc": "A passport machine-readable zone line (P&lt; followed by an issuing-state code) in a response gives every reader of that response the same information the bank holds internally: The MRZ encodes name, document number, nationality, date of birth and expiry in a fixed format that any reader can parse, and it is accepted as proof of identity by many services.",
+    "applicability": "An MRZ line is a complete identity document in text form, and it is enough to open accounts or pass automated verification elsewhere.",
+    "risk": "The MRZ exists to be machine-read, which is exactly why it must not travel into a browser response.",
+    "why": "Upload a document and confirm the response carries no MRZ line.",
+    "fix": [
+      "Return only a masked document reference after upload.",
+      "Encrypt the scan and restrict it to the KYC reviewer role."
+    ],
+    "verifyT": "\\bP<[A-Z]{3}[A-Z<]{5,}",
+    "cells": [
+      {
+        "suffix": "body-passport-mrz",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\\bP<[A-Z]{3}[A-Z<]{5,}"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<pre>P<BGDISLAM<<MD<RAHIM<AHAMED<<<<<<<<<<<<<<<<<<<<<<</pre>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"mrz\":\"P<BGDKHATUN<<SAYEEDA<<<<<<<<<<<<<<<<<<<<<<<<<<<\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<p>Document received. Reference KYC-8841; the scan is held in the vault.</p>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-symfony-profiler",
+    "category": "debug-exposure",
+    "cwe": "CWE-215",
+    "severity": "MEDIUM",
+    "title": "Symfony profiler toolbar served in production",
+    "description": "A Symfony web-debug toolbar or profiler token appears in the response body. The profiler exposes the request, the SQL, the configuration and the session of every page it instruments, and the toolbar advertises the profiler URL.",
+    "remediation": "Disable the web profiler bundle outside development and remove the toolbar from production responses.",
+    "limitation": "One response body. It matches the toolbar element or profiler path, not the profiler's stored data, which requires a follow-up request.",
+    "scopeT": "A page that documents the profiler with no toolbar markup is not reported.",
+    "fp": "Symfony applications deployed with the dev environment or with the bundle left enabled.",
+    "recordDesc": "A Symfony web-debug toolbar or profiler token in a response gives every reader of that response the same information the bank holds internally: The profiler exposes the request, the SQL, the configuration and the session of every page it instruments, and the toolbar advertises the profiler URL.",
+    "applicability": "The profiler store holds SQL, configuration and session data for every request, so one reachable token yields a full application picture.",
+    "risk": "Debug tooling must not be part of a production page; the toolbar is the advertisement that leads to the store.",
+    "why": "Confirm no page contains the toolbar and that /_profiler returns 404.",
+    "fix": [
+      "Set APP_ENV=prod and remove WebProfilerBundle from the production kernel.",
+      "Block /_profiler and /_wdt at the edge and confirm the 404."
+    ],
+    "verifyT": "sf-toolbar|/_profiler/[a-z0-9]{6,}",
+    "cells": [
+      {
+        "suffix": "body-symfony-profiler",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "sf-toolbar|/_profiler/[a-z0-9]{6,}"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<div id=\"sfMiniToolbar-3f9a12\" class=\"sf-toolbar\"></div>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"toolbar\":\"https://bank.example/_profiler/8ac41f?panel=request\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<p>Profiling is disabled outside the development environment.</p>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-tomcat-stack",
+    "category": "information-disclosure",
+    "cwe": "CWE-209",
+    "severity": "MEDIUM",
+    "title": "Tomcat container stack in a response",
+    "description": "An Apache Tomcat container exception class name appears in the response body. Container stack traces name the connector, the valve chain and often absolute deployment paths, which tells an attacker the exact server build and where the application lives on disk.",
+    "remediation": "Return a generic error page with a correlation id and keep the container stack in the server log.",
+    "limitation": "One response body. It matches Tomcat's package-qualified class names, not other containers' traces.",
+    "scopeT": "A documentation page quoting a Tomcat exception class is still reported; confirm it is static text.",
+    "fp": "Tomcat-hosted applications with default error pages or pass-through error handlers.",
+    "recordDesc": "An Apache Tomcat container exception class name in a response gives every reader of that response the same information the bank holds internally: Container stack traces name the connector, the valve chain and often absolute deployment paths, which tells an attacker the exact server build and where the application lives on disk.",
+    "applicability": "Paths and class names narrow the attack to a specific Tomcat version and deployment layout.",
+    "risk": "Stack details belong in the log; the response only needs a correlation id.",
+    "why": "Force a container error and confirm the response carries no org.apache.catalina class.",
+    "fix": [
+      "Override the container error page and log the stack server-side.",
+      "Remove the application name and path from every error surface."
+    ],
+    "verifyT": "org\\.apache\\.catalina\\.[A-Za-z.]{5,60}(?:Exception|Error)",
+    "cells": [
+      {
+        "suffix": "body-tomcat-stack",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "org\\.apache\\.catalina\\.[A-Za-z.]{5,60}(?:Exception|Error)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<h1>HTTP Status 500</h1><p>org.apache.catalina.connector.ClientAbortException: java.io.IOException</p>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"org.apache.catalina.core.StandardContextException\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<h1>Something went wrong</h1><p>Reference c-4417. Our team has the details.</p>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-kubernetes-dashboard",
+    "category": "exposed-interface",
+    "cwe": "CWE-200",
+    "severity": "HIGH",
+    "title": "Kubernetes dashboard linked from a response",
+    "description": "A link or reference to the Kubernetes dashboard or its API appears in the response body. The dashboard lists every workload, secret reference and service account in the cluster, and a link from an application page tells an attacker it exists and where to find it.",
+    "remediation": "Remove the link, keep the dashboard on an administrative network and require strong authentication with least-privilege roles.",
+    "limitation": "One response body. It matches dashboard references in markup or JSON, not whether the dashboard itself is authenticated.",
+    "scopeT": "A runbook page that names the dashboard in prose without a reference is not reported.",
+    "fp": "Status pages, internal portals and CI dashboards used by platform teams.",
+    "recordDesc": "A link or reference to the Kubernetes dashboard or its API in a response gives every reader of that response the same information the bank holds internally: The dashboard lists every workload, secret reference and service account in the cluster, and a link from an application page tells an attacker it exists and where to find it.",
+    "applicability": "Cluster-level visibility is the first step to credential theft and lateral movement inside the cluster.",
+    "risk": "An administrative console must never be discoverable from an application response.",
+    "why": "Confirm no response references the dashboard and that the console is unreachable externally.",
+    "fix": [
+      "Remove the reference and restrict the dashboard by network and identity.",
+      "Confirm the dashboard is not reachable from the internet."
+    ],
+    "verifyT": "kubernetes-dashboard|/api/v1/namespaces/kube-system/services",
+    "cells": [
+      {
+        "suffix": "body-kubernetes-dashboard",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "kubernetes-dashboard|/api/v1/namespaces/kube-system/services"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<a href=\"https://k8s.example/kubernetes-dashboard/\">Cluster</a>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"console\":\"/api/v1/namespaces/kube-system/services/https:kubernetes-dashboard:/proxy\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<a href=\"/ops/cluster\">Cluster status</a>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-node-modules-path",
+    "category": "information-disclosure",
+    "cwe": "CWE-209",
+    "severity": "LOW",
+    "title": "Absolute node_modules path in a response",
+    "description": "An absolute path into a node_modules directory appears in the response body. The path discloses the deployment root, the operating system and the exact dependency layout, which lets an attacker match a known vulnerable package version without touching the server.",
+    "remediation": "Install dependencies outside the served tree, return generic errors and keep stack frames in the log.",
+    "limitation": "One response body. It matches an absolute path ending in a package directory, not a relative import in source that was never executed.",
+    "scopeT": "A documentation page that shows an example path is still reported; confirm it is not from a live error.",
+    "fp": "Node applications with development error handlers or source-mapped production bundles.",
+    "recordDesc": "An absolute path into a node_modules directory in a response gives every reader of that response the same information the bank holds internally: The path discloses the deployment root, the operating system and the exact dependency layout, which lets an attacker match a known vulnerable package version without touching the server.",
+    "applicability": "Dependency paths and versions turn blind probing into a targeted exploit choice.",
+    "risk": "Filesystem layout is server-side information with no use in a response.",
+    "why": "Force an error and confirm no absolute node_modules path is returned.",
+    "fix": [
+      "Return a generic error and log the path server-side.",
+      "Serve bundles without absolute source paths and disable development error pages."
+    ],
+    "verifyT": "(?:[A-Za-z]:\\\\\\\\[^<>\"']{0,120}node_modules\\\\|/(?:srv|app|home|usr|opt)/[^<>\"']{0,120}node_modules/)",
+    "cells": [
+      {
+        "suffix": "body-node-modules-path",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "/(?:srv|app|home|usr|opt)/[^<>\\\"']{0,120}node_modules/"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<pre>at Object.&lt;anonymous&gt; (/srv/app/node_modules/express/lib/router/index.js:281:7)</pre>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "Error: Cannot find module '/opt/drobon/node_modules/pg/lib/index.js'"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<p>Something went wrong. Reference c-2201.</p>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-docker-registry-catalog",
+    "category": "exposed-interface",
+    "cwe": "CWE-200",
+    "severity": "HIGH",
+    "title": "Container registry catalogue in a response",
+    "description": "A Docker registry catalogue listing repository names appears in the response body. The catalogue enumerates every image the registry holds, including internal service names and the images that run production, which is the reconnaissance step before pulling layers or probing tags.",
+    "remediation": "Require authentication on /v2/_catalog, restrict the registry to the build network and audit pulls.",
+    "limitation": "One response body. It matches the catalogue JSON shape, not the registry API itself, which needs its own request.",
+    "scopeT": "A page that documents the registry API with an example payload is not reported.",
+    "fp": "Self-hosted registries exposed through a reverse proxy or a status page.",
+    "recordDesc": "A Docker registry catalogue listing repository names in a response gives every reader of that response the same information the bank holds internally: The catalogue enumerates every image the registry holds, including internal service names and the images that run production, which is the reconnaissance step before pulling layers or probing tags.",
+    "applicability": "Image names map directly to services, and public pulls expose application code and embedded credentials.",
+    "risk": "A registry catalogue is an inventory of the organisation's software; it is not public information.",
+    "why": "Request /v2/_catalog anonymously and confirm it is refused.",
+    "fix": [
+      "Require authentication and authorisation on the catalogue and manifest endpoints.",
+      "Restrict registry access to build and runtime networks."
+    ],
+    "verifyT": "\"repositories\"\\s*:\\s*\\[",
+    "cells": [
+      {
+        "suffix": "body-docker-registry-catalog",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\\\"repositories\\\"\\s*:\\s*\\["
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<pre>{\"repositories\":[\"payments-api\",\"core-banking\",\"statement-renderer\"]}</pre>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"repositories\":[\"internal/admin-console\"]}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<p>The registry requires authentication; images are pulled by the build runner.</p>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-react-dangerous-html",
+    "category": "content-injection",
+    "cwe": "CWE-79",
+    "severity": "MEDIUM",
+    "title": "React dangerouslySetInnerHTML shipped in a bundle",
+    "description": "A React component that assigns markup through dangerouslySetInnerHTML appears in the response body. The prop bypasses React's escaping by design, so any value that reaches it becomes live DOM; shipped in a response, it tells a reader exactly where the escaping stops.",
+    "remediation": "Render the value as text, or sanitise it with a maintained allowlist sanitizer before it reaches the prop.",
+    "limitation": "One response body. It matches the prop in shipped script; it cannot tell whether the value is a constant string or untrusted input.",
+    "scopeT": "A bundle that contains the prop with a literal constant is a weaker finding; confirm the data path before rating it.",
+    "fp": "React single-page applications that render CMS or user content.",
+    "recordDesc": "A React component that assigns markup through dangerouslySetInnerHTML in a response gives every reader of that response the same information the bank holds internally: The prop bypasses React's escaping by design, so any value that reaches it becomes live DOM; shipped in a response, it tells a reader exactly where the escaping stops.",
+    "applicability": "One unbounded data path into this prop converts a stored string into script execution in every visitor's session.",
+    "risk": "React escapes by default; this prop is the documented exception and must be treated as a sink.",
+    "why": "Search the shipped bundle for the prop and confirm every usage renders a sanitised value.",
+    "fix": [
+      "Replace the prop with text content or a sanitized component.",
+      "Add a lint rule that fails new usages outside an approved allowlist."
+    ],
+    "verifyT": "dangerouslySetInnerHTML",
+    "cells": [
+      {
+        "suffix": "body-react-dangerous-html",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "dangerouslySetInnerHTML"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<script>e.createElement(\"div\",{dangerouslySetInnerHTML:{__html:t}})</script>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"bundle\":\"...props:{dangerouslySetInnerHTML:{__html:policyHtml}}...\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<script>e.createElement(\"div\",null,t)</script>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-vue-v-html",
+    "category": "content-injection",
+    "cwe": "CWE-79",
+    "severity": "MEDIUM",
+    "title": "Vue v-html directive in served markup",
+    "description": "A Vue template that binds HTML through the v-html directive appears in the response body. v-html inserts its value as markup instead of text, so a bound value that carries user content becomes executable; the directive in a served template marks the exact injection point.",
+    "remediation": "Use text interpolation or a sanitizer component, and never bind v-html to request data.",
+    "limitation": "One response body. It matches the directive in served markup or templates, not the bound value's origin.",
+    "scopeT": "A template that binds v-html to a constant string is a weaker finding; confirm the value's source.",
+    "fp": "Vue applications that render rich text from a CMS, a ticket or a message.",
+    "recordDesc": "A Vue template that binds HTML through the v-html directive in a response gives every reader of that response the same information the bank holds internally: v-html inserts its value as markup instead of text, so a bound value that carries user content becomes executable; the directive in a served template marks the exact injection point.",
+    "applicability": "Any attacker-controlled string that reaches the directive executes in the page's origin.",
+    "risk": "Vue escapes interpolated text; v-html is the explicit opt-out.",
+    "why": "Confirm rendered pages contain no v-html bound to request data.",
+    "fix": [
+      "Replace v-html with text interpolation or a sanitized renderer.",
+      "Add a lint rule and a review gate for new v-html usages."
+    ],
+    "verifyT": "v-html\\s*=\\s*[\"']",
+    "cells": [
+      {
+        "suffix": "body-vue-v-html",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "v-html\\s*=\\s*[\\\"']"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<div class=\"notice\" v-html=\"message.body\"></div>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<span v-html='alertHtml'></span>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<div class=\"notice\">{{ message.body }}</div>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-angular-bypass-trust",
+    "category": "content-injection",
+    "cwe": "CWE-79",
+    "severity": "MEDIUM",
+    "title": "Angular sanitizer bypass in a bundle",
+    "description": "A call to Angular's bypassSecurityTrust family appears in the response body. These methods mark a value as trusted without sanitising it, so Angular stops escaping it; a bundle that calls them tells a reader where the framework's protection is switched off.",
+    "remediation": "Remove the bypass and keep sanitisation on, or sanitise explicitly with a maintained allowlist before marking the value trusted.",
+    "limitation": "One response body. It matches the bypass call in shipped script; it cannot tell whether the argument is a constant or request data.",
+    "scopeT": "A bypass applied to a static, developer-authored constant is a weaker finding.",
+    "fp": "Angular applications that embed HTML from a CMS, an email template or a partner feed.",
+    "recordDesc": "A call to Angular's bypassSecurityTrust family in a response gives every reader of that response the same information the bank holds internally: These methods mark a value as trusted without sanitising it, so Angular stops escaping it; a bundle that calls them tells a reader where the framework's protection is switched off.",
+    "applicability": "A bypassed value is inserted as markup with no further check, which is a direct path to script execution.",
+    "risk": "The sanitizer is Angular's defence; bypassSecurityTrust is the documented way to disable it.",
+    "why": "Confirm the bundle no longer calls the bypass family outside a reviewed allowlist.",
+    "fix": [
+      "Remove the bypass call and fix the markup so the sanitizer accepts it.",
+      "If a bypass is unavoidable, sanitise the value first and document why."
+    ],
+    "verifyT": "bypassSecurityTrust(?:Html|Script|Style|Url|ResourceUrl)",
+    "cells": [
+      {
+        "suffix": "body-angular-bypass-trust",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "bypassSecurityTrust(?:Html|Script|Style|Url|ResourceUrl)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<script>this.sanitizer.bypassSecurityTrustHtml(notice)</script>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"chunk\":\"d.bypassSecurityTrustScript(payload)\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<script>this.domSanitizer.sanitize(1,notice)</script>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-postmessage-wildcard",
+    "category": "information-disclosure",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "postMessage with a wildcard target origin",
+    "description": "A postMessage call that passes a wildcard target origin appears in the response body. A wildcard origin sends the payload to whatever document currently occupies the target window, so a frame that navigates elsewhere receives the message, including tokens or account data.",
+    "remediation": "Pass the exact receiving origin and verify event.origin on the receiving side.",
+    "limitation": "One response body. It matches the call and its literal target, not the payload, so a constant harmless payload is also reported.",
+    "scopeT": "A wildcard call that sends only a layout height is a common false positive; confirm the payload before rating it.",
+    "fp": "Payment widgets, embedded support chat and cross-origin single sign-on frames.",
+    "recordDesc": "A postMessage call that passes a wildcard target origin in a response gives every reader of that response the same information the bank holds internally: A wildcard origin sends the payload to whatever document currently occupies the target window, so a frame that navigates elsewhere receives the message, including tokens or account data.",
+    "applicability": "Account data or tokens delivered to an unexpected origin leak to whoever controls that frame.",
+    "risk": "The target origin is the only thing that binds a message to a recipient.",
+    "why": "Confirm no postMessage call uses a wildcard target for data-carrying messages.",
+    "fix": [
+      "Replace the wildcard with the receiver's exact origin.",
+      "Validate event.origin and the message shape in the receiving handler."
+    ],
+    "verifyT": "postMessage\\([^)]{0,120},\\s*[\"']\\*[\"']",
+    "cells": [
+      {
+        "suffix": "body-postmessage-wildcard",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "postMessage\\([^)]{0,120},\\s*[\\\"']\\*[\\\"']"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<script>frame.contentWindow.postMessage({token:sessionToken}, '*')</script>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "window.opener.postMessage(state, \"*\");"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<script>frame.contentWindow.postMessage({height:rect.height}, 'https://support.example')</script>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-metadata-endpoint",
+    "category": "information-disclosure",
+    "cwe": "CWE-918",
+    "severity": "HIGH",
+    "title": "Cloud metadata endpoint referenced in a response",
+    "description": "A reference to the link-local metadata address 169.254.169.254 appears in the response body. The metadata service issues instance credentials to anything that can reach it, and an address printed in a response is a ready-made target for a server-side request forgery.",
+    "remediation": "Remove the address from the response, require IMDSv2 with a hop limit of one and block link-local destinations in the outbound proxy.",
+    "limitation": "One response body. It matches the metadata address in any form, not whether a request to it succeeds.",
+    "scopeT": "A documentation page that names the metadata address while explaining SSRF is still reported; confirm the page is static.",
+    "fp": "Debug pages, proxy error messages and client-side configuration that lists internal endpoints.",
+    "recordDesc": "A reference to the link-local metadata address 169.254.169.254 in a response gives every reader of that response the same information the bank holds internally: The metadata service issues instance credentials to anything that can reach it, and an address printed in a response is a ready-made target for a server-side request forgery.",
+    "applicability": "One SSRF primitive pointed at this address yields the instance role's temporary credentials.",
+    "risk": "Link-local metadata is reachable from the instance and worthless to a browser, so its presence means an internal address leaked.",
+    "why": "Confirm no response contains the metadata address and that egress to it is blocked.",
+    "fix": [
+      "Strip internal addresses from responses and error pages.",
+      "Enforce IMDSv2 and block 169.254.0.0/16 from application egress."
+    ],
+    "verifyT": "169\\.254\\.169\\.254",
+    "cells": [
+      {
+        "suffix": "body-metadata-endpoint",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "169\\.254\\.169\\.254"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<p>Proxy target: http://169.254.169.254/latest/meta-data/iam/security-credentials/</p>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"metadata_url\":\"http://169.254.169.254/latest/dynamic/instance-identity/document\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<p>Instance identity is read through the SDK; no address is configured in the application.</p>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  }
+]
