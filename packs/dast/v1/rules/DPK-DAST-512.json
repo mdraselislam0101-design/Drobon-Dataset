@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-512",
+  "title": "Payment form submits card fields with GET",
+  "description": "A form that carries card number or card verification fields submits with method GET, so the values are appended to the URL. Card data then lands in browser history, proxy logs, server access logs and any Referer the next page sends.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-598",
+  "category": "credential-exposure",
+  "remediation": "Submit every payment form with POST over HTTPS, keep card fields out of the query string and never echo them back in a redirect URL.",
+  "limitation": "One response body. It detects the form declaration and a card-shaped field name, not the values a user would type.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "<form(?=[^>]{0,300}method\\s*=\\s*[\\\"']?get)(?=[\\s\\S]{0,1500}?name\\s*=\\s*[\\\"'][^\\\"']{0,60}(?:card|cvv|cvc)[^\\\"']{0,60}[\\\"'])"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://bank.example/cards/pay",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "Cache-Control": "no-store"
+        },
+        "body": "<form action=\"/cards/pay\" method=\"get\"><input name=\"card_number\"><input name=\"cvv\"><button>Pay</button></form>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://bank.example/checkout",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "Cache-Control": "no-store"
+        },
+        "body": "<FORM METHOD=GET ACTION=\"/checkout\"><input name=\"cardholder_cvc\"></FORM>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://bank.example/search",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "Cache-Control": "no-store"
+        },
+        "body": "<form action=\"/search\" method=\"get\"><input name=\"q\"><button>Search</button></form>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1581"
+  ]
+}

@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-514",
+  "title": "One-time passcode served in a response",
+  "description": "The response body carries a one-time passcode field together with its numeric value. An OTP that reaches the client in a payload can be replayed by anyone who can read that payload, including a proxy, a cache or a browser extension, which removes the second factor the bank relies on.",
+  "severity": "HIGH",
+  "cwe": "CWE-522",
+  "category": "credential-exposure",
+  "remediation": "Generate the OTP server-side, deliver it only through the out-of-band channel (SMS, push, hardware token) and never include its value in an HTTP response, log line or analytics event.",
+  "limitation": "One response body and the four-to-eight digit shape only. It cannot tell whether the value was already consumed, and it deliberately ignores base32 TOTP seeds, which the seed rule covers separately.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "(?=[\\s\\S]*(?:otp|one[- ]time (?:password|passcode|code)|verification code))[\\s\\S]*?\\b(?:otp|otp[ _-]?code|verification[ _-]?code|one[_-]?time[_-]?code)\\b[\\\"']?\\s*[:=]\\s*[\\\"']?[0-9]{4,8}\\b"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://bank.example/api/step-up/start",
+        "status": 200,
+        "headers": {
+          "Content-Type": "application/json; charset=utf-8",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "Cache-Control": "no-store"
+        },
+        "body": "{\"challenge_id\":\"ch_8812\",\"channel\":\"sms\",\"otp\":\"482913\",\"expires_in\":120}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://bank.example/transfer/confirm",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "Cache-Control": "no-store"
+        },
+        "body": "<p>Your verification code: 771204. It expires in 5 minutes.</p>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://bank.example/help/2fa",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "Cache-Control": "no-store"
+        },
+        "body": "<h1>Two-factor authentication</h1><p>We send a one-time passcode to your registered mobile number by SMS. Enter the code on the confirmation screen.</p>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1583"
+  ]
+}

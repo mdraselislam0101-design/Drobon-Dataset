@@ -217,7 +217,7 @@ Its vacuous-risk guard previously matched only `Varies by control`, which is exa
 | `validate-dast-overlaps.mjs` | 222 checks, 100 subset pairs, PASS |
 | `test-assets.mjs` | 9,620 / 9,620 |
 | `test-csp-semantics.mjs` | 22,983 assertions |
-| `test-cookie-semantics.mjs` | 1,666 assertions |
+| `test-cookie-semantics.mjs` | 1,676 assertions |
 | `test-consistency.mjs` | 222 / 222 |
 | `test-eval.mjs` | 43 / 43 (TP 1,226 · FN 0 · FP 1) |
 | `test-doc-drift.mjs` | 120 / 120 |

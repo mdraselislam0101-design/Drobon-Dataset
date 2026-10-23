@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-518",
+  "title": "Account statement exported as a CSV row set",
+  "description": "The response is a comma-separated transaction statement with date, amount and balance columns. Bulk financial history served as one downloadable file is the highest-value single response a retail bank can emit, and it usually bypasses the masking the HTML views apply.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-359",
+  "category": "privacy-exposure",
+  "remediation": "Require re-authentication for statement export, mask account identifiers, cap the export window and serve the file with Content-Disposition attachment and no-store.",
+  "limitation": "One response body. It detects the CSV header shape rather than the file extension, so a renamed export is still reported.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "\\b(?:date|transaction date)\\b[^\\r\\n]{0,80},[^\\r\\n]{0,80}\\b(?:debit|credit|amount)\\b[^\\r\\n]{0,80},[^\\r\\n]{0,80}\\bbalance\\b"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://bank.example/accounts/export.csv",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/csv; charset=utf-8",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "Cache-Control": "no-store"
+        },
+        "body": "Transaction Date,Description,Debit,Credit,Balance\n2026-09-01,Salary,,42000.00,58120.55\n2026-09-02,ATM withdrawal,3000.00,,55120.55\n"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://bank.example/accounts/statement.csv",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/csv; charset=utf-8",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "Cache-Control": "no-store"
+        },
+        "body": "date,reference,amount,balance\n2026-09-03,TXN8821,120.00,55000.55\n"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://bank.example/settlement/report.csv",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/csv; charset=utf-8",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "Cache-Control": "no-store"
+        },
+        "body": "Settlement Date,Merchant,Total Fees,Net\n2026-09-03,Example Retail,18.20,8810.40\n"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1587"
+  ]
+}

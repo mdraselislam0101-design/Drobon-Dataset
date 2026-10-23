@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-513",
+  "title": "Card verification value rendered into a form field",
+  "description": "A card verification value is rendered as the value of an input field. The CVV must never be stored after authorisation, so a page that can print it back means the value was kept somewhere, which is a direct PCI DSS violation and a reusable card-not-present credential.",
+  "severity": "HIGH",
+  "cwe": "CWE-359",
+  "category": "privacy-exposure",
+  "remediation": "Never store the CVV: authorise the payment in the same request that receives it and render the field empty on every later page.",
+  "limitation": "One response body and the input value shape only. A CVV typed by the customer into an empty field is not a finding.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "<input(?=[^>]{0,200}(?:name|id)\\s*=\\s*[\\\"'][^\\\"']{0,40}(?:cvv|cvc|security[_-]?code)[^\\\"']{0,40}[\\\"'])(?=[^>]{0,200}value\\s*=\\s*[\\\"'][0-9]{3,4}[\\\"'])"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://bank.example/cards/8842/edit",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "Cache-Control": "no-store"
+        },
+        "body": "<label>CVV</label><input type=\"text\" name=\"cvv\" value=\"812\">"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://bank.example/cards/retry",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "Cache-Control": "no-store"
+        },
+        "body": "<input id=\"security_code\" value=\"4412\" type=\"tel\">"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://bank.example/cards/8842/edit",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "Cache-Control": "no-store"
+        },
+        "body": "<label>CVV</label><input type=\"text\" name=\"cvv\" value=\"\" autocomplete=\"off\">"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1582"
+  ]
+}

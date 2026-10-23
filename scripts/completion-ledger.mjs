@@ -154,11 +154,11 @@ const dimensions = [
     measured: counts.dastRules,
     denominator: 500,
     unit: 'checks',
-    pct: Math.round((counts.dastRules / 500) * 1000) / 10,
+    pct: Math.min(100, Math.round((counts.dastRules / 500) * 1000) / 10),
     status: counts.dastRules >= 500 ? 'COMPLETE' : 'PARTIAL',
     blocker: counts.dastRules >= 500 ? null : 'EVIDENCE_GATED',
     detail: counts.dastRules >= 500
-      ? 'The 500-check planning target is authored: 500 rule files, each with a pattern, record, remediation entry, a declared positive and a declared negative observation test, and an independent evaluation case. This dimension counts authoring only; the App-side reachability limit is measured separately (`app.dast-reachability`) and is not offset by this number.'
+      ? `The 500-check planning target is authored: ${counts.dastRules} rule files (the 500 planning target plus bank-surface rules added on request on 2026-10-21), each with a pattern, record, remediation entry, a declared positive and a declared negative observation test, and an independent evaluation case. The target itself is unchanged at 500; the percentage is capped at 100 and the overshoot is stated here rather than netted out. This dimension counts authoring only; the App-side reachability limit is measured separately (\`app.dast-reachability\`) and is not offset by this number.`
       : `The check vocabulary is closed at seven types; every new check must be semantically distinct, tested against observations and independently evaluated. ${500 - counts.dastRules} remain.`,
     nextAction: counts.dastRules >= 500
       ? 'Keep the pack frozen at 500 unless a genuinely distinct, App-reachable question is found; the open work is App-side (GAP-048 header allowlist).'
@@ -441,7 +441,12 @@ for (const d of dimensions) {
     errors.push(`${d.id}: COMPLETE with pct ${d.pct} — close it or mark the status honestly`);
   }
   if (d.pct === 100 && d.measured !== d.denominator && typeof d.measured === 'number') {
-    errors.push(`${d.id}: claims 100% but measured ${d.measured} of ${d.denominator}`);
+    // Exceeding a planning target is allowed only when the row says so explicitly:
+    // a percentage cannot show 102, so the overshoot has to live in the detail text
+    // instead of being netted out by moving the denominator.
+    const overshoot = typeof d.measured === 'number' && d.measured > d.denominator;
+    if (!overshoot) errors.push(`${d.id}: claims 100% but measured ${d.measured} of ${d.denominator}`);
+    else if (!/planning target/.test(d.detail)) errors.push(`${d.id}: exceeds its target (${d.measured} of ${d.denominator}) without naming the target in detail`);
   }
 }
 if (errors.length > 0) {
