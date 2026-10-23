@@ -4,7 +4,7 @@
 > `docs/BANK_RULE_CHECKLIST.csv` from `packs/dast/v1/rules`; `--check` fails when either drifts.
 > Reachability is read from `interop/app-dast-reachability.json` (App at `9360dd1`, 11 forwarded headers).
 
-**553 rules · 480 evaluable inside the Main App · 73 blocked by the response-header surface.**
+**569 rules · 496 evaluable inside the Main App · 73 blocked by the response-header surface.**
 
 This is an **audit checklist**, not a claim of protection: every row states what the rule observes in one
 synthetic-tested response and what to change. See `docs/BANK_THREAT_COVERAGE_2026-10-21.md` for what no
@@ -19,15 +19,15 @@ someone verified the observation on the target.
 
 | Tier | Focus | Rules | App-reachable |
 |---|---|---|---|
-| 1 | customer money and identity | 134 | 120 |
-| 2 | browser trust and interface contracts | 130 | 92 |
-| 3 | disclosure, fingerprints and debug surfaces | 289 | 268 |
+| 1 | customer money and identity | 141 | 127 |
+| 2 | browser trust and interface contracts | 133 | 95 |
+| 3 | disclosure, fingerprints and debug surfaces | 295 | 274 |
 
 ## Tier 1 — customer money and identity
 
 *These are the observations a fraud team would act on first: financial identifiers, card credentials, one-time codes, session tokens and transport protection. A finding here is worth an incident ticket, not a backlog item.*
 
-**134 rules, 120 evaluable today.**
+**141 rules, 127 evaluable today.**
 
 | Rule | Severity | CWE | What it observes | What to do (first step) | Reachable |
 |---|---|---|---|---|---|
@@ -165,12 +165,19 @@ someone verified the observation on the target.
 | `DPK-DAST-556` Cookie written from script | MEDIUM | CWE-1004 | the response body (first 32,768 bytes) | Set cookies server-side with HttpOnly, Secure and SameSite, and keep script away from cookie state. | yes |
 | `DPK-DAST-561` Credential stored in IndexedDB | MEDIUM | CWE-522 | the response body (first 32,768 bytes) | Keep credentials in HttpOnly cookies or memory and store only non-sensitive cached data in IndexedDB. | yes |
 | `DPK-DAST-564` Service worker registered at the root scope | MEDIUM | CWE-693 | the response body (first 32,768 bytes) | Register the worker under the narrowest path that needs it and review the worker as production code. | yes |
+| `DPK-DAST-565` Card expiry date served in a response | MEDIUM | CWE-359 | the response body (first 32,768 bytes) | Return a masked expiry only, or the last four digits with no date, and keep the full detail behind a re-authenticated view. | yes |
+| `DPK-DAST-566` Cheque number served with account detail | LOW | CWE-359 | the response body (first 32,768 bytes) | Mask the leaf number and show only the cleared status of the cheque. | yes |
+| `DPK-DAST-569` KYC document reference in a response | HIGH | CWE-359 | the response body (first 32,768 bytes) | Return only a masked reference and the verification status, and keep the full number in the encrypted KYC store. | yes |
+| `DPK-DAST-570` Loan outstanding figure in a response | MEDIUM | CWE-359 | the response body (first 32,768 bytes) | Return a rounded band in list views and require re-authentication for the exact figure. | yes |
+| `DPK-DAST-571` Sort code and account number pair in a response | HIGH | CWE-359 | the response body (first 32,768 bytes) | Mask both values to the last four digits in every response and require re-authentication for the full detail. | yes |
+| `DPK-DAST-572` Standing instruction detail in a response | MEDIUM | CWE-359 | the response body (first 32,768 bytes) | Return a masked beneficiary and a rounded amount, and require re-authentication for the mandate detail. | yes |
+| `DPK-DAST-578` Software licence key in a response | MEDIUM | CWE-200 | the response body (first 32,768 bytes) | Remove the key from the response, keep it in the licence server and show only the edition and expiry. | yes |
 
 ## Tier 2 — browser trust and interface contracts
 
 *Header, CSP and markup weaknesses do not move money by themselves, but they are the difference between a stolen session and a blocked one, and between a clickjackable login and a safe one.*
 
-**130 rules, 92 evaluable today.**
+**133 rules, 95 evaluable today.**
 
 | Rule | Severity | CWE | What it observes | What to do (first step) | Reachable |
 |---|---|---|---|---|---|
@@ -304,12 +311,15 @@ someone verified the observation on the target.
 | `DPK-DAST-549` iframe srcdoc carrying markup | MEDIUM | CWE-79 | the response body (first 32,768 bytes) | Render static markup from a separate origin, or pass content through a sandboxed frame with no allow-same-origin. | yes |
 | `DPK-DAST-550` jQuery .html() sink in served script | MEDIUM | CWE-79 | the response body (first 32,768 bytes) | Use .text() for text, or sanitise the value before it reaches .html(). | yes |
 | `DPK-DAST-558` eval applied to a decoded payload | HIGH | CWE-95 | the response body (first 32,768 bytes) | Remove the eval, load the logic as a static module and investigate how the payload reached the page. | yes |
+| `DPK-DAST-567` Embed element loads third-party content | MEDIUM | CWE-79 | the response body (first 32,768 bytes) | Replace the embed with a sandboxed iframe from a reviewed origin, or remove the plugin content. | yes |
+| `DPK-DAST-568` POST form without a CSRF token | MEDIUM | CWE-352 | the response body (first 32,768 bytes) | Add a per-session CSRF token to every state-changing form and verify it server-side. | yes |
+| `DPK-DAST-580` WebDAV methods advertised in a response | MEDIUM | CWE-650 | the response body (first 32,768 bytes) | Disable WebDAV in the server configuration, or restrict it to an authenticated administrative path. | yes |
 
 ## Tier 3 — disclosure, fingerprints and debug surfaces
 
 *Artefacts, consoles and stack traces rarely cause a loss on their own; they shorten the attacker’s reconnaissance and are the cheapest findings to close.*
 
-**289 rules, 268 evaluable today.**
+**295 rules, 274 evaluable today.**
 
 | Rule | Severity | CWE | What it observes | What to do (first step) | Reachable |
 |---|---|---|---|---|---|
@@ -602,6 +612,12 @@ someone verified the observation on the target.
 | `DPK-DAST-560` Link to an IDE workspace directory | LOW | CWE-200 | the response body (first 32,768 bytes) | Remove IDE state from the deployed tree and block the directories at the server. | yes |
 | `DPK-DAST-562` Live-reload script in a production page | LOW | CWE-489 | the response body (first 32,768 bytes) | Remove development tooling from production builds and serve only the compiled bundle. | yes |
 | `DPK-DAST-563` ngrok tunnel URL in a response | MEDIUM | CWE-200 | the response body (first 32,768 bytes) | Remove the tunnel from the response, close it and route the integration through a reviewed staging endpoint. | yes |
+| `DPK-DAST-573` Link to an application log file | MEDIUM | CWE-200 | the response body (first 32,768 bytes) | Remove the link and keep logs outside the web root, with access through the log platform only. | yes |
+| `DPK-DAST-574` Django DisallowedHost page in a response | MEDIUM | CWE-209 | the response body (first 32,768 bytes) | Set ALLOWED_HOSTS explicitly, serve a generic error page and keep DEBUG off in production. | yes |
+| `DPK-DAST-575` .NET stack trace in a response | MEDIUM | CWE-209 | the response body (first 32,768 bytes) | Disable custom errors off in production, return a correlation id and log the exception server-side. | yes |
+| `DPK-DAST-576` GraphQL field suggestion disclosed | LOW | CWE-200 | the response body (first 32,768 bytes) | Disable field suggestions in production and return a generic error for an unknown field. | yes |
+| `DPK-DAST-577` Private IPv4 address in a response | MEDIUM | CWE-200 | the response body (first 32,768 bytes) | Remove internal addresses from responses and error pages, and log them server-side only. | yes |
+| `DPK-DAST-579` ASP.NET trace or ELMAH handler exposed | HIGH | CWE-215 | the response body (first 32,768 bytes) | Disable tracing in production, remove the ELMAH handler from the public site and restrict both to an administrative network. | yes |
 
 ## Appendix — the 73 rules the App cannot evaluate today
 

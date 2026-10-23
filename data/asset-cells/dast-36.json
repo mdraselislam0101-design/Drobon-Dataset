@@ -1,0 +1,810 @@
+[
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-graphql-suggestions",
+    "category": "information-disclosure",
+    "cwe": "CWE-200",
+    "severity": "LOW",
+    "title": "GraphQL field suggestion disclosed",
+    "description": "A GraphQL suggestion list in an error response appears in the response body. The suggestion list names fields that exist but were not queried, so an attacker can walk the schema one typo at a time even when introspection is disabled.",
+    "remediation": "Disable field suggestions in production and return a generic error for an unknown field.",
+    "limitation": "One response body. It matches the suggestion wording or array, not the schema itself.",
+    "scopeT": "One response body. It matches the suggestion wording or array, not the schema itself.",
+    "fp": "A page that documents a GraphQL client's error format is still reported; confirm it is static text.",
+    "recordDesc": "A GraphQL suggestion list in an error response in a response gives every reader the same view the bank has internally: The suggestion list names fields that exist but were not queried, so an attacker can walk the schema one typo at a time even when introspection is disabled.",
+    "applicability": "GraphQL endpoints reachable by customers or partners.",
+    "risk": "A derived schema reveals internal fields, including administrative mutations that should not be discoverable.",
+    "why": "Suggestions exist for developers and are a schema oracle in production.",
+    "fix": [
+      "Disable did-you-mean suggestions outside development.",
+      "Require authentication for any schema-shaped error."
+    ],
+    "verifyT": "Send an unknown field and confirm the response carries no suggestion list.",
+    "cells": [
+      {
+        "suffix": "body-graphql-suggestions",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "did you mean|graphql suggestion|\\\"suggestions\\\"\\s*:\\s*\\["
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"errors\":[{\"message\":\"Cannot query field 'acount'. Did you mean 'account'?\"}]}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"errors\":[{\"message\":\"unknown field\",\"suggestions\":[\"transfer\",\"transferLimit\"]}]}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"errors\":[{\"message\":\"The request could not be completed.\",\"extensions\":{\"code\":\"BAD_REQUEST\"}}]}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-django-disallowed-host",
+    "category": "information-disclosure",
+    "cwe": "CWE-209",
+    "severity": "MEDIUM",
+    "title": "Django DisallowedHost page in a response",
+    "description": "A Django DisallowedHost error page appears in the response body. The page prints the exact Host header the server rejected and the list of allowed hosts, which tells an attacker which virtual hosts the deployment answers to.",
+    "remediation": "Set ALLOWED_HOSTS explicitly, serve a generic error page and keep DEBUG off in production.",
+    "limitation": "One response body. It matches the Django host-rejection page, not other Django errors.",
+    "scopeT": "One response body. It matches the Django host-rejection page, not other Django errors.",
+    "fp": "A documentation page that quotes the message is still reported; confirm it is static text.",
+    "recordDesc": "A Django DisallowedHost error page in a response gives every reader the same view the bank has internally: The page prints the exact Host header the server rejected and the list of allowed hosts, which tells an attacker which virtual hosts the deployment answers to.",
+    "applicability": "Django applications with DEBUG on or an over-broad ALLOWED_HOSTS wildcard.",
+    "risk": "The allowed-host list maps the estate and reveals administrative virtual hosts.",
+    "why": "The rejected value and the allowlist together describe the routing table of the deployment.",
+    "fix": [
+      "Turn DEBUG off and set ALLOWED_HOSTS to the exact production names.",
+      "Return a generic 400 page for an unrecognised Host header."
+    ],
+    "verifyT": "Send a request with an unexpected Host header and confirm the response is generic.",
+    "cells": [
+      {
+        "suffix": "body-django-disallowed-host",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "DisallowedHost at /|Invalid HTTP_HOST header"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<h1>DisallowedHost at /portal/</h1><p>Invalid HTTP_HOST header: 'evil.example'. You may need to add 'evil.example' to ALLOWED_HOSTS.</p>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "Invalid HTTP_HOST header: 'admin.internal'. The domain provided is not in ALLOWED_HOSTS."
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<h1>Bad Request (400)</h1>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-dotnet-stack",
+    "category": "information-disclosure",
+    "cwe": "CWE-209",
+    "severity": "MEDIUM",
+    "title": ".NET stack trace in a response",
+    "description": "A .NET exception type with its namespace appears in the response body. The trace names the framework version, the assembly and often the connection string's origin, which narrows the attack to a specific build and deployment.",
+    "remediation": "Disable custom errors off in production, return a correlation id and log the exception server-side.",
+    "limitation": "One response body. It matches System.* or Microsoft.AspNetCore.* exception types, not every .NET message.",
+    "scopeT": "One response body. It matches System.* or Microsoft.AspNetCore.* exception types, not every .NET message.",
+    "fp": "A page that quotes a .NET exception in documentation is still reported; confirm it is static.",
+    "recordDesc": "A .NET exception type with its namespace in a response gives every reader the same view the bank has internally: The trace names the framework version, the assembly and often the connection string's origin, which narrows the attack to a specific build and deployment.",
+    "applicability": "ASP.NET Core applications with the developer exception page reachable in production.",
+    "risk": "Framework and assembly detail shortens the path from probing to a targeted exploit.",
+    "why": "Stack details belong in the log; the caller only needs a reference.",
+    "fix": [
+      "Set the environment to Production so the developer exception page is not registered.",
+      "Log the exception and return a generic problem-details response."
+    ],
+    "verifyT": "Force an error and confirm the response carries no System.* exception name.",
+    "cells": [
+      {
+        "suffix": "body-dotnet-stack",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "System\\.(?:Web|Data|Runtime)\\.[A-Za-z.]{4,60}Exception|Microsoft\\.AspNetCore\\.[A-Za-z.]{4,60}Exception"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<h1>An unhandled exception occurred while processing the request.</h1><p>System.Data.SqlClient.SqlException: A network-related error</p>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"Microsoft.AspNetCore.Mvc.ViewFeatures.ViewDataDictionaryException\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<h1>Request failed</h1><p>Reference c-7712.</p>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-internal-ipv4",
+    "category": "information-disclosure",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "Private IPv4 address in a response",
+    "description": "A private-range IPv4 address appears in the response body. The address maps the internal network the application talks to, and combined with an SSRF primitive it becomes a set of targets rather than a guess.",
+    "remediation": "Remove internal addresses from responses and error pages, and log them server-side only.",
+    "limitation": "One response body. It matches RFC1918 addresses in the 192.168 and 172.16-31 ranges, not public addresses.",
+    "scopeT": "One response body. It matches RFC1918 addresses in the 192.168 and 172.16-31 ranges, not public addresses.",
+    "fp": "A page that documents a private range as an example may still be reported; confirm it is static text.",
+    "recordDesc": "A private-range IPv4 address in a response gives every reader the same view the bank has internally: The address maps the internal network the application talks to, and combined with an SSRF primitive it becomes a set of targets rather than a guess.",
+    "applicability": "Debug pages, proxy error messages and client configuration that lists upstream hosts.",
+    "risk": "An internal address is the first hop of lateral movement and is worthless to a browser.",
+    "why": "Internal topology is server-side information that never needed to be in the response.",
+    "fix": [
+      "Strip internal addresses from every rendered error and configuration page.",
+      "Block outbound requests to private ranges from the application tier."
+    ],
+    "verifyT": "Confirm no response contains a private address and that egress to it is blocked.",
+    "cells": [
+      {
+        "suffix": "body-internal-ipv4",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\\b(?:192\\.168\\.\\d{1,3}\\.\\d{1,3}|172\\.(?:1[6-9]|2\\d|3[01])\\.\\d{1,3}\\.\\d{1,3})\\b"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<p>Upstream 192.168.14.32:8080 refused the connection.</p>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"database\":\"172.20.5.11:5432\",\"pool\":12}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<p>The upstream service is unavailable. Reference c-3310.</p>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-licence-key",
+    "category": "credential-exposure",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "Software licence key in a response",
+    "description": "A licence key or serial number field appears in the response body. A licence key is a credential for a paid product; published in a page it invites reuse and, for server products, can unlock the same edition elsewhere.",
+    "remediation": "Remove the key from the response, keep it in the licence server and show only the edition and expiry.",
+    "limitation": "One response body. It matches a licence field followed by a grouped key, not the product name.",
+    "scopeT": "One response body. It matches a licence field followed by a grouped key, not the product name.",
+    "fp": "A page that lists licence terms without a key is not reported.",
+    "recordDesc": "A licence key or serial number field in a response gives every reader the same view the bank has internally: A licence key is a credential for a paid product; published in a page it invites reuse and, for server products, can unlock the same edition elsewhere.",
+    "applicability": "Admin consoles, about pages and support bundles.",
+    "risk": "Key reuse undermines the vendor contract and can expose the account the key is bound to.",
+    "why": "A licence key is transferable by design, so it must be treated as a secret.",
+    "fix": [
+      "Remove the key from every rendered page and support bundle.",
+      "Show the edition and expiry date instead."
+    ],
+    "verifyT": "Open the about page and confirm no licence key is returned.",
+    "cells": [
+      {
+        "suffix": "body-licence-key",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\\b(?:licen[cs]e[_ -]?key|serial[_ -]?number|product[_ -]?key)\\b[\\s\\S]{0,24}?[A-Z0-9]{4}(?:-[A-Z0-9]{4}){2,}"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<p>Licence key: ABCD-1234-EFGH-5678</p>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"licence\":{\"serial_number\":\"ZXCV-9876-QWER-5432\"}}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<p>Enterprise edition, licensed until 2027-03-31.</p>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-debug-log-link",
+    "category": "exposed-interface",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "Link to an application log file",
+    "description": "A link whose path names a debug or error log appears in the response body. Application logs record stack traces, SQL, user identifiers and sometimes credentials, and a link to the log makes every one of those entries reachable with one request.",
+    "remediation": "Remove the link and keep logs outside the web root, with access through the log platform only.",
+    "limitation": "One response body. It matches log file names in links, not whether the log is still written.",
+    "scopeT": "One response body. It matches log file names in links, not whether the log is still written.",
+    "fp": "A page that documents where logs live, without a link, is not reported.",
+    "recordDesc": "A link whose path names a debug or error log in a response gives every reader the same view the bank has internally: Application logs record stack traces, SQL, user identifiers and sometimes credentials, and a link to the log makes every one of those entries reachable with one request.",
+    "applicability": "Debug pages, support tools and misconfigured static hosting.",
+    "risk": "Logs carry the internal detail of every failure, including the data that caused it.",
+    "why": "A log file is operational data and must not be a web asset.",
+    "fix": [
+      "Move logs outside the web root and block the names at the server.",
+      "Remove the link and route support access through the log platform."
+    ],
+    "verifyT": "Request the linked log path and confirm the server refuses it.",
+    "cells": [
+      {
+        "suffix": "body-debug-log-link",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "href\\s*=\\s*[\\\"'][^\\\"']{0,140}(?:debug\\.log|error_log|php_errors\\.log|stderr\\.log)\\b"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<a href=\"/logs/debug.log\">Application log</a>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<a href=\"/var/log/php_errors.log\">Errors</a>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<a href=\"/ops/logs\">Log access</a>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-trace-axd",
+    "category": "debug-exposure",
+    "cwe": "CWE-215",
+    "severity": "HIGH",
+    "title": "ASP.NET trace or ELMAH handler exposed",
+    "description": "A reference to trace.axd or elmah.axd appears in the response body. trace.axd dumps every recent request with its headers, session and server variables, and elmah.axd lists every unhandled exception with its stack; both are unauthenticated by default.",
+    "remediation": "Disable tracing in production, remove the ELMAH handler from the public site and restrict both to an administrative network.",
+    "limitation": "One response body. It matches a reference to either handler, not whether the handler is still mapped.",
+    "scopeT": "One response body. It matches a reference to either handler, not whether the handler is still mapped.",
+    "fp": "A page that documents the handler name without linking to it is not reported.",
+    "recordDesc": "A reference to trace.axd or elmah.axd in a response gives every reader the same view the bank has internally: trace.axd dumps every recent request with its headers, session and server variables, and elmah.axd lists every unhandled exception with its stack; both are unauthenticated by default.",
+    "applicability": "ASP.NET and ASP.NET Core deployments with tracing or ELMAH left enabled.",
+    "risk": "The trace lists session identifiers and form values from other users' requests.",
+    "why": "Both handlers are diagnostic surfaces that answer every question an attacker has.",
+    "fix": [
+      "Disable trace and remove the ELMAH module from production.",
+      "Confirm both paths return 404 from the internet."
+    ],
+    "verifyT": "Request both paths and confirm they are not mapped.",
+    "cells": [
+      {
+        "suffix": "body-trace-axd",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "trace\\.axd|/elmah\\.axd"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<a href=\"/trace.axd\">Trace</a>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<a href=\"/elmah.axd\">Error log</a>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<a href=\"/ops/diagnostics\">Diagnostics</a>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-webdav-methods",
+    "category": "http-methods",
+    "cwe": "CWE-650",
+    "severity": "MEDIUM",
+    "title": "WebDAV methods advertised in a response",
+    "description": "A list of WebDAV methods such as PROPFIND or MKCOL appears in the response body. An advertised WebDAV surface lets a client list, copy and write files, and misconfigured servers accept those writes without authentication.",
+    "remediation": "Disable WebDAV in the server configuration, or restrict it to an authenticated administrative path.",
+    "limitation": "One response body. It matches WebDAV method names in the body, not the Allow header, which header rules cover.",
+    "scopeT": "One response body. It matches WebDAV method names in the body, not the Allow header, which header rules cover.",
+    "fp": "A page that documents WebDAV methods in prose may still be reported; confirm the server does not accept them.",
+    "recordDesc": "A list of WebDAV methods such as PROPFIND or MKCOL in a response gives every reader the same view the bank has internally: An advertised WebDAV surface lets a client list, copy and write files, and misconfigured servers accept those writes without authentication.",
+    "applicability": "File servers, document management and legacy intranet applications.",
+    "risk": "An unauthenticated write method turns the web root into attacker-controlled storage.",
+    "why": "WebDAV is a file-system protocol exposed over HTTP and rarely needed by an application.",
+    "fix": [
+      "Disable the WebDAV module and confirm the methods return 405.",
+      "Restrict file management to an authenticated administrative path."
+    ],
+    "verifyT": "Send PROPFIND and confirm the server refuses it.",
+    "cells": [
+      {
+        "suffix": "body-webdav-methods",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\\bPROPFIND\\b|\\bMKCOL\\b|\\bCOPY\\b[\\s\\S]{0,40}?\\bMOVE\\b"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<p>Supported methods: PROPFIND, MKCOL, COPY, MOVE</p>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"dav\":[\"PROPFIND\",\"MKCOL\"]}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<p>Supported methods: GET, POST</p>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  }
+]

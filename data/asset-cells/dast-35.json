@@ -1,0 +1,810 @@
+[
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-sort-code-pair",
+    "category": "privacy-exposure",
+    "cwe": "CWE-359",
+    "severity": "HIGH",
+    "title": "Sort code and account number pair in a response",
+    "description": "A UK sort code followed by an eight-digit account number appears in the response body. The pair is enough to set up a direct debit or a bank transfer at many institutions, and it appears together exactly as a payment instruction needs it.",
+    "remediation": "Mask both values to the last four digits in every response and require re-authentication for the full detail.",
+    "limitation": "One response body. It matches the pair within 200 characters, not whether the account is still open.",
+    "scopeT": "One response body. It matches the pair within 200 characters, not whether the account is still open.",
+    "fp": "A page that shows the sort code alone, with no account number, is not reported.",
+    "recordDesc": "A UK sort code followed by an eight-digit account number in a response gives every reader the same view the bank has internally: The pair is enough to set up a direct debit or a bank transfer at many institutions, and it appears together exactly as a payment instruction needs it.",
+    "applicability": "Account summary, direct-debit setup and statement pages.",
+    "risk": "The pair plus a name is a payment instruction; leaking it supports fraudulent mandates.",
+    "why": "Sort code and account number are stable identifiers, unlike a session or a token.",
+    "fix": [
+      "Mask the account number to the last four digits.",
+      "Require step-up authentication for the full payment detail."
+    ],
+    "verifyT": "Open the account page and confirm only masked values are returned.",
+    "cells": [
+      {
+        "suffix": "body-sort-code-pair",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "sort[_ -]?code\\b[\\s\\S]{0,60}?\\d{2}[- ]?\\d{2}[- ]?\\d{2}\\b[\\s\\S]{0,260}?(?:account|acct)[_ ]?(?:number|no)\\b[\\s\\S]{0,40}?\\d{8}\\b"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<dl><dt>Sort code</dt><dd>20-45-11</dd><dt>Account number</dt><dd>account no: 31926819</dd></dl>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"sortCode\":\"30-96-26\",\"account\":{\"accountNumber\":\"12345678\"}}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<dl><dt>Sort code</dt><dd>20-45-11</dd></dl>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-card-expiry-pair",
+    "category": "privacy-exposure",
+    "cwe": "CWE-359",
+    "severity": "MEDIUM",
+    "title": "Card expiry date served in a response",
+    "description": "A card expiry month and year next to card wording appears in the response body. An expiry date is one of the three values a card-not-present transaction needs, and it is useless to the customer but valuable alongside a leaked number.",
+    "remediation": "Return a masked expiry only, or the last four digits with no date, and keep the full detail behind a re-authenticated view.",
+    "limitation": "One response body. It matches a card word and an expiry value in the same body, not the card number itself.",
+    "scopeT": "One response body. It matches a card word and an expiry value in the same body, not the card number itself.",
+    "fp": "A page that explains when a card expires, with no value, is not reported.",
+    "recordDesc": "A card expiry month and year next to card wording in a response gives every reader the same view the bank has internally: An expiry date is one of the three values a card-not-present transaction needs, and it is useless to the customer but valuable alongside a leaked number.",
+    "applicability": "Card management, subscription billing and saved-card pages.",
+    "risk": "Expiry dates complete partial card data that leaks through other channels such as receipts and support tickets.",
+    "why": "The expiry date has one purpose in a payment and none in a page.",
+    "fix": [
+      "Mask the expiry to the month only, or omit it.",
+      "Require re-authentication to view the saved card's full detail."
+    ],
+    "verifyT": "Open the saved-cards page and confirm no full expiry date is returned.",
+    "cells": [
+      {
+        "suffix": "body-card-expiry-pair",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "(?:card|visa|mastercard)[\\s\\S]{0,140}?\\b(?:expiry|expires|valid[_ ]?thru)\\b[\\s\\S]{0,40}?(?:0[1-9]|1[0-2])\\s*/\\s*\\d{2}\\b"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<div class=\"card\">Visa ending 4242 &middot; expiry: 09/28</div>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"card\":{\"brand\":\"mastercard\",\"expiry\":\"04/27\"}}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<div class=\"card\">Visa ending 4242 &middot; expires next year</div>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-standing-instruction",
+    "category": "privacy-exposure",
+    "cwe": "CWE-359",
+    "severity": "MEDIUM",
+    "title": "Standing instruction detail in a response",
+    "description": "A standing order or direct-debit record with its amount appears in the response body. The record names the beneficiary and the recurring amount, which describes the customer's obligations and cash flow without any need for the value to reach the page.",
+    "remediation": "Return a masked beneficiary and a rounded amount, and require re-authentication for the mandate detail.",
+    "limitation": "One response body. It matches the instruction word and an amount field within 200 characters.",
+    "scopeT": "One response body. It matches the instruction word and an amount field within 200 characters.",
+    "fp": "A page that lists standing orders with masked amounts is not reported, because the amount field must be present.",
+    "recordDesc": "A standing order or direct-debit record with its amount in a response gives every reader the same view the bank has internally: The record names the beneficiary and the recurring amount, which describes the customer's obligations and cash flow without any need for the value to reach the page.",
+    "applicability": "Payments hub, mandate management and account summary pages.",
+    "risk": "Recurring obligations reveal income timing and commitments that support targeted fraud and social engineering.",
+    "why": "A mandate is financial personal data, and the page only needs to show that it exists.",
+    "fix": [
+      "Mask the beneficiary and the amount in list views.",
+      "Require step-up authentication to edit or view the mandate."
+    ],
+    "verifyT": "Open the payments hub and confirm the list shows no full mandate amount.",
+    "cells": [
+      {
+        "suffix": "body-standing-instruction",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\\b(?:standing[_ ]?(?:order|instruction)|direct[_ ]?debit|auto[_ ]?debit)[\\s\\S]{0,160}?\\b(?:amount|installment|instalment|frequency)\\b"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<p>standing order to Northgate Rent, amount: 1250.00</p>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"directDebit\":{\"payee\":\"City Utilities\",\"amount\":\"84.20\"}}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<p>You have 2 standing orders. Details are shown after re-authentication.</p>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-cheque-number",
+    "category": "privacy-exposure",
+    "cwe": "CWE-359",
+    "severity": "LOW",
+    "title": "Cheque number served with account detail",
+    "description": "A cheque number field next to its value appears in the response body. A cheque leaf number with the account lets someone present or dispute a payment they never received, and it is a stable identifier that survives reissue.",
+    "remediation": "Mask the leaf number and show only the cleared status of the cheque.",
+    "limitation": "One response body. It matches the cheque word and a six-to-nine digit number, not the amount.",
+    "scopeT": "One response body. It matches the cheque word and a six-to-nine digit number, not the amount.",
+    "fp": "A page that explains how to order a cheque book, with no number, is not reported.",
+    "recordDesc": "A cheque number field next to its value in a response gives every reader the same view the bank has internally: A cheque leaf number with the account lets someone present or dispute a payment they never received, and it is a stable identifier that survives reissue.",
+    "applicability": "Cheque status, clearing and branch-service pages.",
+    "risk": "Cheque numbers support forged stop-payment requests and dispute fraud.",
+    "why": "The leaf number is a bearer-style reference to a physical instrument.",
+    "fix": [
+      "Show only the cleared or pending status.",
+      "Require branch authentication for leaf-level detail."
+    ],
+    "verifyT": "Open the cheque status page and confirm no leaf number is returned.",
+    "cells": [
+      {
+        "suffix": "body-cheque-number",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\\bcheque\\b[\\s\\S]{0,160}?\\b(?:number|no|leaf)\\b[\\s\\S]{0,24}?\\d{6,9}\\b"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<tr><td>Cheque</td><td>number: 004512</td><td>Cleared</td></tr>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"cheque\":{\"no\":\"771204\",\"status\":\"pending\"}}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<tr><td>Cheque</td><td>Cleared</td></tr>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-loan-outstanding",
+    "category": "privacy-exposure",
+    "cwe": "CWE-359",
+    "severity": "MEDIUM",
+    "title": "Loan outstanding figure in a response",
+    "description": "A loan outstanding balance, principal due or EMI amount appears in the response body. The figure describes the customer's debt position and repayment capacity, and it is exposed wherever the loan summary is rendered without masking.",
+    "remediation": "Return a rounded band in list views and require re-authentication for the exact figure.",
+    "limitation": "One response body. It matches a debt field with a numeric value, not the loan product name.",
+    "scopeT": "One response body. It matches a debt field with a numeric value, not the loan product name.",
+    "fp": "A page that shows the loan type with no figure is not reported.",
+    "recordDesc": "A loan outstanding balance, principal due or EMI amount in a response gives every reader the same view the bank has internally: The figure describes the customer's debt position and repayment capacity, and it is exposed wherever the loan summary is rendered without masking.",
+    "applicability": "Loan summary, credit-limit and pre-approved-offer pages.",
+    "risk": "Debt position supports targeted loan fraud and predatory offers, and it is regulated personal data.",
+    "why": "Repayment capacity is among the most sensitive financial facts a bank holds.",
+    "fix": [
+      "Round the figure in list views and mask it on shared screens.",
+      "Require step-up authentication for the exact outstanding amount."
+    ],
+    "verifyT": "Open the loan summary and confirm the figure requires re-authentication.",
+    "cells": [
+      {
+        "suffix": "body-loan-outstanding",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\\b(?:outstanding[_ ]?balance|principal[_ ]?due|emi[_ ]?amount)\\b[\\s\\S]{0,24}?\\d[0-9,]{3,}"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<div>Home loan &mdash; outstanding_balance = 3,450,000</div>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"loan\":{\"product\":\"auto\",\"emi_amount\":\"18,450\"}}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<div>Home loan &mdash; active</div>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-kyc-document-number",
+    "category": "privacy-exposure",
+    "cwe": "CWE-359",
+    "severity": "HIGH",
+    "title": "KYC document reference in a response",
+    "description": "A KYC block with a document reference value appears in the response body. The reference ties a real identity document to the account, and with the document type it is enough to impersonate the customer at a branch or in a call centre.",
+    "remediation": "Return only a masked reference and the verification status, and keep the full number in the encrypted KYC store.",
+    "limitation": "One response body. It matches the KYC wording and a document reference value, not the document image.",
+    "scopeT": "One response body. It matches the KYC wording and a document reference value, not the document image.",
+    "fp": "A page that says verification is complete, with no reference, is not reported.",
+    "recordDesc": "A KYC block with a document reference value in a response gives every reader the same view the bank has internally: The reference ties a real identity document to the account, and with the document type it is enough to impersonate the customer at a branch or in a call centre.",
+    "applicability": "Onboarding status, profile and branch-service pages.",
+    "risk": "A document number is a durable identity credential; it survives password changes and device resets.",
+    "why": "The KYC reference is the link between an account and a real-world identity.",
+    "fix": [
+      "Mask the reference to its last four characters.",
+      "Restrict the full value to the KYC reviewer role with audit logging."
+    ],
+    "verifyT": "Open the profile page and confirm only a masked reference is returned.",
+    "cells": [
+      {
+        "suffix": "body-kyc-document-number",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\\b(?:kyc|know[_ ]?your[_ ]?customer)\\b[\\s\\S]{0,100}?\\b(?:document|doc|reference|ref)\\b[\\s\\S]{0,24}?[A-Z0-9][A-Z0-9-]{5,}"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<dl><dt>KYC status</dt><dd>Verified &middot; document: B1234567</dd></dl>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"kyc\":{\"doc\":\"NID-9931-4471\",\"state\":\"verified\"}}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<dl><dt>KYC status</dt><dd>Verified</dd></dl>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-form-missing-csrf",
+    "category": "weak-markup",
+    "cwe": "CWE-352",
+    "severity": "MEDIUM",
+    "title": "POST form without a CSRF token",
+    "description": "A form that posts and carries no anti-CSRF field appears in the response body. Without a token the endpoint accepts a request the browser sends on behalf of a logged-in user from another site, so an attacker can submit the action with the victim's session.",
+    "remediation": "Add a per-session CSRF token to every state-changing form and verify it server-side.",
+    "limitation": "One response body. It matches a POST form whose markup contains no csrf-shaped field, not whether the endpoint checks a header instead.",
+    "scopeT": "One response body. It matches a POST form whose markup contains no csrf-shaped field, not whether the endpoint checks a header instead.",
+    "fp": "An application that validates a custom header or SameSite=Strict on every state-changing route may be safe; confirm the server check.",
+    "recordDesc": "A form that posts and carries no anti-CSRF field in a response gives every reader the same view the bank has internally: Without a token the endpoint accepts a request the browser sends on behalf of a logged-in user from another site, so an attacker can submit the action with the victim's session.",
+    "applicability": "Transfers, profile changes, card controls and any form that changes state.",
+    "risk": "A forged request executes with the victim's session and moves money or changes credentials.",
+    "why": "A token the attacker cannot read is the only thing that distinguishes the user's own submission from a forged one.",
+    "fix": [
+      "Emit a CSRF token per session and validate it on every state-changing request.",
+      "Set SameSite=Lax or Strict on the session cookie as defence in depth."
+    ],
+    "verifyT": "Submit the form from another origin and confirm the server rejects the request.",
+    "cells": [
+      {
+        "suffix": "body-form-missing-csrf",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "<form\\b(?=[^>]{0,300}method\\s*=\\s*[\\\"']?post)(?=[\\s\\S]{0,1200}?<input)(?![\\s\\S]{0,1200}?csrf)[\\s\\S]{0,1200}?</form>"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<form method=\"post\" action=\"/transfer\"><input type=\"text\" name=\"iban\"><input type=\"text\" name=\"amount\"></form>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<form method='post' action='/profile/email'><input type='email' name='email'></form>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<form method=\"post\" action=\"/transfer\"><input type=\"hidden\" name=\"csrf_token\" value=\"EXAMPLE-TOKEN\"><input type=\"text\" name=\"iban\"></form>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-embed-plugin",
+    "category": "content-injection",
+    "cwe": "CWE-79",
+    "severity": "MEDIUM",
+    "title": "Embed element loads third-party content",
+    "description": "An embed element with a source appears in the response body. The embed element loads a plugin document that the page cannot sandbox or inspect, and plugin content has historically carried its own script-execution surface.",
+    "remediation": "Replace the embed with a sandboxed iframe from a reviewed origin, or remove the plugin content.",
+    "limitation": "One response body. It matches the embed element and its source, not whether the source is trusted.",
+    "scopeT": "One response body. It matches the embed element and its source, not whether the source is trusted.",
+    "fp": "An embed that points at a same-origin, reviewed document is a weaker finding.",
+    "recordDesc": "An embed element with a source in a response gives every reader the same view the bank has internally: The embed element loads a plugin document that the page cannot sandbox or inspect, and plugin content has historically carried its own script-execution surface.",
+    "applicability": "Legacy PDF viewers, media players and document preview pages.",
+    "risk": "Plugin content runs outside the page's script policy, so the CSP does not constrain it.",
+    "why": "An embed is a document the page cannot govern; an iframe with sandbox is the modern equivalent.",
+    "fix": [
+      "Replace the embed with a sandboxed iframe.",
+      "If the plugin must stay, pin its source and remove script capability from it."
+    ],
+    "verifyT": "Confirm no embed element remains, or that its source is a reviewed same-origin document.",
+    "cells": [
+      {
+        "suffix": "body-embed-plugin",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "<embed\\b[^>]{0,300}\\bsrc\\s*="
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<embed src=\"/viewer/statement.pdf\" type=\"application/pdf\" width=\"800\" height=\"600\">"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<embed type='application/x-shockwave-flash' src='/media/intro.swf'>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<iframe src=\"/viewer/statement.pdf\" sandbox width=\"800\" height=\"600\"></iframe>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  }
+]
