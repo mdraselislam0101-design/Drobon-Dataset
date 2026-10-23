@@ -6,7 +6,7 @@ App profile. **Do not edit by hand** — `npm test` fails when this file or
 
 - Main App reference: `mdraselislam0101-design/Drobon` @ `9360dd1abdf940cc1bffd942aab0702703aaaaef`
 - Profile source of truth: `apps/api/src/external/evaluator.ts`, `apps/api/src/external/packProvider.ts` (verified 2026-10-21)
-- Packs measured: SAST 1000 · Secrets 97 · DAST 569
+- Packs measured: SAST 1000 · Secrets 97 · DAST 579
 - Regenerate: `npm run app-conformance` · verify: `npm run validate:app-conformance`
 
 ## 1. Declared-test parity
@@ -20,7 +20,7 @@ would return for the same input.
 |---|---|---|---|---|---|
 | SAST | 1,000 | 4,043 | 4,043 | 0 | 100% |
 | Secrets | 97 | 441 | 441 | 0 | 100% |
-| DAST | 569 | 2,359 | 569 rules | 15 | 99.4% |
+| DAST | 579 | 2,389 | 579 rules | 15 | 99.4% |
 
 SAST and Secrets agree on every declared test: the App would reproduce this
 repository byte-for-byte on those two families. DAST does not, and the exact
@@ -40,7 +40,7 @@ failing set is listed below.
 | DPK-DAST-155 | response-header-matches | 2 | ARRAY_JOIN_CROSS_VALUE | false | true |
 | DPK-DAST-190 | response-header-matches | 2 | ARRAY_JOIN_CROSS_VALUE | false | true |
 
-Total: **15 divergences on 9 rules**, out of 2,359 declared DAST tests.
+Total: **15 divergences on 9 rules**, out of 2,389 declared DAST tests.
 
 Causes (from `interop/app-conformance.json → causes`):
 

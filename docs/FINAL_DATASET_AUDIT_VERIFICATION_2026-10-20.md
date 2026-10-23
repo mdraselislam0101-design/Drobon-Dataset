@@ -148,7 +148,7 @@ repository and is therefore **not** reported as passing.
 | `test-packs.mjs` | 0 | 5,422 / 5,422 |
 | `test-assets.mjs` | 0 | 10,500 / 10,500 |
 | `test-csp-semantics.mjs` | 0 | 22,983 assertions |
-| `test-cookie-semantics.mjs` | 0 | 1,666 assertions |
+| `test-cookie-semantics.mjs` | 0 | 1,676 assertions |
 | `validate-dast-overlaps.mjs` | 0 | 332 checks, 128 subset pairs (5 reviewed) |
 | `validate-capability-coverage.mjs` | 0 | 695 / 695 |
 | `test-current-state.mjs` | 0 | 155 / 155 |

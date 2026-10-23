@@ -4,7 +4,7 @@
 > `docs/BANK_RULE_CHECKLIST.csv` from `packs/dast/v1/rules`; `--check` fails when either drifts.
 > Reachability is read from `interop/app-dast-reachability.json` (App at `9360dd1`, 11 forwarded headers).
 
-**569 rules · 496 evaluable inside the Main App · 73 blocked by the response-header surface.**
+**579 rules · 506 evaluable inside the Main App · 73 blocked by the response-header surface.**
 
 This is an **audit checklist**, not a claim of protection: every row states what the rule observes in one
 synthetic-tested response and what to change. See `docs/BANK_THREAT_COVERAGE_2026-10-21.md` for what no
@@ -19,15 +19,15 @@ someone verified the observation on the target.
 
 | Tier | Focus | Rules | App-reachable |
 |---|---|---|---|
-| 1 | customer money and identity | 141 | 127 |
-| 2 | browser trust and interface contracts | 133 | 95 |
-| 3 | disclosure, fingerprints and debug surfaces | 295 | 274 |
+| 1 | customer money and identity | 145 | 131 |
+| 2 | browser trust and interface contracts | 134 | 96 |
+| 3 | disclosure, fingerprints and debug surfaces | 300 | 279 |
 
 ## Tier 1 — customer money and identity
 
 *These are the observations a fraud team would act on first: financial identifiers, card credentials, one-time codes, session tokens and transport protection. A finding here is worth an incident ticket, not a backlog item.*
 
-**141 rules, 127 evaluable today.**
+**145 rules, 131 evaluable today.**
 
 | Rule | Severity | CWE | What it observes | What to do (first step) | Reachable |
 |---|---|---|---|---|---|
@@ -172,12 +172,16 @@ someone verified the observation on the target.
 | `DPK-DAST-571` Sort code and account number pair in a response | HIGH | CWE-359 | the response body (first 32,768 bytes) | Mask both values to the last four digits in every response and require re-authentication for the full detail. | yes |
 | `DPK-DAST-572` Standing instruction detail in a response | MEDIUM | CWE-359 | the response body (first 32,768 bytes) | Return a masked beneficiary and a rounded amount, and require re-authentication for the mandate detail. | yes |
 | `DPK-DAST-578` Software licence key in a response | MEDIUM | CWE-200 | the response body (first 32,768 bytes) | Remove the key from the response, keep it in the licence server and show only the edition and expiry. | yes |
+| `DPK-DAST-586` OAuth implicit flow in a response | MEDIUM | CWE-287 | the response body (first 32,768 bytes) | Move the client to the authorisation-code flow with PKCE and keep tokens out of the URL. | yes |
+| `DPK-DAST-587` Link to a private key file | HIGH | CWE-200 | the response body (first 32,768 bytes) | Remove the link, rotate the key and keep private material in the key store only. | yes |
+| `DPK-DAST-589` Link to a service-account credential file | HIGH | CWE-798 | the response body (first 32,768 bytes) | Remove the file, rotate the key in the identity provider and delete the link. | yes |
+| `DPK-DAST-590` TLS verification disabled in sample code | MEDIUM | CWE-295 | the response body (first 32,768 bytes) | Remove the sample and point readers at the trust store configuration instead. | yes |
 
 ## Tier 2 — browser trust and interface contracts
 
 *Header, CSP and markup weaknesses do not move money by themselves, but they are the difference between a stolen session and a blocked one, and between a clickjackable login and a safe one.*
 
-**133 rules, 95 evaluable today.**
+**134 rules, 96 evaluable today.**
 
 | Rule | Severity | CWE | What it observes | What to do (first step) | Reachable |
 |---|---|---|---|---|---|
@@ -314,12 +318,13 @@ someone verified the observation on the target.
 | `DPK-DAST-567` Embed element loads third-party content | MEDIUM | CWE-79 | the response body (first 32,768 bytes) | Replace the embed with a sandboxed iframe from a reviewed origin, or remove the plugin content. | yes |
 | `DPK-DAST-568` POST form without a CSRF token | MEDIUM | CWE-352 | the response body (first 32,768 bytes) | Add a per-session CSRF token to every state-changing form and verify it server-side. | yes |
 | `DPK-DAST-580` WebDAV methods advertised in a response | MEDIUM | CWE-650 | the response body (first 32,768 bytes) | Disable WebDAV in the server configuration, or restrict it to an authenticated administrative path. | yes |
+| `DPK-DAST-584` document.write with a variable | MEDIUM | CWE-79 | the response body (first 32,768 bytes) | Build the DOM with text nodes or a sanitised template, and remove the write call from the shipped bundle. | yes |
 
 ## Tier 3 — disclosure, fingerprints and debug surfaces
 
 *Artefacts, consoles and stack traces rarely cause a loss on their own; they shorten the attacker’s reconnaissance and are the cheapest findings to close.*
 
-**295 rules, 274 evaluable today.**
+**300 rules, 279 evaluable today.**
 
 | Rule | Severity | CWE | What it observes | What to do (first step) | Reachable |
 |---|---|---|---|---|---|
@@ -618,6 +623,11 @@ someone verified the observation on the target.
 | `DPK-DAST-576` GraphQL field suggestion disclosed | LOW | CWE-200 | the response body (first 32,768 bytes) | Disable field suggestions in production and return a generic error for an unknown field. | yes |
 | `DPK-DAST-577` Private IPv4 address in a response | MEDIUM | CWE-200 | the response body (first 32,768 bytes) | Remove internal addresses from responses and error pages, and log them server-side only. | yes |
 | `DPK-DAST-579` ASP.NET trace or ELMAH handler exposed | HIGH | CWE-215 | the response body (first 32,768 bytes) | Disable tracing in production, remove the ELMAH handler from the public site and restrict both to an administrative network. | yes |
+| `DPK-DAST-581` Link to a shell history file | HIGH | CWE-200 | the response body (first 32,768 bytes) | Remove the file from the web root and clear history handling on the host. | yes |
+| `DPK-DAST-582` World-writable chmod instruction in a response | LOW | CWE-732 | the response body (first 32,768 bytes) | Follow the deployment guide instead of ad-hoc permissions and replace the instruction with the least-privilege mode. | yes |
+| `DPK-DAST-583` Link to a Docker Compose file | MEDIUM | CWE-200 | the response body (first 32,768 bytes) | Remove the file from the web root, move secrets into the orchestrator's secret store and delete the link. | yes |
+| `DPK-DAST-585` Link to a Git metadata file | HIGH | CWE-200 | the response body (first 32,768 bytes) | Remove the link, delete the .git directory from the deployed tree and block the path at the server. | yes |
+| `DPK-DAST-588` robots.txt names sensitive paths | LOW | CWE-200 | the response body (first 32,768 bytes) | Do not rely on robots.txt for access control; | yes |
 
 ## Appendix — the 73 rules the App cannot evaluate today
 
