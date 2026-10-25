@@ -1,4 +1,4 @@
-# ASSET_METHODOLOGY.md — how the generated intelligence set is authored (3156 pack rules, 3156 patterns, 3156 generated records)
+# ASSET_METHODOLOGY.md — how the generated intelligence set is authored (4007 pack rules, 4007 patterns, 4007 generated records)
 
 Date: 2026-10-15; counts refreshed 2026-10-25 from `docs/CURRENT_INVENTORY.json` (3,156 packs / 3,156 patterns / 3,156 records / 3,156 remediation / 102 CWE entries).
 This document states the authoring method so an auditor
@@ -74,10 +74,32 @@ same doctrine, enforced by machine gates:
 - record descriptions are asserted unique across the set.
 
 Forbidden by policy and reviewed per class: same-language respellings of
-one signal, per-scheme/per-key splits of one generic shape (e.g. one
-credentials-in-URL rule, not one per scheme), and any cell semantically
-subsumed by an existing rule (documented skip-list in the generator
-header).
+one signal and any cell semantically subsumed by an existing rule
+(documented skip-list in the generator header).
+
+**Policy revision, 2026-10-25 (owner direction, recorded — not a silent
+relaxation).** This section previously banned *per-scheme/per-key splits of
+one generic shape* outright (one credentials-in-URL rule, not one per
+scheme). The owner directed the secrets family to 1,000 rules built on top
+of the existing 149 (`docs/SECRETS_TARGET_DECISION_2026-10-25.md`,
+"Superseded"). A narrowed rule is now admitted when **all** of the
+following hold, and each condition is machine-checked:
+
+1. it names the credential the reader has to act on (a specific key, tool
+   flag, header, file format or tool invocation), so the finding says *what*
+   leaked instead of only that an assignment looked suspicious;
+2. its literal, title, record description, remediation text, positive
+   example and control are its own — `test-assets` asserts unique signals
+   and unique record descriptions, and every negative must stay silent
+   **without** relying on the `EXAMPLE` denylist;
+3. it carries its own evaluation pair, so the count cannot grow without
+   evidence;
+4. it does not claim to cover a new weakness class: the pack status states
+   in the open that these are finer slices of surfaces the generic rules
+   already see.
+
+Same-signal respellings (two rules, one literal) remain forbidden, and the
+generator still refuses a cell whose signal duplicates another.
 
 ## 3. Secrets handling
 

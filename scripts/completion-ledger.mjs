@@ -183,15 +183,15 @@ const dimensions = [
       : 'Author the next capability-aligned batch inside the closed check vocabulary (docs/DAST_CAPABILITY_ALIGNED_500_2026-10-20.md pattern), never as variants of one question.',
     verification: 'npm run validate:packs',
   }),
-  dim('packs.secrets', 'Secrets rule pack', {
+  dim('packs.secrets', 'Secrets rule pack against its 1000 target', {
     measured: counts.secretsRules,
-    denominator: null,
-    unit: 'rules (every documented single-line credential format)',
-    pct: null,
-    status: 'COMPLETE',
-    blocker: null,
-    detail: `${counts.secretsRules} rules, one per published single-line credential format representable in this repository. The 1,000 numeric target for this family was WITHDRAWN by owner decision on 2026-10-25 (docs/SECRETS_TARGET_DECISION_2026-10-25.md): a secrets rule may only be authored for a vendor-published format, and there are not 1,000 such formats, so the difference could only have been padding. Completion is measured against the format inventory, and the count is reported as a count — never as a percentage of a number that cannot be reached honestly.`,
-    nextAction: 'Add a rule (with tests and an eval pair) whenever a vendor publishes a format that is not yet covered; never pad to a number.',
+    denominator: 1000,
+    unit: 'rules',
+    pct: pctOf(counts.secretsRules, 1000),
+    status: counts.secretsRules >= 1000 ? 'COMPLETE' : 'PARTIAL',
+    blocker: counts.secretsRules >= 1000 ? null : 'EVIDENCE_GATED',
+    detail: `${counts.secretsRules} rules against the reinstated 1,000 target (owner direction, 2026-10-25; the earlier withdrawal in docs/SECRETS_TARGET_DECISION_2026-10-25.md is superseded there, not deleted). ${counts.secretsRules >= 1000 ? 'The published-format cohort (149 rules) is unchanged and 851 distinct credential-key, file-format and tool-carrier families were authored on top, each with its own literal, pattern, record, remediation, declared positive and negative test, and evaluation case.' : ''} This dimension counts authored, tested rules only: it does not measure detection breadth, and it does not offset the App-side limits measured in app.* dimensions.`,
+    nextAction: 'Keep every rule distinct and content-driven: a new rule must name a credential shape that no existing rule matches, and it ships with tests and an eval pair. No variants to hold a number.',
     verification: 'npm run validate:packs',
   }),
   dim('packs.sca', 'SCA dependency-declaration pack against its 1000 target', {

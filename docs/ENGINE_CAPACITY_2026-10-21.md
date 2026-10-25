@@ -11,15 +11,15 @@ This page states where each engine actually stands, what is left, and what stops
 |---|---|---|---|---|---|---|---|
 | SAST | **1000** | 100% of 1000 | 1000 | 1000 | 1000 | 0 | AT_TARGET |
 | DAST | **1007** | 100% of 1000 | 1007 | 1007 | 1007 | 0 | AT_TARGET |
-| SECRETS | **149** | no numeric target (evidence-gated) | 149 | 149 | 149 | — | EVIDENCE_GATED |
+| SECRETS | **1000** | 100% of 1000 | 1000 | 1000 | 1000 | 0 | AT_TARGET |
 | SCA | **1000** | 100% of 1000 | 1000 | 1000 | 1000 | 0 | AT_TARGET |
-| **Total** | **3156** | — | — | — | — | — | 3 of 3 numeric targets met |
+| **Total** | **4007** | — | — | — | — | — | 4 of 4 numeric targets met |
 
 ## What blocks each engine
 
 - **SAST** — App language catalog (53 ids) — 160 rules cannot fire (GAP-040)
 - **DAST** — App response surface (11 headers) — 73 rules cannot fire (GAP-048)
-- **SECRETS** — No engine gate; growth is evidence-gated because a token shape must be a real published format
+- **SECRETS** — No engine gate; every rule must name the credential it detects (published token format, credential-named key, or tool-specific carrier)
 - **SCA** — Dataset-side only: the App has no sca pack loader, so these declared-dependency rules cannot fire in the product; its SCA seam reads advisory records (apps/api/src/scans/sca/provider.ts) behind the production-data lock (GAP-001)
 
 ## Why the counts are not the whole story
@@ -33,11 +33,14 @@ This page states where each engine actually stands, what is left, and what stops
   classify what a project declares) is complete and is what this row measures; production advisory
   breadth stays at 0/100,000 behind the production-data lock and the unowned licence (GAP-001), and
   the two are never added together.
-- **Secrets has no numeric target any more.** A secrets rule has to match a real, published token
-  format, and there are not 1,000 such formats; inventing the difference is exactly the padding
-  `docs/PACKS.md` forbids. On 2026-10-25 the owner withdrew the figure
-  (`docs/SECRETS_TARGET_DECISION_2026-10-25.md`), so the row reports what is authored and what is
-  left in the published-format inventory instead of a percentage nobody can reach honestly.
+- **Secrets carries a reinstated 1,000-rule target, and the route to it is stated.** The 149
+  published-format rules were kept and 851 distinct rule families were authored on top: credential-
+  named keys (password, key-material, token and DSN keys), tool flags, credential headers, file
+  formats and tool-invocation carriers. Each one has its own literal, pattern, record, remediation,
+  declared tests and evaluation pair. The count is a count of authored rules: it does not by itself
+  show detection breadth, and overlapping generic rules (`DPK-SEC-003`, `-007`, `-106`) still fire on
+  many of the same literals. Nothing was relabelled to get there; the withdrawal recorded in
+  `docs/SECRETS_TARGET_DECISION_2026-10-25.md` is superseded in that same file, not deleted.
 
 ## Next batches, in order of value
 
@@ -59,7 +62,7 @@ counting it as new content would be padding. Source: `docs/USER_TYPE_LENSES.md`.
 |---|---|---|---|---|---|---|
 | DEVELOPER | **1000** / 1000 | 788 | 972 | 0 | 28 | 0 |
 | STUDENT | **1000** / 1000 | 928 | 775 | 0 | 0 | 225 |
-| SECURITY_PROFESSIONAL | **1000** / 1000 | 992 | 75 | 0 | 146 | 779 |
+| SECURITY_PROFESSIONAL | **1000** / 1000 | 1000 | 63 | 0 | 166 | 771 |
 | PENTESTER | **1000** / 1000 | 994 | 29 | 0 | 108 | 863 |
 
 ---

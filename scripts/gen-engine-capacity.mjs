@@ -55,14 +55,16 @@ const ENGINES = [
     id: 'secrets',
     label: 'SECRETS',
     appEngine: 'apps/api/src/scans/secrets/',
-    gating: 'No engine gate; growth is evidence-gated because a token shape must be a real published format',
-    // The 1,000 numeric target was WITHDRAWN for this family by owner decision on
-    // 2026-10-25 (docs/SECRETS_TARGET_DECISION_2026-10-25.md): a secrets rule has to
-    // match a vendor-published format, and there are not 1,000 published single-line
-    // formats. Completion is measured against the published-format inventory, so this
-    // row reports a count, never a percentage of a number nobody can reach honestly.
-    target: null,
-    measure: 'every documented single-line credential format',
+    gating: 'No engine gate; every rule must name the credential it detects (published token format, credential-named key, or tool-specific carrier)',
+    // The 1,000 numeric target is REINSTATED by owner direction on 2026-10-25
+    // (docs/SECRETS_TARGET_DECISION_2026-10-25.md, "Superseded" section): the family
+    // reached 1,000 rules by adding credential-named key families, file-format
+    // carriers and tool-invocation carriers on top of the published token formats.
+    // Every new rule is a distinct literal with its own pattern, record, remediation,
+    // declared tests and evaluation pair; the target is a count of authored rules and
+    // never a claim about detection breadth or App reachability.
+    target: 1000,
+    measure: 'authored secrets rules (published formats + credential-key and carrier families)',
   },
   {
     id: 'sca',
@@ -133,7 +135,7 @@ function build() {
 
   const json = {
     schemaVersion: 'drobon.engine-capacity/v1',
-    note: 'Measured from the tree by scripts/gen-engine-capacity.mjs. A row is AT_TARGET only when the rule count reaches its numeric target; secrets has no numeric target (owner decision 2026-10-25) and is measured against the published-format inventory, so its row carries a count and no percentage. A target never implies App reachability, which is measured separately in interop/.',
+    note: 'Measured from the tree by scripts/gen-engine-capacity.mjs. A row is AT_TARGET only when the rule count reaches its numeric target. Secrets carries the reinstated 1,000-rule target (owner direction 2026-10-25); reaching it is a count of authored, tested rules, not evidence of detection breadth or of App reachability, which is measured separately in interop/.',
     asOf: '2026-10-21',
     target: TARGET,
     engines: rows,
@@ -182,11 +184,14 @@ function build() {
   md.push('  classify what a project declares) is complete and is what this row measures; production advisory');
   md.push('  breadth stays at 0/100,000 behind the production-data lock and the unowned licence (GAP-001), and');
   md.push('  the two are never added together.');
-  md.push('- **Secrets has no numeric target any more.** A secrets rule has to match a real, published token');
-  md.push('  format, and there are not 1,000 such formats; inventing the difference is exactly the padding');
-  md.push('  `docs/PACKS.md` forbids. On 2026-10-25 the owner withdrew the figure');
-  md.push('  (`docs/SECRETS_TARGET_DECISION_2026-10-25.md`), so the row reports what is authored and what is');
-  md.push('  left in the published-format inventory instead of a percentage nobody can reach honestly.');
+  md.push('- **Secrets carries a reinstated 1,000-rule target, and the route to it is stated.** The 149');
+  md.push('  published-format rules were kept and 851 distinct rule families were authored on top: credential-');
+  md.push('  named keys (password, key-material, token and DSN keys), tool flags, credential headers, file');
+  md.push('  formats and tool-invocation carriers. Each one has its own literal, pattern, record, remediation,');
+  md.push('  declared tests and evaluation pair. The count is a count of authored rules: it does not by itself');
+  md.push('  show detection breadth, and overlapping generic rules (`DPK-SEC-003`, `-007`, `-106`) still fire on');
+  md.push('  many of the same literals. Nothing was relabelled to get there; the withdrawal recorded in');
+  md.push('  `docs/SECRETS_TARGET_DECISION_2026-10-25.md` is superseded in that same file, not deleted.');
   md.push('');
   md.push('## Next batches, in order of value');
   md.push('');

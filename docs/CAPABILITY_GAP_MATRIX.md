@@ -101,7 +101,7 @@ lineage (954 = 914 cell-generated + 40 legacy); DAST rules are structured
 header/cookie/body checks over parsed HTTP input (`docs/FORMAT.md` closed
 vocabulary). (Counts re-recomputed 2026-10-17 Master Completion Pump.) 5.
 **Tests:** `test-packs` 3982, `test-assets` 7522, `validate-packs` 957
-files, `validate-assets` 3156 — all PASS this run. 6.
+files, `validate-assets` 4007 — all PASS this run. 6.
 **Gap:** no structural AST detectors (see CGM-A2); reachability <100% (560/792
 fully reachable under app catalog; documented per-rule in `docs/PACKS.md`). 7.
 **Approach:** status quo is the correct baseline; extend via cell classes with
@@ -109,7 +109,7 @@ evidence + tests (research pipeline §9). 8. **Alternatives:** DSL (proposal
 only). 9. **Security:** rules fire conservatively; `limitation` field mandatory
 per rule. 10. **Acceptance:** every new rule ≥1 positive + ≥1 negative executed
 test (enforced by `test-assets` linkage). 11. **Deps:** none. 12. **Perf:**
-linear regex scan; deterministic. 13. **Status note:** "3156 rules" is breadth,
+linear regex scan; deterministic. 13. **Status note:** "4007 rules" is breadth,
 not measured real-world detection rate (see CGM-I2).
 
 ### CGM-B2 · Semantic vulnerability conditions & taint / data-flow detection
@@ -300,7 +300,7 @@ Phase 5 probe-gap closure (2026-10-17): DPK-SEC-106 (unquoted password
 assignments — env `export`/`DB_PASSWORD=`, YAML `password:`, ADO `Password=;`)
 and DPK-SEC-107 (URL userinfo passwords containing symbols) authored via
 `data/asset-cells/secrets-5.json`. 5. **Tests:** `test-packs` denylist-veto
-mutants; `test-assets` linkage 3156/3156; edge tests for DPK-SEC-105 (11);
+mutants; `test-assets` linkage 4007/4007; edge tests for DPK-SEC-105 (11);
 DPK-SEC-106 carries 16 executed tests and DPK-SEC-107 carries 14 (pos/neg/
 boundary/malformed with exact outcomes). 6. **Gap:** Phase 8 added a Dataset-side evidence-gated CANDIDATE evaluator
 (`scripts/secret-candidates.mjs`, `drobon.secret.candidate/v1` — Shannon
@@ -561,7 +561,7 @@ must be impossible. 10. **Acceptance:** app tests. 11. **Deps:** app. 12.
 **Status:** `PARTIAL` (dataset content side strong; rendering app-side
 unverified). 4. **Evidence:** every rule has `description`, `remediation`,
 `limitation`; patterns carry `examples` (pos+neg), `fpNotes`, `scope`;
-remediation 3156 entries keyed `ruleId`; CWE 102 own-words summaries with
+remediation 4007 entries keyed `ruleId`; CWE 102 own-words summaries with
 canonical links; severity is rule-fixed (contract §2). 5. **Tests:**
 `validate-audiences` 1174 files; `test-consistency` CWE resolution;
 `test-finding-evidence` 31/31 (evidence record: exact path/line-range/excerpt/

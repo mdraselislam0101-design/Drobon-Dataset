@@ -63,3 +63,51 @@ node scripts/completion-ledger.mjs --write        # packs.secrets: COMPLETE, den
 node scripts/validate-capability-coverage.mjs     # 710/710, evaluationCoverage recomputed
 npm test                                          # exit 0
 ```
+
+---
+
+# Superseded — 2026-10-25 (same day): the 1,000-rule target is reinstated and met
+
+**Owner direction (later on 2026-10-25):** "আমি চাই আমার মেইন অ্যাপ এর জন্য এবং ডেটাসেট এর জন্য Secrets এ যা যা লাগে ১০০০ টা
+সম্পুর্ন করো নতুন করে বানাও পুরাতন এর উপর আপডেট করে" — take the secrets family to **1,000 rules**, for the main-app consumption
+path and the dataset alike, by authoring **new** content **on top of** the existing rules. That instruction overrules the
+withdrawal recorded above. The withdrawal is kept in this file as history; it is not deleted, and nothing in the tree now
+reports `target: null` for secrets.
+
+## What was built, and what it is not
+
+| Register | Withdrawn state | Current state |
+|---|---|---|
+| `packs/secrets/v1/rules` | 149 (published formats only) | **1,000** — the 149 published formats plus 851 distinct families authored on top |
+| `docs/ENGINE_CAPACITY_2026-10-21.json` → secrets | `target: null`, `EVIDENCE_GATED` | `target: 1000`, `pct: 100`, `AT_TARGET` |
+| `docs/DATASET_COMPLETION_LEDGER.json` → `packs.secrets` | `denominator: null`, `COMPLETE` | `denominator: 1000`, `pct: 100`, `COMPLETE` |
+| evaluation | 4,604 cases / 3,190 TP | **4,718 cases / 4,041 TP / 0 FN / 1 documented FP** (851 new positives, 71 grouped controls) |
+
+The 851 additions are **not** invented token shapes. They are credential surfaces that already exist in real code, keyed by the
+thing that names the credential:
+
+| Family | Rules | Examples |
+|---|---|---|
+| credential-named keys — password semantics | 205 | `DB_PASSWORD`, `POSTGRES_PASSWORD`, `KEYSTORE_PASSWORD`, `LDAP_BIND_PASSWORD` |
+| credential-named keys — key material | 168 | `AWS_SECRET_ACCESS_KEY`, `JWT_SIGNING_KEY`, `ENCRYPTION_KEY`, `KEK`, `DEK` |
+| credential-named keys — token semantics | 184 | `GITHUB_TOKEN`, `SENTRY_AUTH_TOKEN`, `VAULT_TOKEN`, `NPM_TOKEN` |
+| DSN keys that must carry userinfo | 127 | `DATABASE_URL`, `MONGO_URI`, `AMQP_URL`, `SENTRY_DSN` |
+| tool flags | 47 | `--password`, `--storepass`, `--ssh-passphrase` |
+| credential-bearing HTTP headers | 26 | `Authorization: Basic`, `Private-Token:`, `X-Amz-Security-Token:` |
+| credential file formats | 34 | `.netrc`, `.pgpass`, `machineKey`, `kubeconfig`, bcrypt/Argon2/SHA-crypt hashes |
+| tool invocations that carry a password | 60 | `sshpass -p`, `mysql -p…`, `openssl -pass pass:`, `keytool -storepass` |
+
+This reverses the earlier reading of the repository's skip-list (*"no per-scheme/per-key splits of one generic shape"*). The
+policy is revised openly rather than bypassed: `docs/ASSET_METHODOLOGY.md` §2 and the generator header now state the new rule and
+its conditions — a per-key/per-format rule is admitted only when (a) it narrows a generic shape to a named credential that a
+reader can act on, (b) its literal, title, record, remediation, positive test and control are its own, and (c) the duplicate-signal
+gate proves no other rule carries the same pattern. Same-signal respellings are still forbidden.
+
+## What the number does and does not mean
+
+- It counts **authored, tested, independently evaluated rules**: 1,000 patterns, 1,000 records, 1,000 remediation entries,
+  1,000 positives and 1,000 controls.
+- It does **not** mean 1,000 distinct weakness classes. The published-format cohort (149) is unchanged; the 851 additions slice
+  credential surfaces more finely and several overlap the generic rules `DPK-SEC-003` / `-007` / `-106` on purpose.
+- It says nothing about App reachability (the App loads whatever `DATASET_PATH` provides; `interop/` measures that separately) and
+  nothing about whether a detected value is live. Every rule keeps `confidence`, `redact: true` and the `EXAMPLE` denylist.

@@ -356,20 +356,19 @@ if (existsSync(join(ROOT, 'DROBON_COVERAGE_EVIDENCE.json'))) {
     ? readdirSync(join(ROOT, dir)).filter((f) => re.test(f)).length : 0;
   const claims = [
     ['sast rules', countFiles('packs/sast/v1/rules', /^DPK-.*\.json$/), 1000],
-    // Secrets 97 -> 129 re-pinned 2026-10-25 (documented-format batch: Alibaba, Tencent,
-    // Terraform Cloud, GitLab deploy/runner/OAuth, Bitbucket, Postman, SonarQube, Typeform,
-    // Dropbox, Figma, Resend, W&B, LangSmith, xAI, Pinecone, Replicate, NGC, Grafana Cloud,
-    // Cloudinary, Sentry DSN, Teams webhook, Google OAuth, Fauna, Astra DB, Flutterwave,
-    // Mercado Pago, Braintree, PKCS#8). Knowledge trees 3104 -> 3136 in the same change.
-    ['secrets rules', countFiles('packs/secrets/v1/rules', /^DPK-.*\.json$/), 149],
+    // Secrets 97 -> 129 -> 149 -> 1,000 re-pinned 2026-10-25: the 149 published-format rules
+    // are unchanged and 851 distinct credential-key, file-format and tool-carrier families were
+    // authored on top (owner direction reinstating the 1,000 target,
+    // docs/SECRETS_TARGET_DECISION_2026-10-25.md "Superseded"). Knowledge trees 3,156 -> 4,007.
+    ['secrets rules', countFiles('packs/secrets/v1/rules', /^DPK-.*\.json$/), 1000],
     // Audit claims re-pinned 2026-10-21: DAST 306 -> 325 -> 367 -> 398 -> 500, knowledge trees
     // 1353 -> 1372 -> 1445 -> 1557 after app-surface batches 3, 4, 5 and 6. The pin is the *claim being audited*, so it moves only
     // when the tree moves and the ledger is updated in the same commit.
     ['dast rules', countFiles('packs/dast/v1/rules', /^DPK-.*\.json$/), 1007],
     ['sca rules', countFiles('packs/sca/v1/rules', /^DPK-.*\.json$/), 1000],
-    ['patterns', countFiles('knowledge/patterns', /^DPK-PAT-.*\.json$/), 3156],
-    ['records', countFiles('knowledge/records', /^DPK-REC-.*\.json$/), 3156],
-    ['remediation', countFiles('knowledge/remediation', /^DPK-.*\.json$/), 3156],
+    ['patterns', countFiles('knowledge/patterns', /^DPK-PAT-.*\.json$/), 4007],
+    ['records', countFiles('knowledge/records', /^DPK-REC-.*\.json$/), 4007],
+    ['remediation', countFiles('knowledge/remediation', /^DPK-.*\.json$/), 4007],
     ['cwe', countFiles('knowledge/cwe', /\.json$/), 102],
     ['lessons', countFiles('learning/lessons', /\.json$/), 6],
     ['templates', countFiles('assessments/templates', /\.json$/), 3],
