@@ -1,0 +1,84 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0050",
+  "title": "Lockfile resolves a package from a bare IP address",
+  "description": "package-lock.json declares a lockfile entry served from an IP literal rather than a named host. An IP literal bypasses the TLS name check, so the connection cannot prove it reached the host the review approved.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-494",
+  "category": "supply-chain-integrity",
+  "ecosystems": [
+    "npm"
+  ],
+  "artifact": "package-lock.json",
+  "parser": "json",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "packages.*.resolved",
+    "valuePattern": "^https?://\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}"
+  },
+  "tests": [
+    {
+      "file": "package-lock.json",
+      "document": {
+        "name": "demo-service",
+        "lockfileVersion": 3,
+        "packages": {
+          "node_modules/dependency-0": {
+            "version": "1.0.0",
+            "resolved": "https://10.24.8.9/npm/x/-/x-1.0.0.tgz",
+            "integrity": "sha512-AAAABBBBCCCCDDDD"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "package-lock.json",
+      "document": {
+        "name": "demo-service",
+        "lockfileVersion": 3,
+        "packages": {
+          "node_modules/dependency-0": {
+            "version": "1.0.0",
+            "resolved": "http://192.168.1.20/y/-/y-1.0.0.tgz"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "package-lock.json",
+      "document": {
+        "name": "demo-service",
+        "lockfileVersion": 3,
+        "packages": {
+          "node_modules/dependency-0": {
+            "version": "1.0.0",
+            "resolved": "https://registry.npmjs.org/x/-/x-1.0.0.tgz",
+            "integrity": "sha512-AAAABBBBCCCCDDDD"
+          }
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "package-lock.json",
+      "document": {
+        "name": "demo-service",
+        "lockfileVersion": 3,
+        "packages": {
+          "node_modules/dependency-0": {
+            "version": "1.0.0",
+            "resolved": "https://registry.npmjs.org/y/-/y-1.0.0.tgz"
+          }
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2187"
+  ],
+  "remediation": "Serve packages from a named HTTPS host with a valid certificate.",
+  "limitation": "It matches a lockfile entry served from an IP literal rather than a named host in the parsed package-lock.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

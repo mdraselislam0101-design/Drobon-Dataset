@@ -1,0 +1,94 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0235",
+  "title": "renv lockfile records a cleartext package source",
+  "description": "renv.lock declares a package whose recorded source is a cleartext http location. `renv::restore()` fetches over http, so the package bytes cross the network unencrypted.",
+  "severity": "HIGH",
+  "cwe": "CWE-319",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "cran"
+  ],
+  "artifact": "renv.lock",
+  "parser": "json",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "Packages.*.Source",
+    "valuePattern": "^http://"
+  },
+  "tests": [
+    {
+      "file": "renv.lock",
+      "document": {
+        "R": {
+          "Version": "4.4.1"
+        },
+        "Packages": {
+          "acme.internal": {
+            "Package": "acme.internal",
+            "Version": "1.0.0",
+            "Source": "http://cran.acme.example",
+            "Hash": "aaaa"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "renv.lock",
+      "document": {
+        "R": {
+          "Version": "4.4.1"
+        },
+        "Packages": {
+          "acme.utils": {
+            "Package": "acme.utils",
+            "Version": "2.1.0",
+            "Source": "http://10.24.8.9",
+            "Hash": "bbbb"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "renv.lock",
+      "document": {
+        "R": {
+          "Version": "4.4.1"
+        },
+        "Packages": {
+          "dplyr": {
+            "Package": "dplyr",
+            "Version": "1.1.4",
+            "Source": "Repository",
+            "Hash": "aaaa"
+          }
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "renv.lock",
+      "document": {
+        "R": {
+          "Version": "4.4.1"
+        },
+        "Packages": {
+          "acme.utils": {
+            "Package": "acme.utils",
+            "Version": "2.1.0",
+            "Source": "https://cran.acme.example",
+            "Hash": "bbbb"
+          }
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2372"
+  ],
+  "remediation": "Record an https source and re-snapshot.",
+  "limitation": "It matches a package whose recorded source is a cleartext http location in the parsed renv.lock; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

@@ -1,0 +1,88 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0216",
+  "title": "Hex dependency fetched from a git remote",
+  "description": "mix.exs declares a dependency sourced from git rather than hex.pm. The code sits outside hex.pm's checksum and retirement controls, so the lockfile's integrity model does not describe it.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-829",
+  "category": "dependency-hygiene",
+  "ecosystems": [
+    "hex"
+  ],
+  "artifact": "mix.exs",
+  "parser": "lockfile-text",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "deps[].git",
+    "valuePattern": "^https?://"
+  },
+  "tests": [
+    {
+      "file": "mix.exs",
+      "document": {
+        "project": {
+          "app": "demo_service"
+        },
+        "deps": [
+          {
+            "name": "acme_sdk",
+            "git": "https://github.com/acme/sdk.git",
+            "tag": "v4.2.0"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "mix.exs",
+      "document": {
+        "project": {
+          "app": "demo_service"
+        },
+        "deps": [
+          {
+            "name": "acme_cli",
+            "git": "https://github.com/acme/cli.git",
+            "branch": "main"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "mix.exs",
+      "document": {
+        "project": {
+          "app": "demo_service"
+        },
+        "deps": [
+          {
+            "name": "phoenix",
+            "requirement": "~> 1.7.10"
+          }
+        ]
+      },
+      "match": false
+    },
+    {
+      "file": "mix.exs",
+      "document": {
+        "project": {
+          "app": "demo_service"
+        },
+        "deps": [
+          {
+            "name": "ecto",
+            "requirement": "~> 3.11"
+          }
+        ]
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2353"
+  ],
+  "remediation": "Publish the package to hex.pm and depend on the version.",
+  "limitation": "It matches a dependency sourced from git rather than hex.pm in the parsed mix.exs; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

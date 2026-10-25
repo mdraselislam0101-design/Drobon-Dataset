@@ -1,0 +1,77 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0241",
+  "title": "vcpkg registry cloned over cleartext",
+  "description": "vcpkg-configuration.json declares a registry repository URL that uses cleartext http. The port definitions and patches are fetched unencrypted, so the build can compile a modified port.",
+  "severity": "HIGH",
+  "cwe": "CWE-319",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "vcpkg"
+  ],
+  "artifact": "vcpkg-configuration.json",
+  "parser": "json",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "registries[].repository",
+    "valuePattern": "^http://"
+  },
+  "tests": [
+    {
+      "file": "vcpkg-configuration.json",
+      "document": {
+        "registries": [
+          {
+            "kind": "git",
+            "repository": "http://git.acme.example/vcpkg-registry",
+            "baseline": "9f2c4a1"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "vcpkg-configuration.json",
+      "document": {
+        "registries": [
+          {
+            "kind": "git",
+            "repository": "http://10.24.8.9/vcpkg-registry",
+            "baseline": "0a1b2c3"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "vcpkg-configuration.json",
+      "document": {
+        "registries": [
+          {
+            "kind": "git",
+            "repository": "https://git.acme.example/vcpkg-registry",
+            "baseline": "9f2c4a1"
+          }
+        ]
+      },
+      "match": false
+    },
+    {
+      "file": "vcpkg-configuration.json",
+      "document": {
+        "registries": [
+          {
+            "kind": "filesystem",
+            "path": "../vcpkg-registry"
+          }
+        ]
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2378"
+  ],
+  "remediation": "Clone the registry over https.",
+  "limitation": "It matches a registry repository URL that uses cleartext http in the parsed vcpkg-configuration.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

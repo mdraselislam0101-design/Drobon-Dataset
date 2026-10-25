@@ -1,0 +1,115 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0158",
+  "title": "Maven dependency without a version",
+  "description": "pom.xml declares a dependency that declares no version and no import scope. Maven takes the version from whatever parent or BOM happens to be in scope, so a parent change silently moves the dependency.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1104",
+  "category": "dependency-hygiene",
+  "ecosystems": [
+    "maven"
+  ],
+  "artifact": "pom.xml",
+  "parser": "xml",
+  "check": {
+    "type": "sca-entry-missing-field",
+    "path": "project.dependencies",
+    "field": "version"
+  },
+  "tests": [
+    {
+      "file": "pom.xml",
+      "document": {
+        "project": {
+          "modelVersion": "4.0.0",
+          "groupId": "com.acme",
+          "artifactId": "demo-service",
+          "version": "1.4.0",
+          "dependencies": [
+            {
+              "groupId": "com.acme",
+              "artifactId": "internal-core"
+            },
+            {
+              "groupId": "org.slf4j",
+              "artifactId": "slf4j-api",
+              "version": "2.0.13"
+            }
+          ]
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "pom.xml",
+      "document": {
+        "project": {
+          "modelVersion": "4.0.0",
+          "groupId": "com.acme",
+          "artifactId": "demo-service",
+          "version": "1.4.0",
+          "dependencies": [
+            {
+              "groupId": "com.acme",
+              "artifactId": "internal-util"
+            }
+          ]
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "pom.xml",
+      "document": {
+        "project": {
+          "modelVersion": "4.0.0",
+          "groupId": "com.acme",
+          "artifactId": "demo-service",
+          "version": "1.4.0",
+          "dependencies": [
+            {
+              "groupId": "com.acme",
+              "artifactId": "internal-core",
+              "version": "1.2.0"
+            },
+            {
+              "groupId": "org.slf4j",
+              "artifactId": "slf4j-api",
+              "version": "2.0.13"
+            }
+          ]
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "pom.xml",
+      "document": {
+        "project": {
+          "modelVersion": "4.0.0",
+          "groupId": "com.acme",
+          "artifactId": "demo-service",
+          "version": "1.4.0",
+          "dependencies": [
+            {
+              "groupId": "com.acme",
+              "artifactId": "internal-util",
+              "version": "2.0.0"
+            },
+            {
+              "groupId": "com.zaxxer",
+              "artifactId": "HikariCP",
+              "version": "5.1.0"
+            }
+          ]
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2295"
+  ],
+  "remediation": "Declare the version, or import a BOM whose version is pinned in the same commit.",
+  "limitation": "It matches a dependency that declares no version and no import scope in the parsed pom.xml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

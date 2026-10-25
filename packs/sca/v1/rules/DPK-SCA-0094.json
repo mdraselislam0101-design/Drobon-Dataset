@@ -1,0 +1,78 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0094",
+  "title": "Dependency metadata rewritten by package extensions",
+  "description": ".yarnrc.yml declares a `packageExtensions` block that rewrites the metadata of a published package. The installed graph no longer matches what the publisher declared, so the review reads a different dependency set than the one that installs.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-472",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "npm"
+  ],
+  "artifact": ".yarnrc.yml",
+  "parser": "yaml",
+  "check": {
+    "type": "sca-key-matches",
+    "path": "config.packageExtensions",
+    "keyPattern": "^[a-z@][a-z0-9@/._-]{1,60}$"
+  },
+  "tests": [
+    {
+      "file": ".yarnrc.yml",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "packageExtensions": {
+            "acme-ui": {
+              "peerDependencies": {
+                "react": "*"
+              }
+            }
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": ".yarnrc.yml",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "packageExtensions": {
+            "@acme/cli": {
+              "dependencies": {
+                "lodash": "4.17.21"
+              }
+            }
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": ".yarnrc.yml",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "packageExtensions": {}
+        }
+      },
+      "match": false
+    },
+    {
+      "file": ".yarnrc.yml",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "npmRegistryServer": "https://registry.yarnpkg.com/"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2231"
+  ],
+  "remediation": "Land the fix upstream, or scope the extension to a private fork with its own review.",
+  "limitation": "It matches a `packageExtensions` block that rewrites the metadata of a published package in the parsed .yarnrc.yml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

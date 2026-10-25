@@ -1,0 +1,81 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0138",
+  "title": "Pipfile source skips certificate verification",
+  "description": "Pipfile declares a source with `verify_ssl = false`. Any host able to answer on the path is accepted as the index, so an interception looks exactly like the real source.",
+  "severity": "HIGH",
+  "cwe": "CWE-295",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "pypi"
+  ],
+  "artifact": "Pipfile",
+  "parser": "toml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "source[].verify_ssl",
+    "valuePattern": "^false$"
+  },
+  "tests": [
+    {
+      "file": "Pipfile",
+      "document": {
+        "source": [
+          {
+            "name": "acme",
+            "url": "https://pypi.acme.example/simple",
+            "verify_ssl": false
+          }
+        ],
+        "packages": {}
+      },
+      "match": true
+    },
+    {
+      "file": "Pipfile",
+      "document": {
+        "source": [
+          {
+            "name": "mirror",
+            "url": "https://mirror.acme.example/simple",
+            "verify_ssl": false
+          }
+        ],
+        "packages": {}
+      },
+      "match": true
+    },
+    {
+      "file": "Pipfile",
+      "document": {
+        "source": [
+          {
+            "name": "pypi",
+            "url": "https://pypi.org/simple",
+            "verify_ssl": true
+          }
+        ],
+        "packages": {}
+      },
+      "match": false
+    },
+    {
+      "file": "Pipfile",
+      "document": {
+        "source": [
+          {
+            "name": "acme",
+            "url": "https://pypi.acme.example/simple"
+          }
+        ],
+        "packages": {}
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2275"
+  ],
+  "remediation": "Remove `verify_ssl = false` and install the internal CA.",
+  "limitation": "It matches a source with `verify_ssl = false` in the parsed Pipfile; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

@@ -1,0 +1,89 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0188",
+  "title": "Cargo dependency declared with a wildcard",
+  "description": "Cargo.toml declares a `version = \"*\"` dependency. Cargo resolves the newest release of any major line, so a breaking or compromised publish installs with no manifest change.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1104",
+  "category": "dependency-hygiene",
+  "ecosystems": [
+    "cargo"
+  ],
+  "artifact": "Cargo.toml",
+  "parser": "toml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "dependencies.*.version",
+    "valuePattern": "^\\*$"
+  },
+  "tests": [
+    {
+      "file": "Cargo.toml",
+      "document": {
+        "package": {
+          "name": "demo-service",
+          "version": "0.1.0"
+        },
+        "dependencies": {
+          "serde": {
+            "version": "*"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "Cargo.toml",
+      "document": {
+        "package": {
+          "name": "demo-service",
+          "version": "0.1.0"
+        },
+        "dependencies": {
+          "rand": {
+            "version": "*"
+          },
+          "serde": {
+            "version": "1.0.210"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "Cargo.toml",
+      "document": {
+        "package": {
+          "name": "demo-service",
+          "version": "0.1.0"
+        },
+        "dependencies": {
+          "serde": {
+            "version": "1.0.210"
+          }
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "Cargo.toml",
+      "document": {
+        "package": {
+          "name": "demo-service",
+          "version": "0.1.0"
+        },
+        "dependencies": {
+          "rand": {
+            "version": "0.8.5"
+          }
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2325"
+  ],
+  "remediation": "Pin the version the project tested, and let `Cargo.lock` record the resolution.",
+  "limitation": "It matches a `version = \"*\"` dependency in the parsed Cargo.toml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

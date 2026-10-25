@@ -1,0 +1,94 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0780",
+  "title": "Conda environment that installs a pip dependency from git",
+  "description": "environment.yml declares a `pip:` entry with a `git+` URL. A dependency resolved from a local path or a mutable branch is not the published artifact the rest of the project audits. This rule reads a `pip:` entry with a `git+` URL.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-829",
+  "category": "supply-chain-integrity",
+  "ecosystems": [
+    "conda"
+  ],
+  "artifact": "environment.yml",
+  "parser": "yaml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "dependencies[].pip[]",
+    "valuePattern": "^git\\+"
+  },
+  "tests": [
+    {
+      "file": "environment.yml",
+      "document": {
+        "name": "demo",
+        "channels": [
+          "conda-forge",
+          "defaults"
+        ],
+        "dependencies": [
+          {
+            "pip": [
+              "git+https://github.com/acme/sdk"
+            ]
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "environment.yml",
+      "document": {
+        "name": "demo",
+        "channels": [
+          "conda-forge",
+          "defaults"
+        ],
+        "dependencies": [
+          {
+            "pip": [
+              "git+ssh://git@github.com/acme/core"
+            ]
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "environment.yml",
+      "document": {
+        "name": "demo",
+        "channels": [
+          "conda-forge",
+          "defaults"
+        ],
+        "dependencies": [
+          {
+            "pip": [
+              "requests==2.32.3"
+            ]
+          }
+        ]
+      },
+      "match": false
+    },
+    {
+      "file": "environment.yml",
+      "document": {
+        "name": "demo",
+        "channels": [
+          "conda-forge",
+          "defaults"
+        ],
+        "dependencies": [
+          "numpy=1.26.4"
+        ]
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2917"
+  ],
+  "remediation": "Depend on a published, versioned artifact, and keep local paths or branch references out of the committed manifest. Specifically: fix a `pip:` entry with a `git+` URL.",
+  "limitation": "It matches a `pip:` entry with a `git+` URL in the parsed environment.yml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

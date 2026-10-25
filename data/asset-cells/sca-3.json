@@ -1,0 +1,2539 @@
+[
+  {
+    "class": "npmrc-registry-cleartext",
+    "ecosystem": "npm",
+    "artifact": ".npmrc",
+    "parser": "ini",
+    "category": "registry-configuration",
+    "cwe": "CWE-319",
+    "severity": "HIGH",
+    "title": "npm client configured with a cleartext registry",
+    "what": "an npm registry URL that uses cleartext http",
+    "impact": "Every package and every publish travels unencrypted, so a network attacker can serve a different tarball than the one the lockfile recorded.",
+    "remediation": "Point the client at an https registry with a valid certificate.",
+    "limitation": "It matches an npm registry URL that uses cleartext http in the parsed .npmrc; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A .npmrc that mentions an npm registry URL that uses cleartext http in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "config.registry",
+      "valuePattern": "^http://"
+    },
+    "tests": [
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "registry": "http://registry.acme.example/"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "registry": "http://10.24.8.9:4873/"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "registry": "https://registry.npmjs.org/"
+          }
+        },
+        "match": false
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "registry": "https://npm.acme.example/"
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "registry-configuration"
+  },
+  {
+    "class": "npmrc-strict-ssl-disabled",
+    "ecosystem": "npm",
+    "artifact": ".npmrc",
+    "parser": "ini",
+    "category": "registry-configuration",
+    "cwe": "CWE-295",
+    "severity": "HIGH",
+    "title": "npm client with TLS certificate validation turned off",
+    "what": "a client setting that disables TLS certificate validation",
+    "impact": "With validation off, any host that can answer on the network path is accepted as the registry, so the integrity value protects only against accidental corruption.",
+    "remediation": "Remove `strict-ssl=false` and install the corporate CA with `cafile` instead.",
+    "limitation": "It matches a client setting that disables TLS certificate validation in the parsed .npmrc; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A .npmrc that mentions a client setting that disables TLS certificate validation in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "config.strict-ssl",
+      "valuePattern": "^false$"
+    },
+    "tests": [
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "strict-ssl": "false"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "strict-ssl": "false",
+            "registry": "https://npm.acme.example/"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "strict-ssl": "true"
+          }
+        },
+        "match": false
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "registry": "https://registry.npmjs.org/"
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "registry-configuration"
+  },
+  {
+    "class": "npmrc-auth-token-inline",
+    "ecosystem": "npm",
+    "artifact": ".npmrc",
+    "parser": "ini",
+    "category": "credential-in-config",
+    "cwe": "CWE-798",
+    "severity": "HIGH",
+    "title": "npm publish token committed in the client configuration",
+    "what": "a registry authentication token written directly into the checked-in client configuration",
+    "impact": "Anyone with repository read access can publish as the token's owner, and the token keeps working until it is rotated by hand.",
+    "remediation": "Read the token from the environment (`${NPM_AUTH_TOKEN}`) and keep only a placeholder in the file.",
+    "limitation": "It matches a registry authentication token written directly into the checked-in client configuration in the parsed .npmrc; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A .npmrc that mentions a registry authentication token written directly into the checked-in client configuration in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "config._authToken",
+      "valuePattern": "^[A-Za-z0-9_-]{16,}$"
+    },
+    "tests": [
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "_authToken": "npm_EXAMPLEEXAMPLEEXAMPLEEXAMPLE"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "_authToken": "npm_EXAMPLESECONDEXAMPLEVALUE1234"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "_authToken": "${NPM_AUTH_TOKEN}"
+          }
+        },
+        "match": false
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "registry": "https://registry.npmjs.org/"
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "registry-configuration"
+  },
+  {
+    "class": "npmrc-password-inline",
+    "ecosystem": "npm",
+    "artifact": ".npmrc",
+    "parser": "ini",
+    "category": "credential-in-config",
+    "cwe": "CWE-798",
+    "severity": "HIGH",
+    "title": "Registry password stored in the client configuration",
+    "what": "a registry password written directly into the checked-in client configuration",
+    "impact": "The credential is readable by everyone who can read the repository or a build log that echoes the file, and it cannot be scoped or expired like a token.",
+    "remediation": "Use a scoped automation token read from the environment, and rotate the password.",
+    "limitation": "It matches a registry password written directly into the checked-in client configuration in the parsed .npmrc; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A .npmrc that mentions a registry password written directly into the checked-in client configuration in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "config._password",
+      "valuePattern": "^[A-Za-z0-9+/=._-]{12,}$"
+    },
+    "tests": [
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "_password": "EXAMPLESECRETPASSWORD01"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "_password": "EXAMPLESECONDPASSWORD1234"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "_password": "${NPM_PASSWORD}"
+          }
+        },
+        "match": false
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "registry": "https://registry.npmjs.org/"
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "registry-configuration"
+  },
+  {
+    "class": "npmrc-auth-basic-inline",
+    "ecosystem": "npm",
+    "artifact": ".npmrc",
+    "parser": "ini",
+    "category": "credential-in-config",
+    "cwe": "CWE-522",
+    "severity": "HIGH",
+    "title": "Base64 basic-auth credential in the client configuration",
+    "what": "a base64 `user:password` credential written into the checked-in client configuration",
+    "impact": "Base64 is encoding, not encryption: the pair decodes with one command, so the account can be used until the password is changed.",
+    "remediation": "Read the credential from the environment and switch the account to a scoped token.",
+    "limitation": "It matches a base64 `user:password` credential written into the checked-in client configuration in the parsed .npmrc; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A .npmrc that mentions a base64 `user:password` credential written into the checked-in client configuration in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "config._auth",
+      "valuePattern": "^[A-Za-z0-9+/=]{16,}$"
+    },
+    "tests": [
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "_auth": "ZXhhbXBsZTpleGFtcGxlcGFzc3dvcmQ="
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "_auth": "ZGVtby1zdmM6ZXhhbXBsZXBhc3N3b3Jk"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "_auth": "${NPM_BASIC_AUTH}"
+          }
+        },
+        "match": false
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "registry": "https://registry.npmjs.org/"
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "registry-configuration"
+  },
+  {
+    "class": "npmrc-always-auth",
+    "ecosystem": "npm",
+    "artifact": ".npmrc",
+    "parser": "ini",
+    "category": "registry-configuration",
+    "cwe": "CWE-522",
+    "severity": "MEDIUM",
+    "title": "npm client sends credentials on every request",
+    "what": "a client setting that attaches registry credentials to every request, not only to authenticated calls",
+    "impact": "The token is offered to mirrors, proxies and any host the client is pointed at, which widens the audience of one leaked configuration.",
+    "remediation": "Leave `always-auth` unset so credentials are only sent where the registry requires them.",
+    "limitation": "It matches a client setting that attaches registry credentials to every request, not only to authenticated calls in the parsed .npmrc; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A .npmrc that mentions a client setting that attaches registry credentials to every request, not only to authenticated calls in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "config.always-auth",
+      "valuePattern": "^true$"
+    },
+    "tests": [
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "always-auth": "true"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "always-auth": "true",
+            "registry": "http://registry.acme.example/"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "always-auth": "false"
+          }
+        },
+        "match": false
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "registry": "https://registry.npmjs.org/"
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "registry-configuration"
+  },
+  {
+    "class": "npmrc-audit-disabled",
+    "ecosystem": "npm",
+    "artifact": ".npmrc",
+    "parser": "ini",
+    "category": "registry-configuration",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "npm audit disabled in the client configuration",
+    "what": "a client setting that turns the install-time audit off",
+    "impact": "Advisory findings for the installed tree are never requested, so a vulnerable transitive package installs without any signal reaching the build log.",
+    "remediation": "Leave auditing enabled, or run the audit as a separate CI step that fails the build.",
+    "limitation": "It matches a client setting that turns the install-time audit off in the parsed .npmrc; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A .npmrc that mentions a client setting that turns the install-time audit off in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "config.audit",
+      "valuePattern": "^false$"
+    },
+    "tests": [
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "audit": "false"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "audit": "false",
+            "registry": "https://npm.acme.example/"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "audit": "true"
+          }
+        },
+        "match": false
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "registry": "https://registry.npmjs.org/"
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "registry-configuration"
+  },
+  {
+    "class": "npmrc-package-lock-disabled",
+    "ecosystem": "npm",
+    "artifact": ".npmrc",
+    "parser": "ini",
+    "category": "registry-configuration",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "npm client configured to write no lockfile",
+    "what": "a client setting that stops the lockfile being written or honoured",
+    "impact": "Every install resolves fresh from the registry, so two builds of the same commit can compile different code and no integrity value is recorded.",
+    "remediation": "Enable the lockfile and commit it, so installs resolve from the recorded tree.",
+    "limitation": "It matches a client setting that stops the lockfile being written or honoured in the parsed .npmrc; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A .npmrc that mentions a client setting that stops the lockfile being written or honoured in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "config.package-lock",
+      "valuePattern": "^false$"
+    },
+    "tests": [
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "package-lock": "false"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "package-lock": "false",
+            "registry": "https://npm.acme.example/"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "package-lock": "true"
+          }
+        },
+        "match": false
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "registry": "https://registry.npmjs.org/"
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "registry-configuration"
+  },
+  {
+    "class": "npmrc-legacy-peer-deps",
+    "ecosystem": "npm",
+    "artifact": ".npmrc",
+    "parser": "ini",
+    "category": "registry-configuration",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "npm client ignores peer-dependency conflicts",
+    "what": "a client setting that installs despite conflicting peer requirements",
+    "impact": "The tree that installs is one npm itself refused to accept, so an incompatible transitive copy can shadow the version the project tested.",
+    "remediation": "Resolve the peer conflict in the dependency graph instead of suppressing the check.",
+    "limitation": "It matches a client setting that installs despite conflicting peer requirements in the parsed .npmrc; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A .npmrc that mentions a client setting that installs despite conflicting peer requirements in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "config.legacy-peer-deps",
+      "valuePattern": "^true$"
+    },
+    "tests": [
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "legacy-peer-deps": "true"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "legacy-peer-deps": "true",
+            "registry": "https://npm.acme.example/"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "legacy-peer-deps": "false"
+          }
+        },
+        "match": false
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "registry": "https://registry.npmjs.org/"
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "registry-configuration"
+  },
+  {
+    "class": "npmrc-save-exact-disabled",
+    "ecosystem": "npm",
+    "artifact": ".npmrc",
+    "parser": "ini",
+    "category": "registry-configuration",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "npm client installs with a floating range by default",
+    "what": "a client setting that writes a caret range when a dependency is added",
+    "impact": "Every added dependency starts out accepting unreviewed patch and minor releases, so the manifest drifts away from the version that was tested.",
+    "remediation": "Set `save-exact=true` and let a deliberate upgrade change the pin.",
+    "limitation": "It matches a client setting that writes a caret range when a dependency is added in the parsed .npmrc; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A .npmrc that mentions a client setting that writes a caret range when a dependency is added in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "config.save-exact",
+      "valuePattern": "^false$"
+    },
+    "tests": [
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "save-exact": "false"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "save-exact": "false",
+            "registry": "https://npm.acme.example/"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "save-exact": "true"
+          }
+        },
+        "match": false
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "registry": "https://registry.npmjs.org/"
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "registry-configuration"
+  },
+  {
+    "class": "npmrc-proxy-cleartext",
+    "ecosystem": "npm",
+    "artifact": ".npmrc",
+    "parser": "ini",
+    "category": "registry-configuration",
+    "cwe": "CWE-319",
+    "severity": "MEDIUM",
+    "title": "npm client reaches the network through a cleartext proxy",
+    "what": "a proxy URL that uses cleartext http",
+    "impact": "The proxy sees every request in the clear, including authenticated registry calls, so a hostile or shared proxy can read and rewrite traffic.",
+    "remediation": "Use an https proxy, or terminate TLS at a proxy that presents its own verified certificate.",
+    "limitation": "It matches a proxy URL that uses cleartext http in the parsed .npmrc; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A .npmrc that mentions a proxy URL that uses cleartext http in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "config.proxy",
+      "valuePattern": "^http://"
+    },
+    "tests": [
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "proxy": "http://proxy.acme.example:3128/"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "proxy": "http://10.0.0.5:8080/"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "proxy": "https://proxy.acme.example:8443/"
+          }
+        },
+        "match": false
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "registry": "https://registry.npmjs.org/"
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "registry-configuration"
+  },
+  {
+    "class": "npmrc-https-proxy-cleartext",
+    "ecosystem": "npm",
+    "artifact": ".npmrc",
+    "parser": "ini",
+    "category": "registry-configuration",
+    "cwe": "CWE-319",
+    "severity": "MEDIUM",
+    "title": "HTTPS registry traffic tunnelled through a cleartext proxy URL",
+    "what": "an `https-proxy` setting that itself uses cleartext http",
+    "impact": "The CONNECT tunnel is set up over an unprotected hop, so the proxy identity is unverified and the path can be redirected.",
+    "remediation": "Point `https-proxy` at an https endpoint whose certificate the client validates.",
+    "limitation": "It matches an `https-proxy` setting that itself uses cleartext http in the parsed .npmrc; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A .npmrc that mentions an `https-proxy` setting that itself uses cleartext http in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "config.https-proxy",
+      "valuePattern": "^http://"
+    },
+    "tests": [
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "https-proxy": "http://proxy.acme.example:3128/"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "https-proxy": "http://10.0.0.7:8080/"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "https-proxy": "https://proxy.acme.example:8443/"
+          }
+        },
+        "match": false
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "registry": "https://registry.npmjs.org/"
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "registry-configuration"
+  },
+  {
+    "class": "npmrc-noproxy-wildcard",
+    "ecosystem": "npm",
+    "artifact": ".npmrc",
+    "parser": "ini",
+    "category": "registry-configuration",
+    "cwe": "CWE-441",
+    "severity": "MEDIUM",
+    "title": "Proxy bypassed for every host",
+    "what": "a `noproxy` value that bypasses the proxy for all hosts",
+    "impact": "Every registry request goes direct, so the inspection and caching the proxy provides are lost while the configuration still looks like it routes through one.",
+    "remediation": "List only the internal hosts that must bypass the proxy.",
+    "limitation": "It matches a `noproxy` value that bypasses the proxy for all hosts in the parsed .npmrc; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A .npmrc that mentions a `noproxy` value that bypasses the proxy for all hosts in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "config.noproxy",
+      "valuePattern": "^\\*$"
+    },
+    "tests": [
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "noproxy": "*"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "noproxy": "*",
+            "registry": "https://npm.acme.example/"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "noproxy": "localhost,127.0.0.1"
+          }
+        },
+        "match": false
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "registry": "https://registry.npmjs.org/"
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "registry-configuration"
+  },
+  {
+    "class": "npmrc-engine-strict-disabled",
+    "ecosystem": "npm",
+    "artifact": ".npmrc",
+    "parser": "ini",
+    "category": "registry-configuration",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "npm client ignores engine mismatches",
+    "what": "a client setting that installs packages regardless of the runtime they declare",
+    "impact": "A package built for another Node version installs silently, so the build runs code on a runtime its publisher never tested.",
+    "remediation": "Enable `engine-strict` and align the runtime with the declared range.",
+    "limitation": "It matches a client setting that installs packages regardless of the runtime they declare in the parsed .npmrc; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A .npmrc that mentions a client setting that installs packages regardless of the runtime they declare in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "config.engine-strict",
+      "valuePattern": "^false$"
+    },
+    "tests": [
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "engine-strict": "false"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "engine-strict": "false",
+            "registry": "https://npm.acme.example/"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "engine-strict": "true"
+          }
+        },
+        "match": false
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "registry": "https://registry.npmjs.org/"
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "registry-configuration"
+  },
+  {
+    "class": "npmrc-prefer-offline",
+    "ecosystem": "npm",
+    "artifact": ".npmrc",
+    "parser": "ini",
+    "category": "registry-configuration",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "npm client prefers cached metadata over the registry",
+    "what": "a client setting that reuses cached package metadata instead of asking the registry",
+    "impact": "Revoked or unpublished versions keep resolving from the cache, so a change made on the registry never reaches the build.",
+    "remediation": "Leave `prefer-offline` off for release builds and use a controlled cache with an integrity policy.",
+    "limitation": "It matches a client setting that reuses cached package metadata instead of asking the registry in the parsed .npmrc; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A .npmrc that mentions a client setting that reuses cached package metadata instead of asking the registry in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "config.prefer-offline",
+      "valuePattern": "^true$"
+    },
+    "tests": [
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "prefer-offline": "true"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "prefer-offline": "true",
+            "registry": "https://npm.acme.example/"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "prefer-offline": "false"
+          }
+        },
+        "match": false
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "registry": "https://registry.npmjs.org/"
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "registry-configuration"
+  },
+  {
+    "class": "npmrc-cafile-empty",
+    "ecosystem": "npm",
+    "artifact": ".npmrc",
+    "parser": "ini",
+    "category": "registry-configuration",
+    "cwe": "CWE-295",
+    "severity": "MEDIUM",
+    "title": "Certificate authority file configured but empty",
+    "what": "an empty `cafile` setting, which leaves the client with no trust anchor from that path",
+    "impact": "The client falls back to whatever trust store the runtime happens to have, so the set of accepted registry certificates is unspecified.",
+    "remediation": "Point `cafile` at the real CA bundle, or remove the setting and use the system store deliberately.",
+    "limitation": "It matches an empty `cafile` setting, which leaves the client with no trust anchor from that path in the parsed .npmrc; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A .npmrc that mentions an empty `cafile` setting, which leaves the client with no trust anchor from that path in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "config.cafile",
+      "valuePattern": "^$"
+    },
+    "tests": [
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "cafile": ""
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "cafile": "",
+            "strict-ssl": "true"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "cafile": "/etc/ssl/certs/acme-root.pem"
+          }
+        },
+        "match": false
+      },
+      {
+        "file": ".npmrc",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "registry": "https://registry.npmjs.org/"
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "registry-configuration"
+  },
+  {
+    "class": "yarnrc-registry-cleartext",
+    "ecosystem": "npm",
+    "artifact": ".yarnrc.yml",
+    "parser": "yaml",
+    "category": "registry-configuration",
+    "cwe": "CWE-319",
+    "severity": "HIGH",
+    "title": "Yarn registry configured over cleartext",
+    "what": "a Yarn registry URL that uses cleartext http",
+    "impact": "Packages and authentication headers cross the network unencrypted, so a network attacker can substitute the tarball the lockfile recorded.",
+    "remediation": "Point `npmRegistryServer` at an https endpoint with a valid certificate.",
+    "limitation": "It matches a Yarn registry URL that uses cleartext http in the parsed .yarnrc.yml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A .yarnrc.yml that mentions a Yarn registry URL that uses cleartext http in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "config.npmRegistryServer",
+      "valuePattern": "^http://"
+    },
+    "tests": [
+      {
+        "file": ".yarnrc.yml",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "npmRegistryServer": "http://npm.acme.example/"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".yarnrc.yml",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "npmRegistryServer": "http://10.24.8.9:4873/"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".yarnrc.yml",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "npmRegistryServer": "https://registry.yarnpkg.com/"
+          }
+        },
+        "match": false
+      },
+      {
+        "file": ".yarnrc.yml",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "npmRegistryServer": "https://npm.acme.example/"
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "registry-configuration"
+  },
+  {
+    "class": "yarnrc-auth-token-inline",
+    "ecosystem": "npm",
+    "artifact": ".yarnrc.yml",
+    "parser": "yaml",
+    "category": "credential-in-config",
+    "cwe": "CWE-798",
+    "severity": "HIGH",
+    "title": "Yarn publish token committed in the configuration",
+    "what": "a registry token written directly into the checked-in Yarn configuration",
+    "impact": "Repository readers can publish as the token owner, and nothing expires the credential when a laptop or CI cache leaks.",
+    "remediation": "Reference an environment variable and keep the literal out of the file.",
+    "limitation": "It matches a registry token written directly into the checked-in Yarn configuration in the parsed .yarnrc.yml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A .yarnrc.yml that mentions a registry token written directly into the checked-in Yarn configuration in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "config.npmAuthToken",
+      "valuePattern": "^[A-Za-z0-9_-]{16,}$"
+    },
+    "tests": [
+      {
+        "file": ".yarnrc.yml",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "npmAuthToken": "npm_EXAMPLEEXAMPLEEXAMPLEEXAMPLE"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".yarnrc.yml",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "npmAuthToken": "npm_EXAMPLESECONDEXAMPLEVALUE1234"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".yarnrc.yml",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "npmAuthToken": "${NPM_AUTH_TOKEN}"
+          }
+        },
+        "match": false
+      },
+      {
+        "file": ".yarnrc.yml",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "npmRegistryServer": "https://registry.yarnpkg.com/"
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "registry-configuration"
+  },
+  {
+    "class": "yarnrc-strict-ssl-disabled",
+    "ecosystem": "npm",
+    "artifact": ".yarnrc.yml",
+    "parser": "yaml",
+    "category": "registry-configuration",
+    "cwe": "CWE-295",
+    "severity": "HIGH",
+    "title": "Yarn TLS certificate validation disabled",
+    "what": "a Yarn setting that disables certificate validation",
+    "impact": "Any host able to answer on the path is accepted as the registry, so an intercepted connection looks exactly like the real one.",
+    "remediation": "Re-enable strict TLS and trust the corporate CA explicitly.",
+    "limitation": "It matches a Yarn setting that disables certificate validation in the parsed .yarnrc.yml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A .yarnrc.yml that mentions a Yarn setting that disables certificate validation in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "config.enableStrictSsl",
+      "valuePattern": "^false$"
+    },
+    "tests": [
+      {
+        "file": ".yarnrc.yml",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "enableStrictSsl": false
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".yarnrc.yml",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "enableStrictSsl": "false"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".yarnrc.yml",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "enableStrictSsl": true
+          }
+        },
+        "match": false
+      },
+      {
+        "file": ".yarnrc.yml",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "npmRegistryServer": "https://registry.yarnpkg.com/"
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "registry-configuration"
+  },
+  {
+    "class": "yarnrc-unsafe-http-whitelist",
+    "ecosystem": "npm",
+    "artifact": ".yarnrc.yml",
+    "parser": "yaml",
+    "category": "registry-configuration",
+    "cwe": "CWE-319",
+    "severity": "MEDIUM",
+    "title": "Yarn whitelists a host for unencrypted traffic",
+    "what": "a host on the `unsafeHttpWhitelist`, which Yarn will talk to over cleartext",
+    "impact": "Every package fetched from a whitelisted host forgoes transport authentication, so its bytes can be replaced in flight.",
+    "remediation": "Serve those hosts over https and empty the whitelist.",
+    "limitation": "It matches a host on the `unsafeHttpWhitelist`, which Yarn will talk to over cleartext in the parsed .yarnrc.yml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A .yarnrc.yml that mentions a host on the `unsafeHttpWhitelist`, which Yarn will talk to over cleartext in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "config.unsafeHttpWhitelist[]",
+      "valuePattern": "^[a-z0-9.-]{3,80}$"
+    },
+    "tests": [
+      {
+        "file": ".yarnrc.yml",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "unsafeHttpWhitelist": [
+              "npm.acme.example"
+            ]
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".yarnrc.yml",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "unsafeHttpWhitelist": [
+              "npm.acme.example",
+              "mirror.acme.example"
+            ]
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".yarnrc.yml",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "unsafeHttpWhitelist": []
+          }
+        },
+        "match": false
+      },
+      {
+        "file": ".yarnrc.yml",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "npmRegistryServer": "https://registry.yarnpkg.com/"
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "registry-configuration"
+  },
+  {
+    "class": "yarnrc-immutable-disabled",
+    "ecosystem": "npm",
+    "artifact": ".yarnrc.yml",
+    "parser": "yaml",
+    "category": "registry-configuration",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "Yarn allowed to rewrite the lockfile during CI",
+    "what": "a Yarn setting that lets an install update the lockfile it was given",
+    "impact": "A CI run can resolve versions the review never saw and report success, so the committed lockfile stops describing what was built.",
+    "remediation": "Enable immutable installs in CI so a drift fails the build instead of being written away.",
+    "limitation": "It matches a Yarn setting that lets an install update the lockfile it was given in the parsed .yarnrc.yml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A .yarnrc.yml that mentions a Yarn setting that lets an install update the lockfile it was given in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "config.enableImmutable",
+      "valuePattern": "^false$"
+    },
+    "tests": [
+      {
+        "file": ".yarnrc.yml",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "enableImmutable": false
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".yarnrc.yml",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "enableImmutable": "false"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".yarnrc.yml",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "enableImmutable": true
+          }
+        },
+        "match": false
+      },
+      {
+        "file": ".yarnrc.yml",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "npmRegistryServer": "https://registry.yarnpkg.com/"
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "registry-configuration"
+  },
+  {
+    "class": "yarnrc-checksum-ignore",
+    "ecosystem": "npm",
+    "artifact": ".yarnrc.yml",
+    "parser": "yaml",
+    "category": "registry-configuration",
+    "cwe": "CWE-345",
+    "severity": "HIGH",
+    "title": "Yarn checksum mismatches ignored",
+    "what": "a Yarn setting that ignores a cached-archive checksum mismatch",
+    "impact": "A corrupted or substituted archive installs without any error, which removes the one check that would notice the substitution.",
+    "remediation": "Use `throw` so a mismatch fails the install.",
+    "limitation": "It matches a Yarn setting that ignores a cached-archive checksum mismatch in the parsed .yarnrc.yml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A .yarnrc.yml that mentions a Yarn setting that ignores a cached-archive checksum mismatch in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "config.checksumBehavior",
+      "valuePattern": "^ignore$"
+    },
+    "tests": [
+      {
+        "file": ".yarnrc.yml",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "checksumBehavior": "ignore"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".yarnrc.yml",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "checksumBehavior": "ignore",
+            "npmRegistryServer": "https://registry.yarnpkg.com/"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".yarnrc.yml",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "checksumBehavior": "throw"
+          }
+        },
+        "match": false
+      },
+      {
+        "file": ".yarnrc.yml",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "checksumBehavior": "update"
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "registry-configuration"
+  },
+  {
+    "class": "yarnrc-package-extensions",
+    "ecosystem": "npm",
+    "artifact": ".yarnrc.yml",
+    "parser": "yaml",
+    "category": "registry-configuration",
+    "cwe": "CWE-472",
+    "severity": "MEDIUM",
+    "title": "Dependency metadata rewritten by package extensions",
+    "what": "a `packageExtensions` block that rewrites the metadata of a published package",
+    "impact": "The installed graph no longer matches what the publisher declared, so the review reads a different dependency set than the one that installs.",
+    "remediation": "Land the fix upstream, or scope the extension to a private fork with its own review.",
+    "limitation": "It matches a `packageExtensions` block that rewrites the metadata of a published package in the parsed .yarnrc.yml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A .yarnrc.yml that mentions a `packageExtensions` block that rewrites the metadata of a published package in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-key-matches",
+      "path": "config.packageExtensions",
+      "keyPattern": "^[a-z@][a-z0-9@/._-]{1,60}$"
+    },
+    "tests": [
+      {
+        "file": ".yarnrc.yml",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "packageExtensions": {
+              "acme-ui": {
+                "peerDependencies": {
+                  "react": "*"
+                }
+              }
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".yarnrc.yml",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "packageExtensions": {
+              "@acme/cli": {
+                "dependencies": {
+                  "lodash": "4.17.21"
+                }
+              }
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": ".yarnrc.yml",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "packageExtensions": {}
+          }
+        },
+        "match": false
+      },
+      {
+        "file": ".yarnrc.yml",
+        "document": {
+          "name": "demo-service",
+          "config": {
+            "npmRegistryServer": "https://registry.yarnpkg.com/"
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "registry-configuration"
+  },
+  {
+    "class": "yarn-lock-checksum-absent",
+    "ecosystem": "npm",
+    "artifact": "yarn.lock",
+    "parser": "lockfile-text",
+    "category": "supply-chain-integrity",
+    "cwe": "CWE-494",
+    "severity": "MEDIUM",
+    "title": "Yarn lockfile entry without a checksum",
+    "what": "a Yarn Berry entry that records no archive checksum",
+    "impact": "The archive Yarn fetches is never verified against the lockfile, so a tampered or cached substitute installs silently.",
+    "remediation": "Regenerate the lockfile so each entry carries its checksum, and commit it.",
+    "limitation": "It matches a Yarn Berry entry that records no archive checksum in the parsed yarn.lock; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A yarn.lock that mentions a Yarn Berry entry that records no archive checksum in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-entry-missing-field",
+      "path": "entries",
+      "field": "checksum"
+    },
+    "tests": [
+      {
+        "file": "yarn.lock",
+        "document": {
+          "entries": [
+            {
+              "name": "left-pad",
+              "version": "1.3.0",
+              "resolution": "left-pad@npm:1.3.0"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "yarn.lock",
+        "document": {
+          "entries": [
+            {
+              "name": "ms",
+              "version": "2.1.3",
+              "resolution": "ms@npm:2.1.3",
+              "dependencies": {}
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "yarn.lock",
+        "document": {
+          "entries": [
+            {
+              "name": "left-pad",
+              "version": "1.3.0",
+              "checksum": "8/abcdef"
+            }
+          ]
+        },
+        "match": false
+      },
+      {
+        "file": "yarn.lock",
+        "document": {
+          "entries": [
+            {
+              "name": "ms",
+              "version": "2.1.3",
+              "checksum": "10/0123456789"
+            }
+          ]
+        },
+        "match": false
+      }
+    ]
+  },
+  {
+    "class": "yarn-lock-integrity-sha1",
+    "ecosystem": "npm",
+    "artifact": "yarn.lock",
+    "parser": "lockfile-text",
+    "category": "lockfile-integrity",
+    "cwe": "CWE-328",
+    "severity": "MEDIUM",
+    "title": "Yarn lockfile pins a SHA-1 integrity value",
+    "what": "an integrity value that is a SHA-1 digest",
+    "impact": "SHA-1 collisions are practical, so the digest cannot prove that the installed archive is the one the lockfile recorded.",
+    "remediation": "Re-resolve with a current Yarn so the entry records a SHA-2 value.",
+    "limitation": "It matches an integrity value that is a SHA-1 digest in the parsed yarn.lock; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A yarn.lock that mentions an integrity value that is a SHA-1 digest in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "entries[].integrity",
+      "valuePattern": "^sha1-"
+    },
+    "tests": [
+      {
+        "file": "yarn.lock",
+        "document": {
+          "entries": [
+            {
+              "name": "left-pad",
+              "version": "1.3.0",
+              "integrity": "sha1-AAAABBBBCCCCDDDD"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "yarn.lock",
+        "document": {
+          "entries": [
+            {
+              "name": "ms",
+              "version": "2.1.3",
+              "integrity": "sha1-EEEEFFFFGGGGHHHH"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "yarn.lock",
+        "document": {
+          "entries": [
+            {
+              "name": "left-pad",
+              "version": "1.3.0",
+              "integrity": "sha512-AAAA"
+            }
+          ]
+        },
+        "match": false
+      },
+      {
+        "file": "yarn.lock",
+        "document": {
+          "entries": [
+            {
+              "name": "ms",
+              "version": "2.1.3",
+              "integrity": "sha512-BBBB"
+            }
+          ]
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "yarn-lock-resolution-cleartext",
+    "ecosystem": "npm",
+    "artifact": "yarn.lock",
+    "parser": "lockfile-text",
+    "category": "lockfile-integrity",
+    "cwe": "CWE-319",
+    "severity": "MEDIUM",
+    "title": "Yarn lockfile resolves an archive over cleartext",
+    "what": "a lockfile `resolved` URL that uses cleartext http",
+    "impact": "The archive crosses the network unencrypted, so it can be replaced before the checksum is computed.",
+    "remediation": "Resolve over https and regenerate the lockfile.",
+    "limitation": "It matches a lockfile `resolved` URL that uses cleartext http in the parsed yarn.lock; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A yarn.lock that mentions a lockfile `resolved` URL that uses cleartext http in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "entries[].resolved",
+      "valuePattern": "^http://"
+    },
+    "tests": [
+      {
+        "file": "yarn.lock",
+        "document": {
+          "entries": [
+            {
+              "name": "left-pad",
+              "resolved": "http://registry.acme.example/left-pad-1.3.0.tgz"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "yarn.lock",
+        "document": {
+          "entries": [
+            {
+              "name": "ms",
+              "resolved": "http://10.24.8.9/ms-2.1.3.tgz"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "yarn.lock",
+        "document": {
+          "entries": [
+            {
+              "name": "left-pad",
+              "resolved": "https://registry.yarnpkg.com/left-pad/-/left-pad-1.3.0.tgz"
+            }
+          ]
+        },
+        "match": false
+      },
+      {
+        "file": "yarn.lock",
+        "document": {
+          "entries": [
+            {
+              "name": "ms",
+              "resolved": "https://registry.yarnpkg.com/ms/-/ms-2.1.3.tgz"
+            }
+          ]
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "yarn-lock-version-absent",
+    "ecosystem": "npm",
+    "artifact": "yarn.lock",
+    "parser": "lockfile-text",
+    "category": "supply-chain-integrity",
+    "cwe": "CWE-494",
+    "severity": "MEDIUM",
+    "title": "Yarn lockfile entry without a resolved version",
+    "what": "a Yarn entry that records no version",
+    "impact": "The entry cannot be compared with an advisory range, so a vulnerable install is invisible to every version-based check.",
+    "remediation": "Run `yarn install` against the unchanged `package.json` and commit the regenerated `yarn.lock`, so each entry records the version Yarn actually installed.",
+    "limitation": "It matches a Yarn entry that records no version in the parsed yarn.lock; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A yarn.lock that mentions a Yarn entry that records no version in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-entry-missing-field",
+      "path": "entries",
+      "field": "version"
+    },
+    "tests": [
+      {
+        "file": "yarn.lock",
+        "document": {
+          "entries": [
+            {
+              "name": "left-pad",
+              "resolution": "left-pad@npm:1.3.0",
+              "checksum": "8/aa"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "yarn.lock",
+        "document": {
+          "entries": [
+            {
+              "name": "ms",
+              "resolution": "ms@npm:2.1.3",
+              "checksum": "10/bb"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "yarn.lock",
+        "document": {
+          "entries": [
+            {
+              "name": "left-pad",
+              "version": "1.3.0",
+              "checksum": "8/aa"
+            }
+          ]
+        },
+        "match": false
+      },
+      {
+        "file": "yarn.lock",
+        "document": {
+          "entries": [
+            {
+              "name": "ms",
+              "version": "2.1.3",
+              "checksum": "10/bb"
+            }
+          ]
+        },
+        "match": false
+      }
+    ]
+  },
+  {
+    "class": "yarn-lock-git-resolution",
+    "ecosystem": "npm",
+    "artifact": "yarn.lock",
+    "parser": "lockfile-text",
+    "category": "lockfile-integrity",
+    "cwe": "CWE-829",
+    "severity": "MEDIUM",
+    "title": "Yarn lockfile resolves a package from a git remote",
+    "what": "a Yarn resolution that names a git remote instead of a registry range",
+    "impact": "The code sits outside the registry's publication controls, so its advisory linkage and provenance are unknown.",
+    "remediation": "Depend on a published version that the registry serves with a checksum.",
+    "limitation": "It matches a Yarn resolution that names a git remote instead of a registry range in the parsed yarn.lock; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A yarn.lock that mentions a Yarn resolution that names a git remote instead of a registry range in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "entries[].resolution",
+      "valuePattern": "^[a-z@][^\\s]{0,60}@(?:git|github|gitlab|bitbucket)[:+^]"
+    },
+    "tests": [
+      {
+        "file": "yarn.lock",
+        "document": {
+          "entries": [
+            {
+              "name": "acme-sdk",
+              "resolution": "acme-sdk@git+https://github.com/acme/sdk.git#9f2c4a1"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "yarn.lock",
+        "document": {
+          "entries": [
+            {
+              "name": "acme-cli",
+              "resolution": "acme-cli@github:acme/cli#0a1b2c3"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "yarn.lock",
+        "document": {
+          "entries": [
+            {
+              "name": "acme-sdk",
+              "resolution": "acme-sdk@npm:4.2.0"
+            }
+          ]
+        },
+        "match": false
+      },
+      {
+        "file": "yarn.lock",
+        "document": {
+          "entries": [
+            {
+              "name": "acme-cli",
+              "resolution": "acme-cli@npm:2.1.0"
+            }
+          ]
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "yarn-lock-registry-switch",
+    "ecosystem": "npm",
+    "artifact": "yarn.lock",
+    "parser": "lockfile-text",
+    "category": "lockfile-integrity",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "Yarn lockfile pins an absolute registry URL",
+    "what": "a resolution that hard-codes a registry tarball URL instead of a version range",
+    "impact": "The lockfile stops following the configured registry, so a mirror, an air-gapped build or a policy change cannot redirect it.",
+    "remediation": "Record the resolution as a version range and let the configured registry serve it.",
+    "limitation": "It matches a resolution that hard-codes a registry tarball URL instead of a version range in the parsed yarn.lock; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A yarn.lock that mentions a resolution that hard-codes a registry tarball URL instead of a version range in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "entries[].resolution",
+      "valuePattern": "@https://registry\\.yarnpkg\\.com/"
+    },
+    "tests": [
+      {
+        "file": "yarn.lock",
+        "document": {
+          "entries": [
+            {
+              "name": "left-pad",
+              "resolution": "left-pad@https://registry.yarnpkg.com/left-pad/-/left-pad-1.3.0.tgz"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "yarn.lock",
+        "document": {
+          "entries": [
+            {
+              "name": "ms",
+              "resolution": "ms@https://registry.yarnpkg.com/ms/-/ms-2.1.3.tgz"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "yarn.lock",
+        "document": {
+          "entries": [
+            {
+              "name": "left-pad",
+              "resolution": "left-pad@npm:1.3.0"
+            }
+          ]
+        },
+        "match": false
+      },
+      {
+        "file": "yarn.lock",
+        "document": {
+          "entries": [
+            {
+              "name": "ms",
+              "resolution": "ms@npm:2.1.3"
+            }
+          ]
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "pnpm-lock-resolution-tarball-only",
+    "ecosystem": "npm",
+    "artifact": "pnpm-lock.yaml",
+    "parser": "yaml",
+    "category": "lockfile-integrity",
+    "cwe": "CWE-494",
+    "severity": "MEDIUM",
+    "title": "pnpm lockfile records a resolution as a tarball URL only",
+    "what": "a pnpm resolution that records a tarball URL with no integrity value",
+    "impact": "Nothing in the lockfile ties the fetched archive to a digest, so a mirror or proxy can serve different bytes for the same file.",
+    "remediation": "Regenerate the lockfile so the resolution carries an integrity value from the registry.",
+    "limitation": "It matches a pnpm resolution that records a tarball URL with no integrity value in the parsed pnpm-lock.yaml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A pnpm-lock.yaml that mentions a pnpm resolution that records a tarball URL with no integrity value in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "packages.*.resolution.tarball",
+      "valuePattern": "^https?://"
+    },
+    "tests": [
+      {
+        "file": "pnpm-lock.yaml",
+        "document": {
+          "lockfileVersion": "9.0",
+          "packages": {
+            "/left-pad@1.3.0": {
+              "resolution": {
+                "tarball": "https://registry.acme.example/left-pad-1.3.0.tgz"
+              }
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "pnpm-lock.yaml",
+        "document": {
+          "lockfileVersion": "9.0",
+          "packages": {
+            "/ms@2.1.3": {
+              "resolution": {
+                "tarball": "https://downloads.acme.example/ms-2.1.3.tgz"
+              }
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "pnpm-lock.yaml",
+        "document": {
+          "lockfileVersion": "9.0",
+          "packages": {
+            "/left-pad@1.3.0": {
+              "resolution": {
+                "integrity": "sha512-AAAA"
+              }
+            },
+            "/ms@2.1.3": {
+              "resolution": {
+                "integrity": "sha512-BBBB"
+              }
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "pnpm-lock.yaml",
+        "document": {
+          "lockfileVersion": "9.0",
+          "packages": {
+            "/acme-sdk@4.2.0": {
+              "resolution": {
+                "integrity": "sha512-CCCC"
+              }
+            }
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "pnpm-lock-link-dependency",
+    "ecosystem": "npm",
+    "artifact": "pnpm-lock.yaml",
+    "parser": "yaml",
+    "category": "lockfile-integrity",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "pnpm dependency resolved as a live directory link",
+    "what": "an importer dependency that resolves to a `link:` path instead of a registry version",
+    "impact": "The dependency reads a live directory, so what compiles depends on the state of that path on the machine and is not frozen by the lockfile.",
+    "remediation": "Depend on a published version for released builds, and keep links to development overrides.",
+    "limitation": "It matches an importer dependency that resolves to a `link:` path instead of a registry version in the parsed pnpm-lock.yaml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A pnpm-lock.yaml that mentions an importer dependency that resolves to a `link:` path instead of a registry version in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "importers.*.dependencies.*.version",
+      "valuePattern": "^link:"
+    },
+    "tests": [
+      {
+        "file": "pnpm-lock.yaml",
+        "document": {
+          "lockfileVersion": "9.0",
+          "importers": {
+            ".": {
+              "dependencies": {
+                "acme-ui": {
+                  "specifier": "workspace:*",
+                  "version": "link:packages/ui"
+                }
+              }
+            }
+          },
+          "packages": {}
+        },
+        "match": true
+      },
+      {
+        "file": "pnpm-lock.yaml",
+        "document": {
+          "lockfileVersion": "9.0",
+          "importers": {
+            "apps/web": {
+              "dependencies": {
+                "acme-shared": {
+                  "specifier": "workspace:^",
+                  "version": "link:../../packages/shared"
+                }
+              }
+            }
+          },
+          "packages": {}
+        },
+        "match": true
+      },
+      {
+        "file": "pnpm-lock.yaml",
+        "document": {
+          "lockfileVersion": "9.0",
+          "importers": {
+            ".": {
+              "dependencies": {
+                "acme-ui": {
+                  "specifier": "^2.3.1",
+                  "version": "2.3.1"
+                }
+              }
+            }
+          },
+          "packages": {}
+        },
+        "match": false
+      },
+      {
+        "file": "pnpm-lock.yaml",
+        "document": {
+          "lockfileVersion": "9.0",
+          "importers": {
+            ".": {
+              "dependencies": {
+                "ms": {
+                  "specifier": "^2.1.3",
+                  "version": "2.1.3(react@18.2.0)"
+                }
+              }
+            }
+          },
+          "packages": {}
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "pnpm-lock-git-resolution",
+    "ecosystem": "npm",
+    "artifact": "pnpm-lock.yaml",
+    "parser": "yaml",
+    "category": "lockfile-integrity",
+    "cwe": "CWE-829",
+    "severity": "MEDIUM",
+    "title": "pnpm lockfile resolves a package from a git repository",
+    "what": "a pnpm resolution that names a git repository instead of a registry tarball",
+    "impact": "The installed code is outside registry publication controls, so no checksum or advisory range covers it.",
+    "remediation": "Depend on a published version served by the registry.",
+    "limitation": "It matches a pnpm resolution that names a git repository instead of a registry tarball in the parsed pnpm-lock.yaml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A pnpm-lock.yaml that mentions a pnpm resolution that names a git repository instead of a registry tarball in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "packages.*.resolution.repo",
+      "valuePattern": "^git\\+"
+    },
+    "tests": [
+      {
+        "file": "pnpm-lock.yaml",
+        "document": {
+          "lockfileVersion": "9.0",
+          "packages": {
+            "/acme-sdk@4.2.0": {
+              "resolution": {
+                "repo": "git+https://github.com/acme/sdk.git",
+                "commit": "9f2c4a1"
+              }
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "pnpm-lock.yaml",
+        "document": {
+          "lockfileVersion": "9.0",
+          "packages": {
+            "/acme-cli@2.1.0": {
+              "resolution": {
+                "repo": "git+ssh://git@github.com/acme/cli.git",
+                "commit": "0a1b2c3"
+              }
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "pnpm-lock.yaml",
+        "document": {
+          "lockfileVersion": "9.0",
+          "packages": {
+            "/acme-sdk@4.2.0": {
+              "resolution": {
+                "integrity": "sha512-AAAA"
+              }
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "pnpm-lock.yaml",
+        "document": {
+          "lockfileVersion": "9.0",
+          "packages": {
+            "/acme-cli@2.1.0": {
+              "resolution": {
+                "tarball": "https://registry.npmjs.org/acme-cli/-/acme-cli-2.1.0.tgz"
+              }
+            }
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "pnpm-lock-cleartext-tarball",
+    "ecosystem": "npm",
+    "artifact": "pnpm-lock.yaml",
+    "parser": "yaml",
+    "category": "lockfile-integrity",
+    "cwe": "CWE-319",
+    "severity": "MEDIUM",
+    "title": "pnpm lockfile fetches a tarball over cleartext",
+    "what": "a pnpm tarball URL that uses cleartext http",
+    "impact": "The package crosses the network unencrypted, so its bytes can be replaced before the integrity check runs.",
+    "remediation": "Serve the tarball over https, or drop the explicit URL and use the registry.",
+    "limitation": "It matches a pnpm tarball URL that uses cleartext http in the parsed pnpm-lock.yaml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A pnpm-lock.yaml that mentions a pnpm tarball URL that uses cleartext http in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "packages.*.resolution.tarball",
+      "valuePattern": "^http://"
+    },
+    "tests": [
+      {
+        "file": "pnpm-lock.yaml",
+        "document": {
+          "lockfileVersion": "9.0",
+          "packages": {
+            "/left-pad@1.3.0": {
+              "resolution": {
+                "tarball": "http://registry.acme.example/left-pad-1.3.0.tgz"
+              }
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "pnpm-lock.yaml",
+        "document": {
+          "lockfileVersion": "9.0",
+          "packages": {
+            "/ms@2.1.3": {
+              "resolution": {
+                "tarball": "http://10.24.8.9/ms-2.1.3.tgz"
+              }
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "pnpm-lock.yaml",
+        "document": {
+          "lockfileVersion": "9.0",
+          "packages": {
+            "/left-pad@1.3.0": {
+              "resolution": {
+                "tarball": "https://registry.npmjs.org/left-pad/-/left-pad-1.3.0.tgz"
+              }
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "pnpm-lock.yaml",
+        "document": {
+          "lockfileVersion": "9.0",
+          "packages": {
+            "/ms@2.1.3": {
+              "resolution": {
+                "integrity": "sha512-BBBB"
+              }
+            }
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "pnpm-lock-legacy-version",
+    "ecosystem": "npm",
+    "artifact": "pnpm-lock.yaml",
+    "parser": "yaml",
+    "category": "lockfile-integrity",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "pnpm lockfile in the legacy v5 format",
+    "what": "a pnpm lockfile in the v5 format, which records less resolution provenance per package",
+    "impact": "Older formats record fewer fields per package, so the review sees a weaker graph than a current pnpm would give it.",
+    "remediation": "Regenerate the lockfile with a current pnpm release.",
+    "limitation": "It matches a pnpm lockfile in the v5 format, which records less resolution provenance per package in the parsed pnpm-lock.yaml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A pnpm-lock.yaml that mentions a pnpm lockfile in the v5 format, which records less resolution provenance per package in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "lockfileVersion",
+      "valuePattern": "^5\\."
+    },
+    "tests": [
+      {
+        "file": "pnpm-lock.yaml",
+        "document": {
+          "lockfileVersion": "5.4",
+          "packages": {
+            "/left-pad@1.3.0": {}
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "pnpm-lock.yaml",
+        "document": {
+          "lockfileVersion": "5.3",
+          "packages": {
+            "/ms@2.1.3": {}
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "pnpm-lock.yaml",
+        "document": {
+          "lockfileVersion": "9.0",
+          "packages": {
+            "/left-pad@1.3.0": {}
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "pnpm-lock.yaml",
+        "document": {
+          "lockfileVersion": "6.0",
+          "packages": {
+            "/ms@2.1.3": {}
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "pnpm-lock-patched-dependency",
+    "ecosystem": "npm",
+    "artifact": "pnpm-lock.yaml",
+    "parser": "yaml",
+    "category": "lockfile-integrity",
+    "cwe": "CWE-472",
+    "severity": "MEDIUM",
+    "title": "pnpm applies a local patch to a published dependency",
+    "what": "a pnpm patch entry that rewrites a published package before install",
+    "impact": "The installed code differs from the package the registry published and from the code an advisory range describes, so review and matching both drift.",
+    "remediation": "Publish the fix through a maintained fork with its own review, and record why the patch is needed.",
+    "limitation": "It matches a pnpm patch entry that rewrites a published package before install in the parsed pnpm-lock.yaml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A pnpm-lock.yaml that mentions a pnpm patch entry that rewrites a published package before install in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-key-matches",
+      "path": "settings.patchedDependencies",
+      "keyPattern": "^[a-z@][a-z0-9@/._-]{1,60}@"
+    },
+    "tests": [
+      {
+        "file": "pnpm-lock.yaml",
+        "document": {
+          "lockfileVersion": "9.0",
+          "settings": {
+            "patchedDependencies": {
+              "acme-ui@2.3.1": "patches/acme-ui@2.3.1.patch"
+            }
+          },
+          "packages": {}
+        },
+        "match": true
+      },
+      {
+        "file": "pnpm-lock.yaml",
+        "document": {
+          "lockfileVersion": "9.0",
+          "settings": {
+            "patchedDependencies": {
+              "@acme/cli@2.1.0": "patches/cli.patch"
+            }
+          },
+          "packages": {}
+        },
+        "match": true
+      },
+      {
+        "file": "pnpm-lock.yaml",
+        "document": {
+          "lockfileVersion": "9.0",
+          "settings": {
+            "patchedDependencies": {}
+          },
+          "packages": {}
+        },
+        "match": false
+      },
+      {
+        "file": "pnpm-lock.yaml",
+        "document": {
+          "lockfileVersion": "9.0",
+          "settings": {},
+          "packages": {
+            "/ms@2.1.3": {
+              "resolution": {
+                "integrity": "sha512-BBBB"
+              }
+            }
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "pnpm-lock-script-allowlist",
+    "ecosystem": "npm",
+    "artifact": "pnpm-lock.yaml",
+    "parser": "yaml",
+    "category": "lockfile-integrity",
+    "cwe": "CWE-829",
+    "severity": "MEDIUM",
+    "title": "pnpm permits install scripts for specific packages",
+    "what": "an allowlist entry that lets a dependency run its build script",
+    "impact": "The allowed package executes code with the build user's privileges before any review step, in exchange for a native build the project may not need.",
+    "remediation": "Keep the allowlist empty unless a native build is required, and record the review for each entry.",
+    "limitation": "It matches an allowlist entry that lets a dependency run its build script in the parsed pnpm-lock.yaml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A pnpm-lock.yaml that mentions an allowlist entry that lets a dependency run its build script in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "settings.onlyBuiltDependencies[]",
+      "valuePattern": "^[a-z@][a-z0-9@/._-]{1,60}$"
+    },
+    "tests": [
+      {
+        "file": "pnpm-lock.yaml",
+        "document": {
+          "lockfileVersion": "9.0",
+          "settings": {
+            "onlyBuiltDependencies": [
+              "esbuild"
+            ]
+          },
+          "packages": {}
+        },
+        "match": true
+      },
+      {
+        "file": "pnpm-lock.yaml",
+        "document": {
+          "lockfileVersion": "9.0",
+          "settings": {
+            "onlyBuiltDependencies": [
+              "esbuild",
+              "sharp"
+            ]
+          },
+          "packages": {}
+        },
+        "match": true
+      },
+      {
+        "file": "pnpm-lock.yaml",
+        "document": {
+          "lockfileVersion": "9.0",
+          "settings": {
+            "onlyBuiltDependencies": []
+          },
+          "packages": {}
+        },
+        "match": false
+      },
+      {
+        "file": "pnpm-lock.yaml",
+        "document": {
+          "lockfileVersion": "9.0",
+          "settings": {},
+          "packages": {
+            "/ms@2.1.3": {
+              "resolution": {
+                "integrity": "sha512-BBBB"
+              }
+            }
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "pnpm-lock-override-wildcard",
+    "ecosystem": "npm",
+    "artifact": "pnpm-lock.yaml",
+    "parser": "yaml",
+    "category": "lockfile-integrity",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "pnpm override replaces a transitive range with a wildcard",
+    "what": "an override that forces a transitive dependency to accept any version",
+    "impact": "Every transitive consumer of the package resolves to whatever the registry publishes next, outside the top-level review entirely.",
+    "remediation": "Pin the override to the version that was tested.",
+    "limitation": "It matches an override that forces a transitive dependency to accept any version in the parsed pnpm-lock.yaml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A pnpm-lock.yaml that mentions an override that forces a transitive dependency to accept any version in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "overrides.*",
+      "valuePattern": "^\\*$"
+    },
+    "tests": [
+      {
+        "file": "pnpm-lock.yaml",
+        "document": {
+          "lockfileVersion": "9.0",
+          "overrides": {
+            "lodash": "*"
+          },
+          "packages": {}
+        },
+        "match": true
+      },
+      {
+        "file": "pnpm-lock.yaml",
+        "document": {
+          "lockfileVersion": "9.0",
+          "overrides": {
+            "minimist": "*"
+          },
+          "packages": {}
+        },
+        "match": true
+      },
+      {
+        "file": "pnpm-lock.yaml",
+        "document": {
+          "lockfileVersion": "9.0",
+          "overrides": {
+            "lodash": "4.17.21"
+          },
+          "packages": {}
+        },
+        "match": false
+      },
+      {
+        "file": "pnpm-lock.yaml",
+        "document": {
+          "lockfileVersion": "9.0",
+          "packages": {
+            "/ms@2.1.3": {
+              "resolution": {
+                "integrity": "sha512-BBBB"
+              }
+            }
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  }
+]

@@ -29,7 +29,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (rel) => JSON.parse(readFileSync(join(ROOT, rel), 'utf8'));
 const list = (rel) => (existsSync(join(ROOT, rel)) ? readdirSync(join(ROOT, rel)).filter((f) => f.endsWith('.json')).sort() : []);
 
-const rules = ['sast', 'secrets', 'dast'].flatMap((fam) =>
+const rules = ['sast', 'secrets', 'dast', 'sca'].flatMap((fam) =>
   list(`packs/${fam}/v1/rules`).map((f) => ({ fam, path: `packs/${fam}/v1/rules/${f}`, doc: read(`packs/${fam}/v1/rules/${f}`) })));
 const patterns = list('knowledge/patterns').map((f) => ({ path: `knowledge/patterns/${f}`, doc: read(`knowledge/patterns/${f}`) }));
 const records = list('knowledge/records').map((f) => ({ path: `knowledge/records/${f}`, doc: read(`knowledge/records/${f}`) }));

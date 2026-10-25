@@ -1,0 +1,78 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0180",
+  "title": "Gradle build resolves from a snapshot repository",
+  "description": "build.gradle declares a repository whose URL is the snapshot channel. Snapshots are rebuilt in place, so the same build file can compile different code on two runs.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1104",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "gradle"
+  ],
+  "artifact": "build.gradle",
+  "parser": "gradle",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "repositories[].url",
+    "valuePattern": "snapshots?/?$"
+  },
+  "tests": [
+    {
+      "file": "build.gradle",
+      "document": {
+        "repositories": [
+          {
+            "name": "acmeSnapshots",
+            "url": "https://nexus.acme.example/repository/snapshots"
+          }
+        ],
+        "dependencies": []
+      },
+      "match": true
+    },
+    {
+      "file": "build.gradle",
+      "document": {
+        "repositories": [
+          {
+            "name": "acme",
+            "url": "https://nexus.acme.example/snapshot/"
+          }
+        ],
+        "dependencies": []
+      },
+      "match": true
+    },
+    {
+      "file": "build.gradle",
+      "document": {
+        "repositories": [
+          {
+            "name": "acmeReleases",
+            "url": "https://nexus.acme.example/repository/releases"
+          }
+        ],
+        "dependencies": []
+      },
+      "match": false
+    },
+    {
+      "file": "build.gradle",
+      "document": {
+        "repositories": [
+          {
+            "name": "mavenCentral",
+            "url": "https://repo.maven.apache.org/maven2"
+          }
+        ],
+        "dependencies": []
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2317"
+  ],
+  "remediation": "Resolve snapshots only in a development build, never in the release path.",
+  "limitation": "It matches a repository whose URL is the snapshot channel in the parsed build.gradle; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

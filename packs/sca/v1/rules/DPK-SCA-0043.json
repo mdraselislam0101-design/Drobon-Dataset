@@ -1,0 +1,83 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0043",
+  "title": "Lockfile integrity recorded with SHA-1",
+  "description": "package-lock.json declares a lockfile whose integrity value is a SHA-1 digest. SHA-1 collisions are practical for a motivated attacker, so the digest cannot prove that the installed tarball is the one the lockfile recorded.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-494",
+  "category": "supply-chain-integrity",
+  "ecosystems": [
+    "npm"
+  ],
+  "artifact": "package-lock.json",
+  "parser": "json",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "packages.*.integrity",
+    "valuePattern": "^sha1-"
+  },
+  "tests": [
+    {
+      "file": "package-lock.json",
+      "document": {
+        "name": "demo-service",
+        "lockfileVersion": 3,
+        "packages": {
+          "node_modules/dependency-0": {
+            "version": "1.0.0",
+            "integrity": "sha1-AAAABBBBCCCCDDDDEEEEFFFF"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "package-lock.json",
+      "document": {
+        "name": "demo-service",
+        "lockfileVersion": 3,
+        "packages": {
+          "node_modules/dependency-0": {
+            "version": "3.1.0",
+            "integrity": "sha1-QQQQWWWWEEEERRRRTTTTYYYY"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "package-lock.json",
+      "document": {
+        "name": "demo-service",
+        "lockfileVersion": 3,
+        "packages": {
+          "node_modules/dependency-0": {
+            "version": "1.0.0",
+            "resolved": "https://registry.npmjs.org/x/-/x-1.0.0.tgz",
+            "integrity": "sha512-AAAABBBBCCCCDDDD"
+          }
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "package-lock.json",
+      "document": {
+        "name": "demo-service",
+        "lockfileVersion": 3,
+        "packages": {
+          "node_modules/dependency-0": {
+            "version": "3.1.0",
+            "integrity": "sha512-ZZZZXXXXCCCCVVVV"
+          }
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2180"
+  ],
+  "remediation": "Re-resolve the dependency with a current npm so the lockfile records a SHA-2 integrity value.",
+  "limitation": "It matches a lockfile whose integrity value is a SHA-1 digest in the parsed package-lock.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

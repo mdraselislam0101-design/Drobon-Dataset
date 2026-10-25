@@ -1,0 +1,98 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0173",
+  "title": "Gradle dependency declared with a latest-version selector",
+  "description": "build.gradle declares a `latest.release` or `latest.integration` selector. Every build takes whatever the repository marks as latest, including integration builds, so the compiled code changes with no commit.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1104",
+  "category": "dependency-hygiene",
+  "ecosystems": [
+    "gradle"
+  ],
+  "artifact": "build.gradle",
+  "parser": "gradle",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "dependencies[].notation",
+    "valuePattern": ":latest\\.\\w+$"
+  },
+  "tests": [
+    {
+      "file": "build.gradle",
+      "document": {
+        "repositories": [
+          {
+            "name": "mavenCentral",
+            "url": "https://repo.maven.apache.org/maven2"
+          }
+        ],
+        "dependencies": [
+          {
+            "configuration": "implementation",
+            "notation": "com.acme:internal-core:latest.release"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "build.gradle",
+      "document": {
+        "repositories": [
+          {
+            "name": "mavenCentral",
+            "url": "https://repo.maven.apache.org/maven2"
+          }
+        ],
+        "dependencies": [
+          {
+            "configuration": "testImplementation",
+            "notation": "org.example:lib:latest.integration"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "build.gradle",
+      "document": {
+        "repositories": [
+          {
+            "name": "mavenCentral",
+            "url": "https://repo.maven.apache.org/maven2"
+          }
+        ],
+        "dependencies": [
+          {
+            "configuration": "implementation",
+            "notation": "com.acme:internal-core:1.4.2"
+          }
+        ]
+      },
+      "match": false
+    },
+    {
+      "file": "build.gradle",
+      "document": {
+        "repositories": [
+          {
+            "name": "mavenCentral",
+            "url": "https://repo.maven.apache.org/maven2"
+          }
+        ],
+        "dependencies": [
+          {
+            "configuration": "implementation",
+            "notation": "org.example:lib:2.0.1"
+          }
+        ]
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2310"
+  ],
+  "remediation": "Pin the version the project tested.",
+  "limitation": "It matches a `latest.release` or `latest.integration` selector in the parsed build.gradle; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

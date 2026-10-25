@@ -1,0 +1,76 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0121",
+  "title": "Python index configured over cleartext",
+  "description": "requirements.txt declares an index URL that uses cleartext http. Every artifact and every hash comparison travels unencrypted, so a network attacker can serve a different file and its matching hash.",
+  "severity": "HIGH",
+  "cwe": "CWE-319",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "pypi"
+  ],
+  "artifact": "requirements.txt",
+  "parser": "requirements",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "options.index_url",
+    "valuePattern": "^http://"
+  },
+  "tests": [
+    {
+      "file": "requirements.txt",
+      "document": {
+        "requirements": [],
+        "options": {
+          "index_url": "http://pypi.acme.example/simple"
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "requirements.txt",
+      "document": {
+        "requirements": [
+          {
+            "name": "requests",
+            "specifier": "==2.32.3"
+          }
+        ],
+        "options": {
+          "index_url": "http://10.24.8.9:8081/simple"
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "requirements.txt",
+      "document": {
+        "requirements": [],
+        "options": {
+          "index_url": "https://pypi.org/simple"
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "requirements.txt",
+      "document": {
+        "requirements": [
+          {
+            "name": "requests",
+            "specifier": "==2.32.3"
+          }
+        ],
+        "options": {
+          "index_url": "https://pypi.acme.example/simple"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2258"
+  ],
+  "remediation": "Point the index at an https endpoint with a valid certificate.",
+  "limitation": "It matches an index URL that uses cleartext http in the parsed requirements.txt; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

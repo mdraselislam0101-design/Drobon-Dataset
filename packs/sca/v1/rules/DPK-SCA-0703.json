@@ -1,0 +1,112 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0703",
+  "title": "Any installed package may run a Composer plugin",
+  "description": "composer.json declares a `config.allow-plugins` switch that allows every plugin. A script that runs during install or build executes with the developer or CI identity, before any test or review has looked at the code. This rule reads a `config.allow-plugins` switch that allows every plugin.",
+  "severity": "HIGH",
+  "cwe": "CWE-829",
+  "category": "build-hook",
+  "ecosystems": [
+    "composer"
+  ],
+  "artifact": "composer.json",
+  "parser": "json",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "config.allow-plugins",
+    "valuePattern": "^true$"
+  },
+  "tests": [
+    {
+      "file": "composer.json",
+      "document": {
+        "require": {
+          "monolog/monolog": "^3.7"
+        },
+        "license": [
+          "MIT"
+        ],
+        "config": {
+          "secure-http": true,
+          "platform": {
+            "php": "8.3.0"
+          },
+          "allow-plugins": true
+        },
+        "prefer-stable": true,
+        "scripts": {}
+      },
+      "match": true
+    },
+    {
+      "file": "composer.json",
+      "document": {
+        "require": {
+          "monolog/monolog": "^3.7"
+        },
+        "license": [
+          "MIT"
+        ],
+        "config": {
+          "secure-http": true,
+          "platform": {
+            "php": "8.3.0"
+          },
+          "allow-plugins": "true"
+        },
+        "prefer-stable": true,
+        "scripts": {}
+      },
+      "match": true
+    },
+    {
+      "file": "composer.json",
+      "document": {
+        "require": {
+          "monolog/monolog": "^3.7"
+        },
+        "license": [
+          "MIT"
+        ],
+        "config": {
+          "secure-http": true,
+          "platform": {
+            "php": "8.3.0"
+          },
+          "allow-plugins": {
+            "acme/plugin": true
+          }
+        },
+        "prefer-stable": true,
+        "scripts": {}
+      },
+      "match": false
+    },
+    {
+      "file": "composer.json",
+      "document": {
+        "require": {
+          "monolog/monolog": "^3.7"
+        },
+        "license": [
+          "MIT"
+        ],
+        "config": {
+          "secure-http": true,
+          "platform": {
+            "php": "8.3.0"
+          },
+          "allow-plugins": {}
+        },
+        "prefer-stable": true,
+        "scripts": {}
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2840"
+  ],
+  "remediation": "Move the step out of the install lifecycle into an explicit, reviewed command that the build runs on purpose. Specifically: fix a `config.allow-plugins` switch that allows every plugin.",
+  "limitation": "It matches a `config.allow-plugins` switch that allows every plugin in the parsed composer.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

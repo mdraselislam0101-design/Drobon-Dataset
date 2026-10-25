@@ -1,0 +1,74 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0222",
+  "title": "Dart hosted dependency configured over cleartext",
+  "description": "pubspec.yaml declares a hosted dependency URL that uses cleartext http. The archive and its metadata cross the network unencrypted, so a network attacker can substitute the package.",
+  "severity": "HIGH",
+  "cwe": "CWE-319",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "pub"
+  ],
+  "artifact": "pubspec.yaml",
+  "parser": "yaml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "dependencies.*.hosted.url",
+    "valuePattern": "^http://"
+  },
+  "tests": [
+    {
+      "file": "pubspec.yaml",
+      "document": {
+        "dependencies": {
+          "acme_sdk": {
+            "hosted": {
+              "url": "http://pub.acme.example",
+              "name": "acme_sdk"
+            }
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "pubspec.yaml",
+      "document": {
+        "dependencies": {
+          "acme_cli": {
+            "hosted": {
+              "url": "http://10.24.8.9",
+              "name": "acme_cli"
+            }
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "pubspec.yaml",
+      "document": {
+        "dependencies": {
+          "acme_sdk": {
+            "hosted": "https://pub.acme.example"
+          }
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "pubspec.yaml",
+      "document": {
+        "dependencies": {
+          "http": "^1.2.0"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2359"
+  ],
+  "remediation": "Serve the hosted dependency over https.",
+  "limitation": "It matches a hosted dependency URL that uses cleartext http in the parsed pubspec.yaml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

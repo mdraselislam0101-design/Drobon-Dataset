@@ -55,13 +55,22 @@ const ENGINES = [
     id: 'secrets',
     label: 'SECRETS',
     appEngine: 'apps/api/src/scans/secrets/',
-    gating: 'No engine gate; growth is evidence-gated because a token shape must be a real published format',
+    gating: 'No engine gate; every rule must name the credential it detects (published token format, credential-named key, or tool-specific carrier)',
+    // The 1,000 numeric target is REINSTATED by owner direction on 2026-10-25
+    // (docs/SECRETS_TARGET_DECISION_2026-10-25.md, "Superseded" section): the family
+    // reached 1,000 rules by adding credential-named key families, file-format
+    // carriers and tool-invocation carriers on top of the published token formats.
+    // Every new rule is a distinct literal with its own pattern, record, remediation,
+    // declared tests and evaluation pair; the target is a count of authored rules and
+    // never a claim about detection breadth or App reachability.
+    target: 1000,
+    measure: 'authored secrets rules (published formats + credential-key and carrier families)',
   },
   {
     id: 'sca',
     label: 'SCA',
     appEngine: 'apps/api/src/scans/sca/',
-    gating: 'BLOCKED_OWNER: SCA content is advisory data (GHSA/OSV/NVD), and ingestion is behind the production-data lock (GAP-001) plus an unowned licence (GAP-002)',
+    gating: 'Dataset-side only: the App has no sca pack loader, so these declared-dependency rules cannot fire in the product; its SCA seam reads advisory records (apps/api/src/scans/sca/provider.ts) behind the production-data lock (GAP-001)',
   },
 ];
 
@@ -98,22 +107,24 @@ function build() {
   const rows = ENGINES.map((engine) => {
     const counts = Object.fromEntries(ARTEFACTS.map((a) => [a.key, artefactCount(engine.id, a.key)]));
     const rules = counts.rules;
-    const remaining = Math.max(0, TARGET - rules);
+    const target = engine.target === undefined ? TARGET : engine.target;
+    const numeric = target !== null;
+    const remaining = numeric ? Math.max(0, target - rules) : null;
     let status;
-    if (engine.id === 'sca' && rules === 0) status = 'BLOCKED_OWNER';
+    if (!numeric) status = 'EVIDENCE_GATED';
     else if (remaining === 0) status = 'AT_TARGET';
-    else if (engine.id === 'sca') status = 'BLOCKED_OWNER';
     else status = 'IN_PROGRESS';
     return {
       engine: engine.label,
       id: engine.id,
       appEngine: engine.appEngine,
-      target: TARGET,
+      target,
+      measure: engine.measure ?? null,
       rules,
       patterns: counts.patterns,
       records: counts.records,
       remediation: counts.remediation,
-      pct: Math.min(100, Math.round((rules / TARGET) * 1000) / 10),
+      pct: numeric ? Math.min(100, Math.round((rules / target) * 1000) / 10) : null,
       remaining,
       status,
       gate: engine.gating,
@@ -124,11 +135,17 @@ function build() {
 
   const json = {
     schemaVersion: 'drobon.engine-capacity/v1',
-    note: 'Measured from the tree by scripts/gen-engine-capacity.mjs. A row is AT_TARGET only when the rule count reaches 1,000; the target is a planning number and does not imply App reachability, which is measured separately in interop/.',
+    note: 'Measured from the tree by scripts/gen-engine-capacity.mjs. A row is AT_TARGET only when the rule count reaches its numeric target. Secrets carries the reinstated 1,000-rule target (owner direction 2026-10-25); reaching it is a count of authored, tested rules, not evidence of detection breadth or of App reachability, which is measured separately in interop/.',
     asOf: '2026-10-21',
     target: TARGET,
     engines: rows,
-    totals: { rules: totalRules, enginesAtTarget: rows.filter((r) => r.status === 'AT_TARGET').length, enginesBlocked: rows.filter((r) => r.status === 'BLOCKED_OWNER').length },
+    totals: {
+      rules: totalRules,
+      enginesAtTarget: rows.filter((r) => r.status === 'AT_TARGET').length,
+      enginesBlocked: rows.filter((r) => r.status === 'BLOCKED_OWNER').length,
+      enginesWithNumericTarget: rows.filter((r) => r.target !== null).length,
+      enginesEvidenceGated: rows.filter((r) => r.target === null).length,
+    },
   };
 
   const md = [];
@@ -141,12 +158,14 @@ function build() {
   md.push('This page states where each engine actually stands, what is left, and what stops it. A row reaches');
   md.push('**AT_TARGET** only when the rule count really is 1,000 — never by renaming, merging or counting padding.');
   md.push('');
-  md.push('| Engine | Rules | / 1,000 | Patterns | Records | Remediation | Remaining | Status |');
+  md.push('| Engine | Rules | Against target | Patterns | Records | Remediation | Remaining | Status |');
   md.push('|---|---|---|---|---|---|---|---|');
   for (const r of rows) {
-    md.push(`| ${r.engine} | **${r.rules}** | ${r.pct}% | ${r.patterns} | ${r.records} | ${r.remediation} | ${r.remaining} | ${r.status} |`);
+    const against = r.target === null ? 'no numeric target (evidence-gated)' : `${r.pct}% of ${r.target}`;
+    const remaining = r.remaining === null ? '—' : r.remaining;
+    md.push(`| ${r.engine} | **${r.rules}** | ${against} | ${r.patterns} | ${r.records} | ${r.remediation} | ${remaining} | ${r.status} |`);
   }
-  md.push(`| **Total** | **${totalRules}** | — | — | — | — | — | ${json.totals.enginesAtTarget} of ${rows.length} at target |`);
+  md.push(`| **Total** | **${totalRules}** | — | — | — | — | — | ${json.totals.enginesAtTarget} of ${json.totals.enginesWithNumericTarget} numeric targets met |`);
   md.push('');
   md.push('## What blocks each engine');
   md.push('');
@@ -161,19 +180,27 @@ function build() {
   md.push('- **Patterns ≠ rules.** Every rule links to at least one pattern, so the pattern count tracks the rule');
   md.push('  count by construction (`test-assets` fails on a dangling link). A pattern count above the rule count');
   md.push('  means multi-pattern rules, not extra coverage.');
-  md.push('- **SCA is not a rule pack.** Its content is advisory data, which is blocked by the production-data');
-  md.push('  lock and an unowned licence; authoring 1,000 "SCA rules" without that data would be fabrication.');
-  md.push('- **Secrets growth is evidence-gated.** A secrets rule has to match a real, published token format;');
-  md.push('  inventing 900 formats to reach a number is exactly the padding `docs/PACKS.md` forbids.');
+  md.push('- **SCA now has both halves, kept apart.** The own-authored declaration pack (1,000 rules that');
+  md.push('  classify what a project declares) is complete and is what this row measures; production advisory');
+  md.push('  breadth stays at 0/100,000 behind the production-data lock and the unowned licence (GAP-001), and');
+  md.push('  the two are never added together.');
+  md.push('- **Secrets carries a reinstated 1,000-rule target, and the route to it is stated.** The 149');
+  md.push('  published-format rules were kept and 851 distinct rule families were authored on top: credential-');
+  md.push('  named keys (password, key-material, token and DSN keys), tool flags, credential headers, file');
+  md.push('  formats and tool-invocation carriers. Each one has its own literal, pattern, record, remediation,');
+  md.push('  declared tests and evaluation pair. The count is a count of authored rules: it does not by itself');
+  md.push('  show detection breadth, and overlapping generic rules (`DPK-SEC-003`, `-007`, `-106`) still fire on');
+  md.push('  many of the same literals. Nothing was relabelled to get there; the withdrawal recorded in');
+  md.push('  `docs/SECRETS_TARGET_DECISION_2026-10-25.md` is superseded in that same file, not deleted.');
   md.push('');
   md.push('## Next batches, in order of value');
   md.push('');
   md.push('| Order | Engine | Batch | Why first |');
   md.push('|---|---|---|---|');
   md.push('| 1 | DAST | +90 body-evidence rules per batch (console, artefact, credential, PII families) | Largest gap that is fully inside our control; every rule is App-reachable by construction |');
-  md.push('| 2 | SECRETS | +40 provider formats per batch, each with a published specification | Real formats only; the leak scanner needs a marker for every shape |');
+  md.push('| 2 | SECRETS | every remaining documented single-line format, as vendors publish them | No numeric target (owner decision); the leak scanner needs a marker for every shape |');
   md.push('| 3 | SAST | new evidence-backed classes per batch | At target; further growth needs published evidence per class |');
-  md.push('| 4 | SCA | **owner decision first** | Unblock the licence + production-data lock, or the engine has no dataset to load |');
+  md.push('| 4 | SCA | further declaration classes only with new evidence | At target; growth needs a question no existing rule asks |');
   md.push('');
   // Per-user-type lenses live in their own generator, but they belong on this page:
   // the owner asked for "1,000 per engine" and counts the four audiences as engines.

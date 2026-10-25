@@ -1,0 +1,77 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-1025",
+  "title": "Package flagged for reinstallation",
+  "description": "packages.config declares a `requireReinstallation` flag that marks drifted restore state. Without a recorded digest the downloaded artifact cannot be checked against what was reviewed, so substitution is undetectable at install time. This rule reads a `requireReinstallation` flag that marks drifted restore state.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-494",
+  "category": "supply-chain-integrity",
+  "ecosystems": [
+    "nuget"
+  ],
+  "artifact": "packages.config",
+  "parser": "xml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "packages[].requireReinstallation",
+    "valuePattern": "^true$"
+  },
+  "tests": [
+    {
+      "file": "packages.config",
+      "document": {
+        "packages": [
+          {
+            "id": "Newtonsoft.Json",
+            "version": "13.0.3",
+            "requireReinstallation": "true"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "packages.config",
+      "document": {
+        "packages": [
+          {
+            "id": "System.Text.Json",
+            "version": "8.0.4",
+            "requireReinstallation": true
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "packages.config",
+      "document": {
+        "packages": [
+          {
+            "id": "Newtonsoft.Json",
+            "version": "13.0.3",
+            "requireReinstallation": "false"
+          }
+        ]
+      },
+      "match": false
+    },
+    {
+      "file": "packages.config",
+      "document": {
+        "packages": [
+          {
+            "id": "Dapper",
+            "version": "2.1.35"
+          }
+        ]
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-3162"
+  ],
+  "remediation": "Regenerate the artifact with integrity data enabled and commit the recorded digest or checksum. Specifically: fix a `requireReinstallation` flag that marks drifted restore state.",
+  "limitation": "It matches a `requireReinstallation` flag that marks drifted restore state in the parsed packages.config; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

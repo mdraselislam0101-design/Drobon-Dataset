@@ -1,0 +1,130 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0983",
+  "title": "Repository with no content filter",
+  "description": "build.gradle declares a repository that may serve every group and module. A name or scope that resolves outside the project's intended registry is fetched from a source nobody reviewed, so a publish there becomes an install here. This rule reads a repository that may serve every group and module.",
+  "severity": "LOW",
+  "cwe": "CWE-829",
+  "category": "dependency-confusion",
+  "ecosystems": [
+    "gradle"
+  ],
+  "artifact": "build.gradle",
+  "parser": "gradle",
+  "check": {
+    "type": "sca-field-absent",
+    "path": "repositories[].content"
+  },
+  "tests": [
+    {
+      "file": "build.gradle",
+      "document": {
+        "repositories": [
+          {
+            "name": "acme",
+            "url": "https://repo.acme.example/maven2"
+          }
+        ],
+        "dependencies": [
+          {
+            "group": "org.slf4j",
+            "name": "slf4j-api",
+            "version": "2.0.13"
+          }
+        ],
+        "configurations": [],
+        "dependencyLocking": {
+          "lockAllConfigurations": true
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "build.gradle",
+      "document": {
+        "repositories": [
+          {
+            "name": "acme",
+            "url": "https://repo.acme.example/maven2"
+          },
+          {
+            "name": "mirror"
+          }
+        ],
+        "dependencies": [
+          {
+            "group": "org.slf4j",
+            "name": "slf4j-api",
+            "version": "2.0.13"
+          }
+        ],
+        "configurations": [],
+        "dependencyLocking": {
+          "lockAllConfigurations": true
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "build.gradle",
+      "document": {
+        "repositories": [
+          {
+            "name": "acme",
+            "url": "https://repo.acme.example/maven2",
+            "content": {
+              "includeGroup": [
+                "com.acme"
+              ]
+            }
+          }
+        ],
+        "dependencies": [
+          {
+            "group": "org.slf4j",
+            "name": "slf4j-api",
+            "version": "2.0.13"
+          }
+        ],
+        "configurations": [],
+        "dependencyLocking": {
+          "lockAllConfigurations": true
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "build.gradle",
+      "document": {
+        "repositories": [
+          {
+            "name": "central",
+            "url": "https://repo1.maven.org/maven2",
+            "content": {
+              "includeGroup": [
+                "org.slf4j"
+              ]
+            }
+          }
+        ],
+        "dependencies": [
+          {
+            "group": "org.slf4j",
+            "name": "slf4j-api",
+            "version": "2.0.13"
+          }
+        ],
+        "configurations": [],
+        "dependencyLocking": {
+          "lockAllConfigurations": true
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-3120"
+  ],
+  "remediation": "Point the declaration or the registry configuration at the namespace the project controls, and remove the lookup path that resolves elsewhere. Specifically: fix a repository that may serve every group and module.",
+  "limitation": "It matches a repository that may serve every group and module in the parsed build.gradle; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

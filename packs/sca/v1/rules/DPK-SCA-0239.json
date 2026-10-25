@@ -1,0 +1,76 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0239",
+  "title": "vcpkg dependency declared without a version floor",
+  "description": "vcpkg.json declares a dependency named as a bare string, so its version comes from the baseline only. The resolved version is decided by whichever baseline the registry happens to use, which the manifest never states.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1104",
+  "category": "dependency-hygiene",
+  "ecosystems": [
+    "vcpkg"
+  ],
+  "artifact": "vcpkg.json",
+  "parser": "json",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "dependencies[]",
+    "valuePattern": "^[a-z0-9][a-z0-9-]{1,40}$"
+  },
+  "tests": [
+    {
+      "file": "vcpkg.json",
+      "document": {
+        "name": "demo",
+        "dependencies": [
+          "fmt"
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "vcpkg.json",
+      "document": {
+        "name": "demo",
+        "dependencies": [
+          {
+            "name": "zlib",
+            "version>=": "1.3.1"
+          },
+          "fmt"
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "vcpkg.json",
+      "document": {
+        "name": "demo",
+        "dependencies": [
+          {
+            "name": "fmt",
+            "version>=": "10.2.1"
+          }
+        ]
+      },
+      "match": false
+    },
+    {
+      "file": "vcpkg.json",
+      "document": {
+        "name": "demo",
+        "dependencies": [
+          {
+            "name": "zlib",
+            "version>=": "1.3.1"
+          }
+        ]
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2376"
+  ],
+  "remediation": "Declare a `version>=` floor, and pin `builtin-baseline`.",
+  "limitation": "It matches a dependency named as a bare string, so its version comes from the baseline only in the parsed vcpkg.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

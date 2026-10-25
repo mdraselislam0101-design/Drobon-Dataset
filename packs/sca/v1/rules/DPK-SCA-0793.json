@@ -1,0 +1,73 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0793",
+  "title": "npm auth token stored in the client file",
+  "description": ".npmrc declares a literal `_authToken` value. A secret committed in this file is readable by everyone with repository access and lives on in history after removal. This rule reads a literal `_authToken` value.",
+  "severity": "HIGH",
+  "cwe": "CWE-798",
+  "category": "credential-in-config",
+  "ecosystems": [
+    "npm"
+  ],
+  "artifact": ".npmrc",
+  "parser": "ini",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "_authToken",
+    "valuePattern": "^(?!\\$\\{)[A-Za-z0-9+/=._-]{16,80}$"
+  },
+  "tests": [
+    {
+      "file": ".npmrc",
+      "document": {
+        "registry": "https://registry.npmjs.org",
+        "strict-ssl": "true",
+        "audit": "true",
+        "fund": "true",
+        "save-exact": "true",
+        "_authToken": "EXAMPLESECRETTOKEN0001"
+      },
+      "match": true
+    },
+    {
+      "file": ".npmrc",
+      "document": {
+        "registry": "https://registry.npmjs.org",
+        "strict-ssl": "true",
+        "audit": "true",
+        "fund": "true",
+        "save-exact": "true",
+        "_authToken": "EXAMPLESECRETTOKEN0002"
+      },
+      "match": true
+    },
+    {
+      "file": ".npmrc",
+      "document": {
+        "registry": "https://registry.npmjs.org",
+        "strict-ssl": "true",
+        "audit": "true",
+        "fund": "true",
+        "save-exact": "true",
+        "_authToken": "${NPM_TOKEN}"
+      },
+      "match": false
+    },
+    {
+      "file": ".npmrc",
+      "document": {
+        "registry": "https://registry.npmjs.org",
+        "strict-ssl": "true",
+        "audit": "true",
+        "fund": "true",
+        "save-exact": "true"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2930"
+  ],
+  "remediation": "Remove the literal, rotate the credential and inject it from the CI secret store at run time. Specifically: fix a literal `_authToken` value.",
+  "limitation": "It matches a literal `_authToken` value in the parsed .npmrc; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

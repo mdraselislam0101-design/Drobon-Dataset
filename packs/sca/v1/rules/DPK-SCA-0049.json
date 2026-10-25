@@ -1,0 +1,84 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0049",
+  "title": "Lockfile resolves a source archive instead of a package",
+  "description": "package-lock.json declares a lockfile entry that points at a forge source archive. The archive is generated on demand from a branch or tag, so the installed bytes are not the published artifact and carry no registry integrity value.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-494",
+  "category": "supply-chain-integrity",
+  "ecosystems": [
+    "npm"
+  ],
+  "artifact": "package-lock.json",
+  "parser": "json",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "packages.*.resolved",
+    "valuePattern": "^https://codeload\\.github\\.com/"
+  },
+  "tests": [
+    {
+      "file": "package-lock.json",
+      "document": {
+        "name": "demo-service",
+        "lockfileVersion": 3,
+        "packages": {
+          "node_modules/dependency-0": {
+            "version": "1.0.0",
+            "resolved": "https://codeload.github.com/acme/sdk/tar.gz/9f2c4a1",
+            "integrity": "sha512-AAAABBBBCCCCDDDD"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "package-lock.json",
+      "document": {
+        "name": "demo-service",
+        "lockfileVersion": 3,
+        "packages": {
+          "node_modules/dependency-0": {
+            "version": "1.0.0",
+            "resolved": "https://codeload.github.com/acme/cli/tar.gz/refs/tags/v2"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "package-lock.json",
+      "document": {
+        "name": "demo-service",
+        "lockfileVersion": 3,
+        "packages": {
+          "node_modules/dependency-0": {
+            "version": "1.0.0",
+            "resolved": "https://registry.npmjs.org/x/-/x-1.0.0.tgz",
+            "integrity": "sha512-AAAABBBBCCCCDDDD"
+          }
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "package-lock.json",
+      "document": {
+        "name": "demo-service",
+        "lockfileVersion": 3,
+        "packages": {
+          "node_modules/dependency-0": {
+            "version": "1.0.0",
+            "resolved": "https://registry.npmjs.org/y/-/y-1.0.0.tgz"
+          }
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2186"
+  ],
+  "remediation": "Depend on the published package, or vendor the archive with its digest recorded in review.",
+  "limitation": "It matches a lockfile entry that points at a forge source archive in the parsed package-lock.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

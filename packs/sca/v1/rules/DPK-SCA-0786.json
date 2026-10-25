@@ -1,0 +1,94 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0786",
+  "title": "Conan remote with TLS verification off",
+  "description": "conanfile.py declares a `verify_ssl` switch set to false. A verification or locking control is switched off, so the integrity guarantees the ecosystem offers are not applied here. This rule reads a `verify_ssl` switch set to false.",
+  "severity": "HIGH",
+  "cwe": "CWE-295",
+  "category": "trust-bypass",
+  "ecosystems": [
+    "conan"
+  ],
+  "artifact": "conanfile.py",
+  "parser": "yaml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "remotes.*.verify_ssl",
+    "valuePattern": "^false$"
+  },
+  "tests": [
+    {
+      "file": "conanfile.py",
+      "document": {
+        "requires": [
+          "zlib/1.3.1"
+        ],
+        "remotes": {
+          "acme": {
+            "url": "https://conan.acme.example",
+            "verify_ssl": false
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "conanfile.py",
+      "document": {
+        "requires": [
+          "zlib/1.3.1"
+        ],
+        "remotes": {
+          "acme": {
+            "url": "https://conan.acme.example",
+            "verify_ssl": true
+          },
+          "internal": {
+            "url": "https://10.24.8.9",
+            "verify_ssl": "false"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "conanfile.py",
+      "document": {
+        "requires": [
+          "zlib/1.3.1"
+        ],
+        "remotes": {
+          "acme": {
+            "url": "https://conan.acme.example",
+            "verify_ssl": true
+          }
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "conanfile.py",
+      "document": {
+        "requires": [
+          "zlib/1.3.1"
+        ],
+        "remotes": {
+          "acme": {
+            "url": "https://conan.acme.example",
+            "verify_ssl": true
+          },
+          "conancenter": {
+            "url": "https://center.conan.io",
+            "verify_ssl": true
+          }
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2923"
+  ],
+  "remediation": "Turn the control back on and fix what it reported instead of disabling the check. Specifically: fix a `verify_ssl` switch set to false.",
+  "limitation": "It matches a `verify_ssl` switch set to false in the parsed conanfile.py; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

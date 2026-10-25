@@ -1,0 +1,93 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0234",
+  "title": "renv lockfile entry without a hash",
+  "description": "renv.lock declares a locked R package that records no `Hash`. `renv::restore()` cannot verify the installed package against the lockfile, so a repository substitution is invisible.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-494",
+  "category": "lockfile-integrity",
+  "ecosystems": [
+    "cran"
+  ],
+  "artifact": "renv.lock",
+  "parser": "json",
+  "check": {
+    "type": "sca-entry-missing-field",
+    "path": "Packages",
+    "field": "Hash"
+  },
+  "tests": [
+    {
+      "file": "renv.lock",
+      "document": {
+        "R": {
+          "Version": "4.4.1"
+        },
+        "Packages": {
+          "dplyr": {
+            "Package": "dplyr",
+            "Version": "1.1.4"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "renv.lock",
+      "document": {
+        "R": {
+          "Version": "4.4.1"
+        },
+        "Packages": {
+          "ggplot2": {
+            "Package": "ggplot2",
+            "Version": "3.5.1"
+          },
+          "dplyr": {
+            "Package": "dplyr",
+            "Version": "1.1.4",
+            "Hash": "aaaa"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "renv.lock",
+      "document": {
+        "R": {
+          "Version": "4.4.1"
+        },
+        "Packages": {
+          "dplyr": {
+            "Package": "dplyr",
+            "Version": "1.1.4",
+            "Hash": "aaaa"
+          }
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "renv.lock",
+      "document": {
+        "R": {
+          "Version": "4.4.1"
+        },
+        "Packages": {
+          "ggplot2": {
+            "Package": "ggplot2",
+            "Version": "3.5.1",
+            "Hash": "bbbb"
+          }
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2371"
+  ],
+  "remediation": "Re-snapshot the library so every package records its hash.",
+  "limitation": "It matches a locked R package that records no `Hash` in the parsed renv.lock; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

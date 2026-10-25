@@ -1,0 +1,66 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0075",
+  "title": "npm publish token committed in the client configuration",
+  "description": ".npmrc declares a registry authentication token written directly into the checked-in client configuration. Anyone with repository read access can publish as the token's owner, and the token keeps working until it is rotated by hand.",
+  "severity": "HIGH",
+  "cwe": "CWE-798",
+  "category": "credential-in-config",
+  "ecosystems": [
+    "npm"
+  ],
+  "artifact": ".npmrc",
+  "parser": "ini",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "config._authToken",
+    "valuePattern": "^[A-Za-z0-9_-]{16,}$"
+  },
+  "tests": [
+    {
+      "file": ".npmrc",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "_authToken": "npm_EXAMPLEEXAMPLEEXAMPLEEXAMPLE"
+        }
+      },
+      "match": true
+    },
+    {
+      "file": ".npmrc",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "_authToken": "npm_EXAMPLESECONDEXAMPLEVALUE1234"
+        }
+      },
+      "match": true
+    },
+    {
+      "file": ".npmrc",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "_authToken": "${NPM_AUTH_TOKEN}"
+        }
+      },
+      "match": false
+    },
+    {
+      "file": ".npmrc",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "registry": "https://registry.npmjs.org/"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2212"
+  ],
+  "remediation": "Read the token from the environment (`${NPM_AUTH_TOKEN}`) and keep only a placeholder in the file.",
+  "limitation": "It matches a registry authentication token written directly into the checked-in client configuration in the parsed .npmrc; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

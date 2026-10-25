@@ -1,0 +1,89 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0192",
+  "title": "Cargo dependency follows a git branch",
+  "description": "Cargo.toml declares a git dependency pinned to a branch instead of a revision. The branch moves, so every build can compile a different tree while the manifest and the review record stay identical.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1104",
+  "category": "dependency-hygiene",
+  "ecosystems": [
+    "cargo"
+  ],
+  "artifact": "Cargo.toml",
+  "parser": "toml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "dependencies.*.branch",
+    "valuePattern": "^[A-Za-z]"
+  },
+  "tests": [
+    {
+      "file": "Cargo.toml",
+      "document": {
+        "package": {
+          "name": "demo-service",
+          "version": "0.1.0"
+        },
+        "dependencies": {
+          "acme_sdk": {
+            "git": "https://github.com/acme/sdk",
+            "branch": "main"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "Cargo.toml",
+      "document": {
+        "package": {
+          "name": "demo-service",
+          "version": "0.1.0"
+        },
+        "dependencies": {
+          "acme_cli": {
+            "git": "https://github.com/acme/cli",
+            "branch": "develop"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "Cargo.toml",
+      "document": {
+        "package": {
+          "name": "demo-service",
+          "version": "0.1.0"
+        },
+        "dependencies": {
+          "acme_sdk": {
+            "git": "https://github.com/acme/sdk",
+            "rev": "9f2c4a1b7c3d"
+          }
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "Cargo.toml",
+      "document": {
+        "package": {
+          "name": "demo-service",
+          "version": "0.1.0"
+        },
+        "dependencies": {
+          "acme_sdk": {
+            "version": "4.2.0"
+          }
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2329"
+  ],
+  "remediation": "Pin the `rev` to a commit sha, or depend on a published version.",
+  "limitation": "It matches a git dependency pinned to a branch instead of a revision in the parsed Cargo.toml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

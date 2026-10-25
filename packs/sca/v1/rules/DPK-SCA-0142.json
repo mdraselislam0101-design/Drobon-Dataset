@@ -1,0 +1,73 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0142",
+  "title": "PyPI password stored in the publish configuration",
+  "description": ".pypirc declares a PyPI password written directly into the checked-in `.pypirc`. Repository readers can publish as the account, and the credential cannot be scoped or expired like an API token.",
+  "severity": "HIGH",
+  "cwe": "CWE-798",
+  "category": "credential-in-config",
+  "ecosystems": [
+    "pypi"
+  ],
+  "artifact": ".pypirc",
+  "parser": "ini",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "config.pypi.password",
+    "valuePattern": "^[A-Za-z0-9!@#$%^&*._-]{8,40}$"
+  },
+  "tests": [
+    {
+      "file": ".pypirc",
+      "document": {
+        "config": {
+          "pypi": {
+            "username": "acme-ci",
+            "password": "EXAMPLESECRETPASSWORD01"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": ".pypirc",
+      "document": {
+        "config": {
+          "pypi": {
+            "username": "acme-ci",
+            "password": "EXAMPLESECONDPASSWORD1234"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": ".pypirc",
+      "document": {
+        "config": {
+          "pypi": {
+            "username": "acme-ci",
+            "password": "${PYPI_TOKEN}"
+          }
+        }
+      },
+      "match": false
+    },
+    {
+      "file": ".pypirc",
+      "document": {
+        "config": {
+          "pypi": {
+            "username": "__token__"
+          }
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2279"
+  ],
+  "remediation": "Use a scoped API token read from the environment, and rotate the password.",
+  "limitation": "It matches a PyPI password written directly into the checked-in `.pypirc` in the parsed .pypirc; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

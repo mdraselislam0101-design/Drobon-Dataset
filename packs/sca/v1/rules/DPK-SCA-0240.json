@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0240",
+  "title": "vcpkg manifest without a builtin baseline",
+  "description": "vcpkg.json declares a manifest that records no `builtin-baseline`. Every dependency resolves against the registry's current state, so the same manifest installs different versions over time.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1104",
+  "category": "dependency-hygiene",
+  "ecosystems": [
+    "vcpkg"
+  ],
+  "artifact": "vcpkg.json",
+  "parser": "json",
+  "check": {
+    "type": "sca-field-absent",
+    "path": "builtin-baseline"
+  },
+  "tests": [
+    {
+      "file": "vcpkg.json",
+      "document": {
+        "name": "demo",
+        "dependencies": [
+          {
+            "name": "fmt",
+            "version>=": "10.2.1"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "vcpkg.json",
+      "document": {
+        "name": "demo",
+        "dependencies": [
+          {
+            "name": "zlib",
+            "version>=": "1.3.1"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "vcpkg.json",
+      "document": {
+        "name": "demo",
+        "builtin-baseline": "9f2c4a1b7c3d0a1b2c3d4e5f60718293",
+        "dependencies": [
+          {
+            "name": "fmt",
+            "version>=": "10.2.1"
+          }
+        ]
+      },
+      "match": false
+    },
+    {
+      "file": "vcpkg.json",
+      "document": {
+        "name": "demo",
+        "builtin-baseline": "0a1b2c3d4e5f60718293a4b5c6d7e8f9",
+        "dependencies": [
+          {
+            "name": "zlib",
+            "version>=": "1.3.1"
+          }
+        ]
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2377"
+  ],
+  "remediation": "Record the baseline commit the project tested.",
+  "limitation": "It matches a manifest that records no `builtin-baseline` in the parsed vcpkg.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

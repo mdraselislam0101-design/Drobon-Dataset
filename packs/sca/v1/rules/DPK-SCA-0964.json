@@ -1,0 +1,120 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0964",
+  "title": "Dependency resolved through another configuration",
+  "description": "build.gradle declares a dependency whose target configuration is overridden. A name or scope that resolves outside the project's intended registry is fetched from a source nobody reviewed, so a publish there becomes an install here. This rule reads a dependency whose target configuration is overridden.",
+  "severity": "LOW",
+  "cwe": "CWE-829",
+  "category": "dependency-confusion",
+  "ecosystems": [
+    "gradle"
+  ],
+  "artifact": "build.gradle",
+  "parser": "gradle",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "dependencies[].targetConfiguration",
+    "valuePattern": "^.+$"
+  },
+  "tests": [
+    {
+      "file": "build.gradle",
+      "document": {
+        "repositories": [
+          {
+            "name": "central",
+            "url": "https://repo1.maven.org/maven2"
+          }
+        ],
+        "dependencies": [
+          {
+            "group": "com.acme",
+            "name": "sdk",
+            "version": "4.2.0",
+            "targetConfiguration": "shaded"
+          }
+        ],
+        "configurations": [],
+        "dependencyLocking": {
+          "lockAllConfigurations": true
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "build.gradle",
+      "document": {
+        "repositories": [
+          {
+            "name": "central",
+            "url": "https://repo1.maven.org/maven2"
+          }
+        ],
+        "dependencies": [
+          {
+            "group": "com.acme",
+            "name": "core",
+            "version": "1.4.2",
+            "targetConfiguration": "debug"
+          }
+        ],
+        "configurations": [],
+        "dependencyLocking": {
+          "lockAllConfigurations": true
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "build.gradle",
+      "document": {
+        "repositories": [
+          {
+            "name": "central",
+            "url": "https://repo1.maven.org/maven2"
+          }
+        ],
+        "dependencies": [
+          {
+            "group": "com.acme",
+            "name": "sdk",
+            "version": "4.2.0"
+          }
+        ],
+        "configurations": [],
+        "dependencyLocking": {
+          "lockAllConfigurations": true
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "build.gradle",
+      "document": {
+        "repositories": [
+          {
+            "name": "central",
+            "url": "https://repo1.maven.org/maven2"
+          }
+        ],
+        "dependencies": [
+          {
+            "group": "org.slf4j",
+            "name": "slf4j-api",
+            "version": "2.0.13"
+          }
+        ],
+        "configurations": [],
+        "dependencyLocking": {
+          "lockAllConfigurations": true
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-3101"
+  ],
+  "remediation": "Point the declaration or the registry configuration at the namespace the project controls, and remove the lookup path that resolves elsewhere. Specifically: fix a dependency whose target configuration is overridden.",
+  "limitation": "It matches a dependency whose target configuration is overridden in the parsed build.gradle; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

@@ -1,0 +1,80 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0966",
+  "title": "Package source on the legacy V2 protocol",
+  "description": "nuget.config declares a source pinned to protocol version 2. Without a recorded digest the downloaded artifact cannot be checked against what was reviewed, so substitution is undetectable at install time. This rule reads a source pinned to protocol version 2.",
+  "severity": "LOW",
+  "cwe": "CWE-829",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "nuget"
+  ],
+  "artifact": "nuget.config",
+  "parser": "xml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "sources[].protocolVersion",
+    "valuePattern": "^2$"
+  },
+  "tests": [
+    {
+      "file": "nuget.config",
+      "document": {
+        "sources": [
+          {
+            "key": "acme",
+            "value": "https://nuget.acme.example/v2",
+            "protocolVersion": "2"
+          }
+        ],
+        "config": {},
+        "settings": {}
+      },
+      "match": true
+    },
+    {
+      "file": "nuget.config",
+      "document": {
+        "sources": [
+          {
+            "key": "internal",
+            "value": "https://10.24.8.9/v2",
+            "protocolVersion": 2
+          }
+        ],
+        "config": {},
+        "settings": {}
+      },
+      "match": true
+    },
+    {
+      "file": "nuget.config",
+      "document": {
+        "sources": [
+          {
+            "key": "nuget.org",
+            "value": "https://api.nuget.org/v3/index.json",
+            "protocolVersion": "3"
+          }
+        ],
+        "config": {},
+        "settings": {}
+      },
+      "match": false
+    },
+    {
+      "file": "nuget.config",
+      "document": {
+        "sources": [],
+        "config": {},
+        "settings": {}
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-3103"
+  ],
+  "remediation": "Regenerate the artifact with integrity data enabled and commit the recorded digest or checksum. Specifically: fix a source pinned to protocol version 2.",
+  "limitation": "It matches a source pinned to protocol version 2 in the parsed nuget.config; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

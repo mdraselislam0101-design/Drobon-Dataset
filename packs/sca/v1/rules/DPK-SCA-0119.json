@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0119",
+  "title": "Python requirement resolved from a local path",
+  "description": "requirements.txt declares a requirement that installs from a path on the build machine. The install is not reproducible from the requirements file, and the bytes that run are whatever that path holds at build time.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1104",
+  "category": "dependency-hygiene",
+  "ecosystems": [
+    "pypi"
+  ],
+  "artifact": "requirements.txt",
+  "parser": "requirements",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "requirements[].source",
+    "valuePattern": "^(?:file:|\\.{0,2}/)"
+  },
+  "tests": [
+    {
+      "file": "requirements.txt",
+      "document": {
+        "requirements": [
+          {
+            "name": "acme-shared",
+            "specifier": "",
+            "source": "../acme-shared"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "requirements.txt",
+      "document": {
+        "requirements": [
+          {
+            "name": "acme-assets",
+            "specifier": "",
+            "source": "file:./dist/acme_assets-1.0.0-py3-none-any.whl"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "requirements.txt",
+      "document": {
+        "requirements": [
+          {
+            "name": "acme-shared",
+            "specifier": "==1.2.0"
+          }
+        ]
+      },
+      "match": false
+    },
+    {
+      "file": "requirements.txt",
+      "document": {
+        "requirements": [
+          {
+            "name": "acme-assets",
+            "specifier": "==1.0.0",
+            "hashes": [
+              "sha256:bbbb"
+            ]
+          }
+        ]
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2256"
+  ],
+  "remediation": "Publish the package and pin the released version with a hash.",
+  "limitation": "It matches a requirement that installs from a path on the build machine in the parsed requirements.txt; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

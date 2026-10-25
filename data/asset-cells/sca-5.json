@@ -1,0 +1,3047 @@
+[
+  {
+    "class": "go-require-empty-version",
+    "ecosystem": "go",
+    "artifact": "go.mod",
+    "parser": "ini",
+    "category": "dependency-hygiene",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "Go module required with no version",
+    "what": "a `require` line whose version is empty",
+    "impact": "Go resolves the missing version to the latest release at build time, so the module that compiles is decided by the proxy, not the file.",
+    "remediation": "Record the version the project tested and commit `go.sum` with it.",
+    "limitation": "It matches a `require` line whose version is empty in the parsed go.mod; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A go.mod that mentions a `require` line whose version is empty in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "require[].version",
+      "valuePattern": "^$"
+    },
+    "tests": [
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/stretchr/testify",
+              "version": ""
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "golang.org/x/text",
+              "version": ""
+            },
+            {
+              "module": "github.com/pkg/errors",
+              "version": "v0.9.1"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/stretchr/testify",
+              "version": "v1.9.0"
+            }
+          ]
+        },
+        "match": false
+      },
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "golang.org/x/text",
+              "version": "v0.16.0"
+            }
+          ]
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "dependency-hygiene"
+  },
+  {
+    "class": "go-require-pseudo-version",
+    "ecosystem": "go",
+    "artifact": "go.mod",
+    "parser": "ini",
+    "category": "dependency-hygiene",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "Go dependency pinned to a pseudo-version",
+    "what": "a pseudo-version, which names a commit that carries no release tag",
+    "impact": "The commit has no release review, no changelog and no version that an advisory range can describe, yet it is what compiles.",
+    "remediation": "Tag a release upstream and depend on the tagged version.",
+    "limitation": "It matches a pseudo-version, which names a commit that carries no release tag in the parsed go.mod; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A go.mod that mentions a pseudo-version, which names a commit that carries no release tag in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "require[].version",
+      "valuePattern": "^v\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}-(?:0\\.)?\\d{14}-[0-9a-f]{12}$"
+    },
+    "tests": [
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/acme/sdk",
+              "version": "v0.0.0-20240612120000-9f2c4a1b7c3d"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/acme/cli",
+              "version": "v1.4.2-0.20240101000000-0a1b2c3d4e5f"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/acme/sdk",
+              "version": "v4.2.0"
+            }
+          ]
+        },
+        "match": false
+      },
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/acme/cli",
+              "version": "v2.1.0"
+            }
+          ]
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "dependency-hygiene"
+  },
+  {
+    "class": "go-require-incompatible-suffix",
+    "ecosystem": "go",
+    "artifact": "go.mod",
+    "parser": "ini",
+    "category": "dependency-hygiene",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "Go dependency carrying the +incompatible marker",
+    "what": "a `+incompatible` version, which declares a major version without a matching module path",
+    "impact": "The module path no longer identifies the major line, so two incompatible versions can be resolved under one path.",
+    "remediation": "Depend on the module path that carries the major suffix, or vendor the dependency.",
+    "limitation": "It matches a `+incompatible` version, which declares a major version without a matching module path in the parsed go.mod; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A go.mod that mentions a `+incompatible` version, which declares a major version without a matching module path in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "require[].version",
+      "valuePattern": "\\+incompatible$"
+    },
+    "tests": [
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/legacy/lib",
+              "version": "v2.1.0+incompatible"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/legacy/core",
+              "version": "v3.0.1+incompatible"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/legacy/lib",
+              "version": "v2.1.0"
+            }
+          ]
+        },
+        "match": false
+      },
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/legacy/lib/v2",
+              "version": "v2.1.0"
+            }
+          ]
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "dependency-hygiene"
+  },
+  {
+    "class": "go-require-unstable-major-zero",
+    "ecosystem": "go",
+    "artifact": "go.mod",
+    "parser": "ini",
+    "category": "dependency-hygiene",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "Go dependency on a pre-1.0 module",
+    "what": "a `v0.x` module version, which carries no compatibility promise",
+    "impact": "The API can change in any release, so the build can break or silently change behaviour without a major-version signal.",
+    "remediation": "Track the upstream path to v1, or pin the exact version and vendor it.",
+    "limitation": "It matches a `v0.x` module version, which carries no compatibility promise in the parsed go.mod; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A go.mod that mentions a `v0.x` module version, which carries no compatibility promise in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "require[].version",
+      "valuePattern": "^v0\\."
+    },
+    "tests": [
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/acme/experimental",
+              "version": "v0.4.2"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/acme/alpha",
+              "version": "v0.9.0"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/acme/sdk",
+              "version": "v1.4.2"
+            }
+          ]
+        },
+        "match": false
+      },
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/acme/cli",
+              "version": "v2.0.0"
+            }
+          ]
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "dependency-hygiene"
+  },
+  {
+    "class": "go-require-prerelease",
+    "ecosystem": "go",
+    "artifact": "go.mod",
+    "parser": "ini",
+    "category": "dependency-hygiene",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "Go dependency pinned to a prerelease tag",
+    "what": "a prerelease module version",
+    "impact": "Prereleases sit outside most advisory ranges and carry no stability promise, so a known defect can ship behind a deliberate pin.",
+    "remediation": "Pin the first stable tag.",
+    "limitation": "It matches a prerelease module version in the parsed go.mod; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A go.mod that mentions a prerelease module version in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "require[].version",
+      "valuePattern": "^v\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}-(?:alpha|beta|rc)\\b"
+    },
+    "tests": [
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/acme/sdk",
+              "version": "v4.0.0-rc.1"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/acme/cli",
+              "version": "v2.1.0-beta.3"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/acme/sdk",
+              "version": "v4.0.0"
+            }
+          ]
+        },
+        "match": false
+      },
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/acme/cli",
+              "version": "v2.1.0"
+            }
+          ]
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "dependency-hygiene"
+  },
+  {
+    "class": "go-replace-local-path",
+    "ecosystem": "go",
+    "artifact": "go.mod",
+    "parser": "ini",
+    "category": "dependency-hygiene",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "go.mod replace points at a local directory",
+    "what": "a `replace` whose target is a path on the build machine",
+    "impact": "The build compiles whatever that directory holds, so the file on disk and the code that builds can differ with no manifest change.",
+    "remediation": "Remove the local replace for releases and depend on the published module version.",
+    "limitation": "It matches a `replace` whose target is a path on the build machine in the parsed go.mod; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A go.mod that mentions a `replace` whose target is a path on the build machine in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "replace[].new.path",
+      "valuePattern": "^(?:\\.{1,2}/|/)"
+    },
+    "tests": [
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/acme/sdk",
+              "version": "v4.2.0"
+            }
+          ],
+          "replace": [
+            {
+              "old": {
+                "path": "github.com/acme/sdk",
+                "version": "v4.2.0"
+              },
+              "new": {
+                "path": "../acme-sdk"
+              }
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/acme/cli",
+              "version": "v2.1.0"
+            }
+          ],
+          "replace": [
+            {
+              "old": {
+                "path": "github.com/acme/cli"
+              },
+              "new": {
+                "path": "/opt/vendor/acme-cli"
+              }
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/acme/sdk",
+              "version": "v4.2.0"
+            }
+          ]
+        },
+        "match": false
+      },
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/acme/cli",
+              "version": "v2.1.0"
+            }
+          ],
+          "replace": [
+            {
+              "old": {
+                "path": "github.com/acme/cli"
+              },
+              "new": {
+                "path": "github.com/acme/cli-fork",
+                "version": "v2.1.1"
+              }
+            }
+          ]
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "dependency-hygiene"
+  },
+  {
+    "class": "go-replace-unversioned",
+    "ecosystem": "go",
+    "artifact": "go.mod",
+    "parser": "ini",
+    "category": "dependency-hygiene",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "go.mod replace without a version",
+    "what": "a `replace` that names a module path but pins no version",
+    "impact": "The replacement resolves to the latest release of the fork, so the code that builds follows the fork's publication rather than the file.",
+    "remediation": "Pin the replacement to a version, or drop the replace.",
+    "limitation": "It matches a `replace` that names a module path but pins no version in the parsed go.mod; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A go.mod that mentions a `replace` that names a module path but pins no version in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "replace[].new.version",
+      "valuePattern": "^$"
+    },
+    "tests": [
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/acme/sdk",
+              "version": "v4.2.0"
+            }
+          ],
+          "replace": [
+            {
+              "old": {
+                "path": "github.com/acme/sdk"
+              },
+              "new": {
+                "path": "github.com/acme/sdk-fork",
+                "version": ""
+              }
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/acme/cli",
+              "version": "v2.1.0"
+            }
+          ],
+          "replace": [
+            {
+              "old": {
+                "path": "github.com/acme/cli"
+              },
+              "new": {
+                "path": "github.com/acme/cli-fork",
+                "version": ""
+              }
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/acme/sdk",
+              "version": "v4.2.0"
+            }
+          ],
+          "replace": [
+            {
+              "old": {
+                "path": "github.com/acme/sdk"
+              },
+              "new": {
+                "path": "github.com/acme/sdk-fork",
+                "version": "v4.2.1"
+              }
+            }
+          ]
+        },
+        "match": false
+      },
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/acme/cli",
+              "version": "v2.1.0"
+            }
+          ]
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "dependency-hygiene"
+  },
+  {
+    "class": "go-sum-hash-absent",
+    "ecosystem": "go",
+    "artifact": "go.sum",
+    "parser": "lockfile-text",
+    "category": "supply-chain-integrity",
+    "cwe": "CWE-494",
+    "severity": "MEDIUM",
+    "title": "go.sum entry without a module hash",
+    "what": "a `go.sum` line that records no `h1:` hash",
+    "impact": "The module content is never verified against the checksum database for that line, so a proxy can serve different code under the same version.",
+    "remediation": "Regenerate `go.sum` with `go mod tidy` and commit the hashes.",
+    "limitation": "It matches a `go.sum` line that records no `h1:` hash in the parsed go.sum; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A go.sum that mentions a `go.sum` line that records no `h1:` hash in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-entry-missing-field",
+      "path": "entries",
+      "field": "hash"
+    },
+    "tests": [
+      {
+        "file": "go.sum",
+        "document": {
+          "entries": [
+            {
+              "module": "github.com/acme/sdk",
+              "version": "v4.2.0"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "go.sum",
+        "document": {
+          "entries": [
+            {
+              "module": "github.com/acme/cli",
+              "version": "v2.1.0"
+            },
+            {
+              "module": "github.com/pkg/errors",
+              "version": "v0.9.1",
+              "hash": "h1:aaaa"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "go.sum",
+        "document": {
+          "entries": [
+            {
+              "module": "github.com/acme/sdk",
+              "version": "v4.2.0",
+              "hash": "h1:aaaa"
+            }
+          ]
+        },
+        "match": false
+      },
+      {
+        "file": "go.sum",
+        "document": {
+          "entries": [
+            {
+              "module": "github.com/acme/cli",
+              "version": "v2.1.0",
+              "hash": "h1:bbbb"
+            }
+          ]
+        },
+        "match": false
+      }
+    ]
+  },
+  {
+    "class": "go-sum-hash-sha1-prefix",
+    "ecosystem": "go",
+    "artifact": "go.sum",
+    "parser": "lockfile-text",
+    "category": "lockfile-integrity",
+    "cwe": "CWE-494",
+    "severity": "MEDIUM",
+    "title": "go.sum records a non-standard hash prefix",
+    "what": "a checksum file in which no line carries the expected `h1:` hash",
+    "impact": "Go only enforces the `h1:` directory hash, so lines in another format are either ignored or rejected rather than verified.",
+    "remediation": "Regenerate `go.sum` so every line carries an `h1:` hash.",
+    "limitation": "It matches a checksum file in which no line carries the expected `h1:` hash in the parsed go.sum; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A go.sum that mentions a checksum file in which no line carries the expected `h1:` hash in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-not-matches",
+      "path": "entries[].hash",
+      "valuePattern": "^h1:"
+    },
+    "tests": [
+      {
+        "file": "go.sum",
+        "document": {
+          "entries": [
+            {
+              "module": "github.com/acme/sdk",
+              "version": "v4.2.0",
+              "hash": "sha1:aaaabbbb"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "go.sum",
+        "document": {
+          "entries": [
+            {
+              "module": "github.com/acme/cli",
+              "version": "v2.1.0",
+              "hash": "md5:ccccdddd"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "go.sum",
+        "document": {
+          "entries": [
+            {
+              "module": "github.com/acme/sdk",
+              "version": "v4.2.0",
+              "hash": "h1:aaaa"
+            }
+          ]
+        },
+        "match": false
+      },
+      {
+        "file": "go.sum",
+        "document": {
+          "entries": [
+            {
+              "module": "github.com/acme/cli",
+              "version": "v2.1.0",
+              "hash": "h1:bbbb"
+            }
+          ]
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "go-directive-absent",
+    "ecosystem": "go",
+    "artifact": "go.mod",
+    "parser": "ini",
+    "category": "dependency-hygiene",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "go.mod without a language version directive",
+    "what": "a `go.mod` that declares no `go` version",
+    "impact": "The toolchain falls back to its own default language semantics, so two machines can build the same tree with different rules.",
+    "remediation": "Declare the `go` version the project builds with.",
+    "limitation": "It matches a `go.mod` that declares no `go` version in the parsed go.mod; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A go.mod that mentions a `go.mod` that declares no `go` version in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-absent",
+      "path": "go"
+    },
+    "tests": [
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "require": [
+            {
+              "module": "github.com/acme/sdk",
+              "version": "v4.2.0"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "require": [
+            {
+              "module": "github.com/acme/cli",
+              "version": "v2.1.0"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/acme/sdk",
+              "version": "v4.2.0"
+            }
+          ]
+        },
+        "match": false
+      },
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.21",
+          "require": [
+            {
+              "module": "github.com/acme/cli",
+              "version": "v2.1.0"
+            }
+          ]
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "dependency-hygiene"
+  },
+  {
+    "class": "go-exclude-directive",
+    "ecosystem": "go",
+    "artifact": "go.mod",
+    "parser": "ini",
+    "category": "dependency-hygiene",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "go.mod excludes a published module version",
+    "what": "an `exclude` directive that keeps a specific version out of the build",
+    "impact": "The exclusion is invisible to anyone reading the dependency list, and a fix published in that version never reaches the build.",
+    "remediation": "Move off the excluded version by upgrading, and record why the version is blocked.",
+    "limitation": "It matches an `exclude` directive that keeps a specific version out of the build in the parsed go.mod; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A go.mod that mentions an `exclude` directive that keeps a specific version out of the build in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "exclude[].version",
+      "valuePattern": "^v\\d"
+    },
+    "tests": [
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/acme/sdk",
+              "version": "v4.2.0"
+            }
+          ],
+          "exclude": [
+            {
+              "module": "github.com/acme/sdk",
+              "version": "v4.1.9"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/acme/cli",
+              "version": "v2.1.0"
+            }
+          ],
+          "exclude": [
+            {
+              "module": "github.com/acme/cli",
+              "version": "v2.1.1"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/acme/sdk",
+              "version": "v4.2.0"
+            }
+          ]
+        },
+        "match": false
+      },
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/acme/cli",
+              "version": "v2.1.0"
+            }
+          ]
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "dependency-hygiene"
+  },
+  {
+    "class": "go-retract-directive",
+    "ecosystem": "go",
+    "artifact": "go.mod",
+    "parser": "ini",
+    "category": "dependency-hygiene",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "go.mod retracts a published version",
+    "what": "a `retract` directive in the dependency graph, which marks a version as withdrawn",
+    "impact": "A retraction usually follows a defect or a bad publish; a tree that still transitively resolves the retracted version keeps building withdrawn code.",
+    "remediation": "Confirm no transitive requirement still resolves the retracted version, and record the retraction in review.",
+    "limitation": "It matches a `retract` directive in the dependency graph, which marks a version as withdrawn in the parsed go.mod; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A go.mod that mentions a `retract` directive in the dependency graph, which marks a version as withdrawn in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "retract[].version",
+      "valuePattern": "^v\\d"
+    },
+    "tests": [
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/acme/sdk",
+              "version": "v4.3.0"
+            }
+          ],
+          "retract": [
+            {
+              "version": "v4.2.0",
+              "rationale": "broken release"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/acme/cli",
+              "version": "v2.2.0"
+            }
+          ],
+          "retract": [
+            {
+              "version": "v2.1.5"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/acme/sdk",
+              "version": "v4.3.0"
+            }
+          ]
+        },
+        "match": false
+      },
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/acme/cli",
+              "version": "v2.2.0"
+            }
+          ]
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "dependency-hygiene"
+  },
+  {
+    "class": "maven-dependency-version-absent",
+    "ecosystem": "maven",
+    "artifact": "pom.xml",
+    "parser": "xml",
+    "category": "dependency-hygiene",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "Maven dependency without a version",
+    "what": "a dependency that declares no version and no import scope",
+    "impact": "Maven takes the version from whatever parent or BOM happens to be in scope, so a parent change silently moves the dependency.",
+    "remediation": "Declare the version, or import a BOM whose version is pinned in the same commit.",
+    "limitation": "It matches a dependency that declares no version and no import scope in the parsed pom.xml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A pom.xml that mentions a dependency that declares no version and no import scope in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-entry-missing-field",
+      "path": "project.dependencies",
+      "field": "version"
+    },
+    "tests": [
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "dependencies": [
+              {
+                "groupId": "com.acme",
+                "artifactId": "internal-core"
+              },
+              {
+                "groupId": "org.slf4j",
+                "artifactId": "slf4j-api",
+                "version": "2.0.13"
+              }
+            ]
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "dependencies": [
+              {
+                "groupId": "com.acme",
+                "artifactId": "internal-util"
+              }
+            ]
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "dependencies": [
+              {
+                "groupId": "com.acme",
+                "artifactId": "internal-core",
+                "version": "1.2.0"
+              },
+              {
+                "groupId": "org.slf4j",
+                "artifactId": "slf4j-api",
+                "version": "2.0.13"
+              }
+            ]
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "dependencies": [
+              {
+                "groupId": "com.acme",
+                "artifactId": "internal-util",
+                "version": "2.0.0"
+              },
+              {
+                "groupId": "com.zaxxer",
+                "artifactId": "HikariCP",
+                "version": "5.1.0"
+              }
+            ]
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "dependency-hygiene"
+  },
+  {
+    "class": "maven-dependency-version-range",
+    "ecosystem": "maven",
+    "artifact": "pom.xml",
+    "parser": "xml",
+    "category": "dependency-hygiene",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "Maven dependency declared with a version range",
+    "what": "a dependency version written as a range",
+    "impact": "A range resolves to whatever matching release exists on the day of the build, so two builds of the same pom can compile different code.",
+    "remediation": "Pin the exact version and let a deliberate change move it.",
+    "limitation": "It matches a dependency version written as a range in the parsed pom.xml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A pom.xml that mentions a dependency version written as a range in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "project.dependencies[].version",
+      "valuePattern": "^\\["
+    },
+    "tests": [
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "dependencies": [
+              {
+                "groupId": "org.apache.commons",
+                "artifactId": "commons-lang3",
+                "version": "[3.0,4.0)"
+              }
+            ]
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "dependencies": [
+              {
+                "groupId": "com.google.guava",
+                "artifactId": "guava",
+                "version": "[30.0,)"
+              }
+            ]
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "dependencies": [
+              {
+                "groupId": "org.apache.commons",
+                "artifactId": "commons-lang3",
+                "version": "3.15.0"
+              }
+            ]
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "dependencies": [
+              {
+                "groupId": "com.google.guava",
+                "artifactId": "guava",
+                "version": "33.2.1-jre"
+              }
+            ]
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "dependency-hygiene"
+  },
+  {
+    "class": "maven-snapshot-dependency",
+    "ecosystem": "maven",
+    "artifact": "pom.xml",
+    "parser": "xml",
+    "category": "dependency-hygiene",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "Maven dependency on a snapshot build",
+    "what": "a `-SNAPSHOT` dependency, which is rebuilt by its publisher at any time",
+    "impact": "The artifact behind a snapshot changes without a version change, so the build is not reproducible and no hash can pin it.",
+    "remediation": "Depend on a released version.",
+    "limitation": "It matches a `-SNAPSHOT` dependency, which is rebuilt by its publisher at any time in the parsed pom.xml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A pom.xml that mentions a `-SNAPSHOT` dependency, which is rebuilt by its publisher at any time in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "project.dependencies[].version",
+      "valuePattern": "-SNAPSHOT$"
+    },
+    "tests": [
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "dependencies": [
+              {
+                "groupId": "com.acme",
+                "artifactId": "internal-core",
+                "version": "1.5.0-SNAPSHOT"
+              }
+            ]
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "dependencies": [
+              {
+                "groupId": "com.acme",
+                "artifactId": "internal-util",
+                "version": "2.0.0-SNAPSHOT"
+              }
+            ]
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "dependencies": [
+              {
+                "groupId": "com.acme",
+                "artifactId": "internal-core",
+                "version": "1.5.0"
+              }
+            ]
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "dependencies": [
+              {
+                "groupId": "com.acme",
+                "artifactId": "internal-util",
+                "version": "2.0.0"
+              }
+            ]
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "dependency-hygiene"
+  },
+  {
+    "class": "maven-system-scope",
+    "ecosystem": "maven",
+    "artifact": "pom.xml",
+    "parser": "xml",
+    "category": "dependency-hygiene",
+    "cwe": "CWE-829",
+    "severity": "MEDIUM",
+    "title": "Maven dependency resolved from the local system path",
+    "what": "a dependency with `system` scope, which reads a jar straight from the build machine",
+    "impact": "The artifact comes from a path outside repository management, so no checksum, no provenance and no repository policy applies to it.",
+    "remediation": "Install the artifact into an internal repository and depend on the released coordinate.",
+    "limitation": "It matches a dependency with `system` scope, which reads a jar straight from the build machine in the parsed pom.xml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A pom.xml that mentions a dependency with `system` scope, which reads a jar straight from the build machine in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "project.dependencies[].scope",
+      "valuePattern": "^system$"
+    },
+    "tests": [
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "dependencies": [
+              {
+                "groupId": "com.acme",
+                "artifactId": "legacy-driver",
+                "version": "1.0.0",
+                "scope": "system"
+              }
+            ]
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "dependencies": [
+              {
+                "groupId": "com.acme",
+                "artifactId": "legacy-native",
+                "version": "2.1.0",
+                "scope": "system"
+              }
+            ]
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "dependencies": [
+              {
+                "groupId": "com.acme",
+                "artifactId": "legacy-driver",
+                "version": "1.0.0",
+                "scope": "compile"
+              }
+            ]
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "dependencies": [
+              {
+                "groupId": "com.acme",
+                "artifactId": "legacy-native",
+                "version": "2.1.0"
+              }
+            ]
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "dependency-hygiene"
+  },
+  {
+    "class": "maven-repository-cleartext",
+    "ecosystem": "maven",
+    "artifact": "pom.xml",
+    "parser": "xml",
+    "category": "registry-configuration",
+    "cwe": "CWE-319",
+    "severity": "HIGH",
+    "title": "Maven repository declared over cleartext",
+    "what": "a repository URL that uses cleartext http",
+    "impact": "Artifacts and their checksums cross the network unencrypted, so a network attacker can replace both the jar and the checksum file.",
+    "remediation": "Point the repository at https.",
+    "limitation": "It matches a repository URL that uses cleartext http in the parsed pom.xml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A pom.xml that mentions a repository URL that uses cleartext http in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "project.repositories[].url",
+      "valuePattern": "^http://"
+    },
+    "tests": [
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "dependencies": [],
+            "repositories": [
+              {
+                "id": "acme",
+                "url": "http://repo.acme.example/maven2"
+              }
+            ]
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "dependencies": [],
+            "repositories": [
+              {
+                "id": "mirror",
+                "url": "http://10.24.8.9/maven2"
+              }
+            ]
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "dependencies": [],
+            "repositories": [
+              {
+                "id": "acme",
+                "url": "https://repo.acme.example/maven2"
+              }
+            ]
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "dependencies": [],
+            "repositories": [
+              {
+                "id": "central",
+                "url": "https://repo.maven.apache.org/maven2"
+              }
+            ]
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "registry-configuration"
+  },
+  {
+    "class": "maven-repository-snapshots-enabled",
+    "ecosystem": "maven",
+    "artifact": "pom.xml",
+    "parser": "xml",
+    "category": "registry-configuration",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "Maven repository serves snapshots to this build",
+    "what": "a repository with snapshot resolution enabled",
+    "impact": "Snapshots are rebuilt in place, so the resolved artifact can change between two runs that use the same pom.",
+    "remediation": "Resolve snapshots only in development profiles, never in the release build.",
+    "limitation": "It matches a repository with snapshot resolution enabled in the parsed pom.xml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A pom.xml that mentions a repository with snapshot resolution enabled in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "project.repositories[].snapshots.enabled",
+      "valuePattern": "^true$"
+    },
+    "tests": [
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "dependencies": [],
+            "repositories": [
+              {
+                "id": "acme",
+                "url": "https://repo.acme.example/maven2",
+                "snapshots": {
+                  "enabled": true
+                }
+              }
+            ]
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "dependencies": [],
+            "repositories": [
+              {
+                "id": "internal",
+                "url": "https://repo.acme.example/snapshots",
+                "snapshots": {
+                  "enabled": true
+                }
+              }
+            ]
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "dependencies": [],
+            "repositories": [
+              {
+                "id": "acme",
+                "url": "https://repo.acme.example/maven2",
+                "snapshots": {
+                  "enabled": false
+                }
+              }
+            ]
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "dependencies": [],
+            "repositories": [
+              {
+                "id": "central",
+                "url": "https://repo.maven.apache.org/maven2"
+              }
+            ]
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "registry-configuration"
+  },
+  {
+    "class": "maven-checksum-policy-ignore",
+    "ecosystem": "maven",
+    "artifact": "pom.xml",
+    "parser": "xml",
+    "category": "registry-configuration",
+    "cwe": "CWE-345",
+    "severity": "HIGH",
+    "title": "Maven repository checksum failures ignored",
+    "what": "a repository whose checksum policy is `ignore`",
+    "impact": "A corrupted or substituted artifact installs without any warning, which removes the one integrity check Maven performs.",
+    "remediation": "Use the `fail` policy so a mismatch stops the build.",
+    "limitation": "It matches a repository whose checksum policy is `ignore` in the parsed pom.xml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A pom.xml that mentions a repository whose checksum policy is `ignore` in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "project.repositories[].releases.checksumPolicy",
+      "valuePattern": "^ignore$"
+    },
+    "tests": [
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "dependencies": [],
+            "repositories": [
+              {
+                "id": "acme",
+                "url": "https://repo.acme.example/maven2",
+                "releases": {
+                  "checksumPolicy": "ignore"
+                }
+              }
+            ]
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "dependencies": [],
+            "repositories": [
+              {
+                "id": "mirror",
+                "url": "https://repo.acme.example/maven2",
+                "releases": {
+                  "checksumPolicy": "ignore"
+                }
+              }
+            ]
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "dependencies": [],
+            "repositories": [
+              {
+                "id": "acme",
+                "url": "https://repo.acme.example/maven2",
+                "releases": {
+                  "checksumPolicy": "fail"
+                }
+              }
+            ]
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "dependencies": [],
+            "repositories": [
+              {
+                "id": "central",
+                "url": "https://repo.maven.apache.org/maven2"
+              }
+            ]
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "registry-configuration"
+  },
+  {
+    "class": "maven-parent-version-range",
+    "ecosystem": "maven",
+    "artifact": "pom.xml",
+    "parser": "xml",
+    "category": "dependency-hygiene",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "Maven parent declared with a version range",
+    "what": "a parent POM version written as a range",
+    "impact": "The dependency management the build inherits changes with every matching parent release, so reviewed versions can move without a commit.",
+    "remediation": "Pin the parent version exactly.",
+    "limitation": "It matches a parent POM version written as a range in the parsed pom.xml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A pom.xml that mentions a parent POM version written as a range in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "project.parent.version",
+      "valuePattern": "^\\["
+    },
+    "tests": [
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "dependencies": [],
+            "parent": {
+              "groupId": "com.acme",
+              "artifactId": "platform-parent",
+              "version": "[1.0,2.0)"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "dependencies": [],
+            "parent": {
+              "groupId": "com.acme",
+              "artifactId": "service-parent",
+              "version": "[4.0,)"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "dependencies": [],
+            "parent": {
+              "groupId": "com.acme",
+              "artifactId": "platform-parent",
+              "version": "1.4.0"
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "dependencies": [],
+            "parent": {
+              "groupId": "com.acme",
+              "artifactId": "service-parent",
+              "version": "4.2.0"
+            }
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "dependency-hygiene"
+  },
+  {
+    "class": "maven-plugin-version-absent",
+    "ecosystem": "maven",
+    "artifact": "pom.xml",
+    "parser": "xml",
+    "category": "dependency-hygiene",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "Maven build plugin without a pinned version",
+    "what": "a build plugin that declares no version",
+    "impact": "Maven resolves the plugin to its latest release, so code that runs during the build changes without any change to the pom.",
+    "remediation": "Pin every build plugin to the version the project tested.",
+    "limitation": "It matches a build plugin that declares no version in the parsed pom.xml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A pom.xml that mentions a build plugin that declares no version in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-entry-missing-field",
+      "path": "project.build.plugins",
+      "field": "version"
+    },
+    "tests": [
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "dependencies": [],
+            "build": {
+              "plugins": [
+                {
+                  "groupId": "org.apache.maven.plugins",
+                  "artifactId": "maven-shade-plugin"
+                }
+              ]
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "dependencies": [],
+            "build": {
+              "plugins": [
+                {
+                  "groupId": "org.codehaus.mojo",
+                  "artifactId": "exec-maven-plugin"
+                }
+              ]
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "dependencies": [],
+            "build": {
+              "plugins": [
+                {
+                  "groupId": "org.apache.maven.plugins",
+                  "artifactId": "maven-shade-plugin",
+                  "version": "3.6.0"
+                }
+              ]
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "dependencies": [],
+            "build": {
+              "plugins": [
+                {
+                  "groupId": "org.codehaus.mojo",
+                  "artifactId": "exec-maven-plugin",
+                  "version": "3.4.1"
+                }
+              ]
+            }
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "dependency-hygiene"
+  },
+  {
+    "class": "maven-settings-mirror-cleartext",
+    "ecosystem": "maven",
+    "artifact": "settings.xml",
+    "parser": "xml",
+    "category": "registry-configuration",
+    "cwe": "CWE-319",
+    "severity": "HIGH",
+    "title": "Maven mirror configured over cleartext",
+    "what": "a mirror URL that uses cleartext http",
+    "impact": "Every artifact for the mirrored repositories crosses the network unencrypted, so substitution is invisible to the build.",
+    "remediation": "Point the mirror at https.",
+    "limitation": "It matches a mirror URL that uses cleartext http in the parsed settings.xml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A settings.xml that mentions a mirror URL that uses cleartext http in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "settings.mirrors[].url",
+      "valuePattern": "^http://"
+    },
+    "tests": [
+      {
+        "file": "settings.xml",
+        "document": {
+          "settings": {
+            "mirrors": [
+              {
+                "id": "acme",
+                "mirrorOf": "central",
+                "url": "http://repo.acme.example/maven2"
+              }
+            ]
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "settings.xml",
+        "document": {
+          "settings": {
+            "mirrors": [
+              {
+                "id": "mirror",
+                "mirrorOf": "*",
+                "url": "http://10.24.8.9/maven2"
+              }
+            ]
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "settings.xml",
+        "document": {
+          "settings": {
+            "mirrors": [
+              {
+                "id": "acme",
+                "mirrorOf": "central",
+                "url": "https://repo.acme.example/maven2"
+              }
+            ]
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "settings.xml",
+        "document": {
+          "settings": {
+            "mirrors": [
+              {
+                "id": "corp",
+                "mirrorOf": "central",
+                "url": "https://nexus.acme.example/repository/maven-public"
+              }
+            ]
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "registry-configuration"
+  },
+  {
+    "class": "maven-settings-mirror-wildcard",
+    "ecosystem": "maven",
+    "artifact": "settings.xml",
+    "parser": "xml",
+    "category": "registry-configuration",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "Maven mirror takes over every repository",
+    "what": "a mirror with `mirrorOf` set to `*`",
+    "impact": "All declared repositories, including reviewed internal ones, resolve through one mirror, so its publication controls become the only control.",
+    "remediation": "Mirror specific repositories and leave the others explicit.",
+    "limitation": "It matches a mirror with `mirrorOf` set to `*` in the parsed settings.xml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A settings.xml that mentions a mirror with `mirrorOf` set to `*` in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "settings.mirrors[].mirrorOf",
+      "valuePattern": "^\\*$"
+    },
+    "tests": [
+      {
+        "file": "settings.xml",
+        "document": {
+          "settings": {
+            "mirrors": [
+              {
+                "id": "corp",
+                "mirrorOf": "*",
+                "url": "https://nexus.acme.example/repository/maven-public"
+              }
+            ]
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "settings.xml",
+        "document": {
+          "settings": {
+            "mirrors": [
+              {
+                "id": "single",
+                "mirrorOf": "*",
+                "url": "https://mirror.acme.example/maven2"
+              }
+            ]
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "settings.xml",
+        "document": {
+          "settings": {
+            "mirrors": [
+              {
+                "id": "central",
+                "mirrorOf": "central",
+                "url": "https://nexus.acme.example/repository/maven-public"
+              }
+            ]
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "settings.xml",
+        "document": {
+          "settings": {
+            "mirrors": [
+              {
+                "id": "internal",
+                "mirrorOf": "*,!internal-releases",
+                "url": "https://nexus.acme.example/repository/maven-public"
+              }
+            ]
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "registry-configuration"
+  },
+  {
+    "class": "maven-settings-password-inline",
+    "ecosystem": "maven",
+    "artifact": "settings.xml",
+    "parser": "xml",
+    "category": "credential-in-config",
+    "cwe": "CWE-798",
+    "severity": "HIGH",
+    "title": "Maven server password stored in settings.xml",
+    "what": "a repository password written directly into the checked-in Maven settings",
+    "impact": "Repository readers can publish or pull as the account, and the credential cannot be scoped or expired like a token.",
+    "remediation": "Read the password from the environment or a credential store, and rotate it.",
+    "limitation": "It matches a repository password written directly into the checked-in Maven settings in the parsed settings.xml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A settings.xml that mentions a repository password written directly into the checked-in Maven settings in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "settings.servers[].password",
+      "valuePattern": "^[A-Za-z0-9!@#$%^&*._-]{8,40}$"
+    },
+    "tests": [
+      {
+        "file": "settings.xml",
+        "document": {
+          "settings": {
+            "servers": [
+              {
+                "id": "acme-releases",
+                "username": "ci",
+                "password": "EXAMPLESECRETPASSWORD01"
+              }
+            ]
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "settings.xml",
+        "document": {
+          "settings": {
+            "servers": [
+              {
+                "id": "acme-snapshots",
+                "username": "ci",
+                "password": "EXAMPLESECONDPASSWORD1234"
+              }
+            ]
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "settings.xml",
+        "document": {
+          "settings": {
+            "servers": [
+              {
+                "id": "acme-releases",
+                "username": "ci",
+                "password": "${env.MAVEN_PASSWORD}"
+              }
+            ]
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "settings.xml",
+        "document": {
+          "settings": {
+            "servers": [
+              {
+                "id": "acme-releases",
+                "username": "ci"
+              }
+            ]
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "credential-in-config"
+  },
+  {
+    "class": "gradle-repository-cleartext",
+    "ecosystem": "gradle",
+    "artifact": "build.gradle",
+    "parser": "gradle",
+    "category": "registry-configuration",
+    "cwe": "CWE-319",
+    "severity": "HIGH",
+    "title": "Gradle repository declared over cleartext",
+    "what": "a repository URL that uses cleartext http",
+    "impact": "Artifacts and their checksums cross the network unencrypted, so a network attacker can substitute both.",
+    "remediation": "Point the repository at https.",
+    "limitation": "It matches a repository URL that uses cleartext http in the parsed build.gradle; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A build.gradle that mentions a repository URL that uses cleartext http in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "repositories[].url",
+      "valuePattern": "^http://"
+    },
+    "tests": [
+      {
+        "file": "build.gradle",
+        "document": {
+          "repositories": [
+            {
+              "name": "acme",
+              "url": "http://repo.acme.example/maven2"
+            }
+          ],
+          "dependencies": []
+        },
+        "match": true
+      },
+      {
+        "file": "build.gradle",
+        "document": {
+          "repositories": [
+            {
+              "name": "mirror",
+              "url": "http://10.24.8.9/maven2"
+            }
+          ],
+          "dependencies": []
+        },
+        "match": true
+      },
+      {
+        "file": "build.gradle",
+        "document": {
+          "repositories": [
+            {
+              "name": "acme",
+              "url": "https://repo.acme.example/maven2"
+            }
+          ],
+          "dependencies": []
+        },
+        "match": false
+      },
+      {
+        "file": "build.gradle",
+        "document": {
+          "repositories": [
+            {
+              "name": "mavenCentral",
+              "url": "https://repo.maven.apache.org/maven2"
+            }
+          ],
+          "dependencies": []
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "registry-configuration"
+  },
+  {
+    "class": "gradle-insecure-protocol-allowed",
+    "ecosystem": "gradle",
+    "artifact": "build.gradle",
+    "parser": "gradle",
+    "category": "registry-configuration",
+    "cwe": "CWE-319",
+    "severity": "HIGH",
+    "title": "Gradle explicitly permits an insecure repository protocol",
+    "what": "a repository with `allowInsecureProtocol = true`",
+    "impact": "Gradle only talks cleartext here because the build was told to allow it, so the override is a deliberate decision to drop transport protection.",
+    "remediation": "Serve the repository over https and remove the override.",
+    "limitation": "It matches a repository with `allowInsecureProtocol = true` in the parsed build.gradle; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A build.gradle that mentions a repository with `allowInsecureProtocol = true` in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "repositories[].allowInsecureProtocol",
+      "valuePattern": "^true$"
+    },
+    "tests": [
+      {
+        "file": "build.gradle",
+        "document": {
+          "repositories": [
+            {
+              "name": "acme",
+              "url": "http://repo.acme.example/maven2",
+              "allowInsecureProtocol": true
+            }
+          ],
+          "dependencies": []
+        },
+        "match": true
+      },
+      {
+        "file": "build.gradle",
+        "document": {
+          "repositories": [
+            {
+              "name": "mirror",
+              "url": "http://10.24.8.9/maven2",
+              "allowInsecureProtocol": true
+            }
+          ],
+          "dependencies": []
+        },
+        "match": true
+      },
+      {
+        "file": "build.gradle",
+        "document": {
+          "repositories": [
+            {
+              "name": "acme",
+              "url": "https://repo.acme.example/maven2"
+            }
+          ],
+          "dependencies": []
+        },
+        "match": false
+      },
+      {
+        "file": "build.gradle",
+        "document": {
+          "repositories": [
+            {
+              "name": "mavenCentral",
+              "url": "https://repo.maven.apache.org/maven2"
+            }
+          ],
+          "dependencies": []
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "registry-configuration"
+  },
+  {
+    "class": "gradle-dynamic-version",
+    "ecosystem": "gradle",
+    "artifact": "build.gradle",
+    "parser": "gradle",
+    "category": "dependency-hygiene",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "Gradle dependency declared with a dynamic version",
+    "what": "a dependency notation ending in `N.+`, which accepts every later release of that major",
+    "impact": "The build resolves a version that does not appear anywhere in the repository, so review sees one version and the build uses another.",
+    "remediation": "Pin the exact version, or use a version catalog with resolved entries.",
+    "limitation": "It matches a dependency notation ending in `N.+`, which accepts every later release of that major in the parsed build.gradle; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A build.gradle that mentions a dependency notation ending in `N.+`, which accepts every later release of that major in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "dependencies[].notation",
+      "valuePattern": ":\\d{1,3}\\.\\+$"
+    },
+    "tests": [
+      {
+        "file": "build.gradle",
+        "document": {
+          "repositories": [
+            {
+              "name": "mavenCentral",
+              "url": "https://repo.maven.apache.org/maven2"
+            }
+          ],
+          "dependencies": [
+            {
+              "configuration": "implementation",
+              "notation": "com.acme:internal-core:1.+"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "build.gradle",
+        "document": {
+          "repositories": [
+            {
+              "name": "mavenCentral",
+              "url": "https://repo.maven.apache.org/maven2"
+            }
+          ],
+          "dependencies": [
+            {
+              "configuration": "runtimeOnly",
+              "notation": "org.example:lib:2.+"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "build.gradle",
+        "document": {
+          "repositories": [
+            {
+              "name": "mavenCentral",
+              "url": "https://repo.maven.apache.org/maven2"
+            }
+          ],
+          "dependencies": [
+            {
+              "configuration": "implementation",
+              "notation": "com.acme:internal-core:1.4.2"
+            }
+          ]
+        },
+        "match": false
+      },
+      {
+        "file": "build.gradle",
+        "document": {
+          "repositories": [
+            {
+              "name": "mavenCentral",
+              "url": "https://repo.maven.apache.org/maven2"
+            }
+          ],
+          "dependencies": [
+            {
+              "configuration": "runtimeOnly",
+              "notation": "org.example:lib:2.0.1"
+            }
+          ]
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "dependency-hygiene"
+  },
+  {
+    "class": "gradle-latest-version",
+    "ecosystem": "gradle",
+    "artifact": "build.gradle",
+    "parser": "gradle",
+    "category": "dependency-hygiene",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "Gradle dependency declared with a latest-version selector",
+    "what": "a `latest.release` or `latest.integration` selector",
+    "impact": "Every build takes whatever the repository marks as latest, including integration builds, so the compiled code changes with no commit.",
+    "remediation": "Pin the version the project tested.",
+    "limitation": "It matches a `latest.release` or `latest.integration` selector in the parsed build.gradle; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A build.gradle that mentions a `latest.release` or `latest.integration` selector in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "dependencies[].notation",
+      "valuePattern": ":latest\\.\\w+$"
+    },
+    "tests": [
+      {
+        "file": "build.gradle",
+        "document": {
+          "repositories": [
+            {
+              "name": "mavenCentral",
+              "url": "https://repo.maven.apache.org/maven2"
+            }
+          ],
+          "dependencies": [
+            {
+              "configuration": "implementation",
+              "notation": "com.acme:internal-core:latest.release"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "build.gradle",
+        "document": {
+          "repositories": [
+            {
+              "name": "mavenCentral",
+              "url": "https://repo.maven.apache.org/maven2"
+            }
+          ],
+          "dependencies": [
+            {
+              "configuration": "testImplementation",
+              "notation": "org.example:lib:latest.integration"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "build.gradle",
+        "document": {
+          "repositories": [
+            {
+              "name": "mavenCentral",
+              "url": "https://repo.maven.apache.org/maven2"
+            }
+          ],
+          "dependencies": [
+            {
+              "configuration": "implementation",
+              "notation": "com.acme:internal-core:1.4.2"
+            }
+          ]
+        },
+        "match": false
+      },
+      {
+        "file": "build.gradle",
+        "document": {
+          "repositories": [
+            {
+              "name": "mavenCentral",
+              "url": "https://repo.maven.apache.org/maven2"
+            }
+          ],
+          "dependencies": [
+            {
+              "configuration": "implementation",
+              "notation": "org.example:lib:2.0.1"
+            }
+          ]
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "dependency-hygiene"
+  },
+  {
+    "class": "gradle-plugin-version-absent",
+    "ecosystem": "gradle",
+    "artifact": "build.gradle",
+    "parser": "gradle",
+    "category": "dependency-hygiene",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "Gradle plugin applied without a version",
+    "what": "a plugin request that names no version",
+    "impact": "The plugin resolves to its latest release, and a build plugin runs arbitrary code during configuration, so the change is both invisible and code-executing.",
+    "remediation": "Pin the plugin version, preferably through the settings plugin block or a version catalog.",
+    "limitation": "It matches a plugin request that names no version in the parsed build.gradle; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A build.gradle that mentions a plugin request that names no version in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-entry-missing-field",
+      "path": "plugins",
+      "field": "version"
+    },
+    "tests": [
+      {
+        "file": "build.gradle",
+        "document": {
+          "plugins": [
+            {
+              "id": "com.acme.build-tools"
+            }
+          ],
+          "dependencies": []
+        },
+        "match": true
+      },
+      {
+        "file": "build.gradle",
+        "document": {
+          "plugins": [
+            {
+              "id": "org.example.packaging"
+            },
+            {
+              "id": "java"
+            }
+          ],
+          "dependencies": []
+        },
+        "match": true
+      },
+      {
+        "file": "build.gradle",
+        "document": {
+          "plugins": [
+            {
+              "id": "com.acme.build-tools",
+              "version": "2.4.0"
+            }
+          ],
+          "dependencies": []
+        },
+        "match": false
+      },
+      {
+        "file": "build.gradle",
+        "document": {
+          "plugins": [
+            {
+              "id": "com.github.ben-manes.versions",
+              "version": "0.51.0"
+            }
+          ],
+          "dependencies": []
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "dependency-hygiene"
+  },
+  {
+    "class": "gradle-verification-artifact-hash-absent",
+    "ecosystem": "gradle",
+    "artifact": "verification-metadata.xml",
+    "parser": "xml",
+    "category": "lockfile-integrity",
+    "cwe": "CWE-494",
+    "severity": "MEDIUM",
+    "title": "Gradle verification entry without an artifact hash",
+    "what": "a dependency verification entry whose artifact records no checksum",
+    "impact": "Dependency verification is on, but that entry cannot verify anything, so a substituted jar passes while the build still claims verification.",
+    "remediation": "Regenerate the verification metadata so every artifact carries a checksum.",
+    "limitation": "It matches a dependency verification entry whose artifact records no checksum in the parsed verification-metadata.xml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A verification-metadata.xml that mentions a dependency verification entry whose artifact records no checksum in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-entry-missing-field",
+      "path": "components[].artifacts",
+      "field": "sha256"
+    },
+    "tests": [
+      {
+        "file": "verification-metadata.xml",
+        "document": {
+          "components": [
+            {
+              "group": "com.acme",
+              "name": "internal-core",
+              "version": "1.4.2",
+              "artifacts": [
+                {
+                  "name": "internal-core-1.4.2.jar"
+                }
+              ]
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "verification-metadata.xml",
+        "document": {
+          "components": [
+            {
+              "group": "org.example",
+              "name": "lib",
+              "version": "2.0.1",
+              "artifacts": [
+                {
+                  "name": "lib-2.0.1.jar"
+                }
+              ]
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "verification-metadata.xml",
+        "document": {
+          "components": [
+            {
+              "group": "com.acme",
+              "name": "internal-core",
+              "version": "1.4.2",
+              "artifacts": [
+                {
+                  "name": "internal-core-1.4.2.jar",
+                  "sha256": "aaaabbbb"
+                }
+              ]
+            }
+          ]
+        },
+        "match": false
+      },
+      {
+        "file": "verification-metadata.xml",
+        "document": {
+          "components": [
+            {
+              "group": "org.example",
+              "name": "lib",
+              "version": "2.0.1",
+              "artifacts": [
+                {
+                  "name": "lib-2.0.1.jar",
+                  "sha256": "ccccdddd"
+                }
+              ]
+            }
+          ]
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "gradle-verification-signature-absent",
+    "ecosystem": "gradle",
+    "artifact": "verification-metadata.xml",
+    "parser": "xml",
+    "category": "lockfile-integrity",
+    "cwe": "CWE-347",
+    "severity": "MEDIUM",
+    "title": "Gradle verification entry with an empty signature field",
+    "what": "an artifact entry whose signature value is empty",
+    "impact": "The entry reads as signature-verified to any tool that only checks the key, while no signature is actually checked.",
+    "remediation": "Record the real signature, or rely on checksums and remove the empty key.",
+    "limitation": "It matches an artifact entry whose signature value is empty in the parsed verification-metadata.xml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A verification-metadata.xml that mentions an artifact entry whose signature value is empty in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "components[].artifacts[].pgp",
+      "valuePattern": "^$"
+    },
+    "tests": [
+      {
+        "file": "verification-metadata.xml",
+        "document": {
+          "components": [
+            {
+              "group": "com.acme",
+              "name": "internal-core",
+              "version": "1.4.2",
+              "artifacts": [
+                {
+                  "name": "internal-core-1.4.2.jar",
+                  "pgp": ""
+                }
+              ]
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "verification-metadata.xml",
+        "document": {
+          "components": [
+            {
+              "group": "org.example",
+              "name": "lib",
+              "version": "2.0.1",
+              "artifacts": [
+                {
+                  "name": "lib-2.0.1.jar",
+                  "pgp": ""
+                }
+              ]
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "verification-metadata.xml",
+        "document": {
+          "components": [
+            {
+              "group": "com.acme",
+              "name": "internal-core",
+              "version": "1.4.2",
+              "artifacts": [
+                {
+                  "name": "internal-core-1.4.2.jar",
+                  "pgp": "9F2C4A1B"
+                }
+              ]
+            }
+          ]
+        },
+        "match": false
+      },
+      {
+        "file": "verification-metadata.xml",
+        "document": {
+          "components": [
+            {
+              "group": "org.example",
+              "name": "lib",
+              "version": "2.0.1",
+              "artifacts": [
+                {
+                  "name": "lib-2.0.1.jar",
+                  "pgp": "0A1B2C3D"
+                }
+              ]
+            }
+          ]
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "gradle-snapshot-repository",
+    "ecosystem": "gradle",
+    "artifact": "build.gradle",
+    "parser": "gradle",
+    "category": "registry-configuration",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "Gradle build resolves from a snapshot repository",
+    "what": "a repository whose URL is the snapshot channel",
+    "impact": "Snapshots are rebuilt in place, so the same build file can compile different code on two runs.",
+    "remediation": "Resolve snapshots only in a development build, never in the release path.",
+    "limitation": "It matches a repository whose URL is the snapshot channel in the parsed build.gradle; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A build.gradle that mentions a repository whose URL is the snapshot channel in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "repositories[].url",
+      "valuePattern": "snapshots?/?$"
+    },
+    "tests": [
+      {
+        "file": "build.gradle",
+        "document": {
+          "repositories": [
+            {
+              "name": "acmeSnapshots",
+              "url": "https://nexus.acme.example/repository/snapshots"
+            }
+          ],
+          "dependencies": []
+        },
+        "match": true
+      },
+      {
+        "file": "build.gradle",
+        "document": {
+          "repositories": [
+            {
+              "name": "acme",
+              "url": "https://nexus.acme.example/snapshot/"
+            }
+          ],
+          "dependencies": []
+        },
+        "match": true
+      },
+      {
+        "file": "build.gradle",
+        "document": {
+          "repositories": [
+            {
+              "name": "acmeReleases",
+              "url": "https://nexus.acme.example/repository/releases"
+            }
+          ],
+          "dependencies": []
+        },
+        "match": false
+      },
+      {
+        "file": "build.gradle",
+        "document": {
+          "repositories": [
+            {
+              "name": "mavenCentral",
+              "url": "https://repo.maven.apache.org/maven2"
+            }
+          ],
+          "dependencies": []
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "registry-configuration"
+  },
+  {
+    "class": "gradle-repository-credentials-inline",
+    "ecosystem": "gradle",
+    "artifact": "build.gradle",
+    "parser": "gradle",
+    "category": "credential-in-config",
+    "cwe": "CWE-798",
+    "severity": "HIGH",
+    "title": "Gradle repository password written into the build script",
+    "what": "a repository credential written directly into the checked-in build script",
+    "impact": "Everyone who can read the build script can publish or pull as that account, and the value also lands in build logs and caches.",
+    "remediation": "Read the credential from Gradle properties or the environment, and rotate it.",
+    "limitation": "It matches a repository credential written directly into the checked-in build script in the parsed build.gradle; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A build.gradle that mentions a repository credential written directly into the checked-in build script in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "repositories[].credentials.password",
+      "valuePattern": "^[A-Za-z0-9!@#$%^&*._-]{8,40}$"
+    },
+    "tests": [
+      {
+        "file": "build.gradle",
+        "document": {
+          "repositories": [
+            {
+              "name": "acme",
+              "url": "https://repo.acme.example/maven2",
+              "credentials": {
+                "username": "ci",
+                "password": "EXAMPLESECRETPASSWORD01"
+              }
+            }
+          ],
+          "dependencies": []
+        },
+        "match": true
+      },
+      {
+        "file": "build.gradle",
+        "document": {
+          "repositories": [
+            {
+              "name": "mirror",
+              "url": "https://mirror.acme.example/maven2",
+              "credentials": {
+                "username": "ci",
+                "password": "EXAMPLESECONDPASSWORD1234"
+              }
+            }
+          ],
+          "dependencies": []
+        },
+        "match": true
+      },
+      {
+        "file": "build.gradle",
+        "document": {
+          "repositories": [
+            {
+              "name": "acme",
+              "url": "https://repo.acme.example/maven2",
+              "credentials": {
+                "username": "ci",
+                "password": "${ACME_REPO_PASSWORD}"
+              }
+            }
+          ],
+          "dependencies": []
+        },
+        "match": false
+      },
+      {
+        "file": "build.gradle",
+        "document": {
+          "repositories": [
+            {
+              "name": "mavenCentral",
+              "url": "https://repo.maven.apache.org/maven2"
+            }
+          ],
+          "dependencies": []
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "credential-in-config"
+  },
+  {
+    "class": "gradle-gradle-properties-cleartext-repo",
+    "ecosystem": "gradle",
+    "artifact": "gradle.properties",
+    "parser": "properties",
+    "category": "registry-configuration",
+    "cwe": "CWE-319",
+    "severity": "HIGH",
+    "title": "Gradle properties point at a cleartext repository",
+    "what": "a repository URL property that uses cleartext http",
+    "impact": "The whole build resolves through an unencrypted endpoint, so artifacts and checksums can be replaced in transit.",
+    "remediation": "Point the property at https.",
+    "limitation": "It matches a repository URL property that uses cleartext http in the parsed gradle.properties; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A gradle.properties that mentions a repository URL property that uses cleartext http in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "properties.repoUrl",
+      "valuePattern": "^http://"
+    },
+    "tests": [
+      {
+        "file": "gradle.properties",
+        "document": {
+          "properties": {
+            "repoUrl": "http://repo.acme.example/maven2"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "gradle.properties",
+        "document": {
+          "properties": {
+            "repoUrl": "http://10.24.8.9/maven2"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "gradle.properties",
+        "document": {
+          "properties": {
+            "repoUrl": "https://repo.acme.example/maven2"
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "gradle.properties",
+        "document": {
+          "properties": {
+            "repoUrl": "https://nexus.acme.example/repository/releases"
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "registry-configuration"
+  }
+]

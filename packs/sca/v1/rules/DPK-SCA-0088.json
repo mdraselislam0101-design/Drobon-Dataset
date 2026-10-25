@@ -1,0 +1,67 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0088",
+  "title": "Certificate authority file configured but empty",
+  "description": ".npmrc declares an empty `cafile` setting, which leaves the client with no trust anchor from that path. The client falls back to whatever trust store the runtime happens to have, so the set of accepted registry certificates is unspecified.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-295",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "npm"
+  ],
+  "artifact": ".npmrc",
+  "parser": "ini",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "config.cafile",
+    "valuePattern": "^$"
+  },
+  "tests": [
+    {
+      "file": ".npmrc",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "cafile": ""
+        }
+      },
+      "match": true
+    },
+    {
+      "file": ".npmrc",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "cafile": "",
+          "strict-ssl": "true"
+        }
+      },
+      "match": true
+    },
+    {
+      "file": ".npmrc",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "cafile": "/etc/ssl/certs/acme-root.pem"
+        }
+      },
+      "match": false
+    },
+    {
+      "file": ".npmrc",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "registry": "https://registry.npmjs.org/"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2225"
+  ],
+  "remediation": "Point `cafile` at the real CA bundle, or remove the setting and use the system store deliberately.",
+  "limitation": "It matches an empty `cafile` setting, which leaves the client with no trust anchor from that path in the parsed .npmrc; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

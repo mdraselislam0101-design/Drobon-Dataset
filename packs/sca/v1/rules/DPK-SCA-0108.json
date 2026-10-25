@@ -1,0 +1,87 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0108",
+  "title": "pnpm lockfile records a resolution as a tarball URL only",
+  "description": "pnpm-lock.yaml declares a pnpm resolution that records a tarball URL with no integrity value. Nothing in the lockfile ties the fetched archive to a digest, so a mirror or proxy can serve different bytes for the same file.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-494",
+  "category": "lockfile-integrity",
+  "ecosystems": [
+    "npm"
+  ],
+  "artifact": "pnpm-lock.yaml",
+  "parser": "yaml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "packages.*.resolution.tarball",
+    "valuePattern": "^https?://"
+  },
+  "tests": [
+    {
+      "file": "pnpm-lock.yaml",
+      "document": {
+        "lockfileVersion": "9.0",
+        "packages": {
+          "/left-pad@1.3.0": {
+            "resolution": {
+              "tarball": "https://registry.acme.example/left-pad-1.3.0.tgz"
+            }
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "pnpm-lock.yaml",
+      "document": {
+        "lockfileVersion": "9.0",
+        "packages": {
+          "/ms@2.1.3": {
+            "resolution": {
+              "tarball": "https://downloads.acme.example/ms-2.1.3.tgz"
+            }
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "pnpm-lock.yaml",
+      "document": {
+        "lockfileVersion": "9.0",
+        "packages": {
+          "/left-pad@1.3.0": {
+            "resolution": {
+              "integrity": "sha512-AAAA"
+            }
+          },
+          "/ms@2.1.3": {
+            "resolution": {
+              "integrity": "sha512-BBBB"
+            }
+          }
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "pnpm-lock.yaml",
+      "document": {
+        "lockfileVersion": "9.0",
+        "packages": {
+          "/acme-sdk@4.2.0": {
+            "resolution": {
+              "integrity": "sha512-CCCC"
+            }
+          }
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2245"
+  ],
+  "remediation": "Regenerate the lockfile so the resolution carries an integrity value from the registry.",
+  "limitation": "It matches a pnpm resolution that records a tarball URL with no integrity value in the parsed pnpm-lock.yaml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

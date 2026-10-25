@@ -1,0 +1,66 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0090",
+  "title": "Yarn publish token committed in the configuration",
+  "description": ".yarnrc.yml declares a registry token written directly into the checked-in Yarn configuration. Repository readers can publish as the token owner, and nothing expires the credential when a laptop or CI cache leaks.",
+  "severity": "HIGH",
+  "cwe": "CWE-798",
+  "category": "credential-in-config",
+  "ecosystems": [
+    "npm"
+  ],
+  "artifact": ".yarnrc.yml",
+  "parser": "yaml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "config.npmAuthToken",
+    "valuePattern": "^[A-Za-z0-9_-]{16,}$"
+  },
+  "tests": [
+    {
+      "file": ".yarnrc.yml",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "npmAuthToken": "npm_EXAMPLEEXAMPLEEXAMPLEEXAMPLE"
+        }
+      },
+      "match": true
+    },
+    {
+      "file": ".yarnrc.yml",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "npmAuthToken": "npm_EXAMPLESECONDEXAMPLEVALUE1234"
+        }
+      },
+      "match": true
+    },
+    {
+      "file": ".yarnrc.yml",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "npmAuthToken": "${NPM_AUTH_TOKEN}"
+        }
+      },
+      "match": false
+    },
+    {
+      "file": ".yarnrc.yml",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "npmRegistryServer": "https://registry.yarnpkg.com/"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2227"
+  ],
+  "remediation": "Reference an environment variable and keep the literal out of the file.",
+  "limitation": "It matches a registry token written directly into the checked-in Yarn configuration in the parsed .yarnrc.yml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

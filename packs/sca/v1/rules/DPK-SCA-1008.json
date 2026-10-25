@@ -1,0 +1,78 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-1008",
+  "title": "Individual gem source over cleartext",
+  "description": "Gemfile declares a per-gem `source` URL over cleartext. An artifact fetched over plain HTTP can be replaced in transit, so the bytes that install are not bound to what the author published. This rule reads a per-gem `source` URL over cleartext.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-319",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "rubygems"
+  ],
+  "artifact": "Gemfile",
+  "parser": "yaml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "gems[].source",
+    "valuePattern": "^http://"
+  },
+  "tests": [
+    {
+      "file": "Gemfile",
+      "document": {
+        "source": "https://rubygems.org",
+        "gems": [
+          {
+            "name": "acme-core",
+            "source": "http://gems.acme.example"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "Gemfile",
+      "document": {
+        "source": "https://rubygems.org",
+        "gems": [
+          {
+            "name": "acme-sdk",
+            "source": "http://10.24.8.9/gems"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "Gemfile",
+      "document": {
+        "source": "https://rubygems.org",
+        "gems": [
+          {
+            "name": "rails",
+            "source": "https://rubygems.org"
+          }
+        ]
+      },
+      "match": false
+    },
+    {
+      "file": "Gemfile",
+      "document": {
+        "source": "https://rubygems.org",
+        "gems": [
+          {
+            "name": "puma",
+            "requirement": "~> 6.4"
+          }
+        ]
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-3145"
+  ],
+  "remediation": "Use the HTTPS endpoint the registry publishes and keep the hostname in the configuration reviewable. Specifically: fix a per-gem `source` URL over cleartext.",
+  "limitation": "It matches a per-gem `source` URL over cleartext in the parsed Gemfile; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

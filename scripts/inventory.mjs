@@ -141,6 +141,7 @@ export function computeInventory() {
   const sast = countFiles('packs/sast/v1/rules');
   const secrets = countFiles('packs/secrets/v1/rules');
   const dast = countFiles('packs/dast/v1/rules');
+  const sca = countFiles('packs/sca/v1/rules');
   const advisory = advisoryIdentity();
   const evalCounts = evalCaseCounts();
   const requirements = readJson('docs/REQUIREMENTS_MATRIX.json').requirements ?? [];
@@ -169,7 +170,8 @@ export function computeInventory() {
       evalCasesTotal: evalCounts.total,
       evalCasesUnassessed: evalCounts.unassessed,
       lessons: countFiles('learning/lessons'),
-      packRules: sast + secrets + dast,
+      packRules: sast + secrets + dast + sca,
+      scaRules: sca,
       patterns: countFiles('knowledge/patterns'),
       providerVectors: (readJson('interop/provider-vectors.json').vectors ?? []).length,
       records: countFiles('knowledge/records'),

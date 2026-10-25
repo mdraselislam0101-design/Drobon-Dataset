@@ -1,0 +1,105 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0161",
+  "title": "Maven dependency resolved from the local system path",
+  "description": "pom.xml declares a dependency with `system` scope, which reads a jar straight from the build machine. The artifact comes from a path outside repository management, so no checksum, no provenance and no repository policy applies to it.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-829",
+  "category": "dependency-hygiene",
+  "ecosystems": [
+    "maven"
+  ],
+  "artifact": "pom.xml",
+  "parser": "xml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "project.dependencies[].scope",
+    "valuePattern": "^system$"
+  },
+  "tests": [
+    {
+      "file": "pom.xml",
+      "document": {
+        "project": {
+          "modelVersion": "4.0.0",
+          "groupId": "com.acme",
+          "artifactId": "demo-service",
+          "version": "1.4.0",
+          "dependencies": [
+            {
+              "groupId": "com.acme",
+              "artifactId": "legacy-driver",
+              "version": "1.0.0",
+              "scope": "system"
+            }
+          ]
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "pom.xml",
+      "document": {
+        "project": {
+          "modelVersion": "4.0.0",
+          "groupId": "com.acme",
+          "artifactId": "demo-service",
+          "version": "1.4.0",
+          "dependencies": [
+            {
+              "groupId": "com.acme",
+              "artifactId": "legacy-native",
+              "version": "2.1.0",
+              "scope": "system"
+            }
+          ]
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "pom.xml",
+      "document": {
+        "project": {
+          "modelVersion": "4.0.0",
+          "groupId": "com.acme",
+          "artifactId": "demo-service",
+          "version": "1.4.0",
+          "dependencies": [
+            {
+              "groupId": "com.acme",
+              "artifactId": "legacy-driver",
+              "version": "1.0.0",
+              "scope": "compile"
+            }
+          ]
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "pom.xml",
+      "document": {
+        "project": {
+          "modelVersion": "4.0.0",
+          "groupId": "com.acme",
+          "artifactId": "demo-service",
+          "version": "1.4.0",
+          "dependencies": [
+            {
+              "groupId": "com.acme",
+              "artifactId": "legacy-native",
+              "version": "2.1.0"
+            }
+          ]
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2298"
+  ],
+  "remediation": "Install the artifact into an internal repository and depend on the released coordinate.",
+  "limitation": "It matches a dependency with `system` scope, which reads a jar straight from the build machine in the parsed pom.xml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

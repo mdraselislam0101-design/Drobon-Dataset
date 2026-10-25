@@ -1,0 +1,81 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0154",
+  "title": "go.sum entry without a module hash",
+  "description": "go.sum declares a `go.sum` line that records no `h1:` hash. The module content is never verified against the checksum database for that line, so a proxy can serve different code under the same version.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-494",
+  "category": "supply-chain-integrity",
+  "ecosystems": [
+    "go"
+  ],
+  "artifact": "go.sum",
+  "parser": "lockfile-text",
+  "check": {
+    "type": "sca-entry-missing-field",
+    "path": "entries",
+    "field": "hash"
+  },
+  "tests": [
+    {
+      "file": "go.sum",
+      "document": {
+        "entries": [
+          {
+            "module": "github.com/acme/sdk",
+            "version": "v4.2.0"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "go.sum",
+      "document": {
+        "entries": [
+          {
+            "module": "github.com/acme/cli",
+            "version": "v2.1.0"
+          },
+          {
+            "module": "github.com/pkg/errors",
+            "version": "v0.9.1",
+            "hash": "h1:aaaa"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "go.sum",
+      "document": {
+        "entries": [
+          {
+            "module": "github.com/acme/sdk",
+            "version": "v4.2.0",
+            "hash": "h1:aaaa"
+          }
+        ]
+      },
+      "match": false
+    },
+    {
+      "file": "go.sum",
+      "document": {
+        "entries": [
+          {
+            "module": "github.com/acme/cli",
+            "version": "v2.1.0",
+            "hash": "h1:bbbb"
+          }
+        ]
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2291"
+  ],
+  "remediation": "Regenerate `go.sum` with `go mod tidy` and commit the hashes.",
+  "limitation": "It matches a `go.sum` line that records no `h1:` hash in the parsed go.sum; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

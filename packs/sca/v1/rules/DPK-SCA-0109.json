@@ -1,0 +1,98 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0109",
+  "title": "pnpm dependency resolved as a live directory link",
+  "description": "pnpm-lock.yaml declares an importer dependency that resolves to a `link:` path instead of a registry version. The dependency reads a live directory, so what compiles depends on the state of that path on the machine and is not frozen by the lockfile.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1104",
+  "category": "lockfile-integrity",
+  "ecosystems": [
+    "npm"
+  ],
+  "artifact": "pnpm-lock.yaml",
+  "parser": "yaml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "importers.*.dependencies.*.version",
+    "valuePattern": "^link:"
+  },
+  "tests": [
+    {
+      "file": "pnpm-lock.yaml",
+      "document": {
+        "lockfileVersion": "9.0",
+        "importers": {
+          ".": {
+            "dependencies": {
+              "acme-ui": {
+                "specifier": "workspace:*",
+                "version": "link:packages/ui"
+              }
+            }
+          }
+        },
+        "packages": {}
+      },
+      "match": true
+    },
+    {
+      "file": "pnpm-lock.yaml",
+      "document": {
+        "lockfileVersion": "9.0",
+        "importers": {
+          "apps/web": {
+            "dependencies": {
+              "acme-shared": {
+                "specifier": "workspace:^",
+                "version": "link:../../packages/shared"
+              }
+            }
+          }
+        },
+        "packages": {}
+      },
+      "match": true
+    },
+    {
+      "file": "pnpm-lock.yaml",
+      "document": {
+        "lockfileVersion": "9.0",
+        "importers": {
+          ".": {
+            "dependencies": {
+              "acme-ui": {
+                "specifier": "^2.3.1",
+                "version": "2.3.1"
+              }
+            }
+          }
+        },
+        "packages": {}
+      },
+      "match": false
+    },
+    {
+      "file": "pnpm-lock.yaml",
+      "document": {
+        "lockfileVersion": "9.0",
+        "importers": {
+          ".": {
+            "dependencies": {
+              "ms": {
+                "specifier": "^2.1.3",
+                "version": "2.1.3(react@18.2.0)"
+              }
+            }
+          }
+        },
+        "packages": {}
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2246"
+  ],
+  "remediation": "Depend on a published version for released builds, and keep links to development overrides.",
+  "limitation": "It matches an importer dependency that resolves to a `link:` path instead of a registry version in the parsed pnpm-lock.yaml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

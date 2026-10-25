@@ -1,0 +1,111 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0164",
+  "title": "Maven repository checksum failures ignored",
+  "description": "pom.xml declares a repository whose checksum policy is `ignore`. A corrupted or substituted artifact installs without any warning, which removes the one integrity check Maven performs.",
+  "severity": "HIGH",
+  "cwe": "CWE-345",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "maven"
+  ],
+  "artifact": "pom.xml",
+  "parser": "xml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "project.repositories[].releases.checksumPolicy",
+    "valuePattern": "^ignore$"
+  },
+  "tests": [
+    {
+      "file": "pom.xml",
+      "document": {
+        "project": {
+          "modelVersion": "4.0.0",
+          "groupId": "com.acme",
+          "artifactId": "demo-service",
+          "version": "1.4.0",
+          "dependencies": [],
+          "repositories": [
+            {
+              "id": "acme",
+              "url": "https://repo.acme.example/maven2",
+              "releases": {
+                "checksumPolicy": "ignore"
+              }
+            }
+          ]
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "pom.xml",
+      "document": {
+        "project": {
+          "modelVersion": "4.0.0",
+          "groupId": "com.acme",
+          "artifactId": "demo-service",
+          "version": "1.4.0",
+          "dependencies": [],
+          "repositories": [
+            {
+              "id": "mirror",
+              "url": "https://repo.acme.example/maven2",
+              "releases": {
+                "checksumPolicy": "ignore"
+              }
+            }
+          ]
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "pom.xml",
+      "document": {
+        "project": {
+          "modelVersion": "4.0.0",
+          "groupId": "com.acme",
+          "artifactId": "demo-service",
+          "version": "1.4.0",
+          "dependencies": [],
+          "repositories": [
+            {
+              "id": "acme",
+              "url": "https://repo.acme.example/maven2",
+              "releases": {
+                "checksumPolicy": "fail"
+              }
+            }
+          ]
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "pom.xml",
+      "document": {
+        "project": {
+          "modelVersion": "4.0.0",
+          "groupId": "com.acme",
+          "artifactId": "demo-service",
+          "version": "1.4.0",
+          "dependencies": [],
+          "repositories": [
+            {
+              "id": "central",
+              "url": "https://repo.maven.apache.org/maven2"
+            }
+          ]
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2301"
+  ],
+  "remediation": "Use the `fail` policy so a mismatch stops the build.",
+  "limitation": "It matches a repository whose checksum policy is `ignore` in the parsed pom.xml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

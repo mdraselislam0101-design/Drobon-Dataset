@@ -275,7 +275,7 @@ md.push('');
 md.push('- No user type has a live App consumer for these lenses; the file is a dataset artefact until the App');
 md.push('  gains an audience filter.');
 md.push('- A selected rule is not a verified finding: reachability measures whether the rule *can* fire, not');
-md.push('  whether it fires correctly. That is the eval corpus’s job (1,888 cases, TP 1,583, FN 0, FP 1).');
+md.push('  whether it fires correctly. That is the eval corpus’s job (4,718 cases, TP 4,041, FN 0, FP 1).');
 md.push('- SCA contributes zero rules to every lens because the SCA pack is still empty and blocked on the');
 md.push('  owner decision recorded in `DROBON_REMAINING_WORK.csv` (GAP-001, GAP-002).');
 md.push('');

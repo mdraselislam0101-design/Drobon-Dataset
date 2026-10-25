@@ -1,0 +1,100 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0681",
+  "title": "Every source may serve every package id",
+  "description": "nuget.config declares a nuget.config with no `<packageSourceMapping>`. A name or scope that resolves outside the project's intended registry is fetched from a source nobody reviewed, so a publish there becomes an install here. This rule reads a nuget.config with no `<packageSourceMapping>`.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-829",
+  "category": "dependency-confusion",
+  "ecosystems": [
+    "nuget"
+  ],
+  "artifact": "nuget.config",
+  "parser": "xml",
+  "check": {
+    "type": "sca-field-absent",
+    "path": "packageSourceMapping"
+  },
+  "tests": [
+    {
+      "file": "nuget.config",
+      "document": {
+        "sources": [
+          {
+            "key": "nuget.org",
+            "value": "https://api.nuget.org/v3/index.json"
+          }
+        ],
+        "config": {},
+        "settings": {}
+      },
+      "match": true
+    },
+    {
+      "file": "nuget.config",
+      "document": {
+        "sources": [],
+        "config": {},
+        "settings": {}
+      },
+      "match": true
+    },
+    {
+      "file": "nuget.config",
+      "document": {
+        "sources": [
+          {
+            "key": "nuget.org",
+            "value": "https://api.nuget.org/v3/index.json"
+          }
+        ],
+        "config": {},
+        "settings": {},
+        "packageSourceMapping": {
+          "packageSource": [
+            {
+              "key": "nuget.org",
+              "package": [
+                {
+                  "pattern": "*"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "nuget.config",
+      "document": {
+        "sources": [
+          {
+            "key": "nuget.org",
+            "value": "https://api.nuget.org/v3/index.json"
+          }
+        ],
+        "config": {},
+        "settings": {},
+        "packageSourceMapping": {
+          "packageSource": [
+            {
+              "key": "acme",
+              "package": [
+                {
+                  "pattern": "Acme.*"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2818"
+  ],
+  "remediation": "Point the declaration or the registry configuration at the namespace the project controls, and remove the lookup path that resolves elsewhere. Specifically: fix a nuget.config with no `<packageSourceMapping>`.",
+  "limitation": "It matches a nuget.config with no `<packageSourceMapping>` in the parsed nuget.config; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

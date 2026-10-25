@@ -1,0 +1,82 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0225",
+  "title": "Swift package dependency follows a branch",
+  "description": "Package.swift declares a package dependency whose requirement is a branch. The branch moves, so every resolve can pick a different commit while the manifest stays identical.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1104",
+  "category": "dependency-hygiene",
+  "ecosystems": [
+    "swift"
+  ],
+  "artifact": "Package.swift",
+  "parser": "lockfile-text",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "dependencies[].requirement.branch",
+    "valuePattern": "^[A-Za-z][A-Za-z0-9._/-]{0,60}$"
+  },
+  "tests": [
+    {
+      "file": "Package.swift",
+      "document": {
+        "dependencies": [
+          {
+            "url": "https://github.com/acme/sdk",
+            "requirement": {
+              "branch": "main"
+            }
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "Package.swift",
+      "document": {
+        "dependencies": [
+          {
+            "url": "https://github.com/acme/cli",
+            "requirement": {
+              "branch": "develop"
+            }
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "Package.swift",
+      "document": {
+        "dependencies": [
+          {
+            "url": "https://github.com/acme/sdk",
+            "requirement": {
+              "from": "4.2.0"
+            }
+          }
+        ]
+      },
+      "match": false
+    },
+    {
+      "file": "Package.swift",
+      "document": {
+        "dependencies": [
+          {
+            "url": "https://github.com/acme/cli",
+            "requirement": {
+              "exact": "2.1.0"
+            }
+          }
+        ]
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2362"
+  ],
+  "remediation": "Use a version requirement, and let `Package.resolved` pin the revision.",
+  "limitation": "It matches a package dependency whose requirement is a branch in the parsed Package.swift; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

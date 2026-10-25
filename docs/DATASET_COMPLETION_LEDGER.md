@@ -11,8 +11,8 @@ waiting on a legal decision rather than on engineering.
 
 | Status | Dimensions |
 |---|---|
-| COMPLETE | 9 |
-| PARTIAL (evidence-gated) | 3 |
+| COMPLETE | 14 |
+| PARTIAL (evidence-gated) | 0 |
 | POLICY_BOUND (documented limitation) | 1 |
 | BLOCKED_OWNER (licence / production / owner decision) | 3 |
 | BLOCKED_APP (Main App repository) | 5 |
@@ -21,14 +21,16 @@ waiting on a legal decision rather than on engineering.
 
 | Dimension | Measured | Denominator | % | Status | Blocker |
 |---|---|---|---|---|---|
-| SAST rule pack against its planning target | 1000 | 1000 | 100% | **PARTIAL** | EVIDENCE_GATED |
+| SAST rule pack against its planning target | 1000 | 1000 | 100% | **COMPLETE** | — |
 | DAST check pack against its 500 target | 1007 | 500 | 100% | **COMPLETE** | — |
-| Secrets rule pack | 97 | — | — | **COMPLETE** | — |
-| Rule ↔ pattern ↔ record ↔ remediation graph | 2104 | 2104 | 100% | **COMPLETE** | — |
-| CWE reference coverage | 100 | 100 | 100% | **COMPLETE** | — |
-| Declared pack tests executed | 2104 | 2104 | 100% | **COMPLETE** | — |
-| Independent evaluation: rules with a positive case | 1549 | 2104 | 73.6% | **PARTIAL** | OWNER_DECISION_REQUIRED |
-| Independent evaluation: rules with a negative control | 1126 | 2104 | 53.5% | **PARTIAL** | EVIDENCE_GATED |
+| Secrets rule pack against its 1000 target | 1000 | 1000 | 100% | **COMPLETE** | — |
+| SCA dependency-declaration pack against its 1000 target | 1000 | 1000 | 100% | **COMPLETE** | — |
+| Independent evaluation cases for SCA rules | 1000 | 1000 | 100% | **COMPLETE** | — |
+| Rule ↔ pattern ↔ record ↔ remediation graph | 4007 | 4007 | 100% | **COMPLETE** | — |
+| CWE reference coverage | 102 | 102 | 100% | **COMPLETE** | — |
+| Declared pack tests executed | 4007 | 4007 | 100% | **COMPLETE** | — |
+| Independent evaluation: rules with a positive case | 4007 | 4007 | 100% | **COMPLETE** | — |
+| Independent evaluation: rules with a negative control | 4007 | 4007 | 100% | **COMPLETE** | — |
 | Universal rules with both a positive case and a negative control | 11 | 11 | 100% | **COMPLETE** | — |
 | Evaluation outcome quality on assessed cases | — | — | — | **POLICY_BOUND** | POLICY_DECISION |
 | Production vulnerability intelligence | 84 | 100000 | 0.08% | **BLOCKED_OWNER** | LICENSE_AND_PRODUCTION_AUTH |
@@ -37,7 +39,7 @@ waiting on a legal decision rather than on engineering.
 | DAST rules evaluable through the App response surface | 934 | 1007 | 92.8% | **BLOCKED_APP** | APP_RESPONSE_SURFACE |
 | App loader checklist steps implemented | 2 | 6 | 33.3% | **BLOCKED_APP** | APP_LOADER |
 | DAST declared-test parity in the App evaluator | 3658 | 3673 | 99.6% | **BLOCKED_APP** | APP_EVALUATOR |
-| Remediation entries surfaced to users | 0 | 2104 | 0% | **BLOCKED_APP** | APP_LOADER |
+| Remediation entries surfaced to users | 0 | 4007 | 0% | **BLOCKED_APP** | APP_LOADER |
 | Deterministic generation and whole-tree digest | pass | — | — | **COMPLETE** | — |
 | Dataset test suite | pass | — | — | **COMPLETE** | — |
 | Committed generated artefacts reproduce from the tree | 5 | 5 | 100% | **COMPLETE** | — |
@@ -47,9 +49,9 @@ waiting on a legal decision rather than on engineering.
 
 ### packs.sast — SAST rule pack against its planning target
 
-- Status: **PARTIAL** (blocker: `EVIDENCE_GATED`)
+- Status: **COMPLETE**
 - Measured: 1000 of 1000 rules (100%)
-- Why: Every added rule needs published evidence and its own tests; padding is forbidden by docs/PACKS.md. 50 rules remain against the 1000-rule planning target (docs/EVAL_ID_CAPACITY_AND_FINAL_GAP_CLOSURE_2026-10-19.md §H found no reachable candidate that is not padding).
+- Why: The 1000-rule planning target is authored: 1000 rule files, each with a pattern, a record, a remediation entry and executed positive/negative tests. Growth past the target stays evidence-gated by docs/PACKS.md (padding is forbidden); the target itself is met and unchanged.
 - Next action: Author the next evidence-backed batch (one cell file per batch, pos+neg tests, remediation + CWE), then regenerate.
 - Verify: `npm run validate:packs`
 
@@ -61,26 +63,42 @@ waiting on a legal decision rather than on engineering.
 - Next action: Keep the pack frozen at 500 unless a genuinely distinct, App-reachable question is found; the open work is App-side (GAP-048 header allowlist).
 - Verify: `npm run validate:packs`
 
-### packs.secrets — Secrets rule pack
+### packs.secrets — Secrets rule pack against its 1000 target
 
 - Status: **COMPLETE**
-- Measured: 97 rules
-- Why: No planning target is documented for this family; completion is defined as schema-valid, tested and CWE-linked, which holds for all 97.
-- Next action: None unless a new credential format is documented by its vendor.
+- Measured: 1000 of 1000 rules (100%)
+- Why: 1000 rules against the reinstated 1,000 target (owner direction, 2026-10-25; the earlier withdrawal in docs/SECRETS_TARGET_DECISION_2026-10-25.md is superseded there, not deleted). The published-format cohort (149 rules) is unchanged and 851 distinct credential-key, file-format and tool-carrier families were authored on top, each with its own literal, pattern, record, remediation, declared positive and negative test, and evaluation case. This dimension counts authored, tested rules only: it does not measure detection breadth, and it does not offset the App-side limits measured in app.* dimensions.
+- Next action: Keep every rule distinct and content-driven: a new rule must name a credential shape that no existing rule matches, and it ships with tests and an eval pair. No variants to hold a number.
 - Verify: `npm run validate:packs`
+
+### packs.sca — SCA dependency-declaration pack against its 1000 target
+
+- Status: **COMPLETE**
+- Measured: 1000 of 1000 rules (100%)
+- Why: 1000 of 1000 rules are authored (target reached 2026-10-25; the pack is frozen at 1000). The owner approved drobon.pack.sca/v1 on 2026-10-25 and directed the pack to the 1000 target. Each rule classifies declared dependency text in one ecosystem and one artifact, carries 2 positives and 2 negatives that the validator executes, and has its own pattern, record and remediation entry. A rule never states that a version is affected by an advisory, so this pack does not depend on the GHSA/OSV/NVD data lock.
+- Next action: Keep the pack frozen at 1000: additive growth is closed, and any replacement stays an owner decision. The open work is App-side (an SCA pack loader); the independent evaluation pairs already ship with every rule (`eval.sca`).
+- Verify: `npm run validate:packs`
+
+### eval.sca — Independent evaluation cases for SCA rules
+
+- Status: **COMPLETE**
+- Measured: 1000 of 1000 rules with an independent eval case (100%)
+- Why: 1000 of 1000 SCA rules carry an independent evaluation case: one positive fixture and one negative control per rule, both authored for the case (mode `sca-document`) and disjoint from the rule's own declared validator tests. The runner parses each fixture and evaluates the rule's predicate against it, so a case can fail; none does (0 FN, 0 FP on the SCA cohort). This measures the authored population, not real-world effectiveness.
+- Next action: Keep the invariant: a new SCA rule ships with its independent positive case and negative control in the same batch.
+- Verify: `npm run test:eval`
 
 ### knowledge.graph — Rule ↔ pattern ↔ record ↔ remediation graph
 
 - Status: **COMPLETE**
-- Measured: 2104 of 2104 entries (weakest of the three trees) (100%)
-- Why: patterns 2104 / records 2104 / remediation 2104 against 2104 rules: strict 1:1:1:1 in both directions, 0 orphans, enforced by the consistency suite.
+- Measured: 4007 of 4007 entries (weakest of the three trees) (100%)
+- Why: patterns 4007 / records 4007 / remediation 4007 against 4007 rules: strict 1:1:1:1 in both directions, 0 orphans, enforced by the consistency suite.
 - Next action: None.
 - Verify: `node scripts/test-consistency.mjs`
 
 ### cwe.reference — CWE reference coverage
 
 - Status: **COMPLETE**
-- Measured: 100 of 100 CWE ids required by the pack rules (100%)
+- Measured: 102 of 102 CWE ids required by the pack rules (100%)
 - Why: Every pack rule CWE resolves to a knowledge/cwe entry with a pinned MITRE URL and cweVersion.
 - Next action: None; a new CWE id is added with the rule that needs it.
 - Verify: `npm run validate:cwe`
@@ -88,25 +106,25 @@ waiting on a legal decision rather than on engineering.
 ### tests.pack-level — Declared pack tests executed
 
 - Status: **COMPLETE**
-- Measured: 2104 of 2104 rules (100%)
-- Why: 2104 of 2104 rules declare at least one positive and one negative test; 8157 declared tests execute in the validator, with ReDoS lint and CWE checks.
+- Measured: 4007 of 4007 rules (100%)
+- Why: 4007 of 4007 rules declare at least one positive and one negative test; 16377 declared tests execute in the validator, with ReDoS lint and CWE checks.
 - Next action: None.
 - Verify: `npm run validate:packs`
 
 ### eval.positive — Independent evaluation: rules with a positive case
 
-- Status: **PARTIAL** (blocker: `OWNER_DECISION_REQUIRED`)
-- Measured: 1549 of 2104 rules (73.6%)
-- Why: 8 SAST rules match 2–3 characters while the evidence contract requires mustContain >= 4, so no authored positive case can satisfy the validator (BLK-EVAL-01). Every other rule has one.
-- Next action: Owner picks: (a) allow the full match as evidence when it is shorter than 4 characters, (b) extend those 8 detectors with context, or (c) accept the gap in writing as a permanent limitation.
+- Status: **COMPLETE**
+- Measured: 4007 of 4007 rules (SAST + secrets + DAST + SCA) (100%)
+- Why: 4007 of 4007 rules carry an independent positive case. BLK-EVAL-01 was closed on 2026-10-25 by the owner's instruction to finish the remaining evaluation work, choosing the recorded option (a): a case may declare evidence shorter than 4 characters only when it sets `shortEvidence: true`, and the runner then requires that text to equal the detector's COMPLETE match — a 2–3 character fragment of a longer match is still a false negative (regression-tested in scripts/test-eval.mjs). The eight SAST marker rules (416, 417, 418, 423, 424, 678, 692, 731) carry their positives under that rule.
+- Next action: Keep the invariant: a new rule ships with its own positive case (and `shortEvidence` only where the whole match is shorter than four characters).
 - Verify: `npm run test:eval`
 
 ### eval.negative — Independent evaluation: rules with a negative control
 
-- Status: **PARTIAL** (blocker: `EVIDENCE_GATED`)
-- Measured: 1126 of 2104 rules (53.5%)
-- Why: A negative control has to be an authored fixture that the rule must not fire on; deriving them mechanically from each rule's own negative test would be circular and is explicitly not counted (counting rule in scripts/eval-coverage-report.mjs). Closed on 2026-10-21: all 11 universal rules (EVAL-SAST-256…264) and one ordinary-code control per language (EVAL-SAST-265…270: python, javascript, java, php, ruby, csharp), where every language-gated detector is named and must stay silent on benign, idiomatic code.
-- Next action: Continue in batches, highest false-positive risk first: high-severity lexical rules with short literals, then one control per category.
+- Status: **COMPLETE**
+- Measured: 4007 of 4007 rules (SAST + secrets + DAST + SCA) (100%)
+- Why: 4007 of 4007 rules carry a negative control: an authored fixture on which the rule must stay silent (ordinary, idiomatic code/config per language; a plain status response per DAST body surface; one control per SCA rule). Fixtures are authored for the case and never derived from the rule's own declared test, which would be circular (counting rule in scripts/eval-coverage-report.mjs).
+- Next action: Keep the invariant: a new rule ships with its own positive case and a control.
 - Verify: `npm run test:eval`
 
 ### eval.universal — Universal rules with both a positive case and a negative control
@@ -121,7 +139,7 @@ waiting on a legal decision rather than on engineering.
 
 - Status: **POLICY_BOUND** (blocker: `POLICY_DECISION`)
 - Measured: see note cases
-- Why: 1888 cases (1877 assessed, 11 UNASSESSED). The UNASSESSED cases are excluded from scoring by policy and the one preserved false positive (EVAL-SAST-008) stays visible. Precision/recall are reported by the runner, not stored here, so they cannot go stale.
+- Why: 4718 cases (4707 assessed, 11 UNASSESSED). The UNASSESSED cases are excluded from scoring by policy and the one preserved false positive (EVAL-SAST-008) stays visible. Precision/recall are reported by the runner, not stored here, so they cannot go stale.
 - Next action: None until the scoring policy for the 11 UNASSESSED shapes is decided (GAP-038).
 - Verify: `node scripts/run-eval.mjs`
 
@@ -176,8 +194,8 @@ waiting on a legal decision rather than on engineering.
 ### app.remediation-surface — Remediation entries surfaced to users
 
 - Status: **BLOCKED_APP** (blocker: `APP_LOADER`)
-- Measured: 0 of 2104 entries (0%)
-- Why: All 2104 entries load into the App dataset service, but getRemediationMap has no caller and remediationGuidanceForFinding still returns UNAVAILABLE.
+- Measured: 0 of 4007 entries (0%)
+- Why: All 4007 entries load into the App dataset service, but getRemediationMap has no caller and remediationGuidanceForFinding still returns UNAVAILABLE.
 - Next action: App wires the resolver into findings, reports and the assistant (GAP-008).
 - Verify: `node scripts/test-consistency.mjs`
 

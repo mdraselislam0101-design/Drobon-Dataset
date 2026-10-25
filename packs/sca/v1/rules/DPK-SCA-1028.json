@@ -1,0 +1,123 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-1028",
+  "title": "Workspace dependency resolved from a local path",
+  "description": "Cargo.toml declares a `path` key inside a `[workspace.dependencies]` entry. A dependency resolved from a local path or a mutable branch is not the published artifact the rest of the project audits. This rule reads a `path` key inside a `[workspace.dependencies]` entry.",
+  "severity": "LOW",
+  "cwe": "CWE-1104",
+  "category": "local-source",
+  "ecosystems": [
+    "cargo"
+  ],
+  "artifact": "Cargo.toml",
+  "parser": "toml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "workspace.dependencies.*.path",
+    "valuePattern": "^.+$"
+  },
+  "tests": [
+    {
+      "file": "Cargo.toml",
+      "document": {
+        "package": {
+          "name": "demo-service",
+          "version": "0.1.0",
+          "license": "MIT"
+        },
+        "dependencies": {
+          "serde": {
+            "version": "1.0.210"
+          }
+        },
+        "patch": {},
+        "workspace": {
+          "dependencies": {
+            "serde": "1.0.210",
+            "acme-core": {
+              "path": "../acme-core"
+            }
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "Cargo.toml",
+      "document": {
+        "package": {
+          "name": "demo-service",
+          "version": "0.1.0",
+          "license": "MIT"
+        },
+        "dependencies": {
+          "serde": {
+            "version": "1.0.210"
+          }
+        },
+        "patch": {},
+        "workspace": {
+          "dependencies": {
+            "serde": "1.0.210",
+            "acme-sdk": {
+              "path": "crates/sdk"
+            }
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "Cargo.toml",
+      "document": {
+        "package": {
+          "name": "demo-service",
+          "version": "0.1.0",
+          "license": "MIT"
+        },
+        "dependencies": {
+          "serde": {
+            "version": "1.0.210"
+          }
+        },
+        "patch": {},
+        "workspace": {
+          "dependencies": {
+            "serde": "1.0.210"
+          }
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "Cargo.toml",
+      "document": {
+        "package": {
+          "name": "demo-service",
+          "version": "0.1.0",
+          "license": "MIT"
+        },
+        "dependencies": {
+          "serde": {
+            "version": "1.0.210"
+          }
+        },
+        "patch": {},
+        "workspace": {
+          "dependencies": {
+            "serde": "1.0.210",
+            "acme-core": {
+              "version": "4.2.0"
+            }
+          }
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-3165"
+  ],
+  "remediation": "Depend on a published, versioned artifact, and keep local paths or branch references out of the committed manifest. Specifically: fix a `path` key inside a `[workspace.dependencies]` entry.",
+  "limitation": "It matches a `path` key inside a `[workspace.dependencies]` entry in the parsed Cargo.toml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

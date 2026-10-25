@@ -1,0 +1,93 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0760",
+  "title": "Registry index addressed over SSH",
+  "description": ".cargo/config.toml declares an index URL that relies on SSH host trust. A dependency resolved from a local path or a mutable branch is not the published artifact the rest of the project audits. This rule reads an index URL that relies on SSH host trust.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-829",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "cargo"
+  ],
+  "artifact": ".cargo/config.toml",
+  "parser": "toml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "registries.*.index",
+    "valuePattern": "^ssh://"
+  },
+  "tests": [
+    {
+      "file": ".cargo/config.toml",
+      "document": {
+        "source": {
+          "crates-io": {
+            "replace-with": "acme"
+          }
+        },
+        "registries": {
+          "acme": {
+            "index": "ssh://git@git.acme.example/index"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": ".cargo/config.toml",
+      "document": {
+        "source": {
+          "crates-io": {
+            "replace-with": "acme"
+          }
+        },
+        "registries": {
+          "acme": {
+            "index": "https://registry.acme.example/index"
+          },
+          "internal": {
+            "index": "ssh://git@10.24.8.9/index"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": ".cargo/config.toml",
+      "document": {
+        "source": {
+          "crates-io": {
+            "replace-with": "acme"
+          }
+        },
+        "registries": {
+          "acme": {
+            "index": "https://registry.acme.example/index"
+          }
+        }
+      },
+      "match": false
+    },
+    {
+      "file": ".cargo/config.toml",
+      "document": {
+        "source": {
+          "crates-io": {
+            "replace-with": "acme"
+          }
+        },
+        "registries": {
+          "acme": {
+            "index": "https://registry.acme.example/index"
+          }
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2897"
+  ],
+  "remediation": "Depend on a published, versioned artifact, and keep local paths or branch references out of the committed manifest. Specifically: fix an index URL that relies on SSH host trust.",
+  "limitation": "It matches an index URL that relies on SSH host trust in the parsed .cargo/config.toml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0985",
+  "title": "Resolved pin whose revision is not a full SHA",
+  "description": "Package.resolved declares a pin whose revision is shorter than 40 hex characters. Without a recorded digest the downloaded artifact cannot be checked against what was reviewed, so substitution is undetectable at install time. This rule reads a pin whose revision is shorter than 40 hex characters.",
+  "severity": "LOW",
+  "cwe": "CWE-494",
+  "category": "lockfile-integrity",
+  "ecosystems": [
+    "swift"
+  ],
+  "artifact": "Package.resolved",
+  "parser": "json",
+  "check": {
+    "type": "sca-field-not-matches",
+    "path": "pins[].state.revision",
+    "valuePattern": "^[0-9a-f]{40}$"
+  },
+  "tests": [
+    {
+      "file": "Package.resolved",
+      "document": {
+        "pins": [
+          {
+            "identity": "sdk",
+            "location": "https://github.com/acme/sdk",
+            "state": {
+              "revision": "9f2c3d4e"
+            }
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "Package.resolved",
+      "document": {
+        "pins": [
+          {
+            "identity": "core",
+            "location": "https://github.com/acme/core",
+            "state": {
+              "revision": "a1b2"
+            }
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "Package.resolved",
+      "document": {
+        "pins": [
+          {
+            "identity": "sdk",
+            "location": "https://github.com/acme/sdk",
+            "state": {
+              "revision": "9f2c3d4e5f60718293a4b5c6d7e8f90123456789"
+            }
+          }
+        ]
+      },
+      "match": false
+    },
+    {
+      "file": "Package.resolved",
+      "document": {
+        "pins": [
+          {
+            "identity": "core",
+            "location": "https://github.com/acme/core",
+            "state": {
+              "revision": "abcdef0123456789abcdef0123456789abcdef01"
+            }
+          }
+        ]
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-3122"
+  ],
+  "remediation": "Regenerate the artifact with integrity data enabled and commit the recorded digest or checksum. Specifically: fix a pin whose revision is shorter than 40 hex characters.",
+  "limitation": "It matches a pin whose revision is shorter than 40 hex characters in the parsed Package.resolved; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

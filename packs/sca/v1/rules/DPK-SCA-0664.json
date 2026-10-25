@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0664",
+  "title": "Workspace includes a module from outside the repository",
+  "description": "go.work declares a go.work `use` directive that reaches outside the workspace root. A dependency resolved from a local path or a mutable branch is not the published artifact the rest of the project audits. This rule reads a go.work `use` directive that reaches outside the workspace root.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1104",
+  "category": "dependency-hygiene",
+  "ecosystems": [
+    "go"
+  ],
+  "artifact": "go.work",
+  "parser": "lockfile-text",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "use[]",
+    "valuePattern": "^\\.\\./"
+  },
+  "tests": [
+    {
+      "file": "go.work",
+      "document": {
+        "go": "1.22",
+        "use": [
+          "../shared",
+          "./service"
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "go.work",
+      "document": {
+        "go": "1.22",
+        "use": [
+          "../third-party/core"
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "go.work",
+      "document": {
+        "go": "1.22",
+        "use": [
+          "./service",
+          "./shared"
+        ]
+      },
+      "match": false
+    },
+    {
+      "file": "go.work",
+      "document": {
+        "go": "1.22",
+        "use": [
+          "./apps/api"
+        ]
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2801"
+  ],
+  "remediation": "Depend on a published, versioned artifact, and keep local paths or branch references out of the committed manifest. Specifically: fix a go.work `use` directive that reaches outside the workspace root.",
+  "limitation": "It matches a go.work `use` directive that reaches outside the workspace root in the parsed go.work; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

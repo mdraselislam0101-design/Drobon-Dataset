@@ -1,0 +1,66 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0076",
+  "title": "Registry password stored in the client configuration",
+  "description": ".npmrc declares a registry password written directly into the checked-in client configuration. The credential is readable by everyone who can read the repository or a build log that echoes the file, and it cannot be scoped or expired like a token.",
+  "severity": "HIGH",
+  "cwe": "CWE-798",
+  "category": "credential-in-config",
+  "ecosystems": [
+    "npm"
+  ],
+  "artifact": ".npmrc",
+  "parser": "ini",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "config._password",
+    "valuePattern": "^[A-Za-z0-9+/=._-]{12,}$"
+  },
+  "tests": [
+    {
+      "file": ".npmrc",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "_password": "EXAMPLESECRETPASSWORD01"
+        }
+      },
+      "match": true
+    },
+    {
+      "file": ".npmrc",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "_password": "EXAMPLESECONDPASSWORD1234"
+        }
+      },
+      "match": true
+    },
+    {
+      "file": ".npmrc",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "_password": "${NPM_PASSWORD}"
+        }
+      },
+      "match": false
+    },
+    {
+      "file": ".npmrc",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "registry": "https://registry.npmjs.org/"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2213"
+  ],
+  "remediation": "Use a scoped automation token read from the environment, and rotate the password.",
+  "limitation": "It matches a registry password written directly into the checked-in client configuration in the parsed .npmrc; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

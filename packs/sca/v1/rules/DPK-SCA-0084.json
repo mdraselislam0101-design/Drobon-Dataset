@@ -1,0 +1,66 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0084",
+  "title": "HTTPS registry traffic tunnelled through a cleartext proxy URL",
+  "description": ".npmrc declares an `https-proxy` setting that itself uses cleartext http. The CONNECT tunnel is set up over an unprotected hop, so the proxy identity is unverified and the path can be redirected.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-319",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "npm"
+  ],
+  "artifact": ".npmrc",
+  "parser": "ini",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "config.https-proxy",
+    "valuePattern": "^http://"
+  },
+  "tests": [
+    {
+      "file": ".npmrc",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "https-proxy": "http://proxy.acme.example:3128/"
+        }
+      },
+      "match": true
+    },
+    {
+      "file": ".npmrc",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "https-proxy": "http://10.0.0.7:8080/"
+        }
+      },
+      "match": true
+    },
+    {
+      "file": ".npmrc",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "https-proxy": "https://proxy.acme.example:8443/"
+        }
+      },
+      "match": false
+    },
+    {
+      "file": ".npmrc",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "registry": "https://registry.npmjs.org/"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2221"
+  ],
+  "remediation": "Point `https-proxy` at an https endpoint whose certificate the client validates.",
+  "limitation": "It matches an `https-proxy` setting that itself uses cleartext http in the parsed .npmrc; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

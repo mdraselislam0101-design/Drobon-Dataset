@@ -1,0 +1,77 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0193",
+  "title": "Cargo replaces a registry with another source",
+  "description": "Cargo.toml declares a `replace-with` rule that redirects a registry to another source. Every crate from the replaced registry resolves through a different index, so its publication controls apply instead of the public registry's.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1104",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "cargo"
+  ],
+  "artifact": "Cargo.toml",
+  "parser": "toml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "source.*.replace-with",
+    "valuePattern": "^[a-z0-9_-]{2,40}$"
+  },
+  "tests": [
+    {
+      "file": "Cargo.toml",
+      "document": {
+        "package": {
+          "name": "demo-service"
+        },
+        "source": {
+          "crates-io": {
+            "replace-with": "acme-mirror"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "Cargo.toml",
+      "document": {
+        "package": {
+          "name": "demo-service"
+        },
+        "source": {
+          "acme-mirror": {
+            "replace-with": "acme-fallback"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "Cargo.toml",
+      "document": {
+        "package": {
+          "name": "demo-service"
+        },
+        "source": {
+          "acme-mirror": {
+            "registry": "https://mirror.acme.example/index"
+          }
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "Cargo.toml",
+      "document": {
+        "package": {
+          "name": "demo-service"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2330"
+  ],
+  "remediation": "Document the mirror and serve it with a verified index, or remove the replacement.",
+  "limitation": "It matches a `replace-with` rule that redirects a registry to another source in the parsed Cargo.toml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

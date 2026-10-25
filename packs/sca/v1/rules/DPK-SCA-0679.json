@@ -1,0 +1,108 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0679",
+  "title": "Machine-level sources stay active beside the repository list",
+  "description": "nuget.config declares a nuget.config whose `<packageSources>` block never clears inherited sources. A name or scope that resolves outside the project's intended registry is fetched from a source nobody reviewed, so a publish there becomes an install here. This rule reads a nuget.config whose `<packageSources>` block never clears inherited sources.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-829",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "nuget"
+  ],
+  "artifact": "nuget.config",
+  "parser": "xml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "packageSources.clear",
+    "valuePattern": "^false$"
+  },
+  "tests": [
+    {
+      "file": "nuget.config",
+      "document": {
+        "sources": [
+          {
+            "key": "nuget.org",
+            "value": "https://api.nuget.org/v3/index.json"
+          }
+        ],
+        "config": {},
+        "settings": {},
+        "packageSources": {
+          "clear": false,
+          "add": [
+            {
+              "key": "nuget.org",
+              "value": "https://api.nuget.org/v3/index.json"
+            }
+          ]
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "nuget.config",
+      "document": {
+        "sources": [
+          {
+            "key": "nuget.org",
+            "value": "https://api.nuget.org/v3/index.json"
+          }
+        ],
+        "config": {},
+        "settings": {},
+        "packageSources": {
+          "clear": "false",
+          "add": []
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "nuget.config",
+      "document": {
+        "sources": [
+          {
+            "key": "nuget.org",
+            "value": "https://api.nuget.org/v3/index.json"
+          }
+        ],
+        "config": {},
+        "settings": {},
+        "packageSources": {
+          "clear": true,
+          "add": [
+            {
+              "key": "nuget.org",
+              "value": "https://api.nuget.org/v3/index.json"
+            }
+          ]
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "nuget.config",
+      "document": {
+        "sources": [
+          {
+            "key": "nuget.org",
+            "value": "https://api.nuget.org/v3/index.json"
+          }
+        ],
+        "config": {},
+        "settings": {},
+        "packageSources": {
+          "clear": "true",
+          "add": []
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2816"
+  ],
+  "remediation": "Point the declaration or the registry configuration at the namespace the project controls, and remove the lookup path that resolves elsewhere. Specifically: fix a nuget.config whose `<packageSources>` block never clears inherited sources.",
+  "limitation": "It matches a nuget.config whose `<packageSources>` block never clears inherited sources in the parsed nuget.config; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

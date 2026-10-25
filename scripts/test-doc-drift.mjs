@@ -50,6 +50,7 @@ const computed = {
   sast: countFiles('packs/sast/v1/rules'),
   secrets: countFiles('packs/secrets/v1/rules'),
   dast: countFiles('packs/dast/v1/rules'),
+  sca: countFiles('packs/sca/v1/rules'),
   patterns: countFiles('knowledge/patterns'),
   records: countFiles('knowledge/records'),
   remediation: countFiles('knowledge/remediation'),
@@ -60,7 +61,7 @@ const computed = {
   advisoryFiles: countFiles('vuln-intel/npm') + countFiles('vuln-intel/pypi'),
   fixtures: countFiles('vuln-intel/npm/samples') + countFiles('vuln-intel/pypi/samples'),
 };
-computed.packs = computed.sast + computed.secrets + computed.dast;
+computed.packs = computed.sast + computed.secrets + computed.dast + computed.sca;
 
 // advisory identity items: (id, ecosystem, package) tuples
 const identityTuples = new Set();
@@ -87,13 +88,14 @@ computed.advisoryIds = advisoryIds.size;
   const rFiles = num(/(\d+) reviewed GHSA seed records/, 'ghsa files');
   assert(rFiles.found && rFiles.value === computed.advisoryFiles,
     `README: GHSA seed record files = ${computed.advisoryFiles}`, `got ${rFiles.value}`);
-  const m = /(\d+) pack rules\** \((\d+) SAST \+ (\d+) secrets \+ (\d+) DAST\)/.exec(readme);
+  const m = /(\d+) pack rules\** \((\d+) SAST \+ (\d+) secrets \+ (\d+) DAST \+ (\d+) SCA\)/.exec(readme);
   assert(m !== null
     && Number(m[1]) === computed.packs
     && Number(m[2]) === computed.sast
     && Number(m[3]) === computed.secrets
-    && Number(m[4]) === computed.dast,
-    `README: pack rules = ${computed.packs} (${computed.sast}+${computed.secrets}+${computed.dast})`,
+    && Number(m[4]) === computed.dast
+    && Number(m[5]) === computed.sca,
+    `README: pack rules = ${computed.packs} (${computed.sast}+${computed.secrets}+${computed.dast}+${computed.sca})`,
     m === null ? 'pattern missing' : m[0]);
   const rRem = num(/(\d+) remediation entries/, 'remediation');
   assert(rRem.found && rRem.value === computed.remediation,
@@ -162,9 +164,9 @@ computed.advisoryIds = advisoryIds.size;
   assert(m3 !== null && Number(m3[1]) === computed.sast,
     `capability-coverage: sast rules = ${computed.sast}`, m3?.[0] ?? 'pattern missing');
   const sca = read('docs/SCA_RULE_SCHEMA_PROPOSAL.md');
-  const m4 = /SCA 0 = \*\*(\d+)\*\* rule packs/.exec(sca);
-  assert(m4 !== null && Number(m4[1]) === computed.sast + computed.dast,
-    `sca-proposal: rule-pack total = ${computed.sast + computed.dast}`, m4?.[0] ?? 'pattern missing');
+  const m4 = /sca-pack: implemented = (\d+) rules/.exec(sca);
+  assert(m4 !== null && Number(m4[1]) === computed.sca,
+    `sca-schema: implemented rules = ${computed.sca}`, m4?.[0] ?? 'pattern missing');
 }
 
 // --- 4. REQUIREMENTS_MATRIX inventory ---------------------------------------
@@ -354,15 +356,20 @@ if (existsSync(join(ROOT, 'DROBON_COVERAGE_EVIDENCE.json'))) {
     ? readdirSync(join(ROOT, dir)).filter((f) => re.test(f)).length : 0;
   const claims = [
     ['sast rules', countFiles('packs/sast/v1/rules', /^DPK-.*\.json$/), 1000],
-    ['secrets rules', countFiles('packs/secrets/v1/rules', /^DPK-.*\.json$/), 97],
+    // Secrets 97 -> 129 -> 149 -> 1,000 re-pinned 2026-10-25: the 149 published-format rules
+    // are unchanged and 851 distinct credential-key, file-format and tool-carrier families were
+    // authored on top (owner direction reinstating the 1,000 target,
+    // docs/SECRETS_TARGET_DECISION_2026-10-25.md "Superseded"). Knowledge trees 3,156 -> 4,007.
+    ['secrets rules', countFiles('packs/secrets/v1/rules', /^DPK-.*\.json$/), 1000],
     // Audit claims re-pinned 2026-10-21: DAST 306 -> 325 -> 367 -> 398 -> 500, knowledge trees
     // 1353 -> 1372 -> 1445 -> 1557 after app-surface batches 3, 4, 5 and 6. The pin is the *claim being audited*, so it moves only
     // when the tree moves and the ledger is updated in the same commit.
     ['dast rules', countFiles('packs/dast/v1/rules', /^DPK-.*\.json$/), 1007],
-    ['patterns', countFiles('knowledge/patterns', /^DPK-PAT-.*\.json$/), 2104],
-    ['records', countFiles('knowledge/records', /^DPK-REC-.*\.json$/), 2104],
-    ['remediation', countFiles('knowledge/remediation', /^DPK-.*\.json$/), 2104],
-    ['cwe', countFiles('knowledge/cwe', /\.json$/), 100],
+    ['sca rules', countFiles('packs/sca/v1/rules', /^DPK-.*\.json$/), 1000],
+    ['patterns', countFiles('knowledge/patterns', /^DPK-PAT-.*\.json$/), 4007],
+    ['records', countFiles('knowledge/records', /^DPK-REC-.*\.json$/), 4007],
+    ['remediation', countFiles('knowledge/remediation', /^DPK-.*\.json$/), 4007],
+    ['cwe', countFiles('knowledge/cwe', /\.json$/), 102],
     ['lessons', countFiles('learning/lessons', /\.json$/), 6],
     ['templates', countFiles('assessments/templates', /\.json$/), 3],
     ['engagements', countFiles('engagements', /\.json$/), 2],

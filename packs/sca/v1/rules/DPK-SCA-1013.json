@@ -1,0 +1,114 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-1013",
+  "title": "Project dependency pulls a named extra",
+  "description": "pyproject.toml declares a requirement with an `[extra]` selector. A name or scope that resolves outside the project's intended registry is fetched from a source nobody reviewed, so a publish there becomes an install here. This rule reads a requirement with an `[extra]` selector.",
+  "severity": "LOW",
+  "cwe": "CWE-829",
+  "category": "dependency-confusion",
+  "ecosystems": [
+    "pypi"
+  ],
+  "artifact": "pyproject.toml",
+  "parser": "toml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "project.dependencies[]",
+    "valuePattern": "\\[\\s*[a-z-]+"
+  },
+  "tests": [
+    {
+      "file": "pyproject.toml",
+      "document": {
+        "project": {
+          "name": "demo-service",
+          "version": "1.4.0",
+          "dependencies": [
+            "acme-sdk[dev]==4.2.0"
+          ],
+          "license": {
+            "text": "MIT"
+          }
+        },
+        "build-system": {
+          "requires": [
+            "setuptools==75.1.0"
+          ],
+          "build-backend": "setuptools.build_meta"
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "pyproject.toml",
+      "document": {
+        "project": {
+          "name": "demo-service",
+          "version": "1.4.0",
+          "dependencies": [
+            "acme-core[security]==1.4.2"
+          ],
+          "license": {
+            "text": "MIT"
+          }
+        },
+        "build-system": {
+          "requires": [
+            "setuptools==75.1.0"
+          ],
+          "build-backend": "setuptools.build_meta"
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "pyproject.toml",
+      "document": {
+        "project": {
+          "name": "demo-service",
+          "version": "1.4.0",
+          "dependencies": [
+            "acme-sdk==4.2.0"
+          ],
+          "license": {
+            "text": "MIT"
+          }
+        },
+        "build-system": {
+          "requires": [
+            "setuptools==75.1.0"
+          ],
+          "build-backend": "setuptools.build_meta"
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "pyproject.toml",
+      "document": {
+        "project": {
+          "name": "demo-service",
+          "version": "1.4.0",
+          "dependencies": [
+            "requests==2.32.3"
+          ],
+          "license": {
+            "text": "MIT"
+          }
+        },
+        "build-system": {
+          "requires": [
+            "setuptools==75.1.0"
+          ],
+          "build-backend": "setuptools.build_meta"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-3150"
+  ],
+  "remediation": "Point the declaration or the registry configuration at the namespace the project controls, and remove the lookup path that resolves elsewhere. Specifically: fix a requirement with an `[extra]` selector.",
+  "limitation": "It matches a requirement with an `[extra]` selector in the parsed pyproject.toml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

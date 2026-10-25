@@ -9,6 +9,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { evalDastCheck } from './validate-packs.mjs';
+import { evaluateScaCheck } from './sca-rule-engine.mjs';
 import { PATTERN_SCHEMA, RECORD_SCHEMA, validatePattern, validateRecord } from './validate-assets.mjs';
 
 const ROOT = resolve(new URL('.', import.meta.url).pathname, '..');
@@ -38,7 +39,7 @@ function loadJson(file) {
 
 const patternFiles = collectJsonFiles(join(ROOT, 'knowledge', 'patterns'));
 const recordFiles = collectJsonFiles(join(ROOT, 'knowledge', 'records'));
-const ruleFiles = ['sast', 'secrets', 'dast'].flatMap((kind) =>
+const ruleFiles = ['sast', 'secrets', 'dast', 'sca'].flatMap((kind) =>
   collectJsonFiles(join(ROOT, 'packs', kind, 'v1', 'rules')),
 );
 const patterns = new Map(patternFiles.map((file) => [loadJson(file).id, { file, record: loadJson(file) }]));
@@ -123,14 +124,22 @@ for (const [id, { record }] of patterns) {
       });
     }
   } else if (record.signal?.kind === 'check') {
+    const scaCheck = typeof record.signal.check?.type === 'string' && record.signal.check.type.startsWith('sca-');
     examples.forEach((entry, index) => {
-      if (typeof entry.observation !== 'object' || entry.observation === null) {
+      if (scaCheck) {
+        if (typeof entry.document !== 'object' || entry.document === null) {
+          mismatches.push(`examples[${index}]: sca example needs a parsed document`);
+          return;
+        }
+      } else if (typeof entry.observation !== 'object' || entry.observation === null) {
         mismatches.push(`examples[${index}]: check-kind example needs an observation`);
         return;
       }
       let actual = null;
       try {
-        actual = evalDastCheck(record.signal.check, entry.observation);
+        actual = scaCheck
+          ? evaluateScaCheck(record.signal.check, { file: entry.file, document: entry.document })
+          : evalDastCheck(record.signal.check, entry.observation);
       } catch (err) {
         mismatches.push(`examples[${index}]: check threw: ${err.message}`);
         return;

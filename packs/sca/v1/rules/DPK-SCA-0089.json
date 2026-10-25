@@ -1,0 +1,66 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0089",
+  "title": "Yarn registry configured over cleartext",
+  "description": ".yarnrc.yml declares a Yarn registry URL that uses cleartext http. Packages and authentication headers cross the network unencrypted, so a network attacker can substitute the tarball the lockfile recorded.",
+  "severity": "HIGH",
+  "cwe": "CWE-319",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "npm"
+  ],
+  "artifact": ".yarnrc.yml",
+  "parser": "yaml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "config.npmRegistryServer",
+    "valuePattern": "^http://"
+  },
+  "tests": [
+    {
+      "file": ".yarnrc.yml",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "npmRegistryServer": "http://npm.acme.example/"
+        }
+      },
+      "match": true
+    },
+    {
+      "file": ".yarnrc.yml",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "npmRegistryServer": "http://10.24.8.9:4873/"
+        }
+      },
+      "match": true
+    },
+    {
+      "file": ".yarnrc.yml",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "npmRegistryServer": "https://registry.yarnpkg.com/"
+        }
+      },
+      "match": false
+    },
+    {
+      "file": ".yarnrc.yml",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "npmRegistryServer": "https://npm.acme.example/"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2226"
+  ],
+  "remediation": "Point `npmRegistryServer` at an https endpoint with a valid certificate.",
+  "limitation": "It matches a Yarn registry URL that uses cleartext http in the parsed .yarnrc.yml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

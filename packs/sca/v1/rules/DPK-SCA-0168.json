@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0168",
+  "title": "Maven mirror takes over every repository",
+  "description": "settings.xml declares a mirror with `mirrorOf` set to `*`. All declared repositories, including reviewed internal ones, resolve through one mirror, so its publication controls become the only control.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1104",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "maven"
+  ],
+  "artifact": "settings.xml",
+  "parser": "xml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "settings.mirrors[].mirrorOf",
+    "valuePattern": "^\\*$"
+  },
+  "tests": [
+    {
+      "file": "settings.xml",
+      "document": {
+        "settings": {
+          "mirrors": [
+            {
+              "id": "corp",
+              "mirrorOf": "*",
+              "url": "https://nexus.acme.example/repository/maven-public"
+            }
+          ]
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "settings.xml",
+      "document": {
+        "settings": {
+          "mirrors": [
+            {
+              "id": "single",
+              "mirrorOf": "*",
+              "url": "https://mirror.acme.example/maven2"
+            }
+          ]
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "settings.xml",
+      "document": {
+        "settings": {
+          "mirrors": [
+            {
+              "id": "central",
+              "mirrorOf": "central",
+              "url": "https://nexus.acme.example/repository/maven-public"
+            }
+          ]
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "settings.xml",
+      "document": {
+        "settings": {
+          "mirrors": [
+            {
+              "id": "internal",
+              "mirrorOf": "*,!internal-releases",
+              "url": "https://nexus.acme.example/repository/maven-public"
+            }
+          ]
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2305"
+  ],
+  "remediation": "Mirror specific repositories and leave the others explicit.",
+  "limitation": "It matches a mirror with `mirrorOf` set to `*` in the parsed settings.xml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

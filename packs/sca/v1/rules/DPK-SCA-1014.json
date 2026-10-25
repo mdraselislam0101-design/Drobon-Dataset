@@ -1,0 +1,103 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-1014",
+  "title": "Test extra declared in the distribution metadata",
+  "description": "setup.cfg declares an `extras_require` entry named `test`. A name or scope that resolves outside the project's intended registry is fetched from a source nobody reviewed, so a publish there becomes an install here. This rule reads an `extras_require` entry named `test`.",
+  "severity": "LOW",
+  "cwe": "CWE-829",
+  "category": "dependency-confusion",
+  "ecosystems": [
+    "pypi"
+  ],
+  "artifact": "setup.cfg",
+  "parser": "ini",
+  "check": {
+    "type": "sca-key-matches",
+    "path": "options.extras_require",
+    "keyPattern": "^test$"
+  },
+  "tests": [
+    {
+      "file": "setup.cfg",
+      "document": {
+        "metadata": {
+          "name": "demo-service",
+          "version": "1.4.0"
+        },
+        "options": {
+          "install_requires": [
+            "requests==2.32.3"
+          ],
+          "extras_require": {
+            "test": [
+              "pytest==8.3.3"
+            ]
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "setup.cfg",
+      "document": {
+        "metadata": {
+          "name": "demo-service",
+          "version": "1.4.0"
+        },
+        "options": {
+          "install_requires": [
+            "requests==2.32.3"
+          ],
+          "extras_require": {
+            "test": [
+              "pytest==8.3.3",
+              "coverage==7.6.1"
+            ]
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "setup.cfg",
+      "document": {
+        "metadata": {
+          "name": "demo-service",
+          "version": "1.4.0"
+        },
+        "options": {
+          "install_requires": [
+            "requests==2.32.3"
+          ],
+          "extras_require": {
+            "security": [
+              "cryptography==43.0.1"
+            ]
+          }
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "setup.cfg",
+      "document": {
+        "metadata": {
+          "name": "demo-service",
+          "version": "1.4.0"
+        },
+        "options": {
+          "install_requires": [
+            "requests==2.32.3"
+          ],
+          "extras_require": {}
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-3151"
+  ],
+  "remediation": "Point the declaration or the registry configuration at the namespace the project controls, and remove the lookup path that resolves elsewhere. Specifically: fix an `extras_require` entry named `test`.",
+  "limitation": "It matches an `extras_require` entry named `test` in the parsed setup.cfg; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

@@ -1,0 +1,74 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0220",
+  "title": "Dart dependency fetched from a git remote",
+  "description": "pubspec.yaml declares a pubspec dependency sourced from git. The code sits outside pub.dev's publication controls, so the hosted checksum model does not apply to it.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-829",
+  "category": "dependency-hygiene",
+  "ecosystems": [
+    "pub"
+  ],
+  "artifact": "pubspec.yaml",
+  "parser": "yaml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "dependencies.*.git.url",
+    "valuePattern": "^https?://"
+  },
+  "tests": [
+    {
+      "file": "pubspec.yaml",
+      "document": {
+        "dependencies": {
+          "acme_sdk": {
+            "git": {
+              "url": "https://github.com/acme/sdk.git",
+              "ref": "9f2c4a1"
+            }
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "pubspec.yaml",
+      "document": {
+        "dependencies": {
+          "acme_cli": {
+            "git": {
+              "url": "https://github.com/acme/cli.git",
+              "path": "packages/cli"
+            }
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "pubspec.yaml",
+      "document": {
+        "dependencies": {
+          "http": "^1.2.0"
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "pubspec.yaml",
+      "document": {
+        "dependencies": {
+          "acme_sdk": {
+            "hosted": "https://pub.acme.example"
+          }
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2357"
+  ],
+  "remediation": "Publish the package and depend on the hosted version.",
+  "limitation": "It matches a pubspec dependency sourced from git in the parsed pubspec.yaml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

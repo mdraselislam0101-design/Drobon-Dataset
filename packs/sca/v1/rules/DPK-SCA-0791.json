@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0791",
+  "title": "npm registry configured over cleartext",
+  "description": ".npmrc declares a `registry` URL over cleartext. An artifact fetched over plain HTTP can be replaced in transit, so the bytes that install are not bound to what the author published. This rule reads a `registry` URL over cleartext.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-319",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "npm"
+  ],
+  "artifact": ".npmrc",
+  "parser": "ini",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "registry",
+    "valuePattern": "^http://"
+  },
+  "tests": [
+    {
+      "file": ".npmrc",
+      "document": {
+        "registry": "http://registry.acme.example",
+        "strict-ssl": "true",
+        "audit": "true",
+        "fund": "true",
+        "save-exact": "true"
+      },
+      "match": true
+    },
+    {
+      "file": ".npmrc",
+      "document": {
+        "registry": "http://10.24.8.9:4873",
+        "strict-ssl": "true",
+        "audit": "true",
+        "fund": "true",
+        "save-exact": "true"
+      },
+      "match": true
+    },
+    {
+      "file": ".npmrc",
+      "document": {
+        "registry": "https://registry.npmjs.org",
+        "strict-ssl": "true",
+        "audit": "true",
+        "fund": "true",
+        "save-exact": "true"
+      },
+      "match": false
+    },
+    {
+      "file": ".npmrc",
+      "document": {
+        "registry": "https://registry.acme.example",
+        "strict-ssl": "true",
+        "audit": "true",
+        "fund": "true",
+        "save-exact": "true"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2928"
+  ],
+  "remediation": "Use the HTTPS endpoint the registry publishes and keep the hostname in the configuration reviewable. Specifically: fix a `registry` URL over cleartext.",
+  "limitation": "It matches a `registry` URL over cleartext in the parsed .npmrc; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

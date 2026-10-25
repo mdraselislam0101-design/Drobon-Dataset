@@ -1,0 +1,124 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0667",
+  "title": "Profile adds a cleartext repository",
+  "description": "settings.xml declares a profile repository URL over cleartext. An artifact fetched over plain HTTP can be replaced in transit, so the bytes that install are not bound to what the author published. This rule reads a profile repository URL over cleartext.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-319",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "maven"
+  ],
+  "artifact": "settings.xml",
+  "parser": "xml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "settings.profiles[].repositories[].url",
+    "valuePattern": "^http://"
+  },
+  "tests": [
+    {
+      "file": "settings.xml",
+      "document": {
+        "settings": {
+          "mirrors": [
+            {
+              "id": "central",
+              "mirrorOf": "central",
+              "url": "https://repo1.maven.org/maven2"
+            }
+          ],
+          "servers": [],
+          "profiles": [
+            {
+              "id": "acme",
+              "repositories": [
+                {
+                  "id": "acme",
+                  "url": "http://repo.acme.example/maven2"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "settings.xml",
+      "document": {
+        "settings": {
+          "mirrors": [
+            {
+              "id": "central",
+              "mirrorOf": "central",
+              "url": "https://repo1.maven.org/maven2"
+            }
+          ],
+          "servers": [],
+          "profiles": [
+            {
+              "id": "internal",
+              "repositories": [
+                {
+                  "id": "internal",
+                  "url": "http://10.24.8.9/maven2"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "settings.xml",
+      "document": {
+        "settings": {
+          "mirrors": [
+            {
+              "id": "central",
+              "mirrorOf": "central",
+              "url": "https://repo1.maven.org/maven2"
+            }
+          ],
+          "servers": [],
+          "profiles": [
+            {
+              "id": "acme",
+              "repositories": [
+                {
+                  "id": "acme",
+                  "url": "https://repo.acme.example/maven2"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "settings.xml",
+      "document": {
+        "settings": {
+          "mirrors": [
+            {
+              "id": "central",
+              "mirrorOf": "central",
+              "url": "https://repo1.maven.org/maven2"
+            }
+          ],
+          "servers": [],
+          "profiles": []
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2804"
+  ],
+  "remediation": "Use the HTTPS endpoint the registry publishes and keep the hostname in the configuration reviewable. Specifically: fix a profile repository URL over cleartext.",
+  "limitation": "It matches a profile repository URL over cleartext in the parsed settings.xml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

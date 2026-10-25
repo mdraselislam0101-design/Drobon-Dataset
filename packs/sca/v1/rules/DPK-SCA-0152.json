@@ -1,0 +1,114 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0152",
+  "title": "go.mod replace points at a local directory",
+  "description": "go.mod declares a `replace` whose target is a path on the build machine. The build compiles whatever that directory holds, so the file on disk and the code that builds can differ with no manifest change.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1104",
+  "category": "dependency-hygiene",
+  "ecosystems": [
+    "go"
+  ],
+  "artifact": "go.mod",
+  "parser": "ini",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "replace[].new.path",
+    "valuePattern": "^(?:\\.{1,2}/|/)"
+  },
+  "tests": [
+    {
+      "file": "go.mod",
+      "document": {
+        "module": "example.com/demo-service",
+        "go": "1.22",
+        "require": [
+          {
+            "module": "github.com/acme/sdk",
+            "version": "v4.2.0"
+          }
+        ],
+        "replace": [
+          {
+            "old": {
+              "path": "github.com/acme/sdk",
+              "version": "v4.2.0"
+            },
+            "new": {
+              "path": "../acme-sdk"
+            }
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "go.mod",
+      "document": {
+        "module": "example.com/demo-service",
+        "go": "1.22",
+        "require": [
+          {
+            "module": "github.com/acme/cli",
+            "version": "v2.1.0"
+          }
+        ],
+        "replace": [
+          {
+            "old": {
+              "path": "github.com/acme/cli"
+            },
+            "new": {
+              "path": "/opt/vendor/acme-cli"
+            }
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "go.mod",
+      "document": {
+        "module": "example.com/demo-service",
+        "go": "1.22",
+        "require": [
+          {
+            "module": "github.com/acme/sdk",
+            "version": "v4.2.0"
+          }
+        ]
+      },
+      "match": false
+    },
+    {
+      "file": "go.mod",
+      "document": {
+        "module": "example.com/demo-service",
+        "go": "1.22",
+        "require": [
+          {
+            "module": "github.com/acme/cli",
+            "version": "v2.1.0"
+          }
+        ],
+        "replace": [
+          {
+            "old": {
+              "path": "github.com/acme/cli"
+            },
+            "new": {
+              "path": "github.com/acme/cli-fork",
+              "version": "v2.1.1"
+            }
+          }
+        ]
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2289"
+  ],
+  "remediation": "Remove the local replace for releases and depend on the published module version.",
+  "limitation": "It matches a `replace` whose target is a path on the build machine in the parsed go.mod; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0040",
+  "title": "Dependency installed from a plain tarball URL",
+  "description": "package.json declares a dependency URL that points at a tarball outside the configured registry. The tarball is fetched without a registry signature or provenance attestation, and the URL can serve different bytes on every install.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1104",
+  "category": "dependency-hygiene",
+  "ecosystems": [
+    "npm"
+  ],
+  "artifact": "package.json",
+  "parser": "json",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "dependencies.*",
+    "valuePattern": "^https?://(?!registry\\.npmjs\\.org)[^ ]{1,200}\\.(?:tgz|tar\\.gz)$"
+  },
+  "tests": [
+    {
+      "file": "package.json",
+      "document": {
+        "name": "demo-service",
+        "version": "1.4.0",
+        "dependencies": {
+          "acme-sdk": "https://downloads.acme.example/sdk-4.2.0.tgz"
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "package.json",
+      "document": {
+        "name": "demo-service",
+        "version": "1.4.0",
+        "dependencies": {
+          "acme-cli": "http://mirror.acme.example/cli.tar.gz"
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "package.json",
+      "document": {
+        "name": "demo-service",
+        "version": "1.4.0",
+        "dependencies": {
+          "acme-sdk": "4.2.0"
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "package.json",
+      "document": {
+        "name": "demo-service",
+        "version": "1.4.0",
+        "dependencies": {
+          "acme-sdk": "https://registry.npmjs.org/acme-sdk/-/acme-sdk-4.2.0.tgz"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2177"
+  ],
+  "remediation": "Publish the artifact to the registry and depend on the version, so the lockfile records an integrity hash.",
+  "limitation": "It matches a dependency URL that points at a tarball outside the configured registry in the parsed package.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

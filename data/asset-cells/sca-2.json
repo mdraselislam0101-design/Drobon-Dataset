@@ -1,0 +1,2001 @@
+[
+  {
+    "class": "npm-lock-integrity-absent",
+    "ecosystem": "npm",
+    "artifact": "package-lock.json",
+    "parser": "json",
+    "category": "supply-chain-integrity",
+    "cwe": "CWE-494",
+    "severity": "MEDIUM",
+    "title": "Lockfile entries without a SHA-2 integrity value",
+    "what": "a package entry that carries no SHA-2 integrity value in the lockfile",
+    "impact": "The install verifies nothing about the bytes it downloads, so a substituted tarball from a compromised registry or network path is accepted as the reviewed package.",
+    "remediation": "Regenerate the lockfile against a registry that publishes integrity values and commit the result.",
+    "limitation": "It matches a package entry that carries no SHA-2 integrity value in the lockfile in the parsed package-lock.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A lockfile written by an old npm that only emitted sha1 shows up under the sha1 rule, not this one.",
+    "check": {
+      "type": "sca-entry-missing-field",
+      "path": "packages",
+      "field": "integrity"
+    },
+    "tests": [
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "name": "left-pad"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "2.0.0",
+              "resolved": "https://registry.npmjs.org/a/-/a-2.0.0.tgz"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "resolved": "https://registry.npmjs.org/left-pad/-/left-pad-1.0.0.tgz",
+              "integrity": "sha512-AAAABBBBCCCCDDDD"
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "2.0.0",
+              "integrity": "sha512-QQQQWWWWEEEERRRR"
+            }
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "npm-lock-integrity-sha1",
+    "ecosystem": "npm",
+    "artifact": "package-lock.json",
+    "parser": "json",
+    "category": "supply-chain-integrity",
+    "cwe": "CWE-494",
+    "severity": "MEDIUM",
+    "title": "Lockfile integrity recorded with SHA-1",
+    "what": "a lockfile whose integrity value is a SHA-1 digest",
+    "impact": "SHA-1 collisions are practical for a motivated attacker, so the digest cannot prove that the installed tarball is the one the lockfile recorded.",
+    "remediation": "Re-resolve the dependency with a current npm so the lockfile records a SHA-2 integrity value.",
+    "limitation": "It matches a lockfile whose integrity value is a SHA-1 digest in the parsed package-lock.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A package that genuinely publishes only sha1 is still reported; the digest strength is the finding.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "packages.*.integrity",
+      "valuePattern": "^sha1-"
+    },
+    "tests": [
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "integrity": "sha1-AAAABBBBCCCCDDDDEEEEFFFF"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "3.1.0",
+              "integrity": "sha1-QQQQWWWWEEEERRRRTTTTYYYY"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "resolved": "https://registry.npmjs.org/x/-/x-1.0.0.tgz",
+              "integrity": "sha512-AAAABBBBCCCCDDDD"
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "3.1.0",
+              "integrity": "sha512-ZZZZXXXXCCCCVVVV"
+            }
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "npm-lock-integrity-empty",
+    "ecosystem": "npm",
+    "artifact": "package-lock.json",
+    "parser": "json",
+    "category": "supply-chain-integrity",
+    "cwe": "CWE-494",
+    "severity": "MEDIUM",
+    "title": "Lockfile integrity field present but empty",
+    "what": "an integrity field that is present but empty",
+    "impact": "An empty field reads as verified to every tool that only checks for the key, while nothing is actually verified at install time.",
+    "remediation": "Remove the empty field and regenerate the lockfile so it carries a real digest.",
+    "limitation": "It matches an integrity field that is present but empty in the parsed package-lock.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A lockfile written by a tool that emits an empty string deliberately is still reported; the empty value is the finding.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "packages.*.integrity",
+      "valuePattern": "^$"
+    },
+    "tests": [
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "integrity": ""
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.1.0",
+              "integrity": ""
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "resolved": "https://registry.npmjs.org/x/-/x-1.0.0.tgz",
+              "integrity": "sha512-AAAABBBBCCCCDDDD"
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.1.0",
+              "integrity": "sha512-AAAABBBB"
+            }
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "npm-lock-resolved-http",
+    "ecosystem": "npm",
+    "artifact": "package-lock.json",
+    "parser": "json",
+    "category": "supply-chain-integrity",
+    "cwe": "CWE-494",
+    "severity": "MEDIUM",
+    "title": "Lockfile resolves a package over cleartext HTTP",
+    "what": "a lockfile entry that resolves its tarball over cleartext http",
+    "impact": "Cleartext transport lets a network attacker replace the tarball in flight, and the integrity value only helps if it is checked against the substituted bytes.",
+    "remediation": "Resolve the dependency over HTTPS and commit the regenerated lockfile.",
+    "limitation": "It matches a lockfile entry that resolves its tarball over cleartext http in the parsed package-lock.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A local mirror on loopback is still reported; record it as an accepted exception if that is the policy.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "packages.*.resolved",
+      "valuePattern": "^http://"
+    },
+    "tests": [
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "resolved": "http://registry.acme.example/x/-/x-1.0.0.tgz",
+              "integrity": "sha512-AAAABBBBCCCCDDDD"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "2.0.0",
+              "resolved": "http://mirror.acme.example/y/-/y-2.0.0.tgz"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "resolved": "https://registry.npmjs.org/x/-/x-1.0.0.tgz",
+              "integrity": "sha512-AAAABBBBCCCCDDDD"
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "2.0.0",
+              "resolved": "https://registry.npmjs.org/y/-/y-2.0.0.tgz"
+            }
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "npm-lock-resolved-non-registry-host",
+    "ecosystem": "npm",
+    "artifact": "package-lock.json",
+    "parser": "json",
+    "category": "supply-chain-integrity",
+    "cwe": "CWE-494",
+    "severity": "MEDIUM",
+    "title": "Lockfile resolves packages from a third-party registry host",
+    "what": "a lockfile entry served by a host other than the configured public registry",
+    "impact": "Every package in the tree is fetched from a host the review process never covered, so its publication controls and provenance are unknown.",
+    "remediation": "Serve the dependency from the approved registry, or document the mirror and pin it with integrity.",
+    "limitation": "It matches a lockfile entry served by a host other than the configured public registry in the parsed package-lock.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "An internal Artifactory mirror is a deliberate configuration; record it as an accepted exception with its integrity policy.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "packages.*.resolved",
+      "valuePattern": "^https://(?!registry\\.npmjs\\.org)[a-z0-9.-]{3,80}/"
+    },
+    "tests": [
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "resolved": "https://artifacts.acme.example/x/-/x-1.0.0.tgz",
+              "integrity": "sha512-AAAABBBBCCCCDDDD"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "2.0.0",
+              "resolved": "https://npm-mirror.thirdparty.example/y/-/y-2.0.0.tgz"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "resolved": "https://registry.npmjs.org/x/-/x-1.0.0.tgz",
+              "integrity": "sha512-AAAABBBBCCCCDDDD"
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "2.0.0",
+              "resolved": "https://registry.npmjs.org/y/-/y-2.0.0.tgz"
+            }
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "npm-lock-resolved-file-path",
+    "ecosystem": "npm",
+    "artifact": "package-lock.json",
+    "parser": "json",
+    "category": "supply-chain-integrity",
+    "cwe": "CWE-494",
+    "severity": "MEDIUM",
+    "title": "Lockfile resolves a dependency from a local path",
+    "what": "a lockfile entry resolved from a path on the build machine",
+    "impact": "The tree is not reproducible from the lockfile alone, and the bytes that compile are whatever that path holds at build time.",
+    "remediation": "Publish the package and depend on a registry version with integrity.",
+    "limitation": "It matches a lockfile entry resolved from a path on the build machine in the parsed package-lock.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A workspace link is a deliberate monorepo pattern; it is still reported because the lockfile cannot reproduce it elsewhere.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "packages.*.resolved",
+      "valuePattern": "^file:"
+    },
+    "tests": [
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "resolved": "file:../packages/shared",
+              "integrity": "sha512-AAAABBBBCCCCDDDD"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "resolved": "file:vendor/legacy-lib"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "resolved": "https://registry.npmjs.org/x/-/x-1.0.0.tgz",
+              "integrity": "sha512-AAAABBBBCCCCDDDD"
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "resolved": "https://registry.npmjs.org/y/-/y-1.0.0.tgz"
+            }
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "npm-lock-resolved-git-remote",
+    "ecosystem": "npm",
+    "artifact": "package-lock.json",
+    "parser": "json",
+    "category": "supply-chain-integrity",
+    "cwe": "CWE-494",
+    "severity": "MEDIUM",
+    "title": "Lockfile resolves a dependency from a git remote",
+    "what": "a lockfile entry fetched from a git remote instead of a registry tarball",
+    "impact": "The code is outside the registry's signing and provenance controls, so the registry integrity model does not apply to it.",
+    "remediation": "Replace the git dependency with a published version that carries an integrity value.",
+    "limitation": "It matches a lockfile entry fetched from a git remote instead of a registry tarball in the parsed package-lock.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A private registry that proxies git archives is still reported; the entry names a git remote.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "packages.*.resolved",
+      "valuePattern": "^git\\+"
+    },
+    "tests": [
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "resolved": "git+https://github.com/acme/sdk.git#9f2c4a1",
+              "integrity": "sha512-AAAABBBBCCCCDDDD"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "resolved": "git+ssh://git@github.com/acme/cli.git#0a1b2c3"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "resolved": "https://registry.npmjs.org/x/-/x-1.0.0.tgz",
+              "integrity": "sha512-AAAABBBBCCCCDDDD"
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "resolved": "https://registry.npmjs.org/y/-/y-1.0.0.tgz"
+            }
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "npm-lock-resolved-github-archive",
+    "ecosystem": "npm",
+    "artifact": "package-lock.json",
+    "parser": "json",
+    "category": "supply-chain-integrity",
+    "cwe": "CWE-494",
+    "severity": "MEDIUM",
+    "title": "Lockfile resolves a source archive instead of a package",
+    "what": "a lockfile entry that points at a forge source archive",
+    "impact": "The archive is generated on demand from a branch or tag, so the installed bytes are not the published artifact and carry no registry integrity value.",
+    "remediation": "Depend on the published package, or vendor the archive with its digest recorded in review.",
+    "limitation": "It matches a lockfile entry that points at a forge source archive in the parsed package-lock.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "An archive URL pinned to a commit sha is immutable but still outside the registry; it is reported as the same source kind.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "packages.*.resolved",
+      "valuePattern": "^https://codeload\\.github\\.com/"
+    },
+    "tests": [
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "resolved": "https://codeload.github.com/acme/sdk/tar.gz/9f2c4a1",
+              "integrity": "sha512-AAAABBBBCCCCDDDD"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "resolved": "https://codeload.github.com/acme/cli/tar.gz/refs/tags/v2"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "resolved": "https://registry.npmjs.org/x/-/x-1.0.0.tgz",
+              "integrity": "sha512-AAAABBBBCCCCDDDD"
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "resolved": "https://registry.npmjs.org/y/-/y-1.0.0.tgz"
+            }
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "npm-lock-resolved-ip-literal",
+    "ecosystem": "npm",
+    "artifact": "package-lock.json",
+    "parser": "json",
+    "category": "supply-chain-integrity",
+    "cwe": "CWE-494",
+    "severity": "MEDIUM",
+    "title": "Lockfile resolves a package from a bare IP address",
+    "what": "a lockfile entry served from an IP literal rather than a named host",
+    "impact": "An IP literal bypasses the TLS name check, so the connection cannot prove it reached the host the review approved.",
+    "remediation": "Serve packages from a named HTTPS host with a valid certificate.",
+    "limitation": "It matches a lockfile entry served from an IP literal rather than a named host in the parsed package-lock.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A loopback dev registry is reported as well; treat it as an accepted exception for local builds.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "packages.*.resolved",
+      "valuePattern": "^https?://\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}"
+    },
+    "tests": [
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "resolved": "https://10.24.8.9/npm/x/-/x-1.0.0.tgz",
+              "integrity": "sha512-AAAABBBBCCCCDDDD"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "resolved": "http://192.168.1.20/y/-/y-1.0.0.tgz"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "resolved": "https://registry.npmjs.org/x/-/x-1.0.0.tgz",
+              "integrity": "sha512-AAAABBBBCCCCDDDD"
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "resolved": "https://registry.npmjs.org/y/-/y-1.0.0.tgz"
+            }
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "npm-lock-nested-duplicate",
+    "ecosystem": "npm",
+    "artifact": "package-lock.json",
+    "parser": "json",
+    "category": "supply-chain-integrity",
+    "cwe": "CWE-494",
+    "severity": "MEDIUM",
+    "title": "Lockfile nests duplicate copies of a package",
+    "what": "a lockfile that nests a second copy of a package inside another dependency",
+    "impact": "Two copies of the same package mean the tree ships code the top-level review never saw, and a patched top-level version can be shadowed by the nested one.",
+    "remediation": "Deduplicate the tree and lift the dependency to the top level where it can be reviewed once.",
+    "limitation": "It matches a lockfile that nests a second copy of a package inside another dependency in the parsed package-lock.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A deliberate dual-version tree for a compatibility window is still reported; the duplicate is the finding.",
+    "check": {
+      "type": "sca-key-matches",
+      "path": "packages",
+      "keyPattern": "^node_modules/[^/]+/node_modules/|^node_modules/node_modules/"
+    },
+    "tests": [
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/a/node_modules/b": {
+              "version": "1.0.0",
+              "integrity": "sha512-AAAA"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/x/node_modules/y/node_modules/z": {
+              "version": "2.0.0",
+              "integrity": "sha512-BBBB"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/a": {
+              "version": "1.0.0",
+              "integrity": "sha512-AAAA"
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/b": {
+              "version": "2.0.0",
+              "integrity": "sha512-BBBB"
+            }
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "npm-lock-version-absent",
+    "ecosystem": "npm",
+    "artifact": "package-lock.json",
+    "parser": "json",
+    "category": "supply-chain-integrity",
+    "cwe": "CWE-494",
+    "severity": "MEDIUM",
+    "title": "Lockfile entry without a resolved version",
+    "what": "a package entry that carries no version string",
+    "impact": "Without a version the entry cannot be compared to an advisory range, so a vulnerable install is invisible to every version-based check.",
+    "remediation": "Regenerate the lockfile so each package entry records the version that was installed.",
+    "limitation": "It matches a package entry that carries no version string in the parsed package-lock.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A link or workspace entry without a version is still reported; it cannot be version-checked either.",
+    "check": {
+      "type": "sca-entry-missing-field",
+      "path": "packages",
+      "field": "version"
+    },
+    "tests": [
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "integrity": "sha512-AAAA"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "resolved": "https://registry.npmjs.org/a/-/a-1.0.0.tgz",
+              "integrity": "sha512-BBBB"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "resolved": "https://registry.npmjs.org/x/-/x-1.0.0.tgz",
+              "integrity": "sha512-AAAABBBBCCCCDDDD"
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "2.0.0",
+              "resolved": "https://registry.npmjs.org/y/-/y-2.0.0.tgz"
+            }
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "npm-lock-version-prerelease",
+    "ecosystem": "npm",
+    "artifact": "package-lock.json",
+    "parser": "json",
+    "category": "supply-chain-integrity",
+    "cwe": "CWE-494",
+    "severity": "MEDIUM",
+    "title": "Lockfile resolved a prerelease build",
+    "what": "a resolved version that is a prerelease build",
+    "impact": "Prerelease builds sit outside most advisory ranges and outside the stability promises the project tested against.",
+    "remediation": "Pin the first stable release once it exists, and record the review that approved the prerelease.",
+    "limitation": "It matches a resolved version that is a prerelease build in the parsed package-lock.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A project that ships prereleases on purpose is still reported; the version shape is the finding.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "packages.*.version",
+      "valuePattern": "^\\d{1,4}\\.\\d{1,4}\\.\\d{1,4}-(?:alpha|beta|rc|next|canary|dev)"
+    },
+    "tests": [
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "2.0.0-rc.1",
+              "integrity": "sha512-AAAA"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.4.0-beta.7",
+              "integrity": "sha512-BBBB"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "2.0.0",
+              "integrity": "sha512-AAAA"
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.4.0",
+              "integrity": "sha512-BBBB"
+            }
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "npm-lock-version-git-placeholder",
+    "ecosystem": "npm",
+    "artifact": "package-lock.json",
+    "parser": "json",
+    "category": "supply-chain-integrity",
+    "cwe": "CWE-494",
+    "severity": "MEDIUM",
+    "title": "Lockfile records git or path dependencies as version 0.0.0",
+    "what": "a package entry whose version is the git/path placeholder `0.0.0`",
+    "impact": "The placeholder hides the real identity of the code, so version-based review and advisory matching cannot see what actually runs.",
+    "remediation": "Replace the git or path dependency with a published, versioned package.",
+    "limitation": "It matches a package entry whose version is the git/path placeholder `0.0.0` in the parsed package-lock.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A deliberately published `0.0.0` bootstrap package is still reported; the placeholder is the finding.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "packages.*.version",
+      "valuePattern": "^0\\.0\\.0$"
+    },
+    "tests": [
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "0.0.0",
+              "resolved": "git+https://github.com/acme/sdk.git#9f2c4a1"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "0.0.0",
+              "resolved": "file:../acme-lib"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "0.0.1",
+              "integrity": "sha512-AAAA"
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "integrity": "sha512-BBBB"
+            }
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "npm-lock-install-script",
+    "ecosystem": "npm",
+    "artifact": "package-lock.json",
+    "parser": "json",
+    "category": "supply-chain-integrity",
+    "cwe": "CWE-494",
+    "severity": "HIGH",
+    "title": "Lockfile records a dependency that runs an install script",
+    "what": "a package entry flagged as running an install script",
+    "impact": "Install scripts execute with the build user's privileges before any review step, so the dependency's code runs even if the project never imports it.",
+    "remediation": "Prefer packages without install scripts, or run installs with scripts disabled for the untrusted subset.",
+    "limitation": "It matches a package entry flagged as running an install script in the parsed package-lock.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A package with a build script that only prints a notice is still reported; the install hook is the finding.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "packages.*.hasInstallScript",
+      "valuePattern": "^true$"
+    },
+    "tests": [
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "hasInstallScript": true
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "2.0.0",
+              "hasInstallScript": true,
+              "integrity": "sha512-AAAA"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "hasInstallScript": false
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "2.0.0",
+              "integrity": "sha512-AAAA"
+            }
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "npm-lock-bundled-dependency",
+    "ecosystem": "npm",
+    "artifact": "package-lock.json",
+    "parser": "json",
+    "category": "supply-chain-integrity",
+    "cwe": "CWE-494",
+    "severity": "MEDIUM",
+    "title": "Lockfile records a bundled dependency",
+    "what": "a package entry that ships inside another dependency's tarball",
+    "impact": "The bundled copy bypasses registry integrity for that package, so the outer package's tarball decides which bytes are installed.",
+    "remediation": "Unbundle the dependency and let the registry serve it with its own integrity value.",
+    "limitation": "It matches a package entry that ships inside another dependency's tarball in the parsed package-lock.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A vendored runtime that cannot be published is still reported; the bundle is the finding.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "packages.*.inBundle",
+      "valuePattern": "^true$"
+    },
+    "tests": [
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "inBundle": true
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "2.0.0",
+              "inBundle": true,
+              "integrity": "sha512-AAAA"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "inBundle": false
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "2.0.0",
+              "integrity": "sha512-AAAA"
+            }
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "npm-lock-deprecated-entry",
+    "ecosystem": "npm",
+    "artifact": "package-lock.json",
+    "parser": "json",
+    "category": "supply-chain-integrity",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "Lockfile records a dependency the registry marks deprecated",
+    "what": "a package entry that carries a deprecation notice",
+    "impact": "A deprecated package stops receiving fixes, so defects and advisories in it stay unfixed while the project keeps shipping it.",
+    "remediation": "Replace the package or pin and document the maintenance plan that replaces upstream support.",
+    "limitation": "It matches a package entry that carries a deprecation notice in the parsed package-lock.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A deprecated package kept deliberately for compatibility is still reported; the notice is the finding.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "packages.*.deprecated",
+      "valuePattern": "^\\S"
+    },
+    "tests": [
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "deprecated": "no longer maintained"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "2.0.0",
+              "deprecated": "use the successor package"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "2.0.0"
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "2.0.0",
+              "integrity": "sha512-AAAA"
+            }
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "npm-lock-optional-dependency",
+    "ecosystem": "npm",
+    "artifact": "package-lock.json",
+    "parser": "json",
+    "category": "supply-chain-integrity",
+    "cwe": "CWE-494",
+    "severity": "MEDIUM",
+    "title": "Lockfile records an optional dependency that fetches at install time",
+    "what": "a package entry marked optional, which npm may fetch from the network during install",
+    "impact": "Optional packages still execute install scripts when they resolve, so a failed or substituted fetch can add code paths the review never listed.",
+    "remediation": "Drop optional dependencies the project does not need, or run installs with optional fetches disabled.",
+    "limitation": "It matches a package entry marked optional, which npm may fetch from the network during install in the parsed package-lock.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "An optional package used for platform binaries is still reported; record the accepted exception and its integrity policy.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "packages.*.optional",
+      "valuePattern": "^true$"
+    },
+    "tests": [
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "optional": true
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "2.0.0",
+              "optional": true,
+              "integrity": "sha512-AAAA"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "optional": false
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "2.0.0",
+              "integrity": "sha512-AAAA"
+            }
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "npm-lock-license-absent",
+    "ecosystem": "npm",
+    "artifact": "package-lock.json",
+    "parser": "json",
+    "category": "supply-chain-integrity",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "Lockfile entry without licence metadata",
+    "what": "a package entry that records no licence",
+    "impact": "Redistribution rights cannot be established for a dependency whose licence is unknown, which blocks release review and downstream use.",
+    "remediation": "Regenerate the lockfile with a registry that publishes licence metadata, and record the licence in review.",
+    "limitation": "It matches a package entry that records no licence in the parsed package-lock.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A package whose licence file exists but is not in the registry metadata is still reported; the lockfile is the evidence.",
+    "check": {
+      "type": "sca-entry-missing-field",
+      "path": "packages",
+      "field": "license"
+    },
+    "tests": [
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "integrity": "sha512-AAAA"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "2.0.0",
+              "integrity": "sha512-BBBB"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "license": "MIT"
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "2.0.0",
+              "license": "Apache-2.0"
+            }
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "npm-lock-requires-absent",
+    "ecosystem": "npm",
+    "artifact": "package-lock.json",
+    "parser": "json",
+    "category": "supply-chain-integrity",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "Lockfile drops a dependency's own requirements",
+    "what": "a package entry that records no dependency requirements where the package declares some",
+    "impact": "The transitive surface disappears from the lockfile, so the tree that installs is larger than the tree the review read.",
+    "remediation": "Regenerate the lockfile with a tool that records transitive requirements, and review the resulting graph.",
+    "limitation": "It matches a package entry that records no dependency requirements where the package declares some in the parsed package-lock.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A package with genuinely no dependencies is still reported; confirm it against the registry metadata.",
+    "check": {
+      "type": "sca-entry-missing-field",
+      "path": "packages",
+      "field": "requires"
+    },
+    "tests": [
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "integrity": "sha512-AAAA"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "2.0.0",
+              "integrity": "sha512-BBBB"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "requires": {
+                "left-pad": "^1.3.0"
+              },
+              "integrity": "sha512-AAAA"
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "2.0.0",
+              "requires": {
+                "ms": "^2.1.3"
+              },
+              "integrity": "sha512-BBBB"
+            }
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "npm-lock-engine-node-absent",
+    "ecosystem": "npm",
+    "artifact": "package-lock.json",
+    "parser": "json",
+    "category": "supply-chain-integrity",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "Lockfile entry records no supported Node version",
+    "what": "a package entry that declares no supported Node runtime",
+    "impact": "Nothing tells the build whether the package was tested on the runtime that executes it, so a mismatch fails at run time rather than at review.",
+    "remediation": "Regenerate the lockfile so the engine constraint is recorded, and align it with the runtime the project ships.",
+    "limitation": "It matches a package entry that declares no supported Node runtime in the parsed package-lock.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A pure-data package with no runtime requirement is still reported; the missing constraint is the finding.",
+    "check": {
+      "type": "sca-entry-missing-field",
+      "path": "packages",
+      "field": "engines"
+    },
+    "tests": [
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "integrity": "sha512-AAAA"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "2.0.0",
+              "integrity": "sha512-BBBB"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "engines": {
+                "node": ">=18"
+              },
+              "integrity": "sha512-AAAA"
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "2.0.0",
+              "engines": {
+                "node": ">=20.11"
+              },
+              "integrity": "sha512-BBBB"
+            }
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "npm-lock-lockfile-version-absent",
+    "ecosystem": "npm",
+    "artifact": "package-lock.json",
+    "parser": "json",
+    "category": "supply-chain-integrity",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "Lockfile without a lockfile format version",
+    "what": "a lockfile that declares no format version",
+    "impact": "Without the version field the installer guesses the format, and different npm releases can resolve different trees from the same file.",
+    "remediation": "Regenerate the lockfile with the npm release the project supports, so the format version is explicit.",
+    "limitation": "It matches a lockfile that declares no format version in the parsed package-lock.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A lockfile produced by a tool that omits the field is still reported; the missing declaration is the finding.",
+    "check": {
+      "type": "sca-field-absent",
+      "path": "lockfileVersion"
+    },
+    "tests": [
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "packages": {
+            "": {
+              "name": "demo-service"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "dependencies": {
+            "left-pad": {
+              "version": "1.3.0"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "": {
+              "name": "demo-service"
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 2,
+          "packages": {
+            "": {
+              "name": "demo-service"
+            }
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "npm-lock-lockfile-version-legacy",
+    "ecosystem": "npm",
+    "artifact": "package-lock.json",
+    "parser": "json",
+    "category": "supply-chain-integrity",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "Lockfile written in the legacy v1 format",
+    "what": "a lockfile in the legacy v1 format, which records a weaker per-package provenance shape",
+    "impact": "The old format records less provenance per package, so the review sees a weaker graph than a modern lockfile would give it.",
+    "remediation": "Regenerate the lockfile with a current npm release and commit the v2/v3 result.",
+    "limitation": "It matches a lockfile in the legacy v1 format, which records a weaker per-package provenance shape in the parsed package-lock.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A repository that must support an old npm is still reported; the format is the finding.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "lockfileVersion",
+      "valuePattern": "^1$"
+    },
+    "tests": [
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 1,
+          "dependencies": {
+            "left-pad": {
+              "version": "1.3.0"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 1,
+          "dependencies": {
+            "ms": {
+              "version": "2.1.3"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "": {
+              "name": "demo-service"
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 2,
+          "packages": {
+            "": {
+              "name": "demo-service"
+            }
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "npm-lock-registry-port",
+    "ecosystem": "npm",
+    "artifact": "package-lock.json",
+    "parser": "json",
+    "category": "supply-chain-integrity",
+    "cwe": "CWE-494",
+    "severity": "MEDIUM",
+    "title": "Lockfile pins the public registry to a non-standard port",
+    "what": "a lockfile entry that reaches the public registry on an explicit non-standard port",
+    "impact": "The port is outside the host's published service definition, so the connection may terminate on a proxy whose controls are unknown.",
+    "remediation": "Resolve through the standard HTTPS port, or document the proxy and verify its integrity behaviour.",
+    "limitation": "It matches a lockfile entry that reaches the public registry on an explicit non-standard port in the parsed package-lock.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A corporate TLS-inspecting proxy is still reported; record it as an accepted exception.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "packages.*.resolved",
+      "valuePattern": "^https://registry\\.npmjs\\.org:\\d{2,5}/"
+    },
+    "tests": [
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "resolved": "https://registry.npmjs.org:8443/x/-/x-1.0.0.tgz",
+              "integrity": "sha512-AAAABBBBCCCCDDDD"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "2.0.0",
+              "resolved": "https://registry.npmjs.org:8080/y/-/y-2.0.0.tgz"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "resolved": "https://registry.npmjs.org/x/-/x-1.0.0.tgz",
+              "integrity": "sha512-AAAABBBBCCCCDDDD"
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "2.0.0",
+              "resolved": "https://registry.npmjs.org/y/-/y-2.0.0.tgz"
+            }
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "npm-lock-resolved-ssh",
+    "ecosystem": "npm",
+    "artifact": "package-lock.json",
+    "parser": "json",
+    "category": "supply-chain-integrity",
+    "cwe": "CWE-494",
+    "severity": "MEDIUM",
+    "title": "Lockfile resolves a package over SSH",
+    "what": "a lockfile entry that fetches over SSH from a git remote",
+    "impact": "The install trusts whatever host key and account the build machine holds, so the bytes that run are decided outside the registry.",
+    "remediation": "Fetch over HTTPS from a registry entry with integrity, or pin the commit and verify the checkout digest.",
+    "limitation": "It matches a lockfile entry that fetches over SSH from a git remote in the parsed package-lock.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A private registry that speaks SSH internally is still reported; the entry names an SSH remote.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "packages.*.resolved",
+      "valuePattern": "^git\\+ssh://"
+    },
+    "tests": [
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "resolved": "git+ssh://git@github.com/acme/sdk.git#9f2c4a1",
+              "integrity": "sha512-AAAABBBBCCCCDDDD"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "resolved": "git+ssh://git@git.acme.internal/lib.git#0a1b2c3"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "resolved": "git+https://github.com/acme/sdk.git#9f2c4a1",
+              "integrity": "sha512-AAAABBBBCCCCDDDD"
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "resolved": "https://registry.npmjs.org/y/-/y-1.0.0.tgz"
+            }
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "npm-lock-tarball-without-registry",
+    "ecosystem": "npm",
+    "artifact": "package-lock.json",
+    "parser": "json",
+    "category": "supply-chain-integrity",
+    "cwe": "CWE-494",
+    "severity": "MEDIUM",
+    "title": "Lockfile resolves a bare tarball URL",
+    "what": "a lockfile entry pointing straight at a `.tgz` file rather than a registry path",
+    "impact": "The tarball is not served through the registry API, so its metadata, signatures and advisory linkage do not exist for that entry.",
+    "remediation": "Publish the artifact to the registry and resolve it as a normal package.",
+    "limitation": "It matches a lockfile entry pointing straight at a `.tgz` file rather than a registry path in the parsed package-lock.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A registry mirror that serves the same layout is still reported when the host is not the configured registry.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "packages.*.resolved",
+      "valuePattern": "^(?!.*/-/)[^ ]{0,160}\\.tgz$"
+    },
+    "tests": [
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "resolved": "https://downloads.acme.example/sdk-4.2.0.tgz",
+              "integrity": "sha512-AAAABBBBCCCCDDDD"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "2.0.0",
+              "resolved": "https://cdn.thirdparty.example/cli-2.0.0.tgz"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "1.0.0",
+              "resolved": "https://registry.npmjs.org/x/-/x-1.0.0.tgz",
+              "integrity": "sha512-AAAABBBBCCCCDDDD"
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "package-lock.json",
+        "document": {
+          "name": "demo-service",
+          "lockfileVersion": 3,
+          "packages": {
+            "node_modules/dependency-0": {
+              "version": "2.0.0",
+              "resolved": "https://artifacts.acme.example/y/-/y-2.0.0.tgz"
+            }
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  }
+]

@@ -1,0 +1,74 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0097",
+  "title": "Yarn lockfile resolves an archive over cleartext",
+  "description": "yarn.lock declares a lockfile `resolved` URL that uses cleartext http. The archive crosses the network unencrypted, so it can be replaced before the checksum is computed.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-319",
+  "category": "lockfile-integrity",
+  "ecosystems": [
+    "npm"
+  ],
+  "artifact": "yarn.lock",
+  "parser": "lockfile-text",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "entries[].resolved",
+    "valuePattern": "^http://"
+  },
+  "tests": [
+    {
+      "file": "yarn.lock",
+      "document": {
+        "entries": [
+          {
+            "name": "left-pad",
+            "resolved": "http://registry.acme.example/left-pad-1.3.0.tgz"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "yarn.lock",
+      "document": {
+        "entries": [
+          {
+            "name": "ms",
+            "resolved": "http://10.24.8.9/ms-2.1.3.tgz"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "yarn.lock",
+      "document": {
+        "entries": [
+          {
+            "name": "left-pad",
+            "resolved": "https://registry.yarnpkg.com/left-pad/-/left-pad-1.3.0.tgz"
+          }
+        ]
+      },
+      "match": false
+    },
+    {
+      "file": "yarn.lock",
+      "document": {
+        "entries": [
+          {
+            "name": "ms",
+            "resolved": "https://registry.yarnpkg.com/ms/-/ms-2.1.3.tgz"
+          }
+        ]
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2234"
+  ],
+  "remediation": "Resolve over https and regenerate the lockfile.",
+  "limitation": "It matches a lockfile `resolved` URL that uses cleartext http in the parsed yarn.lock; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

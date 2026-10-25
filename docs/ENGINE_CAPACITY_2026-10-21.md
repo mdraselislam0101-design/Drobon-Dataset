@@ -7,20 +7,20 @@ The request behind this file was "1,000 data, 1,000 patterns, 1,000 rules for ev
 This page states where each engine actually stands, what is left, and what stops it. A row reaches
 **AT_TARGET** only when the rule count really is 1,000 — never by renaming, merging or counting padding.
 
-| Engine | Rules | / 1,000 | Patterns | Records | Remediation | Remaining | Status |
+| Engine | Rules | Against target | Patterns | Records | Remediation | Remaining | Status |
 |---|---|---|---|---|---|---|---|
-| SAST | **1000** | 100% | 1000 | 1000 | 1000 | 0 | AT_TARGET |
-| DAST | **1007** | 100% | 1007 | 1007 | 1007 | 0 | AT_TARGET |
-| SECRETS | **97** | 9.7% | 97 | 97 | 97 | 903 | IN_PROGRESS |
-| SCA | **0** | 0% | 0 | 0 | 0 | 1000 | BLOCKED_OWNER |
-| **Total** | **2104** | — | — | — | — | — | 2 of 4 at target |
+| SAST | **1000** | 100% of 1000 | 1000 | 1000 | 1000 | 0 | AT_TARGET |
+| DAST | **1007** | 100% of 1000 | 1007 | 1007 | 1007 | 0 | AT_TARGET |
+| SECRETS | **1000** | 100% of 1000 | 1000 | 1000 | 1000 | 0 | AT_TARGET |
+| SCA | **1000** | 100% of 1000 | 1000 | 1000 | 1000 | 0 | AT_TARGET |
+| **Total** | **4007** | — | — | — | — | — | 4 of 4 numeric targets met |
 
 ## What blocks each engine
 
 - **SAST** — App language catalog (53 ids) — 160 rules cannot fire (GAP-040)
 - **DAST** — App response surface (11 headers) — 73 rules cannot fire (GAP-048)
-- **SECRETS** — No engine gate; growth is evidence-gated because a token shape must be a real published format
-- **SCA** — BLOCKED_OWNER: SCA content is advisory data (GHSA/OSV/NVD), and ingestion is behind the production-data lock (GAP-001) plus an unowned licence (GAP-002)
+- **SECRETS** — No engine gate; every rule must name the credential it detects (published token format, credential-named key, or tool-specific carrier)
+- **SCA** — Dataset-side only: the App has no sca pack loader, so these declared-dependency rules cannot fire in the product; its SCA seam reads advisory records (apps/api/src/scans/sca/provider.ts) behind the production-data lock (GAP-001)
 
 ## Why the counts are not the whole story
 
@@ -29,19 +29,27 @@ This page states where each engine actually stands, what is left, and what stops
 - **Patterns ≠ rules.** Every rule links to at least one pattern, so the pattern count tracks the rule
   count by construction (`test-assets` fails on a dangling link). A pattern count above the rule count
   means multi-pattern rules, not extra coverage.
-- **SCA is not a rule pack.** Its content is advisory data, which is blocked by the production-data
-  lock and an unowned licence; authoring 1,000 "SCA rules" without that data would be fabrication.
-- **Secrets growth is evidence-gated.** A secrets rule has to match a real, published token format;
-  inventing 900 formats to reach a number is exactly the padding `docs/PACKS.md` forbids.
+- **SCA now has both halves, kept apart.** The own-authored declaration pack (1,000 rules that
+  classify what a project declares) is complete and is what this row measures; production advisory
+  breadth stays at 0/100,000 behind the production-data lock and the unowned licence (GAP-001), and
+  the two are never added together.
+- **Secrets carries a reinstated 1,000-rule target, and the route to it is stated.** The 149
+  published-format rules were kept and 851 distinct rule families were authored on top: credential-
+  named keys (password, key-material, token and DSN keys), tool flags, credential headers, file
+  formats and tool-invocation carriers. Each one has its own literal, pattern, record, remediation,
+  declared tests and evaluation pair. The count is a count of authored rules: it does not by itself
+  show detection breadth, and overlapping generic rules (`DPK-SEC-003`, `-007`, `-106`) still fire on
+  many of the same literals. Nothing was relabelled to get there; the withdrawal recorded in
+  `docs/SECRETS_TARGET_DECISION_2026-10-25.md` is superseded in that same file, not deleted.
 
 ## Next batches, in order of value
 
 | Order | Engine | Batch | Why first |
 |---|---|---|---|
 | 1 | DAST | +90 body-evidence rules per batch (console, artefact, credential, PII families) | Largest gap that is fully inside our control; every rule is App-reachable by construction |
-| 2 | SECRETS | +40 provider formats per batch, each with a published specification | Real formats only; the leak scanner needs a marker for every shape |
+| 2 | SECRETS | every remaining documented single-line format, as vendors publish them | No numeric target (owner decision); the leak scanner needs a marker for every shape |
 | 3 | SAST | new evidence-backed classes per batch | At target; further growth needs published evidence per class |
-| 4 | SCA | **owner decision first** | Unblock the licence + production-data lock, or the engine has no dataset to load |
+| 4 | SCA | further declaration classes only with new evidence | At target; growth needs a question no existing rule asks |
 
 ## Per-user-type lenses (not engines)
 
@@ -54,8 +62,8 @@ counting it as new content would be padding. Source: `docs/USER_TYPE_LENSES.md`.
 |---|---|---|---|---|---|---|
 | DEVELOPER | **1000** / 1000 | 788 | 972 | 0 | 28 | 0 |
 | STUDENT | **1000** / 1000 | 928 | 775 | 0 | 0 | 225 |
-| SECURITY_PROFESSIONAL | **1000** / 1000 | 992 | 127 | 0 | 94 | 779 |
-| PENTESTER | **1000** / 1000 | 994 | 43 | 0 | 94 | 863 |
+| SECURITY_PROFESSIONAL | **1000** / 1000 | 1000 | 63 | 0 | 166 | 771 |
+| PENTESTER | **1000** / 1000 | 994 | 29 | 0 | 108 | 863 |
 
 ---
 

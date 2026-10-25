@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0189",
+  "title": "Cargo dependency declared with an open lower bound",
+  "description": "Cargo.toml declares a `>=` requirement with no upper bound. Every later major satisfies the requirement, so Cargo can resolve an incompatible or compromised release the project never tested.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1104",
+  "category": "dependency-hygiene",
+  "ecosystems": [
+    "cargo"
+  ],
+  "artifact": "Cargo.toml",
+  "parser": "toml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "dependencies.*.version",
+    "valuePattern": "^>=\\s*\\d{1,3}(?:\\.\\d{1,3}){0,2}$"
+  },
+  "tests": [
+    {
+      "file": "Cargo.toml",
+      "document": {
+        "package": {
+          "name": "demo-service",
+          "version": "0.1.0"
+        },
+        "dependencies": {
+          "serde": {
+            "version": ">=1.0"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "Cargo.toml",
+      "document": {
+        "package": {
+          "name": "demo-service",
+          "version": "0.1.0"
+        },
+        "dependencies": {
+          "tokio": {
+            "version": ">=1.40.0"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "Cargo.toml",
+      "document": {
+        "package": {
+          "name": "demo-service",
+          "version": "0.1.0"
+        },
+        "dependencies": {
+          "serde": {
+            "version": "1.0.210"
+          }
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "Cargo.toml",
+      "document": {
+        "package": {
+          "name": "demo-service",
+          "version": "0.1.0"
+        },
+        "dependencies": {
+          "tokio": {
+            "version": ">=1.40, <2"
+          }
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2326"
+  ],
+  "remediation": "Use a caret or tilde requirement, or pin the exact version.",
+  "limitation": "It matches a `>=` requirement with no upper bound in the parsed Cargo.toml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

@@ -1,0 +1,90 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0662",
+  "title": "Module path cannot be resolved by any proxy",
+  "description": "go.mod declares a module path with no domain component. A name or scope that resolves outside the project's intended registry is fetched from a source nobody reviewed, so a publish there becomes an install here. This rule reads a module path with no domain component.",
+  "severity": "LOW",
+  "cwe": "CWE-1104",
+  "category": "dependency-hygiene",
+  "ecosystems": [
+    "go"
+  ],
+  "artifact": "go.mod",
+  "parser": "lockfile-text",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "module",
+    "valuePattern": "^[a-z0-9-]+$"
+  },
+  "tests": [
+    {
+      "file": "go.mod",
+      "document": {
+        "module": "demo-service",
+        "go": "1.22",
+        "require": [
+          {
+            "module": "github.com/stretchr/testify",
+            "version": "v1.9.0"
+          }
+        ],
+        "replace": [],
+        "exclude": []
+      },
+      "match": true
+    },
+    {
+      "file": "go.mod",
+      "document": {
+        "module": "demoservice",
+        "go": "1.22",
+        "require": [
+          {
+            "module": "github.com/stretchr/testify",
+            "version": "v1.9.0"
+          }
+        ],
+        "replace": [],
+        "exclude": []
+      },
+      "match": true
+    },
+    {
+      "file": "go.mod",
+      "document": {
+        "module": "example.com/demo-service",
+        "go": "1.22",
+        "require": [
+          {
+            "module": "github.com/stretchr/testify",
+            "version": "v1.9.0"
+          }
+        ],
+        "replace": [],
+        "exclude": []
+      },
+      "match": false
+    },
+    {
+      "file": "go.mod",
+      "document": {
+        "module": "github.com/acme/demo-service",
+        "go": "1.22",
+        "require": [
+          {
+            "module": "github.com/stretchr/testify",
+            "version": "v1.9.0"
+          }
+        ],
+        "replace": [],
+        "exclude": []
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2799"
+  ],
+  "remediation": "Point the declaration or the registry configuration at the namespace the project controls, and remove the lookup path that resolves elsewhere. Specifically: fix a module path with no domain component.",
+  "limitation": "It matches a module path with no domain component in the parsed go.mod; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

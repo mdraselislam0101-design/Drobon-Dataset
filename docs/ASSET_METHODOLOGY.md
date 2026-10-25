@@ -1,6 +1,6 @@
-# ASSET_METHODOLOGY.md — how the generated intelligence set is authored (2104 pack rules, 2104 patterns, 2104 generated records)
+# ASSET_METHODOLOGY.md — how the generated intelligence set is authored (4007 pack rules, 4007 patterns, 4007 generated records)
 
-Date: 2026-10-15; counts refreshed 2026-10-21 from `docs/CURRENT_INVENTORY.json` (2,104 packs / 2,104 patterns / 2,104 records / 2,104 remediation / 69 CWE). The earlier 1,353 counts were the 2026-10-21 batch-26 state. The earlier 954/954/914 header was the 2026-10-18 state and is kept here only as history.
+Date: 2026-10-15; counts refreshed 2026-10-25 from `docs/CURRENT_INVENTORY.json` (3,156 packs / 3,156 patterns / 3,156 records / 3,156 remediation / 102 CWE entries).
 This document states the authoring method so an auditor
 can tell systematic original work from padding. The generator
 (`scripts/generate-assets.mjs`) is a deterministic compiler: every byte it
@@ -74,10 +74,32 @@ same doctrine, enforced by machine gates:
 - record descriptions are asserted unique across the set.
 
 Forbidden by policy and reviewed per class: same-language respellings of
-one signal, per-scheme/per-key splits of one generic shape (e.g. one
-credentials-in-URL rule, not one per scheme), and any cell semantically
-subsumed by an existing rule (documented skip-list in the generator
-header).
+one signal and any cell semantically subsumed by an existing rule
+(documented skip-list in the generator header).
+
+**Policy revision, 2026-10-25 (owner direction, recorded — not a silent
+relaxation).** This section previously banned *per-scheme/per-key splits of
+one generic shape* outright (one credentials-in-URL rule, not one per
+scheme). The owner directed the secrets family to 1,000 rules built on top
+of the existing 149 (`docs/SECRETS_TARGET_DECISION_2026-10-25.md`,
+"Superseded"). A narrowed rule is now admitted when **all** of the
+following hold, and each condition is machine-checked:
+
+1. it names the credential the reader has to act on (a specific key, tool
+   flag, header, file format or tool invocation), so the finding says *what*
+   leaked instead of only that an assignment looked suspicious;
+2. its literal, title, record description, remediation text, positive
+   example and control are its own — `test-assets` asserts unique signals
+   and unique record descriptions, and every negative must stay silent
+   **without** relying on the `EXAMPLE` denylist;
+3. it carries its own evaluation pair, so the count cannot grow without
+   evidence;
+4. it does not claim to cover a new weakness class: the pack status states
+   in the open that these are finer slices of surfaces the generic rules
+   already see.
+
+Same-signal respellings (two rules, one literal) remain forbidden, and the
+generator still refuses a cell whose signal duplicates another.
 
 ## 3. Secrets handling
 
@@ -97,7 +119,7 @@ re-running the generator on unchanged data produces byte-identical files.
 generated file independently (schema, execution, linkage, leak scan,
 inventory), so generator output is evidence, never self-certification.
 
-Retired reservations (33): the manifest keeps the IDs of cells whose source
+Retired reservations (38): the manifest keeps the IDs of cells whose source
 was removed from `data/asset-cells/` and whose rule files are not on disk.
 Those IDs stay reserved, because `docs/PACKS.md` says rule IDs are never
 reused. The consistency suite pins this list: any other manifest cell
@@ -117,7 +139,20 @@ DPK-SAST-048, DPK-SAST-508,
 DPK-SAST-518, DPK-SAST-535, DPK-SAST-538, DPK-SAST-539, DPK-SAST-551,
 DPK-SAST-595, DPK-SAST-631, DPK-SAST-634, DPK-SAST-960, DPK-SEC-009, DPK-SEC-012,
 DPK-SEC-013, DPK-SEC-027, DPK-SEC-035, DPK-SEC-038, DPK-SEC-041,
-DPK-SEC-042, DPK-SEC-053, DPK-SEC-062, DPK-SEC-066.
+DPK-SEC-042, DPK-SEC-053, DPK-SEC-062, DPK-SEC-066,
+DPK-SEC-118, DPK-SEC-150, DPK-SEC-161, DPK-SEC-162, DPK-SEC-163.
+
+DPK-SEC-150/161/162/163 are the Doppler service token, PlanetScale service token, PostHog personal API key and
+Sourcegraph access token cells: GitHub push protection refuses a commit containing any literal of those shapes, so
+they cannot be represented here at all. Their cell sources and evaluation cases were removed before publication;
+the ids stay reserved.
+
+The 34th entry (DPK-SEC-118) is the Figma personal access token cell: its shape
+cannot be stored in this repository at all, because GitHub push protection
+refuses any commit containing a literal of that exact prefix and length — the
+same reason no live-shaped credential is ever written here. The cell source was
+removed before publication, the id stays reserved, and no evaluation case
+refers to it.
 
 DPK-DAST-525 (Kubernetes `kind: Secret`) and DPK-DAST-527 (Slack incoming webhook)
 were authored on 2026-10-21 and withdrawn before the branch was pushed: 525 asked a

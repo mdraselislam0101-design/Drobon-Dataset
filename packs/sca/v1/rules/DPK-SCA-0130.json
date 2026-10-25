@@ -1,0 +1,91 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0130",
+  "title": "Poetry source configured over cleartext",
+  "description": "pyproject.toml declares a Poetry source URL that uses cleartext http. Packages and their hashes cross the network unencrypted, so a network attacker can substitute both the file and the hash that verifies it.",
+  "severity": "HIGH",
+  "cwe": "CWE-319",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "pypi"
+  ],
+  "artifact": "pyproject.toml",
+  "parser": "toml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "tool.poetry.source[].url",
+    "valuePattern": "^http://"
+  },
+  "tests": [
+    {
+      "file": "pyproject.toml",
+      "document": {
+        "tool": {
+          "poetry": {
+            "source": [
+              {
+                "name": "acme",
+                "url": "http://pypi.acme.example/simple",
+                "priority": "primary"
+              }
+            ]
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "pyproject.toml",
+      "document": {
+        "tool": {
+          "poetry": {
+            "source": [
+              {
+                "name": "mirror",
+                "url": "http://10.24.8.9/simple"
+              }
+            ]
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "pyproject.toml",
+      "document": {
+        "tool": {
+          "poetry": {
+            "source": [
+              {
+                "name": "acme",
+                "url": "https://pypi.acme.example/simple"
+              }
+            ]
+          }
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "pyproject.toml",
+      "document": {
+        "tool": {
+          "poetry": {
+            "source": [
+              {
+                "name": "pypi",
+                "url": "https://pypi.org/simple"
+              }
+            ]
+          }
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2267"
+  ],
+  "remediation": "Point the source at an https endpoint with a valid certificate.",
+  "limitation": "It matches a Poetry source URL that uses cleartext http in the parsed pyproject.toml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

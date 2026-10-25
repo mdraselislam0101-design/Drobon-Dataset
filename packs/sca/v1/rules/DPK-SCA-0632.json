@@ -1,0 +1,83 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0632",
+  "title": "A declared name is one edit away from `Dapper`",
+  "description": "packages.lock.json declares a locked package name in packages.lock.json within one edit of `Dapper`. NuGet restores exactly these names, so a name that only looks like the intended package brings foreign assemblies into the build. The name this rule expects is `Dapper`.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-829",
+  "category": "name-watchlist",
+  "ecosystems": [
+    "nuget"
+  ],
+  "artifact": "packages.lock.json",
+  "parser": "json",
+  "check": {
+    "type": "sca-name-distance",
+    "path": "dependencies.*",
+    "target": "Dapper",
+    "maxDistance": 1
+  },
+  "tests": [
+    {
+      "file": "packages.lock.json",
+      "document": {
+        "dependencies": {
+          "net8.0": {
+            "Dpper": {
+              "type": "Direct",
+              "resolved": "1.0.0"
+            }
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "packages.lock.json",
+      "document": {
+        "dependencies": {
+          "net8.0": {
+            "Dappex": {
+              "type": "Direct",
+              "resolved": "1.0.0"
+            }
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "packages.lock.json",
+      "document": {
+        "dependencies": {
+          "net8.0": {
+            "Dapper": {
+              "type": "Direct",
+              "resolved": "1.0.0"
+            }
+          }
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "packages.lock.json",
+      "document": {
+        "dependencies": {
+          "net8.0": {
+            "zzunrelatedtoolkit": {
+              "type": "Direct",
+              "resolved": "1.0.0"
+            }
+          }
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2769"
+  ],
+  "remediation": "Confirm the intended name against the package documentation the project already trusts and pin the declaration to that exact name; a name that is one edit away from a widely used package is a typo until the project can show it published the name itself. If the declaration was meant to be `Dapper`, correct it to that exact spelling.",
+  "limitation": "It compares declared names with `Dapper` by Levenshtein distance of one and reports a name that is not `Dapper` itself; it cannot tell whether the similarly spelled package exists, who publishes it, whether it is malicious, or whether the dependency reaches production code."
+}

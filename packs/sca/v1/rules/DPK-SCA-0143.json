@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0143",
+  "title": "Package upload endpoint configured over cleartext",
+  "description": ".pypirc declares an upload `repository` URL that uses cleartext http. The credential and the uploaded artifact travel unencrypted, so a network attacker can read the token and replace the package.",
+  "severity": "HIGH",
+  "cwe": "CWE-319",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "pypi"
+  ],
+  "artifact": ".pypirc",
+  "parser": "ini",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "config.pypi.repository",
+    "valuePattern": "^http://"
+  },
+  "tests": [
+    {
+      "file": ".pypirc",
+      "document": {
+        "config": {
+          "pypi": {
+            "repository": "http://upload.pypi.acme.example/legacy/"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": ".pypirc",
+      "document": {
+        "config": {
+          "pypi": {
+            "repository": "http://10.24.8.9/legacy/"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": ".pypirc",
+      "document": {
+        "config": {
+          "pypi": {
+            "repository": "https://upload.pypi.org/legacy/"
+          }
+        }
+      },
+      "match": false
+    },
+    {
+      "file": ".pypirc",
+      "document": {
+        "config": {
+          "pypi": {
+            "repository": "https://upload.pypi.acme.example/legacy/"
+          }
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2280"
+  ],
+  "remediation": "Upload over https, and rotate any credential used with a cleartext endpoint.",
+  "limitation": "It matches an upload `repository` URL that uses cleartext http in the parsed .pypirc; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

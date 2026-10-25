@@ -1,0 +1,76 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0123",
+  "title": "Python index marked as a trusted host",
+  "description": "requirements.txt declares a host on `--trusted-host`, for which certificate validation is skipped. TLS verification is turned off for that host by definition, so the transport no longer proves which server answered.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-295",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "pypi"
+  ],
+  "artifact": "requirements.txt",
+  "parser": "requirements",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "options.trusted_host[]",
+    "valuePattern": "^[a-z0-9.-]{3,80}$"
+  },
+  "tests": [
+    {
+      "file": "requirements.txt",
+      "document": {
+        "requirements": [],
+        "options": {
+          "trusted_host": [
+            "pypi.acme.example"
+          ]
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "requirements.txt",
+      "document": {
+        "requirements": [],
+        "options": {
+          "trusted_host": [
+            "pypi.acme.example",
+            "mirror.acme.example"
+          ]
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "requirements.txt",
+      "document": {
+        "requirements": [],
+        "options": {
+          "trusted_host": []
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "requirements.txt",
+      "document": {
+        "requirements": [
+          {
+            "name": "requests",
+            "specifier": "==2.32.3"
+          }
+        ],
+        "options": {
+          "index_url": "https://pypi.org/simple"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2260"
+  ],
+  "remediation": "Install the internal CA instead of trusting the host.",
+  "limitation": "It matches a host on `--trusted-host`, for which certificate validation is skipped in the parsed requirements.txt; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

@@ -1,0 +1,80 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0171",
+  "title": "Gradle explicitly permits an insecure repository protocol",
+  "description": "build.gradle declares a repository with `allowInsecureProtocol = true`. Gradle only talks cleartext here because the build was told to allow it, so the override is a deliberate decision to drop transport protection.",
+  "severity": "HIGH",
+  "cwe": "CWE-319",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "gradle"
+  ],
+  "artifact": "build.gradle",
+  "parser": "gradle",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "repositories[].allowInsecureProtocol",
+    "valuePattern": "^true$"
+  },
+  "tests": [
+    {
+      "file": "build.gradle",
+      "document": {
+        "repositories": [
+          {
+            "name": "acme",
+            "url": "http://repo.acme.example/maven2",
+            "allowInsecureProtocol": true
+          }
+        ],
+        "dependencies": []
+      },
+      "match": true
+    },
+    {
+      "file": "build.gradle",
+      "document": {
+        "repositories": [
+          {
+            "name": "mirror",
+            "url": "http://10.24.8.9/maven2",
+            "allowInsecureProtocol": true
+          }
+        ],
+        "dependencies": []
+      },
+      "match": true
+    },
+    {
+      "file": "build.gradle",
+      "document": {
+        "repositories": [
+          {
+            "name": "acme",
+            "url": "https://repo.acme.example/maven2"
+          }
+        ],
+        "dependencies": []
+      },
+      "match": false
+    },
+    {
+      "file": "build.gradle",
+      "document": {
+        "repositories": [
+          {
+            "name": "mavenCentral",
+            "url": "https://repo.maven.apache.org/maven2"
+          }
+        ],
+        "dependencies": []
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2308"
+  ],
+  "remediation": "Serve the repository over https and remove the override.",
+  "limitation": "It matches a repository with `allowInsecureProtocol = true` in the parsed build.gradle; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

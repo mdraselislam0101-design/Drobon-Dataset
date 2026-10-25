@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0191",
+  "title": "Cargo dependency resolved from a local path",
+  "description": "Cargo.toml declares a dependency that points at a directory on the build machine. The build compiles whatever that directory holds, so the artifact is not reproducible from the manifest.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1104",
+  "category": "dependency-hygiene",
+  "ecosystems": [
+    "cargo"
+  ],
+  "artifact": "Cargo.toml",
+  "parser": "toml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "dependencies.*.path",
+    "valuePattern": "^(?:\\.{1,2}/|/)"
+  },
+  "tests": [
+    {
+      "file": "Cargo.toml",
+      "document": {
+        "package": {
+          "name": "demo-service",
+          "version": "0.1.0"
+        },
+        "dependencies": {
+          "acme_shared": {
+            "path": "../acme-shared"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "Cargo.toml",
+      "document": {
+        "package": {
+          "name": "demo-service",
+          "version": "0.1.0"
+        },
+        "dependencies": {
+          "acme_lib": {
+            "path": "/opt/vendor/acme-lib"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "Cargo.toml",
+      "document": {
+        "package": {
+          "name": "demo-service",
+          "version": "0.1.0"
+        },
+        "dependencies": {
+          "acme_shared": {
+            "version": "1.2.0"
+          }
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "Cargo.toml",
+      "document": {
+        "package": {
+          "name": "demo-service",
+          "version": "0.1.0"
+        },
+        "dependencies": {
+          "acme_lib": {
+            "version": "2.0.1"
+          }
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2328"
+  ],
+  "remediation": "Publish the crate and depend on a version for releases.",
+  "limitation": "It matches a dependency that points at a directory on the build machine in the parsed Cargo.toml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

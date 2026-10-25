@@ -106,13 +106,16 @@ assert(
   'invariant: UNASSESSED cases contribute no TP, FP, FN and execute no detector',
   JSON.stringify(unassessed.filter((r) => r.falsePositives !== 0 || r.falseNegatives !== 0 || r.actual.length !== 0).map((r) => r.id)),
 );
-// Re-pinned 2026-10-21 (1336 -> 1353 -> 1365 -> 1379 -> 1398 -> 1440 -> 1573, +31 app-surface-5
-// positives) after the defensive DAST batch added 17
-// independent positive cases and 2 ordinary-response controls; recomputed value
-// comes from `node scripts/run-eval.mjs`, never from an edited expectation.
+// Re-pinned 2026-10-25: 1583 -> 2583 -> 3130 -> 3138 -> 3170 -> 3169 -> 3194 -> 3190 -> 4041 TP after the independent evaluation batches for
+// SCA (1,000 positives + 1,000 controls), DAST response-body (497 positives + 3 controls) and
+// SAST (50 positives + 102 controls), the SAST short-match cohort and the secrets shapes (32
+// positives + 2 controls) and the secrets 1,000-rule batch (+851 positives in 43 packed cases and 71
+// grouped controls). The pin moves only when the tree moves; the value comes
+// from `node scripts/run-eval.mjs`, never from an edited expectation. The single FP is the
+// preserved EVAL-SAST-008 docstring trap.
 assert(
-    report.counts.truePositives === 1583 && report.counts.falseNegatives === 0 && report.counts.falsePositives === 1,
-    'metrics: population counts pinned (1583 TP / 0 FN / 1 documented FP — additive SAST/DAST breadth totals)',
+    report.counts.truePositives === 4041 && report.counts.falseNegatives === 0 && report.counts.falsePositives === 1,
+    'metrics: population counts pinned (4041 TP / 0 FN / 1 documented FP — additive SAST/DAST/SCA/secrets totals)',
   JSON.stringify(report.counts),
 );
 
@@ -184,7 +187,28 @@ expectError((c) => { c.schemaVersion = 'drobon.eval.case/v99'; }, 'unsupported s
 expectError((c) => { c.expected = undefined; }, 'expected: required object', 'regression: missing expected outcomes rejected');
 expectError((c) => { c.expected = { detections: [] }; }, 'must declare >=1 expected detection', 'regression: issue-present without detections rejected');
 expectError((c) => { delete c.expected.detections[0].lineNo; }, 'lineNo: required', 'regression: incomplete evidence (no lineNo) rejected');
-expectError((c) => { c.expected.detections[0].mustContain = 'ab'; }, 'mustContain: required evidence text', 'regression: truncated evidence text rejected');
+expectError((c) => { c.expected.detections[0].mustContain = 'ab'; }, 'under 4 characters needs "shortEvidence"', 'regression: sub-4-character evidence without the owner-sanctioned flag rejected');
+expectError((c) => { c.expected.detections[0].mustContain = 'a'; }, 'required evidence text (>=2 chars)', 'regression: one-character evidence rejected outright');
+expectError((c) => { c.expected.detections[0].mustContain = 'ab'; c.shortEvidence = false; }, 'shortEvidence: must be true', 'regression: shortEvidence must be the literal true');
+{
+  const short = JSON.parse(JSON.stringify(VALID));
+  short.shortEvidence = true;
+  short.expected.detections[0].mustContain = 'ab';
+  assert(validateCase(short).length === 0, 'regression: shortEvidence case validates (evidence allowed as a complete-match proof)');
+  // ...but at execution it must equal the COMPLETE match, not a fragment of it.
+  const complete = JSON.parse(JSON.stringify(short));
+  complete.language = 'text';
+  complete.fixture = { name: 'short-evidence.txt', lines: ['prefix ab-suffix'] };
+  complete.expected.detections[0].ruleId = 'DPK-SAST-283';
+  complete.expected.detections[0].lineNo = 1;
+  complete.expected.detections[0].mustContain = 'ab';
+  const fragment = evaluateCase(ROOT, complete);
+  assert(
+    fragment.truePositives === 0 && fragment.falseNegatives === 1,
+    'evidence: short evidence must equal the detector complete match (a 2-char fragment of a longer match is not evidence)',
+    JSON.stringify(fragment.notes),
+  );
+}
 expectError((c) => { c.synthetic = false; }, 'synthetic: must be true', 'regression: non-synthetic case rejected');
 expectError((c) => { c.groundTruth = { state: 'ASSESSED', class: 'maybe', rationale: 'x'.repeat(11) }; }, 'groundTruth.class', 'regression: unknown ground-truth class rejected');
 expectError((c) => { c.id = 'EVAL-1'; }, 'id: must match', 'regression: malformed case id rejected');

@@ -1,0 +1,78 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0126",
+  "title": "pyproject dependency declared from a git remote",
+  "description": "pyproject.toml declares a `name @ git+…` dependency. The installed code sits outside index publication controls and can move with the branch the reference names.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-829",
+  "category": "dependency-hygiene",
+  "ecosystems": [
+    "pypi"
+  ],
+  "artifact": "pyproject.toml",
+  "parser": "toml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "project.dependencies[]",
+    "valuePattern": "^[A-Za-z0-9._-]{1,80} @ git\\+"
+  },
+  "tests": [
+    {
+      "file": "pyproject.toml",
+      "document": {
+        "project": {
+          "name": "demo-service",
+          "version": "1.4.0",
+          "dependencies": [
+            "acme-sdk @ git+https://github.com/acme/sdk.git@9f2c4a1"
+          ]
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "pyproject.toml",
+      "document": {
+        "project": {
+          "name": "demo-service",
+          "version": "1.4.0",
+          "dependencies": [
+            "acme-cli @ git+ssh://git@github.com/acme/cli.git@main"
+          ]
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "pyproject.toml",
+      "document": {
+        "project": {
+          "name": "demo-service",
+          "version": "1.4.0",
+          "dependencies": [
+            "acme-sdk==4.2.0"
+          ]
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "pyproject.toml",
+      "document": {
+        "project": {
+          "name": "demo-service",
+          "version": "1.4.0",
+          "dependencies": [
+            "acme-cli @ https://files.acme.example/cli.tar.gz"
+          ]
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2263"
+  ],
+  "remediation": "Publish the package and pin the released version.",
+  "limitation": "It matches a `name @ git+…` dependency in the parsed pyproject.toml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

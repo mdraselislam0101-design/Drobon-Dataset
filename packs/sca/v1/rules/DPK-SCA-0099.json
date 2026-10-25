@@ -1,0 +1,74 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0099",
+  "title": "Yarn lockfile resolves a package from a git remote",
+  "description": "yarn.lock declares a Yarn resolution that names a git remote instead of a registry range. The code sits outside the registry's publication controls, so its advisory linkage and provenance are unknown.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-829",
+  "category": "lockfile-integrity",
+  "ecosystems": [
+    "npm"
+  ],
+  "artifact": "yarn.lock",
+  "parser": "lockfile-text",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "entries[].resolution",
+    "valuePattern": "^[a-z@][^\\s]{0,60}@(?:git|github|gitlab|bitbucket)[:+^]"
+  },
+  "tests": [
+    {
+      "file": "yarn.lock",
+      "document": {
+        "entries": [
+          {
+            "name": "acme-sdk",
+            "resolution": "acme-sdk@git+https://github.com/acme/sdk.git#9f2c4a1"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "yarn.lock",
+      "document": {
+        "entries": [
+          {
+            "name": "acme-cli",
+            "resolution": "acme-cli@github:acme/cli#0a1b2c3"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "yarn.lock",
+      "document": {
+        "entries": [
+          {
+            "name": "acme-sdk",
+            "resolution": "acme-sdk@npm:4.2.0"
+          }
+        ]
+      },
+      "match": false
+    },
+    {
+      "file": "yarn.lock",
+      "document": {
+        "entries": [
+          {
+            "name": "acme-cli",
+            "resolution": "acme-cli@npm:2.1.0"
+          }
+        ]
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2236"
+  ],
+  "remediation": "Depend on a published version that the registry serves with a checksum.",
+  "limitation": "It matches a Yarn resolution that names a git remote instead of a registry range in the parsed yarn.lock; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

@@ -1,0 +1,202 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0665",
+  "title": "Release artifacts are published over cleartext",
+  "description": "pom.xml declares a `<distributionManagement><repository>` URL over cleartext. An artifact fetched over plain HTTP can be replaced in transit, so the bytes that install are not bound to what the author published. This rule reads a `<distributionManagement><repository>` URL over cleartext.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-319",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "maven"
+  ],
+  "artifact": "pom.xml",
+  "parser": "xml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "project.distributionManagement.repository.url",
+    "valuePattern": "^http://"
+  },
+  "tests": [
+    {
+      "file": "pom.xml",
+      "document": {
+        "project": {
+          "modelVersion": "4.0.0",
+          "groupId": "com.acme",
+          "artifactId": "demo-service",
+          "version": "1.4.0",
+          "licenses": [
+            {
+              "name": "Apache-2.0"
+            }
+          ],
+          "repositories": [
+            {
+              "id": "central",
+              "url": "https://repo1.maven.org/maven2"
+            }
+          ],
+          "dependencyManagement": {
+            "dependencies": [
+              {
+                "groupId": "org.slf4j",
+                "artifactId": "slf4j-api",
+                "version": "2.0.13"
+              }
+            ]
+          },
+          "dependencies": [
+            {
+              "groupId": "org.slf4j",
+              "artifactId": "slf4j-api"
+            }
+          ],
+          "distributionManagement": {
+            "repository": {
+              "id": "acme",
+              "url": "http://nexus.acme.example/releases"
+            }
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "pom.xml",
+      "document": {
+        "project": {
+          "modelVersion": "4.0.0",
+          "groupId": "com.acme",
+          "artifactId": "demo-service",
+          "version": "1.4.0",
+          "licenses": [
+            {
+              "name": "Apache-2.0"
+            }
+          ],
+          "repositories": [
+            {
+              "id": "central",
+              "url": "https://repo1.maven.org/maven2"
+            }
+          ],
+          "dependencyManagement": {
+            "dependencies": [
+              {
+                "groupId": "org.slf4j",
+                "artifactId": "slf4j-api",
+                "version": "2.0.13"
+              }
+            ]
+          },
+          "dependencies": [
+            {
+              "groupId": "org.slf4j",
+              "artifactId": "slf4j-api"
+            }
+          ],
+          "distributionManagement": {
+            "repository": {
+              "id": "acme",
+              "url": "http://10.24.8.9/releases"
+            }
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "pom.xml",
+      "document": {
+        "project": {
+          "modelVersion": "4.0.0",
+          "groupId": "com.acme",
+          "artifactId": "demo-service",
+          "version": "1.4.0",
+          "licenses": [
+            {
+              "name": "Apache-2.0"
+            }
+          ],
+          "repositories": [
+            {
+              "id": "central",
+              "url": "https://repo1.maven.org/maven2"
+            }
+          ],
+          "dependencyManagement": {
+            "dependencies": [
+              {
+                "groupId": "org.slf4j",
+                "artifactId": "slf4j-api",
+                "version": "2.0.13"
+              }
+            ]
+          },
+          "dependencies": [
+            {
+              "groupId": "org.slf4j",
+              "artifactId": "slf4j-api"
+            }
+          ],
+          "distributionManagement": {
+            "repository": {
+              "id": "acme",
+              "url": "https://nexus.acme.example/releases"
+            }
+          }
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "pom.xml",
+      "document": {
+        "project": {
+          "modelVersion": "4.0.0",
+          "groupId": "com.acme",
+          "artifactId": "demo-service",
+          "version": "1.4.0",
+          "licenses": [
+            {
+              "name": "Apache-2.0"
+            }
+          ],
+          "repositories": [
+            {
+              "id": "central",
+              "url": "https://repo1.maven.org/maven2"
+            }
+          ],
+          "dependencyManagement": {
+            "dependencies": [
+              {
+                "groupId": "org.slf4j",
+                "artifactId": "slf4j-api",
+                "version": "2.0.13"
+              }
+            ]
+          },
+          "dependencies": [
+            {
+              "groupId": "org.slf4j",
+              "artifactId": "slf4j-api"
+            }
+          ],
+          "distributionManagement": {
+            "repository": {
+              "id": "central",
+              "url": "https://oss.sonatype.org/service/local/staging/deploy/maven2"
+            }
+          }
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2802"
+  ],
+  "remediation": "Use the HTTPS endpoint the registry publishes and keep the hostname in the configuration reviewable. Specifically: fix a `<distributionManagement><repository>` URL over cleartext.",
+  "limitation": "It matches a `<distributionManagement><repository>` URL over cleartext in the parsed pom.xml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

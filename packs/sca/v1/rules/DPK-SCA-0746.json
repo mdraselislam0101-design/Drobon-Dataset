@@ -1,0 +1,133 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0746",
+  "title": "Profile repository that allows snapshot updates",
+  "description": "settings.xml declares a profile repository with snapshots enabled. The declaration leaves version choice to a resolver run, so a release published after this review is taken without a new decision. This rule reads a profile repository with snapshots enabled.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1104",
+  "category": "dependency-hygiene",
+  "ecosystems": [
+    "maven"
+  ],
+  "artifact": "settings.xml",
+  "parser": "xml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "settings.profiles[].repositories[].snapshots.enabled",
+    "valuePattern": "^true$"
+  },
+  "tests": [
+    {
+      "file": "settings.xml",
+      "document": {
+        "settings": {
+          "mirrors": [
+            {
+              "id": "central",
+              "mirrorOf": "central",
+              "url": "https://repo1.maven.org/maven2"
+            }
+          ],
+          "servers": [],
+          "profiles": [
+            {
+              "id": "internal",
+              "repositories": [
+                {
+                  "id": "internal",
+                  "url": "https://nexus.acme.example/releases",
+                  "snapshots": {
+                    "enabled": "true"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "settings.xml",
+      "document": {
+        "settings": {
+          "mirrors": [
+            {
+              "id": "central",
+              "mirrorOf": "central",
+              "url": "https://repo1.maven.org/maven2"
+            }
+          ],
+          "servers": [],
+          "profiles": [
+            {
+              "id": "acme",
+              "repositories": [
+                {
+                  "id": "acme",
+                  "url": "https://repo.acme.example",
+                  "snapshots": {
+                    "enabled": "true"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "settings.xml",
+      "document": {
+        "settings": {
+          "mirrors": [
+            {
+              "id": "central",
+              "mirrorOf": "central",
+              "url": "https://repo1.maven.org/maven2"
+            }
+          ],
+          "servers": [],
+          "profiles": [
+            {
+              "id": "internal",
+              "repositories": [
+                {
+                  "id": "internal",
+                  "url": "https://nexus.acme.example/releases",
+                  "snapshots": {
+                    "enabled": "false"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "settings.xml",
+      "document": {
+        "settings": {
+          "mirrors": [
+            {
+              "id": "central",
+              "mirrorOf": "central",
+              "url": "https://repo1.maven.org/maven2"
+            }
+          ],
+          "servers": [],
+          "profiles": []
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2883"
+  ],
+  "remediation": "Pin the declaration to an exact version or to the narrowest range the project tests, and update it deliberately. Specifically: fix a profile repository with snapshots enabled.",
+  "limitation": "It matches a profile repository with snapshots enabled in the parsed settings.xml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

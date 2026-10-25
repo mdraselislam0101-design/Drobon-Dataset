@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0167",
+  "title": "Maven mirror configured over cleartext",
+  "description": "settings.xml declares a mirror URL that uses cleartext http. Every artifact for the mirrored repositories crosses the network unencrypted, so substitution is invisible to the build.",
+  "severity": "HIGH",
+  "cwe": "CWE-319",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "maven"
+  ],
+  "artifact": "settings.xml",
+  "parser": "xml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "settings.mirrors[].url",
+    "valuePattern": "^http://"
+  },
+  "tests": [
+    {
+      "file": "settings.xml",
+      "document": {
+        "settings": {
+          "mirrors": [
+            {
+              "id": "acme",
+              "mirrorOf": "central",
+              "url": "http://repo.acme.example/maven2"
+            }
+          ]
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "settings.xml",
+      "document": {
+        "settings": {
+          "mirrors": [
+            {
+              "id": "mirror",
+              "mirrorOf": "*",
+              "url": "http://10.24.8.9/maven2"
+            }
+          ]
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "settings.xml",
+      "document": {
+        "settings": {
+          "mirrors": [
+            {
+              "id": "acme",
+              "mirrorOf": "central",
+              "url": "https://repo.acme.example/maven2"
+            }
+          ]
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "settings.xml",
+      "document": {
+        "settings": {
+          "mirrors": [
+            {
+              "id": "corp",
+              "mirrorOf": "central",
+              "url": "https://nexus.acme.example/repository/maven-public"
+            }
+          ]
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2304"
+  ],
+  "remediation": "Point the mirror at https.",
+  "limitation": "It matches a mirror URL that uses cleartext http in the parsed settings.xml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

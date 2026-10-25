@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0687",
+  "title": "Lock file uses the first format, which records less restore detail",
+  "description": "packages.lock.json declares a `packages.lock.json` on the older lock-file format. Without a recorded digest the downloaded artifact cannot be checked against what was reviewed, so substitution is undetectable at install time. This rule reads a `packages.lock.json` on the older lock-file format.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-494",
+  "category": "lockfile-integrity",
+  "ecosystems": [
+    "nuget"
+  ],
+  "artifact": "packages.lock.json",
+  "parser": "json",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "version",
+    "valuePattern": "^1$"
+  },
+  "tests": [
+    {
+      "file": "packages.lock.json",
+      "document": {
+        "version": 1,
+        "dependencies": {
+          "net8.0": {
+            "Newtonsoft.Json": {
+              "type": "Direct",
+              "resolved": "13.0.3"
+            }
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "packages.lock.json",
+      "document": {
+        "version": "1",
+        "dependencies": {
+          "net8.0": {
+            "Newtonsoft.Json": {
+              "type": "Direct",
+              "resolved": "13.0.3"
+            }
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "packages.lock.json",
+      "document": {
+        "version": 2,
+        "dependencies": {
+          "net8.0": {
+            "Newtonsoft.Json": {
+              "type": "Direct",
+              "resolved": "13.0.3"
+            }
+          }
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "packages.lock.json",
+      "document": {
+        "version": 2,
+        "dependencies": {
+          "net8.0": {
+            "Newtonsoft.Json": {
+              "type": "Direct",
+              "resolved": "13.0.3"
+            }
+          }
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2824"
+  ],
+  "remediation": "Regenerate the artifact with integrity data enabled and commit the recorded digest or checksum. Specifically: fix a `packages.lock.json` on the older lock-file format.",
+  "limitation": "It matches a `packages.lock.json` on the older lock-file format in the parsed packages.lock.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

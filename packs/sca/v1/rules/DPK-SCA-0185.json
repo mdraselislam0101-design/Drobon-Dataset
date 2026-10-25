@@ -1,0 +1,90 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0185",
+  "title": "NuGet lockfile recorded a floating version",
+  "description": "packages.lock.json declares a resolved version that is a floating `N.*` selector. A floating version resolves to whatever exists at restore time, so the lockfile stops describing the tree that was reviewed.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1104",
+  "category": "lockfile-integrity",
+  "ecosystems": [
+    "nuget"
+  ],
+  "artifact": "packages.lock.json",
+  "parser": "json",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "dependencies.*.*.resolved",
+    "valuePattern": "^\\d{1,3}\\.\\*$"
+  },
+  "tests": [
+    {
+      "file": "packages.lock.json",
+      "document": {
+        "version": 1,
+        "dependencies": {
+          "net8.0": {
+            "Newtonsoft.Json": {
+              "type": "Direct",
+              "resolved": "13.*",
+              "contentHash": "aaaa"
+            }
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "packages.lock.json",
+      "document": {
+        "version": 1,
+        "dependencies": {
+          "net8.0": {
+            "Serilog": {
+              "type": "Direct",
+              "resolved": "4.*",
+              "contentHash": "bbbb"
+            }
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "packages.lock.json",
+      "document": {
+        "version": 1,
+        "dependencies": {
+          "net8.0": {
+            "Newtonsoft.Json": {
+              "type": "Direct",
+              "resolved": "13.0.3",
+              "contentHash": "aaaa"
+            }
+          }
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "packages.lock.json",
+      "document": {
+        "version": 1,
+        "dependencies": {
+          "net8.0": {
+            "Serilog": {
+              "type": "Direct",
+              "resolved": "4.0.1",
+              "contentHash": "bbbb"
+            }
+          }
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2322"
+  ],
+  "remediation": "Pin the concrete version in the project and re-lock.",
+  "limitation": "It matches a resolved version that is a floating `N.*` selector in the parsed packages.lock.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

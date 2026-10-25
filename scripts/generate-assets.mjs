@@ -11,8 +11,15 @@
  *  - no httpx verify=False, django DEBUG, flask debug, spring debug cells
  *    (covered by DPK-SAST-015 / DPK-SAST-019);
  *  - no java/spring duplicate spellings (one cell per distinct signal);
- *  - no per-scheme credential-URL splits (one generic rule per shape);
- *  - no quoted json/toml/properties password cells (covered by DPK-SEC-007);
+ *  - REVISED 2026-10-25 by owner direction (docs/SECRETS_TARGET_DECISION_2026-10-25.md,
+ *    "Superseded"): narrowed per-key / per-format / per-tool credential rules ARE
+ *    admitted to the secrets pack, because the key, header, format or flag is the
+ *    content that lets an engine name the credential. The conditions are in
+ *    docs/ASSET_METHODOLOGY.md §2 and are enforced here: unique signal per cell,
+ *    unique record description, at least one negative that stays silent without the
+ *    EXAMPLE denylist, and an evaluation pair per rule. Same-signal respellings stay
+ *    forbidden; the generic rules DPK-SEC-003 / -007 / -106 remain and overlap by
+ *    design (stated in docs/PACKS.md).
  *  - SAST-004 was narrowed to bare md5( so dotted calls belong to
  *    language-specific cells (documented in that rule).
  *

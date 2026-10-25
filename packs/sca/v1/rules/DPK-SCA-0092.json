@@ -1,0 +1,71 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0092",
+  "title": "Yarn whitelists a host for unencrypted traffic",
+  "description": ".yarnrc.yml declares a host on the `unsafeHttpWhitelist`, which Yarn will talk to over cleartext. Every package fetched from a whitelisted host forgoes transport authentication, so its bytes can be replaced in flight.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-319",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "npm"
+  ],
+  "artifact": ".yarnrc.yml",
+  "parser": "yaml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "config.unsafeHttpWhitelist[]",
+    "valuePattern": "^[a-z0-9.-]{3,80}$"
+  },
+  "tests": [
+    {
+      "file": ".yarnrc.yml",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "unsafeHttpWhitelist": [
+            "npm.acme.example"
+          ]
+        }
+      },
+      "match": true
+    },
+    {
+      "file": ".yarnrc.yml",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "unsafeHttpWhitelist": [
+            "npm.acme.example",
+            "mirror.acme.example"
+          ]
+        }
+      },
+      "match": true
+    },
+    {
+      "file": ".yarnrc.yml",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "unsafeHttpWhitelist": []
+        }
+      },
+      "match": false
+    },
+    {
+      "file": ".yarnrc.yml",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "npmRegistryServer": "https://registry.yarnpkg.com/"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2229"
+  ],
+  "remediation": "Serve those hosts over https and empty the whitelist.",
+  "limitation": "It matches a host on the `unsafeHttpWhitelist`, which Yarn will talk to over cleartext in the parsed .yarnrc.yml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

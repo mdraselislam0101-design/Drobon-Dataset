@@ -58,6 +58,7 @@ const SCHEMA_BY_KIND = {
   sast: 'drobon.pack.sast/v1',
   secrets: 'drobon.pack.secrets/v1',
   dast: 'drobon.pack.dast/v1',
+  sca: 'drobon.pack.sca/v1',
 };
 
 // --- 1. positive: manifests + rules validate -------------------------------

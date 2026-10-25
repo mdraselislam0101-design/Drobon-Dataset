@@ -1,0 +1,82 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0070",
+  "title": "Lockfile nests duplicate copies of a package",
+  "description": "package-lock.json declares a lockfile that nests a second copy of a package inside another dependency. Two copies of the same package mean the tree ships code the top-level review never saw, and a patched top-level version can be shadowed by the nested one.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-494",
+  "category": "supply-chain-integrity",
+  "ecosystems": [
+    "npm"
+  ],
+  "artifact": "package-lock.json",
+  "parser": "json",
+  "check": {
+    "type": "sca-key-matches",
+    "path": "packages",
+    "keyPattern": "^node_modules/[^/]+/node_modules/|^node_modules/node_modules/"
+  },
+  "tests": [
+    {
+      "file": "package-lock.json",
+      "document": {
+        "name": "demo-service",
+        "lockfileVersion": 3,
+        "packages": {
+          "node_modules/a/node_modules/b": {
+            "version": "1.0.0",
+            "integrity": "sha512-AAAA"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "package-lock.json",
+      "document": {
+        "name": "demo-service",
+        "lockfileVersion": 3,
+        "packages": {
+          "node_modules/x/node_modules/y/node_modules/z": {
+            "version": "2.0.0",
+            "integrity": "sha512-BBBB"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "package-lock.json",
+      "document": {
+        "name": "demo-service",
+        "lockfileVersion": 3,
+        "packages": {
+          "node_modules/a": {
+            "version": "1.0.0",
+            "integrity": "sha512-AAAA"
+          }
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "package-lock.json",
+      "document": {
+        "name": "demo-service",
+        "lockfileVersion": 3,
+        "packages": {
+          "node_modules/b": {
+            "version": "2.0.0",
+            "integrity": "sha512-BBBB"
+          }
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2207"
+  ],
+  "remediation": "Deduplicate the tree and lift the dependency to the top level where it can be reviewed once.",
+  "limitation": "It matches a lockfile that nests a second copy of a package inside another dependency in the parsed package-lock.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}
