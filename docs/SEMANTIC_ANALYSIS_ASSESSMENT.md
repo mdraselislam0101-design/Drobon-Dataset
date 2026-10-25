@@ -10,11 +10,11 @@ statements are backed by the current repository tree and its test suites.
 
 | Layer | State | Evidence |
 |---|---|---|
-| Lexical detectors | **Implemented + verified** | 1676 rules (`packs/*/v1/rules`) with executable pos/neg tests; `test-packs` 5,962/5,594 (2026-10-21) |
+| Lexical detectors | **Implemented + verified** | 1732 rules (`packs/*/v1/rules`) with executable pos/neg tests; `test-packs` 5,962/5,594 (2026-10-21) |
 | Line/observation evaluation | **Implemented + verified** (Phase 6; breadth extended 2026-10-19) | `scripts/eval-foundation.mjs` + `data/eval-cases` (1,390 synthetic cases, 1,192 distinct rules in positive detections: 942 SAST / 97 secrets / 153 DAST); `test-eval` 43/43; breadth report `npm run eval:coverage` |
 | Evidence source-mapping | **Implemented + verified** (Phase 6, small milestone) | `scripts/finding-evidence.mjs` `extractEvidence` (line-range/excerpt/context computed from actual text); `test-finding-evidence` 31/31 |
 | Parser / AST | **NOT IMPLEMENTED** | no parser, grammar, or AST code anywhere in `scripts/`; no tests |
-| Header semantic models | **Implemented + verified** (2026-10-19) | `scripts/lib/csp.mjs` (policies/directives/source lists, fallback chain, first-wins duplicates) and `scripts/lib/set-cookie.mjs` (RFC 6265 attribute model, flag and SameSite resolution, and a storage decision that excludes refused cookies); differential gates `scripts/test-csp-semantics.mjs` 4,538/4,538 (incl. the multi-policy, keyword-case and duplicate-header limitation pins) and `scripts/test-cookie-semantics.mjs` 1,676/1,676 (incl. a cross-rule duplicate-finding suite) |
+| Header semantic models | **Implemented + verified** (2026-10-19) | `scripts/lib/csp.mjs` (policies/directives/source lists, fallback chain, first-wins duplicates) and `scripts/lib/set-cookie.mjs` (RFC 6265 attribute model, flag and SameSite resolution, and a storage decision that excludes refused cookies); differential gates `scripts/test-csp-semantics.mjs` 4,538/4,538 (incl. the multi-policy, keyword-case and duplicate-header limitation pins) and `scripts/test-cookie-semantics.mjs` 1,732/1,732 (incl. a cross-rule duplicate-finding suite) |
 | Control-flow graph | **NOT IMPLEMENTED** | no CFG code or tests |
 | Data-flow / taint tracking | **NOT IMPLEMENTED** | no taint code or tests; eval case EVAL-SAST-004 is explicitly `UNASSESSED` because of this |
 | Source/sink/sanitizer models | **NOT IMPLEMENTED** | rule pack is shape-level; sanitizers are not modelled (see FP/FN boundaries per rule `limitation` fields) |

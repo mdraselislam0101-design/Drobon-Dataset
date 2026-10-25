@@ -4,7 +4,7 @@
 > `docs/BANK_RULE_CHECKLIST.csv` from `packs/dast/v1/rules`; `--check` fails when either drifts.
 > Reachability is read from `interop/app-dast-reachability.json` (App at `9360dd1`, 11 forwarded headers).
 
-**579 rules · 506 evaluable inside the Main App · 73 blocked by the response-header surface.**
+**635 rules · 562 evaluable inside the Main App · 73 blocked by the response-header surface.**
 
 This is an **audit checklist**, not a claim of protection: every row states what the rule observes in one
 synthetic-tested response and what to change. See `docs/BANK_THREAT_COVERAGE_2026-10-21.md` for what no
@@ -19,15 +19,15 @@ someone verified the observation on the target.
 
 | Tier | Focus | Rules | App-reachable |
 |---|---|---|---|
-| 1 | customer money and identity | 145 | 131 |
-| 2 | browser trust and interface contracts | 134 | 96 |
-| 3 | disclosure, fingerprints and debug surfaces | 300 | 279 |
+| 1 | customer money and identity | 169 | 155 |
+| 2 | browser trust and interface contracts | 144 | 106 |
+| 3 | disclosure, fingerprints and debug surfaces | 322 | 301 |
 
 ## Tier 1 — customer money and identity
 
 *These are the observations a fraud team would act on first: financial identifiers, card credentials, one-time codes, session tokens and transport protection. A finding here is worth an incident ticket, not a backlog item.*
 
-**145 rules, 131 evaluable today.**
+**169 rules, 155 evaluable today.**
 
 | Rule | Severity | CWE | What it observes | What to do (first step) | Reachable |
 |---|---|---|---|---|---|
@@ -176,12 +176,36 @@ someone verified the observation on the target.
 | `DPK-DAST-587` Link to a private key file | HIGH | CWE-200 | the response body (first 32,768 bytes) | Remove the link, rotate the key and keep private material in the key store only. | yes |
 | `DPK-DAST-589` Link to a service-account credential file | HIGH | CWE-798 | the response body (first 32,768 bytes) | Remove the file, rotate the key in the identity provider and delete the link. | yes |
 | `DPK-DAST-590` TLS verification disabled in sample code | MEDIUM | CWE-295 | the response body (first 32,768 bytes) | Remove the sample and point readers at the trust store configuration instead. | yes |
+| `DPK-DAST-591` Account restriction reason disclosed | HIGH | CWE-359 | the response body (first 32,768 bytes) | Show a neutral status with the next step and keep the restriction reason inside the case-management system. | yes |
+| `DPK-DAST-595` Spring Actuator session list | HIGH | CWE-359 | the response body (first 32,768 bytes) | Exclude the sessions endpoint and store session state in a server-side store the management port cannot read. | yes |
+| `DPK-DAST-601` Customer information file number in a response | MEDIUM | CWE-359 | the response body (first 32,768 bytes) | Return a masked reference and use an opaque token internally. | yes |
+| `DPK-DAST-602` Collections status in a response | MEDIUM | CWE-359 | the response body (first 32,768 bytes) | Show the overdue amount with a neutral message and keep the recovery stage internal. | yes |
+| `DPK-DAST-605` Dormant-account flag in a response | LOW | CWE-359 | the response body (first 32,768 bytes) | Keep the dormancy state server-side and show only the reactivation step to the customer. | yes |
+| `DPK-DAST-606` Driving licence number in a response | MEDIUM | CWE-359 | the response body (first 32,768 bytes) | Mask the licence to its last four characters and keep the full value in the encrypted KYC store. | yes |
+| `DPK-DAST-614` Image loaded over plaintext HTTP | LOW | CWE-319 | the response body (first 32,768 bytes) | Serve images over HTTPS and enable upgrade-insecure-requests. | yes |
+| `DPK-DAST-615` Declared income disclosed | MEDIUM | CWE-359 | the response body (first 32,768 bytes) | Return a band only where the product needs it and keep the declared figure in the credit system. | yes |
+| `DPK-DAST-616` JDBC URL carrying a user parameter | HIGH | CWE-798 | the response body (first 32,768 bytes) | Move the connection detail into the platform secret store and keep it out of every rendered page. | yes |
+| `DPK-DAST-622` Cookie set from a meta element | MEDIUM | CWE-1004 | the response body (first 32,768 bytes) | Set cookies from the server with HttpOnly, Secure and SameSite. | yes |
+| `DPK-DAST-624` Mother's maiden name in a response | MEDIUM | CWE-359 | the response body (first 32,768 bytes) | Remove the field from every response and stop using it as a verification factor. | yes |
+| `DPK-DAST-627` Object element loaded over plaintext HTTP | MEDIUM | CWE-319 | the response body (first 32,768 bytes) | Load embedded documents over HTTPS and prefer a sandboxed frame. | yes |
+| `DPK-DAST-628` ODBC connection string in a response | HIGH | CWE-798 | the response body (first 32,768 bytes) | Render a masked DSN and keep the credential in the platform secret store. | yes |
+| `DPK-DAST-630` Overdraft limit served in a response | MEDIUM | CWE-359 | the response body (first 32,768 bytes) | Return the available amount instead of the limit and keep the limit in the credit system. | yes |
+| `DPK-DAST-632` Pre-approved limit served in a response | MEDIUM | CWE-359 | the response body (first 32,768 bytes) | Reveal the offer only inside the authenticated offer screen and never in a general summary payload. | yes |
+| `DPK-DAST-634` Relationship manager contact in a response | MEDIUM | CWE-359 | the response body (first 32,768 bytes) | Show a role-based contact channel and keep named contacts in the CRM. | yes |
+| `DPK-DAST-635` Internal risk grade in a response | HIGH | CWE-359 | the response body (first 32,768 bytes) | Keep the grade in the decision engine and expose only the approved or declined outcome. | yes |
+| `DPK-DAST-636` Script loaded over plaintext HTTP | HIGH | CWE-319 | the response body (first 32,768 bytes) | Load scripts only over HTTPS and add upgrade-insecure-requests to the policy. | yes |
+| `DPK-DAST-637` Security question answer in a response | MEDIUM | CWE-359 | the response body (first 32,768 bytes) | Store only a salted hash of the answer and never return it to any client. | yes |
+| `DPK-DAST-638` Sentry DSN in a response | MEDIUM | CWE-798 | the response body (first 32,768 bytes) | Rotate the DSN, keep it in the server-side configuration and proxy error reports through the backend. | yes |
+| `DPK-DAST-640` Stylesheet loaded over plaintext HTTP | MEDIUM | CWE-319 | the response body (first 32,768 bytes) | Load every asset over HTTPS and add upgrade-insecure-requests to the policy. | yes |
+| `DPK-DAST-642` Magnetic-stripe track data in a response | CRITICAL | CWE-522 | the response body (first 32,768 bytes) | Never store or transmit track data after authorisation; | yes |
+| `DPK-DAST-643` UPI virtual address in a response | MEDIUM | CWE-359 | the response body (first 32,768 bytes) | Mask the handle in list views and show it only inside the authenticated payee screen. | yes |
+| `DPK-DAST-645` Sanctions or watchlist match disclosed | HIGH | CWE-359 | the response body (first 32,768 bytes) | Keep screening results inside the compliance workflow and tell the customer only that a review is in progress. | yes |
 
 ## Tier 2 — browser trust and interface contracts
 
 *Header, CSP and markup weaknesses do not move money by themselves, but they are the difference between a stolen session and a blocked one, and between a clickjackable login and a safe one.*
 
-**134 rules, 96 evaluable today.**
+**144 rules, 106 evaluable today.**
 
 | Rule | Severity | CWE | What it observes | What to do (first step) | Reachable |
 |---|---|---|---|---|---|
@@ -319,12 +343,22 @@ someone verified the observation on the target.
 | `DPK-DAST-568` POST form without a CSRF token | MEDIUM | CWE-352 | the response body (first 32,768 bytes) | Add a per-session CSRF token to every state-changing form and verify it server-side. | yes |
 | `DPK-DAST-580` WebDAV methods advertised in a response | MEDIUM | CWE-650 | the response body (first 32,768 bytes) | Disable WebDAV in the server configuration, or restrict it to an authenticated administrative path. | yes |
 | `DPK-DAST-584` document.write with a variable | MEDIUM | CWE-79 | the response body (first 32,768 bytes) | Build the DOM with text nodes or a sanitised template, and remove the write call from the shipped bundle. | yes |
+| `DPK-DAST-597` Anchor navigates to a data:text/html document | MEDIUM | CWE-79 | the response body (first 32,768 bytes) | Serve the content from a route that sets a safe content type. | yes |
+| `DPK-DAST-598` Angular innerHTML property binding | MEDIUM | CWE-79 | the response body (first 32,768 bytes) | Bind text instead, or pass the value through the sanitizer explicitly. | yes |
+| `DPK-DAST-604` Same-origin policy relaxed from script | MEDIUM | CWE-1021 | the response body (first 32,768 bytes) | Remove the assignment and use postMessage with an explicit origin instead. | yes |
+| `DPK-DAST-607` Form action set to a javascript URL | HIGH | CWE-79 | the response body (first 32,768 bytes) | Point the action at a server route and handle validation there. | yes |
+| `DPK-DAST-608` Form posts into a new top-level window | LOW | CWE-1021 | the response body (first 32,768 bytes) | Post to a same-tab route or add rel=noopener on the anchor that leads there. | yes |
+| `DPK-DAST-613` Sandboxed frame keeps the same origin | MEDIUM | CWE-1021 | the response body (first 32,768 bytes) | Drop allow-same-origin from frames that also allow scripts. | yes |
+| `DPK-DAST-617` jQuery append of markup | MEDIUM | CWE-79 | the response body (first 32,768 bytes) | Use text() or a sanitised template before appending. | yes |
+| `DPK-DAST-618` jQuery parseHTML of untrusted markup | MEDIUM | CWE-79 | the response body (first 32,768 bytes) | Sanitise the string before parsing and insert it only as text. | yes |
+| `DPK-DAST-621` URL fragment written into innerHTML | MEDIUM | CWE-79 | the response body (first 32,768 bytes) | Write the fragment as text, or validate it against a fixed list of section names. | yes |
+| `DPK-DAST-641` Inline SVG carrying a script element | MEDIUM | CWE-79 | the response body (first 32,768 bytes) | Render SVG from a trusted source, or sanitise it with a policy that drops script and event attributes. | yes |
 
 ## Tier 3 — disclosure, fingerprints and debug surfaces
 
 *Artefacts, consoles and stack traces rarely cause a loss on their own; they shorten the attacker’s reconnaissance and are the cheapest findings to close.*
 
-**300 rules, 279 evaluable today.**
+**322 rules, 301 evaluable today.**
 
 | Rule | Severity | CWE | What it observes | What to do (first step) | Reachable |
 |---|---|---|---|---|---|
@@ -628,6 +662,28 @@ someone verified the observation on the target.
 | `DPK-DAST-583` Link to a Docker Compose file | MEDIUM | CWE-200 | the response body (first 32,768 bytes) | Remove the file from the web root, move secrets into the orchestrator's secret store and delete the link. | yes |
 | `DPK-DAST-585` Link to a Git metadata file | HIGH | CWE-200 | the response body (first 32,768 bytes) | Remove the link, delete the .git directory from the deployed tree and block the path at the server. | yes |
 | `DPK-DAST-588` robots.txt names sensitive paths | LOW | CWE-200 | the response body (first 32,768 bytes) | Do not rely on robots.txt for access control; | yes |
+| `DPK-DAST-592` Spring Actuator configuration properties dump | HIGH | CWE-215 | the response body (first 32,768 bytes) | Exclude configprops from the exposed management endpoints and keep bindings in the platform configuration. | yes |
+| `DPK-DAST-593` Spring Actuator environment dump | HIGH | CWE-215 | the response body (first 32,768 bytes) | Expose only health and info on the management port and require authentication for the rest. | yes |
+| `DPK-DAST-594` Spring Actuator heap dump reachable | CRITICAL | CWE-215 | the response body (first 32,768 bytes) | Never expose the heap dump over HTTP; | yes |
+| `DPK-DAST-596` Spring Actuator thread dump | MEDIUM | CWE-215 | the response body (first 32,768 bytes) | Exclude the threads endpoint from production exposure and take thread dumps on the host when they are needed. | yes |
+| `DPK-DAST-599` API version disclosed in the payload | LOW | CWE-200 | the response body (first 32,768 bytes) | Remove the internal version from the payload and correlate incidents with the request id instead. | yes |
+| `DPK-DAST-600` CakePHP DebugKit toolbar in a response | MEDIUM | CWE-215 | the response body (first 32,768 bytes) | Set debug to false in the production configuration and remove the DebugKit plugin from the production application. | yes |
+| `DPK-DAST-603` Django Silk profiling UI in a response | MEDIUM | CWE-215 | the response body (first 32,768 bytes) | Remove silk from the production settings, restrict it to a developer machine and delete the persisted profile data. | yes |
+| `DPK-DAST-609` Grails error page in a response | MEDIUM | CWE-209 | the response body (first 32,768 bytes) | Disable the Grails error page in production and map exceptions to a generic response with a correlation id. | yes |
+| `DPK-DAST-610` GraphQL playground served | MEDIUM | CWE-200 | the response body (first 32,768 bytes) | Disable the playground in production and keep introspection off outside development. | yes |
+| `DPK-DAST-611` Health check exposes dependency status | LOW | CWE-200 | the response body (first 32,768 bytes) | Return an aggregate status only and keep the per-component detail on the management network. | yes |
+| `DPK-DAST-612` Hibernate SQL echoed in a response | MEDIUM | CWE-209 | the response body (first 32,768 bytes) | Disable show_sql and format_sql in production and log statements to the server log only. | yes |
+| `DPK-DAST-619` JSF ViewState carried in a response | MEDIUM | CWE-502 | the response body (first 32,768 bytes) | Enable signed ViewState, prefer server-side state saving and keep the deserialiser patched against known gadget chains. | yes |
+| `DPK-DAST-620` Kafka management UI in a response | MEDIUM | CWE-200 | the response body (first 32,768 bytes) | Keep the UI on the platform network and require authentication if it must exist at all. | yes |
+| `DPK-DAST-623` Mongo Express UI in a response | HIGH | CWE-200 | the response body (first 32,768 bytes) | Remove the UI from the deployed estate and restrict database access to the application network. | yes |
+| `DPK-DAST-625` Next.js development error overlay in a response | MEDIUM | CWE-215 | the response body (first 32,768 bytes) | Build and deploy with NODE_ENV=production so the error overlay is not compiled in, and return a generic error page instead. | yes |
+| `DPK-DAST-626` OAuth error_description in a response | LOW | CWE-209 | the response body (first 32,768 bytes) | Log the detailed reason and return a stable error code with a generic description. | yes |
+| `DPK-DAST-629` Oracle error code in a response | MEDIUM | CWE-209 | the response body (first 32,768 bytes) | Catch database exceptions and return a generic error with a correlation id; | yes |
+| `DPK-DAST-631` Phoenix LiveDashboard exposed | HIGH | CWE-200 | the response body (first 32,768 bytes) | Remove the dashboard route from the production router or gate it behind an authenticated plug on an administrative host. | yes |
+| `DPK-DAST-633` Redis Commander UI in a response | HIGH | CWE-200 | the response body (first 32,768 bytes) | Remove the UI from the deployed estate and require an authenticated tunnel for any administrative Redis access. | yes |
+| `DPK-DAST-639` Struts development mode enabled | MEDIUM | CWE-215 | the response body (first 32,768 bytes) | Set struts.devMode to false in production and deploy the release configuration. | yes |
+| `DPK-DAST-644` Vaadin development mode in a response | MEDIUM | CWE-215 | the response body (first 32,768 bytes) | Build with the production profile so the Vaadin servlet serves the compiled bundle and no debug window. | yes |
+| `DPK-DAST-646` Zipkin tracing UI in a response | MEDIUM | CWE-200 | the response body (first 32,768 bytes) | Restrict Zipkin to the observability network and require authentication in front of it. | yes |
 
 ## Appendix — the 73 rules the App cannot evaluate today
 

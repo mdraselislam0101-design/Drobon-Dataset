@@ -83,7 +83,7 @@ directory).
 | OSV | n/a (no records) | NO | 0 | BLOCKED |
 | NVD | n/a | NO | 0 | BLOCKED |
 | CWE knowledge (63) | YES | link-pinned | n/a | acknowledgment open |
-| Original (1,676 rules etc.) | YES | NO (no LICENSE) | n/a | BLOCKED (BLK-001) |
+| Original (1,732 rules etc.) | YES | NO (no LICENSE) | n/a | BLOCKED (BLK-001) |
 
 No production corpus may be downloaded, normalized, published, or promoted
 until every applicable row above carries an explicit owner decision with
