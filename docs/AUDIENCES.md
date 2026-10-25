@@ -48,18 +48,18 @@ One shared intelligence base serves all four user types. Membership is by direct
 
 | UserType | Dataset content it draws on | Count (tree) | Status |
 |---|---|---|---|
-| DEVELOPER | Remediation guidance (shared, every pack rule); developer lessons `lsn_dev_*` | remediation 3135; dev lessons 2 | Data present; no app consumer |
+| DEVELOPER | Remediation guidance (shared, every pack rule); developer lessons `lsn_dev_*` | remediation 3156; dev lessons 2 | Data present; no app consumer |
 | STUDENT | Lessons `learning/lessons/*` (includes the 2 `lsn_dev_*` lessons; no audience field) | lessons 6 | Data present; overlap with DEVELOPER by design until audience field is approved |
 | SECURITY_PROFESSIONAL | Assessment templates `tmpl_*`; shared packs (SAST 950 / secrets 129 / DAST 91) and CWE knowledge | templates 3; CWE 63 | Data present; templates never pre-declare authorization |
 | PENTESTER | Passive engagement templates `eng_*` (no offensive content) | engagement templates 2 | Data present; passive-only by design |
 
-Shared base (all four types): packs 3135 rules, patterns 3135 (all referenced by a rule), records 3135 (every rule and every pattern now has exactly one record, including the 40 legacy rules that previously had none), remediation 3135, CWE 102.
+Shared base (all four types): packs 3156 rules, patterns 3156 (all referenced by a rule), records 3156 (every rule and every pattern now has exactly one record, including the 40 legacy rules that previously had none), remediation 3156, CWE 102.
 
 **Honest state:** no UserType has a live app consumer from this repo. Dataset presence does not imply Main App engine or loader capability (see the language-reachability snapshot in `docs/PACKS.md`).
 
 Tripwire line (format is load-bearing; read by `test-consistency`):
 
-matrix-counts: devLessons=2 studentLessons=6 securityTemplates=3 pentesterTemplates=2 remediation=3135 patterns=3135 records=3135 cwe=102
+matrix-counts: devLessons=2 studentLessons=6 securityTemplates=3 pentesterTemplates=2 remediation=3156 patterns=3156 records=3156 cwe=102
 
 **Gaps (not closed in Pump 3):**
 - DEVELOPER has 2 executable lessons; a broader developer curriculum needs new lesson files, which require explicit approval (new-file rule).
@@ -80,14 +80,14 @@ Read-only audit of the four UserTypes against the working tree and the Main App 
 
 | UserType | Checked | Result |
 |---|---|---|
-| DEVELOPER | `knowledge/remediation/` (3,135 files); lessons `lsn_dev_*` (2 files) | Counts match the tripwire. Remediation is shared, not forked. No app consumer. |
+| DEVELOPER | `knowledge/remediation/` (3,156 files); lessons `lsn_dev_*` (2 files) | Counts match the tripwire. Remediation is shared, not forked. No app consumer. |
 | STUDENT | `learning/lessons/` (6 files) | Counts match. The 2 `lsn_dev_*` lessons also sit in this set. No lesson has an `audience` or `userType` field (0 of 5), so overlap with DEVELOPER stays by design until the owner decides the audience field (§2). |
 | SECURITY_PROFESSIONAL | `assessments/templates/` (3); CWE (48) | Counts match. All three templates list only `scope`: `inScopeHosts`, `outOfScopeHosts`, and notes. None pre-declares authorization. Notes say "review-only" or "passive only". |
 | PENTESTER | `engagements/` (2) | Counts match. Checklists require written authorization, check that the target matches the declared scope exactly, and say that anything beyond passive reads needs a new written scope. No offensive or exploit content was found. A grep for `exploit`, `payload`, and `attack` in `engagements/` and `assessments/templates/` matched one benign triage phrase in `tmpl_api_review.json` ("exploitability notes"), and nothing else. |
 
 Cross-check against the Main App (read-only): `packages/shared/src/authz.ts` `USER_TYPES` = `DEVELOPER`, `STUDENT`, `SECURITY_PROFESSIONAL`, `PENTESTER`. The four Dataset types match these four ids. The Main App treats UserType as classification, not authorization, and the Dataset does the same.
 
-Shared base for all four types (current counts, 2026-10-21 recount): the numbers in the shared-base paragraph above are the recomputed figures — packs 3135 rules; patterns 3135; records 3135, every pattern referenced by exactly one record; remediation 3135; CWE 102. The 40 legacy rules that had no record before the 2026-10-19 generator fix are included.
+Shared base for all four types (current counts, 2026-10-21 recount): the numbers in the shared-base paragraph above are the recomputed figures — packs 3156 rules; patterns 3156; records 3156, every pattern referenced by exactly one record; remediation 3156; CWE 102. The 40 legacy rules that had no record before the 2026-10-19 generator fix are included.
 
 Gaps found and left open (owner decisions, see `docs/OWNER_ACTION_REQUIRED.md` §6):
 - Lesson audience field (none exists; DEVELOPER and STUDENT overlap).

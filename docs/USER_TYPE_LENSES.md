@@ -20,10 +20,10 @@ audiences, and this page says so instead of counting it four times as if it were
 |---|---|---|---|---|---|---|---|---|
 | DEVELOPER | **1000** / 1000 | 788 | 3.90 | 972 | 0 | 28 | 0 | `views/developer-v1.json` |
 | STUDENT | **1000** / 1000 | 928 | 3.90 | 775 | 0 | 0 | 225 | `views/student-v1.json` |
-| SECURITY_PROFESSIONAL | **1000** / 1000 | 992 | 4.10 | 96 | 0 | 125 | 779 | `views/security-professional-v1.json` |
+| SECURITY_PROFESSIONAL | **1000** / 1000 | 992 | 4.10 | 75 | 0 | 146 | 779 | `views/security-professional-v1.json` |
 | PENTESTER | **1000** / 1000 | 994 | 4.70 | 29 | 0 | 108 | 863 | `views/pentester-v1.json` |
 
-Candidates: **3135** rules across the four packs. Every lens selects the top 1000, so a rule
+Candidates: **3156** rules across the four packs. Every lens selects the top 1000, so a rule
 outside a lens is not rejected as wrong — it is simply past the cutoff for that audience.
 
 ## Scoring model (authored policy, printed so it can be argued with)
@@ -46,7 +46,7 @@ the 11 forwarded response headers for DAST, and the ungated secrets engine.
 - No user type has a live App consumer for these lenses; the file is a dataset artefact until the App
   gains an audience filter.
 - A selected rule is not a verified finding: reachability measures whether the rule *can* fire, not
-  whether it fires correctly. That is the eval corpus’s job (4,581 cases, TP 3,169, FN 0, FP 1).
+  whether it fires correctly. That is the eval corpus’s job (4,604 cases, TP 3,190, FN 0, FP 1).
 - SCA contributes zero rules to every lens because the SCA pack is still empty and blocked on the
   owner decision recorded in `DROBON_REMAINING_WORK.csv` (GAP-001, GAP-002).
 

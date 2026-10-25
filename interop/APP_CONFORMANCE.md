@@ -6,7 +6,7 @@ App profile. **Do not edit by hand** — `npm test` fails when this file or
 
 - Main App reference: `mdraselislam0101-design/Drobon` @ `9360dd1abdf940cc1bffd942aab0702703aaaaef`
 - Profile source of truth: `apps/api/src/external/evaluator.ts`, `apps/api/src/external/packProvider.ts` (verified 2026-10-21)
-- Packs measured: SAST 1000 · Secrets 128 · DAST 1007
+- Packs measured: SAST 1000 · Secrets 149 · DAST 1007
 - Regenerate: `npm run app-conformance` · verify: `npm run validate:app-conformance`
 
 ## 1. Declared-test parity
@@ -19,7 +19,7 @@ would return for the same input.
 | Family | Rules | Declared tests | App accepts | Mismatches | Parity |
 |---|---|---|---|---|---|
 | SAST | 1,000 | 4,043 | 4,043 | 0 | 100% |
-| Secrets | 128 | 565 | 565 | 0 | 100% |
+| Secrets | 149 | 649 | 649 | 0 | 100% |
 | DAST | 1,007 | 3,673 | 1,007 rules | 15 | 99.6% |
 
 SAST and Secrets agree on every declared test: the App would reproduce this

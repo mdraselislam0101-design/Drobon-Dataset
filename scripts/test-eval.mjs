@@ -106,15 +106,15 @@ assert(
   'invariant: UNASSESSED cases contribute no TP, FP, FN and execute no detector',
   JSON.stringify(unassessed.filter((r) => r.falsePositives !== 0 || r.falseNegatives !== 0 || r.actual.length !== 0).map((r) => r.id)),
 );
-// Re-pinned 2026-10-25: 1583 -> 2583 -> 3130 -> 3138 -> 3170 -> 3169 TP after the independent evaluation batches for
+// Re-pinned 2026-10-25: 1583 -> 2583 -> 3130 -> 3138 -> 3170 -> 3169 -> 3194 -> 3190 TP after the independent evaluation batches for
 // SCA (1,000 positives + 1,000 controls), DAST response-body (497 positives + 3 controls) and
 // SAST (50 positives + 102 controls), the SAST short-match cohort and the secrets shapes (32
 // positives + 2 controls). The pin moves only when the tree moves; the value comes
 // from `node scripts/run-eval.mjs`, never from an edited expectation. The single FP is the
 // preserved EVAL-SAST-008 docstring trap.
 assert(
-    report.counts.truePositives === 3169 && report.counts.falseNegatives === 0 && report.counts.falsePositives === 1,
-    'metrics: population counts pinned (3169 TP / 0 FN / 1 documented FP — additive SAST/DAST/SCA totals)',
+    report.counts.truePositives === 3190 && report.counts.falseNegatives === 0 && report.counts.falsePositives === 1,
+    'metrics: population counts pinned (3190 TP / 0 FN / 1 documented FP — additive SAST/DAST/SCA totals)',
   JSON.stringify(report.counts),
 );
 

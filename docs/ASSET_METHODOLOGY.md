@@ -1,6 +1,6 @@
-# ASSET_METHODOLOGY.md — how the generated intelligence set is authored (3135 pack rules, 3135 patterns, 3135 generated records)
+# ASSET_METHODOLOGY.md — how the generated intelligence set is authored (3156 pack rules, 3156 patterns, 3156 generated records)
 
-Date: 2026-10-15; counts refreshed 2026-10-25 from `docs/CURRENT_INVENTORY.json` (3,135 packs / 3,135 patterns / 3,135 records / 3,135 remediation / 102 CWE entries).
+Date: 2026-10-15; counts refreshed 2026-10-25 from `docs/CURRENT_INVENTORY.json` (3,156 packs / 3,156 patterns / 3,156 records / 3,156 remediation / 102 CWE entries).
 This document states the authoring method so an auditor
 can tell systematic original work from padding. The generator
 (`scripts/generate-assets.mjs`) is a deterministic compiler: every byte it
@@ -97,7 +97,7 @@ re-running the generator on unchanged data produces byte-identical files.
 generated file independently (schema, execution, linkage, leak scan,
 inventory), so generator output is evidence, never self-certification.
 
-Retired reservations (34): the manifest keeps the IDs of cells whose source
+Retired reservations (38): the manifest keeps the IDs of cells whose source
 was removed from `data/asset-cells/` and whose rule files are not on disk.
 Those IDs stay reserved, because `docs/PACKS.md` says rule IDs are never
 reused. The consistency suite pins this list: any other manifest cell
@@ -118,7 +118,12 @@ DPK-SAST-518, DPK-SAST-535, DPK-SAST-538, DPK-SAST-539, DPK-SAST-551,
 DPK-SAST-595, DPK-SAST-631, DPK-SAST-634, DPK-SAST-960, DPK-SEC-009, DPK-SEC-012,
 DPK-SEC-013, DPK-SEC-027, DPK-SEC-035, DPK-SEC-038, DPK-SEC-041,
 DPK-SEC-042, DPK-SEC-053, DPK-SEC-062, DPK-SEC-066,
-DPK-SEC-118.
+DPK-SEC-118, DPK-SEC-150, DPK-SEC-161, DPK-SEC-162, DPK-SEC-163.
+
+DPK-SEC-150/161/162/163 are the Doppler service token, PlanetScale service token, PostHog personal API key and
+Sourcegraph access token cells: GitHub push protection refuses a commit containing any literal of those shapes, so
+they cannot be represented here at all. Their cell sources and evaluation cases were removed before publication;
+the ids stay reserved.
 
 The 34th entry (DPK-SEC-118) is the Figma personal access token cell: its shape
 cannot be stored in this repository at all, because GitHub push protection

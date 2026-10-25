@@ -7,13 +7,13 @@ The request behind this file was "1,000 data, 1,000 patterns, 1,000 rules for ev
 This page states where each engine actually stands, what is left, and what stops it. A row reaches
 **AT_TARGET** only when the rule count really is 1,000 — never by renaming, merging or counting padding.
 
-| Engine | Rules | / 1,000 | Patterns | Records | Remediation | Remaining | Status |
+| Engine | Rules | Against target | Patterns | Records | Remediation | Remaining | Status |
 |---|---|---|---|---|---|---|---|
-| SAST | **1000** | 100% | 1000 | 1000 | 1000 | 0 | AT_TARGET |
-| DAST | **1007** | 100% | 1007 | 1007 | 1007 | 0 | AT_TARGET |
-| SECRETS | **128** | 12.8% | 128 | 128 | 128 | 872 | IN_PROGRESS |
-| SCA | **1000** | 100% | 1000 | 1000 | 1000 | 0 | AT_TARGET |
-| **Total** | **3135** | — | — | — | — | — | 3 of 4 at target |
+| SAST | **1000** | 100% of 1000 | 1000 | 1000 | 1000 | 0 | AT_TARGET |
+| DAST | **1007** | 100% of 1000 | 1007 | 1007 | 1007 | 0 | AT_TARGET |
+| SECRETS | **149** | no numeric target (evidence-gated) | 149 | 149 | 149 | — | EVIDENCE_GATED |
+| SCA | **1000** | 100% of 1000 | 1000 | 1000 | 1000 | 0 | AT_TARGET |
+| **Total** | **3156** | — | — | — | — | — | 3 of 3 numeric targets met |
 
 ## What blocks each engine
 
@@ -29,19 +29,24 @@ This page states where each engine actually stands, what is left, and what stops
 - **Patterns ≠ rules.** Every rule links to at least one pattern, so the pattern count tracks the rule
   count by construction (`test-assets` fails on a dangling link). A pattern count above the rule count
   means multi-pattern rules, not extra coverage.
-- **SCA is not a rule pack.** Its content is advisory data, which is blocked by the production-data
-  lock and an unowned licence; authoring 1,000 "SCA rules" without that data would be fabrication.
-- **Secrets growth is evidence-gated.** A secrets rule has to match a real, published token format;
-  inventing 900 formats to reach a number is exactly the padding `docs/PACKS.md` forbids.
+- **SCA now has both halves, kept apart.** The own-authored declaration pack (1,000 rules that
+  classify what a project declares) is complete and is what this row measures; production advisory
+  breadth stays at 0/100,000 behind the production-data lock and the unowned licence (GAP-001), and
+  the two are never added together.
+- **Secrets has no numeric target any more.** A secrets rule has to match a real, published token
+  format, and there are not 1,000 such formats; inventing the difference is exactly the padding
+  `docs/PACKS.md` forbids. On 2026-10-25 the owner withdrew the figure
+  (`docs/SECRETS_TARGET_DECISION_2026-10-25.md`), so the row reports what is authored and what is
+  left in the published-format inventory instead of a percentage nobody can reach honestly.
 
 ## Next batches, in order of value
 
 | Order | Engine | Batch | Why first |
 |---|---|---|---|
 | 1 | DAST | +90 body-evidence rules per batch (console, artefact, credential, PII families) | Largest gap that is fully inside our control; every rule is App-reachable by construction |
-| 2 | SECRETS | +40 provider formats per batch, each with a published specification | Real formats only; the leak scanner needs a marker for every shape |
+| 2 | SECRETS | every remaining documented single-line format, as vendors publish them | No numeric target (owner decision); the leak scanner needs a marker for every shape |
 | 3 | SAST | new evidence-backed classes per batch | At target; further growth needs published evidence per class |
-| 4 | SCA | **owner decision first** | Unblock the licence + production-data lock, or the engine has no dataset to load |
+| 4 | SCA | further declaration classes only with new evidence | At target; growth needs a question no existing rule asks |
 
 ## Per-user-type lenses (not engines)
 
@@ -54,7 +59,7 @@ counting it as new content would be padding. Source: `docs/USER_TYPE_LENSES.md`.
 |---|---|---|---|---|---|---|
 | DEVELOPER | **1000** / 1000 | 788 | 972 | 0 | 28 | 0 |
 | STUDENT | **1000** / 1000 | 928 | 775 | 0 | 0 | 225 |
-| SECURITY_PROFESSIONAL | **1000** / 1000 | 992 | 96 | 0 | 125 | 779 |
+| SECURITY_PROFESSIONAL | **1000** / 1000 | 992 | 75 | 0 | 146 | 779 |
 | PENTESTER | **1000** / 1000 | 994 | 29 | 0 | 108 | 863 |
 
 ---

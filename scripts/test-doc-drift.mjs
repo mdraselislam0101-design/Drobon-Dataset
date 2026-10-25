@@ -361,15 +361,15 @@ if (existsSync(join(ROOT, 'DROBON_COVERAGE_EVIDENCE.json'))) {
     // Dropbox, Figma, Resend, W&B, LangSmith, xAI, Pinecone, Replicate, NGC, Grafana Cloud,
     // Cloudinary, Sentry DSN, Teams webhook, Google OAuth, Fauna, Astra DB, Flutterwave,
     // Mercado Pago, Braintree, PKCS#8). Knowledge trees 3104 -> 3136 in the same change.
-    ['secrets rules', countFiles('packs/secrets/v1/rules', /^DPK-.*\.json$/), 128],
+    ['secrets rules', countFiles('packs/secrets/v1/rules', /^DPK-.*\.json$/), 149],
     // Audit claims re-pinned 2026-10-21: DAST 306 -> 325 -> 367 -> 398 -> 500, knowledge trees
     // 1353 -> 1372 -> 1445 -> 1557 after app-surface batches 3, 4, 5 and 6. The pin is the *claim being audited*, so it moves only
     // when the tree moves and the ledger is updated in the same commit.
     ['dast rules', countFiles('packs/dast/v1/rules', /^DPK-.*\.json$/), 1007],
     ['sca rules', countFiles('packs/sca/v1/rules', /^DPK-.*\.json$/), 1000],
-    ['patterns', countFiles('knowledge/patterns', /^DPK-PAT-.*\.json$/), 3135],
-    ['records', countFiles('knowledge/records', /^DPK-REC-.*\.json$/), 3135],
-    ['remediation', countFiles('knowledge/remediation', /^DPK-.*\.json$/), 3135],
+    ['patterns', countFiles('knowledge/patterns', /^DPK-PAT-.*\.json$/), 3156],
+    ['records', countFiles('knowledge/records', /^DPK-REC-.*\.json$/), 3156],
+    ['remediation', countFiles('knowledge/remediation', /^DPK-.*\.json$/), 3156],
     ['cwe', countFiles('knowledge/cwe', /\.json$/), 102],
     ['lessons', countFiles('learning/lessons', /\.json$/), 6],
     ['templates', countFiles('assessments/templates', /\.json$/), 3],
