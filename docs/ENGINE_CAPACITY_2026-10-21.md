@@ -10,10 +10,10 @@ This page states where each engine actually stands, what is left, and what stops
 | Engine | Rules | / 1,000 | Patterns | Records | Remediation | Remaining | Status |
 |---|---|---|---|---|---|---|---|
 | SAST | **1000** | 100% | 1000 | 1000 | 1000 | 0 | AT_TARGET |
-| DAST | **771** | 77.1% | 771 | 771 | 771 | 229 | IN_PROGRESS |
+| DAST | **871** | 87.1% | 871 | 871 | 871 | 129 | IN_PROGRESS |
 | SECRETS | **97** | 9.7% | 97 | 97 | 97 | 903 | IN_PROGRESS |
 | SCA | **0** | 0% | 0 | 0 | 0 | 1000 | BLOCKED_OWNER |
-| **Total** | **1868** | — | — | — | — | — | 1 of 4 at target |
+| **Total** | **1968** | — | — | — | — | — | 1 of 4 at target |
 
 ## What blocks each engine
 
@@ -53,9 +53,9 @@ counting it as new content would be padding. Source: `docs/USER_TYPE_LENSES.md`.
 | UserType | Selected | App-reachable | SAST | SCA | Secrets | DAST |
 |---|---|---|---|---|---|---|
 | DEVELOPER | **1000** / 1000 | 788 | 972 | 0 | 28 | 0 |
-| STUDENT | **1000** / 1000 | 891 | 812 | 0 | 5 | 183 |
-| SECURITY_PROFESSIONAL | **1000** / 1000 | 990 | 316 | 0 | 94 | 590 |
-| PENTESTER | **1000** / 1000 | 962 | 170 | 0 | 97 | 733 |
+| STUDENT | **1000** / 1000 | 904 | 799 | 0 | 0 | 201 |
+| SECURITY_PROFESSIONAL | **1000** / 1000 | 990 | 248 | 0 | 94 | 658 |
+| PENTESTER | **1000** / 1000 | 962 | 70 | 0 | 97 | 833 |
 
 ---
 

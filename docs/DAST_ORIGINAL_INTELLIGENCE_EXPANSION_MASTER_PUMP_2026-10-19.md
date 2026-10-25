@@ -158,7 +158,7 @@ The generated source pool now contains `https://*`, `http://*`, `wss://*` and a 
 host, so the two repairs are exercised by generated policies as well as curated rows. The generator
 is seeded, has no clock and no I/O beyond the rule files; repeated runs produce identical output.
 
-### 5.2 Cookie gate — `node scripts/test-cookie-semantics.mjs` → **PASS 1,868/1,868**
+### 5.2 Cookie gate — `node scripts/test-cookie-semantics.mjs` → **PASS 1,968/1,968**
 
 | Suite | Content | Assertions |
 |---|---|---|
@@ -168,7 +168,7 @@ is seeded, has no clock and no I/O beyond the rule files; repeated runs produce 
 | D | generated rule pairs (300) plus round-trip (300), LCG `0x5e7c00c1` | 600 |
 | E | pinned limitations | 4 |
 | F | 325 cross-rule inputs × 3 assertions (no duplicate, 071 vs model, storage predicate) | 975 |
-| **Total** | | **1,868** |
+| **Total** | | **1,968** |
 
 Suite D's oracle now applies the two storage rules first (discarded header, refused cookie), so the
 generated corpus tests the new decision rather than assuming the old behaviour. Suite F fails the
@@ -262,7 +262,7 @@ hidden.
 | Command | Exit | Result |
 |---|---|---|
 | `node scripts/test-csp-semantics.mjs` | 0 | PASS 3,720/3,720 (53 curated, 3,600 generated) |
-| `node scripts/test-cookie-semantics.mjs` | 0 | PASS 1,868/1,868 (22 curated, 600 generated, 325 cross-rule inputs) |
+| `node scripts/test-cookie-semantics.mjs` | 0 | PASS 1,968/1,968 (22 curated, 600 generated, 325 cross-rule inputs) |
 | `node scripts/test-packs.mjs` | 0 | PASS 4,734/4,734 |
 | `node scripts/run-eval.mjs` | 0 | 1,251 / 1,240 / 11; TP 1,164 / FP 1 / FN 0; 1 FAIL |
 | `npm test` | 0 | 19,668 `ok -` lines; `asset-tests` 9,122/9,122; eval 43/43; doc-drift 119/119; current-state 153/153 |

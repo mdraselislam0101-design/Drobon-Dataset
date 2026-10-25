@@ -217,7 +217,7 @@ Its vacuous-risk guard previously matched only `Varies by control`, which is exa
 | `validate-dast-overlaps.mjs` | 222 checks, 100 subset pairs, PASS |
 | `test-assets.mjs` | 9,620 / 9,620 |
 | `test-csp-semantics.mjs` | 22,983 assertions |
-| `test-cookie-semantics.mjs` | 1,868 assertions |
+| `test-cookie-semantics.mjs` | 1,968 assertions |
 | `test-consistency.mjs` | 222 / 222 |
 | `test-eval.mjs` | 43 / 43 (TP 1,226 · FN 0 · FP 1) |
 | `test-doc-drift.mjs` | 120 / 120 |
@@ -368,7 +368,7 @@ another header family that the product cannot see.
 | DAST rules | 306 | **325** |
 | Patterns / records / remediation | 1 353 each | **1 372 each** |
 | Declared DAST tests | 1 478 | **1 554** (+76) |
-| DAST evaluation cases | 558 | **771** (+21) |
+| DAST evaluation cases | 558 | **871** (+21) |
 | `run-eval` true positives | 1 379 | **1 398** |
 | Distance to the 500 target | 194 | **175** |
 | Rules evaluable inside the App | 233 of 306 (76.1 %) | **252 of 325 (77.5 %)** |

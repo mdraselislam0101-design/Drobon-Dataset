@@ -206,7 +206,7 @@ D-ORIG — this is flagged here as an owner correction, not silently rewritten.
 | File | Correction |
 |---|---|
 | `docs/COMPLETION_MATRIX.json` | Secrets 96→97, audiences 960→965 files, asset tests re-stated, linkage 953→954, "Lessons (5)"→(6), patterns 950/records 910→954/914, CWE "unpinned"→pinned 4.20, owner decisions 5/5→4/5; added frozen acceptance criteria/verification/dependency per item |
-| `docs/RELEASE_READINESS_MATRIX.json` | Gate evidence re-measured for 2026-10-18: packs 953→957, assets 1860→1868, audiences 960→965, rules 953→954, owner decisions 5/5→4/5; `lastVerified` moved to 2026-10-18; digest claim made non-self-referential |
+| `docs/RELEASE_READINESS_MATRIX.json` | Gate evidence re-measured for 2026-10-18: packs 953→957, assets 1860→1968, audiences 960→965, rules 953→954, owner decisions 5/5→4/5; `lastVerified` moved to 2026-10-18; digest claim made non-self-referential |
 | `docs/BLOCKER_REGISTER.json` | "5 decisions, all OWNER_DECISION_REQUIRED" → 4 of 5 pending with D-ORIG recorded; derivation text no longer contradicts itself |
 | `docs/REQUIREMENTS_MATRIX.json` | Secrets "94 rules" → 97; owner-decision evidence 5/5 → 4/5 with D-ORIG note |
 | `docs/COVERAGE_MAP.json` | Reason prose: patterns 953/records 913 → 954/914; owner decisions 5/5 → 4 of 5 pending |
@@ -244,7 +244,7 @@ deletion of any evaluation case or test assertion, no weakening of ground truth.
 | `npm run validate:matrix` | matrix valid, inventory recomputed, no license file | 0 |
 | `npm run validate:sources` | 1 file, 0 errors | 0 |
 | `npm run validate:corpus` | 3 files, 0 errors | 0 |
-| `npm run validate:assets` | 1,868 files, 0 errors | 0 |
+| `npm run validate:assets` | 1,968 files, 0 errors | 0 |
 | `npm run test:vectors` | 16/16 vectors | 0 |
 | `npm run inventory:check` | snapshot matches the tree | 0 |
 | `npm run test:current-state` | 153 passed, 0 failed | 0 |

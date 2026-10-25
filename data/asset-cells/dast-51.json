@@ -1,0 +1,911 @@
+[
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-refresh-token",
+    "category": "credential-exposure",
+    "cwe": "CWE-522",
+    "severity": "CRITICAL",
+    "title": "Refresh token returned in a response body",
+    "description": "A refresh token issued inside the response body appears in the response body. A refresh token mints new access tokens without the password or the second factor, so one leaked copy extends an intrusion for as long as the token lives.",
+    "remediation": "Deliver refresh tokens through a scoped, rotating flow and revoke on any anomaly.",
+    "limitation": "One response body, first 32,768 bytes. It matches the refresh token field with a long value; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a refresh token issued inside the response body.",
+    "fp": "An acknowledgement that a token was rotated is not reported.",
+    "recordDesc": "A refresh token issued inside the response body in a response hands every reader the view the build or admin side kept: A refresh token mints new access tokens without the password or the second factor, so one leaked copy extends an intrusion for as long as the token lives.",
+    "applicability": "Deployments that render a refresh token issued inside the response body into a customer- or partner-facing response.",
+    "risk": "A refresh token mints new access tokens without the password or the second factor, so one leaked copy extends an intrusion for as long as the token lives.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Deliver refresh tokens through a scoped, rotating flow and revoke on any anomaly.",
+      "Rotate refresh tokens on use and revoke them on any anomaly."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a refresh token issued inside the response body.",
+    "cells": [
+      {
+        "suffix": "body-refresh-token",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\"(?:refreshToken|refresh_token)\"\\s*:\\s*\"[A-Za-z0-9._-]{20,}\""
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"accessToken\":\"SYNTH3T1C\",\"refreshToken\":\"SYNTH3TIC-REFRESH-000111222333444555666\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"refresh_token\": \"dGhpcy1pcy1hLXN5bnRoZXRpYy1yZWZyZXNoLXRva2Vu\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"refreshTokenRotated\":true,\"sessionId\":\"s-1\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-id-token-claims",
+    "category": "information-disclosure",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "Identity token claims disclosed with internal roles",
+    "description": "A decoded identity token whose claims include internal group or role names appears in the response body. The claims name the identity groups a workforce account belongs to, which is the authorisation map an attacker uses to choose a target account.",
+    "remediation": "Project only the claims the client needs and keep group membership server-side.",
+    "limitation": "One response body, first 32,768 bytes. It matches the identity token with a role or group claim; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a decoded identity token whose claims include internal group or role names.",
+    "fp": "A token that carries only a subject and an audience is not reported.",
+    "recordDesc": "A decoded identity token whose claims include internal group or role names in a response hands every reader the view the build or admin side kept: The claims name the identity groups a workforce account belongs to, which is the authorisation map an attacker uses to choose a target account.",
+    "applicability": "Deployments that render a decoded identity token whose claims include internal group or role names into a customer- or partner-facing response.",
+    "risk": "The claims name the identity groups a workforce account belongs to, which is the authorisation map an attacker uses to choose a target account.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Project only the claims the client needs and keep group membership server-side.",
+      "Project only the claims the client needs and keep groups server-side."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a decoded identity token whose claims include internal group or role names.",
+    "cells": [
+      {
+        "suffix": "body-id-token-claims",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\"(?:idToken|id_token)\"\\s*:\\s*\"[A-Za-z0-9._-]{20,}\"[\\s\\S]{0,200}?\"(?:groups|roles)\"|\"(?:groups|roles)\"\\s*:\\s*\\[[\\s\\S]{0,120}?\"(?:bank_admins|core_ops|ledger_write)\""
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"idToken\":\"eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiI4ODQxIn0.c2ln\",\"claims\":{\"groups\":[\"bank_admins\",\"ledger_write\"]}}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"claims\":{\"roles\":[\"core_ops\",\"kyc_reviewer\"]},\"id_token\":\"eyJhbGciOiJSUzI1NiJ9.e30.c2ln\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"claims\":{\"sub\":\"8841\",\"aud\":\"portal\"}}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-otp-value",
+    "category": "credential-exposure",
+    "cwe": "CWE-640",
+    "severity": "CRITICAL",
+    "title": "One-time code returned in the response",
+    "description": "The one-time code that was just issued for the step-up check appears in the response body. The code is the second factor, so returning it in the same response as the request removes the factor entirely and lets anyone holding the session complete the step-up.",
+    "remediation": "Send the code only to the enrolled channel and return nothing but an acknowledgement.",
+    "limitation": "One response body, first 32,768 bytes. It matches the one-time code field; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries the one-time code that was just issued for the step-up check.",
+    "fp": "A masked field that says a code was sent is not reported.",
+    "recordDesc": "The one-time code that was just issued for the step-up check in a response hands every reader the view the build or admin side kept: The code is the second factor, so returning it in the same response as the request removes the factor entirely and lets anyone holding the session complete the step-up.",
+    "applicability": "Deployments that render the one-time code that was just issued for the step-up check into a customer- or partner-facing response.",
+    "risk": "The code is the second factor, so returning it in the same response as the request removes the factor entirely and lets anyone holding the session complete the step-up.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Send the code only to the enrolled channel and return nothing but an acknowledgement.",
+      "Send the code to the enrolled channel and return only an acknowledgement."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries the one-time code that was just issued for the step-up check.",
+    "cells": [
+      {
+        "suffix": "body-otp-value",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\"(?:otp|otpCode|mfaCode|verificationCode)\"\\s*:\\s*\"?\\d{4,8}"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"otp\":\"482913\",\"expiresIn\":120,\"channel\":\"SMS\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"verificationCode\": 771204, \"delivery\": \"EMAIL\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"otpSent\":true,\"channel\":\"SMS\",\"expiresIn\":120}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-client-secret",
+    "category": "credential-exposure",
+    "cwe": "CWE-798",
+    "severity": "CRITICAL",
+    "title": "OAuth client secret returned in a response",
+    "description": "An OAuth client id paired with its client secret appears in the response body. The pair lets anyone mint tokens as the application, which usually carries every scope the integration was granted.",
+    "remediation": "Keep the secret on the server, rotate it, and use proof-of-possession flows for public clients.",
+    "limitation": "One response body, first 32,768 bytes. It matches the client secret field with a long value; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries an OAuth client id paired with its client secret.",
+    "fp": "A public client with no secret is not reported.",
+    "recordDesc": "An OAuth client id paired with its client secret in a response hands every reader the view the build or admin side kept: The pair lets anyone mint tokens as the application, which usually carries every scope the integration was granted.",
+    "applicability": "Deployments that render an OAuth client id paired with its client secret into a customer- or partner-facing response.",
+    "risk": "The pair lets anyone mint tokens as the application, which usually carries every scope the integration was granted.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Keep the secret on the server, rotate it, and use proof-of-possession flows for public clients.",
+      "Keep the secret server-side, rotate it and use a public-client flow."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries an OAuth client id paired with its client secret.",
+    "cells": [
+      {
+        "suffix": "body-client-secret",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\"(?:clientSecret|client_secret)\"\\s*:\\s*\"[A-Za-z0-9._~-]{12,}\""
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"clientId\":\"drobon-mobile\",\"clientSecret\":\"SYNTH3TIC-CLIENT-SECRET-000111222\",\"scope\":\"accounts\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"client_secret\": \"a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"clientId\":\"drobon-mobile\",\"tokenEndpointAuthMethod\":\"none\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-api-secret",
+    "category": "credential-exposure",
+    "cwe": "CWE-798",
+    "severity": "HIGH",
+    "title": "API secret returned in a response",
+    "description": "An API secret key next to its key id appears in the response body. The secret authenticates every signed call the key makes, so a leak lets an attacker replay the integration's authority until the key is rotated.",
+    "remediation": "Keep the secret in the server key store and rotate it on exposure.",
+    "limitation": "One response body, first 32,768 bytes. It matches the API secret field with a long value; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries an API secret key next to its key id.",
+    "fp": "A masked secret display is not reported.",
+    "recordDesc": "An API secret key next to its key id in a response hands every reader the view the build or admin side kept: The secret authenticates every signed call the key makes, so a leak lets an attacker replay the integration's authority until the key is rotated.",
+    "applicability": "Deployments that render an API secret key next to its key id into a customer- or partner-facing response.",
+    "risk": "The secret authenticates every signed call the key makes, so a leak lets an attacker replay the integration's authority until the key is rotated.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Keep the secret in the server key store and rotate it on exposure.",
+      "Keep the secret in the server key store and rotate it on exposure."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries an API secret key next to its key id.",
+    "cells": [
+      {
+        "suffix": "body-api-secret",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\"(?:apiSecret|secretKey|apiSecretKey)\"\\s*:\\s*\"[A-Za-z0-9+/=_-]{16,}\""
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"keyId\":\"key_7712\",\"apiSecret\":\"SYNTH3TICAPISECRET000111222333\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"secretKey\": \"u7Yq2Nc0Lm4Xb9Rt1Vw6Zs3Pe8Hd5Kf\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"keyId\":\"key_7712\",\"apiSecret\":\"****333\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-temp-password",
+    "category": "credential-exposure",
+    "cwe": "CWE-640",
+    "severity": "HIGH",
+    "title": "Temporary password returned in a response",
+    "description": "A freshly generated temporary password in the response body appears in the response body. The temporary password is the whole credential for the first login, so returning it to the caller lets whoever requested the reset take the account.",
+    "remediation": "Deliver the temporary credential out of band with a forced change on first use.",
+    "limitation": "One response body, first 32,768 bytes. It matches the temporary password field; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a freshly generated temporary password in the response body.",
+    "fp": "A page that explains the reset flow is not reported.",
+    "recordDesc": "A freshly generated temporary password in the response body in a response hands every reader the view the build or admin side kept: The temporary password is the whole credential for the first login, so returning it to the caller lets whoever requested the reset take the account.",
+    "applicability": "Deployments that render a freshly generated temporary password in the response body into a customer- or partner-facing response.",
+    "risk": "The temporary password is the whole credential for the first login, so returning it to the caller lets whoever requested the reset take the account.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Deliver the temporary credential out of band with a forced change on first use.",
+      "Deliver the credential out of band and force a change on first use."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a freshly generated temporary password in the response body.",
+    "cells": [
+      {
+        "suffix": "body-temp-password",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\"(?:tempPassword|temporaryPassword|initialPassword)\"\\s*:\\s*\"[^\\s\"]{6,}\""
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"userId\":\"8841\",\"tempPassword\":\"Dro-SYNTH-2026\",\"mustChange\":true}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"temporaryPassword\": \"SYNTH-INIT-0091\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"tempPasswordIssued\":true,\"channel\":\"COURIER\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-bulk-customer-export",
+    "category": "data-exposure",
+    "cwe": "CWE-200",
+    "severity": "CRITICAL",
+    "title": "Bulk customer records in a single response",
+    "description": "A response array with many customer records carrying identity fields appears in the response body. One response that returns a list of customers breaks the assumption that a record must be fetched one at a time, so a single request can harvest most of the book.",
+    "remediation": "Paginate behind authorisation and cap the page size; require a business reason for exports.",
+    "limitation": "One response body, first 32,768 bytes. It matches an array of several customer records with identity fields; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a response array with many customer records carrying identity fields.",
+    "fp": "A single customer record is not reported.",
+    "recordDesc": "A response array with many customer records carrying identity fields in a response hands every reader the view the build or admin side kept: One response that returns a list of customers breaks the assumption that a record must be fetched one at a time, so a single request can harvest most of the book.",
+    "applicability": "Deployments that render a response array with many customer records carrying identity fields into a customer- or partner-facing response.",
+    "risk": "One response that returns a list of customers breaks the assumption that a record must be fetched one at a time, so a single request can harvest most of the book.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Paginate behind authorisation and cap the page size; require a business reason for exports.",
+      "Paginate behind authorisation, cap page size and require a reason for exports."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a response array with many customer records carrying identity fields.",
+    "cells": [
+      {
+        "suffix": "body-bulk-customer-export",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\\[\\s*\\{[^{}]{0,400}?\"(?:nid|nationalId|customerId)\"[\\s\\S]{0,400}?\\},\\s*\\{[^{}]{0,400}?\"(?:nid|nationalId|customerId)\""
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "[{\"customerId\":\"C-8841\",\"nid\":\"1990123456789\"},{\"customerId\":\"C-8842\",\"nid\":\"1991023456781\"}]"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "[{\"customerId\":\"C-1180\",\"nid\":\"1988112233445\"},{\"customerId\":\"C-1181\",\"nid\":\"1989011223344\"},{\"customerId\":\"C-1182\",\"nid\":\"1990030412345\"}]"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "[{\"customerId\":\"C-8841\",\"maskedNid\":\"1990*****89\"}]"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-staff-email-list",
+    "category": "information-disclosure",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "Internal staff addresses in a response",
+    "description": "A list of internal staff e-mail addresses appears in the response body. Staff addresses are the anchor for a targeted phishing campaign and they confirm the internal mail domain, which is half of a spoofing plan.",
+    "remediation": "Return a role mailbox instead of individual staff addresses.",
+    "limitation": "One response body, first 32,768 bytes. It matches two or more internal staff addresses; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a list of internal staff e-mail addresses.",
+    "fp": "A single support address on a contact page is not reported.",
+    "recordDesc": "A list of internal staff e-mail addresses in a response hands every reader the view the build or admin side kept: Staff addresses are the anchor for a targeted phishing campaign and they confirm the internal mail domain, which is half of a spoofing plan.",
+    "applicability": "Deployments that render a list of internal staff e-mail addresses into a customer- or partner-facing response.",
+    "risk": "Staff addresses are the anchor for a targeted phishing campaign and they confirm the internal mail domain, which is half of a spoofing plan.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Return a role mailbox instead of individual staff addresses.",
+      "Return a role mailbox instead of individual staff addresses."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a list of internal staff e-mail addresses.",
+    "cells": [
+      {
+        "suffix": "body-staff-email-list",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "(?:[a-z0-9._-]{3,30}@drobon\\.(?:internal|local|corp)[\\s\\S]{0,160}?){2,}"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"assignee\":[\"officer.rahman@drobon.internal\",\"ops.desk2@drobon.internal\"]}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "[\"kyc.review@drobon.corp\", \"ledger.ops@drobon.corp\"]"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"support\":\"support@bank.example\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-scope-wildcard",
+    "category": "information-disclosure",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "OAuth scope granted as wildcard",
+    "description": "A scope value that grants every permission appears in the response body. A wildcard scope means every downstream check is the only thing standing between a token holder and the whole API, and it is usually a misconfiguration rather than a decision.",
+    "remediation": "Grant the narrowest scope per integration and review the consent screen text.",
+    "limitation": "One response body, first 32,768 bytes. It matches the scope field set to a wildcard; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a scope value that grants every permission.",
+    "fp": "A scope list that names explicit permissions is not reported.",
+    "recordDesc": "A scope value that grants every permission in a response hands every reader the view the build or admin side kept: A wildcard scope means every downstream check is the only thing standing between a token holder and the whole API, and it is usually a misconfiguration rather than a decision.",
+    "applicability": "Deployments that render a scope value that grants every permission into a customer- or partner-facing response.",
+    "risk": "A wildcard scope means every downstream check is the only thing standing between a token holder and the whole API, and it is usually a misconfiguration rather than a decision.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Grant the narrowest scope per integration and review the consent screen text.",
+      "Grant the narrowest scope per integration and review the consent text."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a scope value that grants every permission.",
+    "cells": [
+      {
+        "suffix": "body-scope-wildcard",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\"(?:scope|scopes)\"\\s*:\\s*\"(?:\\*|\\S+\\s+\\*)\""
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"scope\":\"*\",\"aud\":\"core-api\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"scopes\": \"read *\", \"client\":\"drobon-mobile\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"scope\":\"accounts:read payments:write\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  }
+]

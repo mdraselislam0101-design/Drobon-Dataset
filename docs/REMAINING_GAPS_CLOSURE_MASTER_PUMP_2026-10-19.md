@@ -264,7 +264,7 @@ recorded once per engine. Capability matrix: 2 `COVERED_VERIFIED`, 7 `APP_INTEGR
 |---|---|---|
 | `npm test` | **0** | 16,545 assertions; determinism 5/5 (whole-tree digest reproducible; value depends on the final uncommitted tree) |
 | `npm run validate:packs` | 0 | 957 files, 0 errors |
-| `npm run validate:assets` | 0 | 1,868 files, 0 errors |
+| `npm run validate:assets` | 0 | 1,968 files, 0 errors |
 | `npm run validate:audiences` | 0 | 965 files, 0 errors |
 | `npm run validate:cwe` | 0 | 61 files, 0 errors |
 | `node scripts/validate-capability-coverage.mjs` | 0 | 656 / 656 |

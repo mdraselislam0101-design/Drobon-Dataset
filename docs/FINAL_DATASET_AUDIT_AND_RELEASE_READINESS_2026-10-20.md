@@ -136,7 +136,7 @@ construct, or re-run until green.
 | `node scripts/test-packs.mjs` | 0 | 5,422 / 5,422 |
 | `node scripts/test-assets.mjs` | 0 | 10,500 / 10,500 |
 | `node scripts/test-csp-semantics.mjs` | 0 | 22,983 assertions |
-| `node scripts/test-cookie-semantics.mjs` | 0 | 1,868 assertions |
+| `node scripts/test-cookie-semantics.mjs` | 0 | 1,968 assertions |
 | `node scripts/test-eval.mjs` | 0 | 43 / 43 |
 | `node scripts/test-finding-evidence.mjs` | 0 | 31 / 31 |
 | `node scripts/test-secret-candidates.mjs` | 0 | 35 / 35 |
