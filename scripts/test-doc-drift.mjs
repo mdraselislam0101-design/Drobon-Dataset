@@ -361,10 +361,10 @@ if (existsSync(join(ROOT, 'DROBON_COVERAGE_EVIDENCE.json'))) {
     // 1353 -> 1372 -> 1445 -> 1557 after app-surface batches 3, 4, 5 and 6. The pin is the *claim being audited*, so it moves only
     // when the tree moves and the ledger is updated in the same commit.
     ['dast rules', countFiles('packs/dast/v1/rules', /^DPK-.*\.json$/), 1007],
-    ['sca rules', countFiles('packs/sca/v1/rules', /^DPK-.*\.json$/), 42],
-    ['patterns', countFiles('knowledge/patterns', /^DPK-PAT-.*\.json$/), 2146],
-    ['records', countFiles('knowledge/records', /^DPK-REC-.*\.json$/), 2146],
-    ['remediation', countFiles('knowledge/remediation', /^DPK-.*\.json$/), 2146],
+    ['sca rules', countFiles('packs/sca/v1/rules', /^DPK-.*\.json$/), 67],
+    ['patterns', countFiles('knowledge/patterns', /^DPK-PAT-.*\.json$/), 2171],
+    ['records', countFiles('knowledge/records', /^DPK-REC-.*\.json$/), 2171],
+    ['remediation', countFiles('knowledge/remediation', /^DPK-.*\.json$/), 2171],
     ['cwe', countFiles('knowledge/cwe', /\.json$/), 100],
     ['lessons', countFiles('learning/lessons', /\.json$/), 6],
     ['templates', countFiles('assessments/templates', /\.json$/), 3],

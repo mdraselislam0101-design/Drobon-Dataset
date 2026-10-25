@@ -25,12 +25,33 @@ export const SCA_CHECK_TYPES = Object.freeze([
   'sca-field-matches',
   'sca-field-not-matches',
   'sca-field-absent',
+  'sca-entry-missing-field',
   'sca-key-matches',
   'sca-name-distance',
 ]);
 
 /** Predicates that take a regular expression. */
 export const SCA_PATTERN_TYPES = Object.freeze(['sca-field-matches', 'sca-field-not-matches', 'sca-key-matches']);
+
+/**
+ * Entries reached by a container path. A lockfile map (`packages`) and an array
+ * (`requirements`) both reduce to their entry objects, so one predicate can ask
+ * "does any entry lack field X" without knowing the container shape.
+ */
+export function entriesAtPath(document, path) {
+  const entries = [];
+  for (const node of resolvePath(document, path)) {
+    const value = node.value;
+    if (Array.isArray(value)) {
+      for (const item of value) if (item !== null && typeof item === 'object' && !Array.isArray(item)) entries.push(item);
+    } else if (value !== null && typeof value === 'object') {
+      for (const item of Object.values(value)) {
+        if (item !== null && typeof item === 'object' && !Array.isArray(item)) entries.push(item);
+      }
+    }
+  }
+  return entries;
+}
 
 /** Ecosystems a rule may name. One ecosystem per rule, by design. */
 export const SCA_ECOSYSTEMS = Object.freeze([
@@ -164,6 +185,13 @@ export function boundedDistance(left, right, limit) {
   return previous[right.length];
 }
 
+/** Values a predicate may test: strings, plus the booleans and numbers a manifest can carry. */
+function scalarText(value) {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'boolean' || typeof value === 'number') return String(value);
+  return null;
+}
+
 function compilePattern(check) {
   if (typeof check.valuePattern === 'string') {
     try {
@@ -203,18 +231,30 @@ export function evaluateScaCheck(check, input) {
   switch (check.type) {
     case 'sca-field-matches': {
       const pattern = compilePattern(check);
-      return resolvePath(document, check.path).some(
-        (node) => typeof node.value === 'string' && pattern.test(node.value),
-      );
+      return resolvePath(document, check.path).some((node) => {
+        const text = scalarText(node.value);
+        return text !== null && pattern.test(text);
+      });
     }
     case 'sca-field-not-matches': {
       const pattern = compilePattern(check);
       const nodes = resolvePath(document, check.path);
       if (nodes.length === 0) return false;
-      return !nodes.some((node) => typeof node.value === 'string' && pattern.test(node.value));
+      return !nodes.some((node) => {
+        const text = scalarText(node.value);
+        return text !== null && pattern.test(text);
+      });
     }
     case 'sca-field-absent':
       return resolvePath(document, check.path).length === 0;
+    case 'sca-entry-missing-field': {
+      if (typeof check.field !== 'string' || check.field.length === 0) {
+        throw new ScaRuleError('check.field: must be a non-empty member name');
+      }
+      const entries = entriesAtPath(document, check.path);
+      if (entries.length === 0) return false;
+      return entries.some((entry) => !Object.prototype.hasOwnProperty.call(entry, check.field));
+    }
     case 'sca-key-matches': {
       const pattern = compilePattern(check);
       return keysAtPath(document, check.path).some((entry) => pattern.test(entry.key));
@@ -241,7 +281,14 @@ export function evaluateScaCheck(check, input) {
 /** Stable dedupe signature: ecosystem + predicate + normalized parameters. */
 export function scaSignature(rule) {
   const check = rule.check ?? {};
-  const parts = [rule.ecosystems?.[0] ?? 'none', check.type ?? 'none', check.path ?? '', check.target ?? ''];
+  const parts = [
+    rule.ecosystems?.[0] ?? 'none',
+    check.type ?? 'none',
+    check.path ?? '',
+    check.field ?? '',
+    check.target ?? '',
+    check.maxDistance === undefined ? '' : String(check.maxDistance),
+  ];
   const pattern = check.valuePattern ?? check.keyPattern ?? '';
   parts.push(pattern.replace(/\s+/g, ' ').trim());
   return parts.join('|');

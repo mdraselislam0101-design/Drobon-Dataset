@@ -1,0 +1,84 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0062",
+  "title": "Lockfile resolves a package over SSH",
+  "description": "package-lock.json declares a lockfile entry that fetches over SSH from a git remote. The install trusts whatever host key and account the build machine holds, so the bytes that run are decided outside the registry.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-494",
+  "category": "supply-chain-integrity",
+  "ecosystems": [
+    "npm"
+  ],
+  "artifact": "package-lock.json",
+  "parser": "json",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "packages.*.resolved",
+    "valuePattern": "^git\\+ssh://"
+  },
+  "tests": [
+    {
+      "file": "package-lock.json",
+      "document": {
+        "name": "demo-service",
+        "lockfileVersion": 3,
+        "packages": {
+          "node_modules/dependency-0": {
+            "version": "1.0.0",
+            "resolved": "git+ssh://git@github.com/acme/sdk.git#9f2c4a1",
+            "integrity": "sha512-AAAABBBBCCCCDDDD"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "package-lock.json",
+      "document": {
+        "name": "demo-service",
+        "lockfileVersion": 3,
+        "packages": {
+          "node_modules/dependency-0": {
+            "version": "1.0.0",
+            "resolved": "git+ssh://git@git.acme.internal/lib.git#0a1b2c3"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "package-lock.json",
+      "document": {
+        "name": "demo-service",
+        "lockfileVersion": 3,
+        "packages": {
+          "node_modules/dependency-0": {
+            "version": "1.0.0",
+            "resolved": "git+https://github.com/acme/sdk.git#9f2c4a1",
+            "integrity": "sha512-AAAABBBBCCCCDDDD"
+          }
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "package-lock.json",
+      "document": {
+        "name": "demo-service",
+        "lockfileVersion": 3,
+        "packages": {
+          "node_modules/dependency-0": {
+            "version": "1.0.0",
+            "resolved": "https://registry.npmjs.org/y/-/y-1.0.0.tgz"
+          }
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2199"
+  ],
+  "remediation": "Fetch over HTTPS from a registry entry with integrity, or pin the commit and verify the checkout digest.",
+  "limitation": "It matches a lockfile entry that fetches over SSH from a git remote in the parsed package-lock.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

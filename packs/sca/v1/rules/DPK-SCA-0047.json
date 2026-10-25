@@ -1,0 +1,84 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0047",
+  "title": "Lockfile resolves a dependency from a local path",
+  "description": "package-lock.json declares a lockfile entry resolved from a path on the build machine. The tree is not reproducible from the lockfile alone, and the bytes that compile are whatever that path holds at build time.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-494",
+  "category": "supply-chain-integrity",
+  "ecosystems": [
+    "npm"
+  ],
+  "artifact": "package-lock.json",
+  "parser": "json",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "packages.*.resolved",
+    "valuePattern": "^file:"
+  },
+  "tests": [
+    {
+      "file": "package-lock.json",
+      "document": {
+        "name": "demo-service",
+        "lockfileVersion": 3,
+        "packages": {
+          "node_modules/dependency-0": {
+            "version": "1.0.0",
+            "resolved": "file:../packages/shared",
+            "integrity": "sha512-AAAABBBBCCCCDDDD"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "package-lock.json",
+      "document": {
+        "name": "demo-service",
+        "lockfileVersion": 3,
+        "packages": {
+          "node_modules/dependency-0": {
+            "version": "1.0.0",
+            "resolved": "file:vendor/legacy-lib"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "package-lock.json",
+      "document": {
+        "name": "demo-service",
+        "lockfileVersion": 3,
+        "packages": {
+          "node_modules/dependency-0": {
+            "version": "1.0.0",
+            "resolved": "https://registry.npmjs.org/x/-/x-1.0.0.tgz",
+            "integrity": "sha512-AAAABBBBCCCCDDDD"
+          }
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "package-lock.json",
+      "document": {
+        "name": "demo-service",
+        "lockfileVersion": 3,
+        "packages": {
+          "node_modules/dependency-0": {
+            "version": "1.0.0",
+            "resolved": "https://registry.npmjs.org/y/-/y-1.0.0.tgz"
+          }
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2184"
+  ],
+  "remediation": "Publish the package and depend on a registry version with integrity.",
+  "limitation": "It matches a lockfile entry resolved from a path on the build machine in the parsed package-lock.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

@@ -4,7 +4,7 @@ Status: **IMPLEMENTED.** The owner approved the rule kind and the schema on 2026
 SCA dataset to be built to the 1,000-rule planning target, additively. This document describes what is
 actually on disk and enforced by tests; it is not a proposal.
 
-sca-pack: implemented = 42 rules
+sca-pack: implemented = 67 rules
 
 Date: 2026-10-25. Main App reference: `9360dd1` (read-only).
 
@@ -118,8 +118,8 @@ malicious. No GHSA/OSV/NVD record, id or range is copied into `packs/sca/`.
 
 | Tier | Count | Evidence |
 |---|---|---|
-| SCA rules (`packs/sca/v1/rules`) | **42** of 1,000 | `docs/CURRENT_INVENTORY.json` `scaRules` |
-| SCA patterns / records / remediation | **42** each | generated 1:1:1:1 with the rules |
+| SCA rules (`packs/sca/v1/rules`) | **67** of 1,000 | `docs/CURRENT_INVENTORY.json` `scaRules` |
+| SCA patterns / records / remediation | **67** each | generated 1:1:1:1 with the rules |
 | Executed rule tests | 4+ per rule, ≥2 positive and ≥2 negative | `validate-packs` runs them all |
 | Advisory records (`vuln-intel/`) | 84 items / 100 files, **unchanged** | `docs/CORPUS_TARGETS.json` `advisory-record` |
 | App consumption | none | the App has no `sca` pack loader; its SCA seam is the advisory provider |

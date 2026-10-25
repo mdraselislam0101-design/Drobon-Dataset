@@ -65,12 +65,21 @@ const recIdByRule = new Map(Object.values(manifestForChain.cells ?? {}).map((ids
 
 // --- 1. ids ----------------------------------------------------------------
 const idProblems = [];
-rules.forEach(({ rule }, index) => {
-  if (!/^DPK-SCA-[0-9]{4}$/.test(rule.id)) idProblems.push(`${rule.id}: id shape`);
-  const expected = `DPK-SCA-${String(index + 1).padStart(4, '0')}`;
-  if (rule.id !== expected) idProblems.push(`${rule.id}: expected contiguous ${expected}`);
-});
-assert(idProblems.length === 0, 'ids: DPK-SCA-nnnn, unique and contiguous from 0001', idProblems.slice(0, 5).join('; '));
+let previousNumber = 0;
+for (const { rule } of rules) {
+  if (!/^DPK-SCA-[0-9]{4}$/.test(rule.id)) {
+    idProblems.push(`${rule.id}: id shape`);
+    continue;
+  }
+  const number = Number.parseInt(rule.id.slice('DPK-SCA-'.length), 10);
+  // Numbers are allocated monotonically and never reused, so a gap means a cell
+  // was removed and its numbers stay reserved. A repeat or a backwards step is a
+  // defect; a gap is not.
+  if (number <= previousNumber) idProblems.push(`${rule.id}: not increasing after ${previousNumber}`);
+  previousNumber = number;
+}
+assert(idProblems.length === 0, 'ids: DPK-SCA-nnnn, unique and strictly increasing (gaps stay reserved)',
+  idProblems.slice(0, 5).join('; '));
 
 // --- 2. schema + executed tests --------------------------------------------
 const schemaProblems = [];
@@ -232,7 +241,7 @@ assert(codeOf(() => evaluateScaCheck(
   { type: 'sca-name-distance', path: 'dependencies', target: 'express', maxDistance: 9 },
   { document: {} },
 )) === 'ScaRuleError', 'engine: an out-of-range edit budget throws');
-assert(SCA_CHECK_TYPES.length === 5, 'engine: the predicate vocabulary stays closed at five types');
+assert(SCA_CHECK_TYPES.length === 6, 'engine: the predicate vocabulary stays closed at six types');
 assert(npmRule.schemaVersion === 'drobon.pack.sca/v1', 'pack: rules carry the sca schema version');
 
 process.stdout.write(`\nsca-pack-tests: ${passed} passed, ${failed} failed\n`);

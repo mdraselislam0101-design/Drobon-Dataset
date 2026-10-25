@@ -24,11 +24,11 @@ waiting on a legal decision rather than on engineering.
 | SAST rule pack against its planning target | 1000 | 1000 | 100% | **PARTIAL** | EVIDENCE_GATED |
 | DAST check pack against its 500 target | 1007 | 500 | 100% | **COMPLETE** | — |
 | Secrets rule pack | 97 | — | — | **COMPLETE** | — |
-| SCA dependency-declaration pack against its 1000 target | 42 | 1000 | 4.2% | **PARTIAL** | EVIDENCE_GATED |
-| Independent evaluation cases for SCA rules | 0 | 42 | 0% | **PARTIAL** | EVIDENCE_GATED |
-| Rule ↔ pattern ↔ record ↔ remediation graph | 2146 | 2146 | 100% | **COMPLETE** | — |
+| SCA dependency-declaration pack against its 1000 target | 67 | 1000 | 6.7% | **PARTIAL** | EVIDENCE_GATED |
+| Independent evaluation cases for SCA rules | 0 | 67 | 0% | **PARTIAL** | EVIDENCE_GATED |
+| Rule ↔ pattern ↔ record ↔ remediation graph | 2171 | 2171 | 100% | **COMPLETE** | — |
 | CWE reference coverage | 100 | 100 | 100% | **COMPLETE** | — |
-| Declared pack tests executed | 2146 | 2146 | 100% | **COMPLETE** | — |
+| Declared pack tests executed | 2171 | 2171 | 100% | **COMPLETE** | — |
 | Independent evaluation: rules with a positive case | 1549 | 2104 | 73.6% | **PARTIAL** | OWNER_DECISION_REQUIRED |
 | Independent evaluation: rules with a negative control | 1126 | 2104 | 53.5% | **PARTIAL** | EVIDENCE_GATED |
 | Universal rules with both a positive case and a negative control | 11 | 11 | 100% | **COMPLETE** | — |
@@ -39,7 +39,7 @@ waiting on a legal decision rather than on engineering.
 | DAST rules evaluable through the App response surface | 934 | 1007 | 92.8% | **BLOCKED_APP** | APP_RESPONSE_SURFACE |
 | App loader checklist steps implemented | 2 | 6 | 33.3% | **BLOCKED_APP** | APP_LOADER |
 | DAST declared-test parity in the App evaluator | 3658 | 3673 | 99.6% | **BLOCKED_APP** | APP_EVALUATOR |
-| Remediation entries surfaced to users | 0 | 2146 | 0% | **BLOCKED_APP** | APP_LOADER |
+| Remediation entries surfaced to users | 0 | 2171 | 0% | **BLOCKED_APP** | APP_LOADER |
 | Deterministic generation and whole-tree digest | pass | — | — | **COMPLETE** | — |
 | Dataset test suite | pass | — | — | **COMPLETE** | — |
 | Committed generated artefacts reproduce from the tree | 5 | 5 | 100% | **COMPLETE** | — |
@@ -74,15 +74,15 @@ waiting on a legal decision rather than on engineering.
 ### packs.sca — SCA dependency-declaration pack against its 1000 target
 
 - Status: **PARTIAL** (blocker: `EVIDENCE_GATED`)
-- Measured: 42 of 1000 rules (4.2%)
-- Why: 42 of 1000 rules are authored. The owner approved drobon.pack.sca/v1 on 2026-10-25 and directed the pack to the 1000 target. Each rule classifies declared dependency text in one ecosystem and one artifact, carries 2 positives and 2 negatives that the validator executes, and has its own pattern, record and remediation entry. A rule never states that a version is affected by an advisory, so this pack does not depend on the GHSA/OSV/NVD data lock.
+- Measured: 67 of 1000 rules (6.7%)
+- Why: 67 of 1000 rules are authored. The owner approved drobon.pack.sca/v1 on 2026-10-25 and directed the pack to the 1000 target. Each rule classifies declared dependency text in one ecosystem and one artifact, carries 2 positives and 2 negatives that the validator executes, and has its own pattern, record and remediation entry. A rule never states that a version is affected by an advisory, so this pack does not depend on the GHSA/OSV/NVD data lock.
 - Next action: Continue the family batches (lockfile integrity, registry configuration, curated name watchlist, policy metadata) until the pack reaches 1000, then freeze it.
 - Verify: `npm run validate:packs`
 
 ### eval.sca — Independent evaluation cases for SCA rules
 
 - Status: **PARTIAL** (blocker: `EVIDENCE_GATED`)
-- Measured: 0 of 42 rules with an independent eval case (0%)
+- Measured: 0 of 67 rules with an independent eval case (0%)
 - Why: No independent eval case exists for an SCA rule yet. The rules are not unverified: validate-packs executes at least two positives and two negatives per rule, and each pattern mirrors its rule signal. An eval case is a separate, independently authored fixture, and none has been written for this kind.
 - Next action: Author independent eval cases for the SCA pack, one positive and one negative control per rule, highest false-positive risk first (name watchlist and short-literal specifiers).
 - Verify: `npm run test:eval`
@@ -90,8 +90,8 @@ waiting on a legal decision rather than on engineering.
 ### knowledge.graph — Rule ↔ pattern ↔ record ↔ remediation graph
 
 - Status: **COMPLETE**
-- Measured: 2146 of 2146 entries (weakest of the three trees) (100%)
-- Why: patterns 2146 / records 2146 / remediation 2146 against 2146 rules: strict 1:1:1:1 in both directions, 0 orphans, enforced by the consistency suite.
+- Measured: 2171 of 2171 entries (weakest of the three trees) (100%)
+- Why: patterns 2171 / records 2171 / remediation 2171 against 2171 rules: strict 1:1:1:1 in both directions, 0 orphans, enforced by the consistency suite.
 - Next action: None.
 - Verify: `node scripts/test-consistency.mjs`
 
@@ -106,8 +106,8 @@ waiting on a legal decision rather than on engineering.
 ### tests.pack-level — Declared pack tests executed
 
 - Status: **COMPLETE**
-- Measured: 2146 of 2146 rules (100%)
-- Why: 2146 of 2146 rules declare at least one positive and one negative test; 8325 declared tests execute in the validator, with ReDoS lint and CWE checks.
+- Measured: 2171 of 2171 rules (100%)
+- Why: 2171 of 2171 rules declare at least one positive and one negative test; 8425 declared tests execute in the validator, with ReDoS lint and CWE checks.
 - Next action: None.
 - Verify: `npm run validate:packs`
 
@@ -194,8 +194,8 @@ waiting on a legal decision rather than on engineering.
 ### app.remediation-surface — Remediation entries surfaced to users
 
 - Status: **BLOCKED_APP** (blocker: `APP_LOADER`)
-- Measured: 0 of 2146 entries (0%)
-- Why: All 2146 entries load into the App dataset service, but getRemediationMap has no caller and remediationGuidanceForFinding still returns UNAVAILABLE.
+- Measured: 0 of 2171 entries (0%)
+- Why: All 2171 entries load into the App dataset service, but getRemediationMap has no caller and remediationGuidanceForFinding still returns UNAVAILABLE.
 - Next action: App wires the resolver into findings, reports and the assistant (GAP-008).
 - Verify: `node scripts/test-consistency.mjs`
 

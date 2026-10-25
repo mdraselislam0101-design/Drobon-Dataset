@@ -1,0 +1,83 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0053",
+  "title": "Lockfile records a dependency that runs an install script",
+  "description": "package-lock.json declares a package entry flagged as running an install script. Install scripts execute with the build user's privileges before any review step, so the dependency's code runs even if the project never imports it.",
+  "severity": "HIGH",
+  "cwe": "CWE-494",
+  "category": "supply-chain-integrity",
+  "ecosystems": [
+    "npm"
+  ],
+  "artifact": "package-lock.json",
+  "parser": "json",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "packages.*.hasInstallScript",
+    "valuePattern": "^true$"
+  },
+  "tests": [
+    {
+      "file": "package-lock.json",
+      "document": {
+        "name": "demo-service",
+        "lockfileVersion": 3,
+        "packages": {
+          "node_modules/dependency-0": {
+            "version": "1.0.0",
+            "hasInstallScript": true
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "package-lock.json",
+      "document": {
+        "name": "demo-service",
+        "lockfileVersion": 3,
+        "packages": {
+          "node_modules/dependency-0": {
+            "version": "2.0.0",
+            "hasInstallScript": true,
+            "integrity": "sha512-AAAA"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "package-lock.json",
+      "document": {
+        "name": "demo-service",
+        "lockfileVersion": 3,
+        "packages": {
+          "node_modules/dependency-0": {
+            "version": "1.0.0",
+            "hasInstallScript": false
+          }
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "package-lock.json",
+      "document": {
+        "name": "demo-service",
+        "lockfileVersion": 3,
+        "packages": {
+          "node_modules/dependency-0": {
+            "version": "2.0.0",
+            "integrity": "sha512-AAAA"
+          }
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2190"
+  ],
+  "remediation": "Prefer packages without install scripts, or run installs with scripts disabled for the untrusted subset.",
+  "limitation": "It matches a package entry flagged as running an install script in the parsed package-lock.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

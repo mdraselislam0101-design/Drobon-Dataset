@@ -718,6 +718,10 @@ const SCA_CHECK_FIELDS = {
     required: ['type', 'path', 'valuePattern'],
   },
   'sca-field-absent': { allowed: ['type', 'path'], required: ['type', 'path'] },
+  'sca-entry-missing-field': {
+    allowed: ['type', 'path', 'field'],
+    required: ['type', 'path', 'field'],
+  },
   'sca-key-matches': {
     allowed: ['type', 'path', 'keyPattern'],
     required: ['type', 'path', 'keyPattern'],
@@ -745,6 +749,10 @@ function checkScaCheck(errors, record) {
   }
   const shape = SCA_CHECK_FIELDS[check['type']];
   checkClosed(errors, 'check', check, shape.allowed, shape.required);
+  if (check['type'] === 'sca-entry-missing-field'
+    && (typeof check['field'] !== 'string' || !/^[A-Za-z_][A-Za-z0-9_-]{0,63}$/.test(check['field']))) {
+    errors.push('check.field: must be a member name (1..64 chars)');
+  }
   if (typeof check['path'] === 'string' && !SCA_PATH_PATTERN.test(check['path'])) {
     errors.push('check.path: must use the dotted grammar (a.b, a.*, a[])');
   }
