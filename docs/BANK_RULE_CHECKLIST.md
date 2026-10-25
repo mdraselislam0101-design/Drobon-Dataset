@@ -4,7 +4,7 @@
 > `docs/BANK_RULE_CHECKLIST.csv` from `packs/dast/v1/rules`; `--check` fails when either drifts.
 > Reachability is read from `interop/app-dast-reachability.json` (App at `9360dd1`, 11 forwarded headers).
 
-**871 rules · 798 evaluable inside the Main App · 73 blocked by the response-header surface.**
+**1007 rules · 934 evaluable inside the Main App · 73 blocked by the response-header surface.**
 
 This is an **audit checklist**, not a claim of protection: every row states what the rule observes in one
 synthetic-tested response and what to change. See `docs/BANK_THREAT_COVERAGE_2026-10-21.md` for what no
@@ -19,15 +19,15 @@ someone verified the observation on the target.
 
 | Tier | Focus | Rules | App-reachable |
 |---|---|---|---|
-| 1 | customer money and identity | 245 | 231 |
-| 2 | browser trust and interface contracts | 169 | 131 |
-| 3 | disclosure, fingerprints and debug surfaces | 457 | 436 |
+| 1 | customer money and identity | 269 | 255 |
+| 2 | browser trust and interface contracts | 174 | 136 |
+| 3 | disclosure, fingerprints and debug surfaces | 564 | 543 |
 
 ## Tier 1 — customer money and identity
 
 *These are the observations a fraud team would act on first: financial identifiers, card credentials, one-time codes, session tokens and transport protection. A finding here is worth an incident ticket, not a backlog item.*
 
-**245 rules, 231 evaluable today.**
+**269 rules, 255 evaluable today.**
 
 | Rule | Severity | CWE | What it observes | What to do (first step) | Reachable |
 |---|---|---|---|---|---|
@@ -47,7 +47,9 @@ someone verified the observation on the target.
 | `DPK-DAST-096` Basic authentication challenge sent over plaintext HTTP | MEDIUM | CWE-319 | the WWW-Authenticate value against a pattern | Serve the endpoint over HTTPS only and keep HTTP Strict-Transport-Security on the redirect path; | **no** — needs `WWW-Authenticate` |
 | `DPK-DAST-097` CORS allows every request header | LOW | CWE-942 | the Access-Control-Allow-Headers value against a pattern | List the request headers the API consumes, for example Access-Control-Allow-Headers: Content-Type, Authorization. | **no** — needs `Access-Control-Allow-Headers` |
 | `DPK-DAST-100` HTTPS response redirects to a plaintext URL | MEDIUM | CWE-319 | the Location value against a pattern | Redirect to an https URL, or to a path-relative target that keeps the current scheme. | yes |
+| `DPK-DAST-1000` Build-time environment injected into the page | HIGH | CWE-200 | the response body (first 32,768 bytes) | Move the values to a server route and keep only public identifiers in the build. | yes |
 | `DPK-DAST-101` CORS allows a plaintext HTTP origin | LOW | CWE-942 | the Access-Control-Allow-Origin value against a pattern | Serve the calling application over HTTPS and list its https origin. | yes |
+| `DPK-DAST-1014` Credential inside an error detail | HIGH | CWE-209 | the response body (first 32,768 bytes) | Redact credentials when formatting connection errors and rotate the affected password. | yes |
 | `DPK-DAST-102` Content-Security-Policy connect-src allows plaintext HTTP origins | MEDIUM | CWE-319 | the Content-Security-Policy value against a pattern | Permit only https: and wss: sources in connect-src, for example connect-src 'self' https://api.example wss://api.example. | yes |
 | `DPK-DAST-103` Content-Security-Policy form-action allows plaintext HTTP submissions | MEDIUM | CWE-319 | the Content-Security-Policy value against a pattern | Permit only https: destinations in form-action, for example form-action 'self' https://pay.example. | yes |
 | `DPK-DAST-110` Refresh header redirects to a plaintext URL | MEDIUM | CWE-319 | the Refresh value against a pattern | Point the Refresh target at https, or replace Refresh with a 3xx redirect to an https URL. | **no** — needs `Refresh` |
@@ -276,12 +278,34 @@ someone verified the observation on the target.
 | `DPK-DAST-880` Passport number in a response | HIGH | CWE-359 | the response body (first 32,768 bytes) | Keep the document in the identity vault and return only a masked last four. | yes |
 | `DPK-DAST-881` Religion recorded in a customer payload | MEDIUM | CWE-359 | the response body (first 32,768 bytes) | Remove special-category fields from API payloads and audit why they were collected. | yes |
 | `DPK-DAST-882` Marketing consent flags in a response | LOW | CWE-359 | the response body (first 32,768 bytes) | Return only the consent needed by the current screen and log every read. | yes |
+| `DPK-DAST-883` Audio loaded over plaintext HTTP | LOW | CWE-319 | the response body (first 32,768 bytes) | Serve media from the same secure origin. | yes |
+| `DPK-DAST-888` Form submits over plaintext HTTP | HIGH | CWE-319 | the response body (first 32,768 bytes) | Post only to an https route on the bank's own origin. | yes |
+| `DPK-DAST-889` Frame loaded over plaintext HTTP | MEDIUM | CWE-319 | the response body (first 32,768 bytes) | Frame only secure origins and pin the allowed list. | yes |
+| `DPK-DAST-891` Stylesheet linked over plaintext HTTP | MEDIUM | CWE-319 | the response body (first 32,768 bytes) | Serve styles from the same secure origin. | yes |
+| `DPK-DAST-892` Embedded document loaded over plaintext HTTP | MEDIUM | CWE-319 | the response body (first 32,768 bytes) | Serve embedded documents from a secure route with a fixed content type. | yes |
+| `DPK-DAST-893` Resource hint pointing at plaintext HTTP | LOW | CWE-319 | the response body (first 32,768 bytes) | Keep hints on secure origins. | yes |
+| `DPK-DAST-894` Script import from a plaintext module | HIGH | CWE-319 | the response body (first 32,768 bytes) | Import only from the secure origin and pin integrity where possible. | yes |
+| `DPK-DAST-895` Media source element on plaintext HTTP | LOW | CWE-319 | the response body (first 32,768 bytes) | List only secure sources in the player. | yes |
+| `DPK-DAST-896` SVG image reference on plaintext HTTP | LOW | CWE-319 | the response body (first 32,768 bytes) | Reference images only from the secure origin. | yes |
+| `DPK-DAST-897` Caption track loaded over plaintext HTTP | LOW | CWE-319 | the response body (first 32,768 bytes) | Serve subtitle tracks from the same secure origin. | yes |
+| `DPK-DAST-898` Video loaded over plaintext HTTP | LOW | CWE-319 | the response body (first 32,768 bytes) | Serve video from the same secure origin behind a signed route. | yes |
+| `DPK-DAST-899` Worker script from plaintext HTTP | MEDIUM | CWE-319 | the response body (first 32,768 bytes) | Construct workers from the secure origin only. | yes |
+| `DPK-DAST-918` Credential stored in a collection variable | HIGH | CWE-522 | the response body (first 32,768 bytes) | Remove secrets from collections and use an environment that each developer supplies. | yes |
+| `DPK-DAST-920` API client environment export published | HIGH | CWE-522 | the response body (first 32,768 bytes) | Share environments out of band and rotate any value that was exported. | yes |
+| `DPK-DAST-931` Audit entry carrying the old and new value | MEDIUM | CWE-359 | the response body (first 32,768 bytes) | Return the fact that a field changed and keep the values in the restricted audit store. | yes |
+| `DPK-DAST-933` Case note text returned to the customer app | HIGH | CWE-359 | the response body (first 32,768 bytes) | Keep case notes in the investigation tool with its own access control. | yes |
+| `DPK-DAST-937` Password file served by the app | HIGH | CWE-538 | the response body (first 32,768 bytes) | Keep the password file outside the web root and rotate the credentials it holds. | yes |
+| `DPK-DAST-939` Package manager config served with a token | HIGH | CWE-538 | the response body (first 32,768 bytes) | Remove the file from the deployment and rotate the registry token. | yes |
+| `DPK-DAST-951` Bypass code built into the service | CRITICAL | CWE-798 | the response body (first 32,768 bytes) | Remove the bypass and rotate every credential it protected. | yes |
+| `DPK-DAST-953` Submitted password echoed in a response | HIGH | CWE-200 | the response body (first 32,768 bytes) | Never serialise a password field, even on a validation error. | yes |
+| `DPK-DAST-954` Knowledge-based questions returned with answers | HIGH | CWE-640 | the response body (first 32,768 bytes) | Never return answers; | yes |
+| `DPK-DAST-998` Rejected request body echoed in the error | MEDIUM | CWE-209 | the response body (first 32,768 bytes) | Return the field name that failed and never echo the value. | yes |
 
 ## Tier 2 — browser trust and interface contracts
 
 *Header, CSP and markup weaknesses do not move money by themselves, but they are the difference between a stolen session and a blocked one, and between a clickjackable login and a safe one.*
 
-**169 rules, 131 evaluable today.**
+**174 rules, 136 evaluable today.**
 
 | Rule | Severity | CWE | What it observes | What to do (first step) | Reachable |
 |---|---|---|---|---|---|
@@ -454,12 +478,17 @@ someone verified the observation on the target.
 | `DPK-DAST-860` Meta content security policy allows inline script | MEDIUM | CWE-693 | the response body (first 32,768 bytes) | Send the policy as a response header and remove unsafe-inline from it. | yes |
 | `DPK-DAST-861` Third-party script without an integrity check | LOW | CWE-353 | the response body (first 32,768 bytes) | Pin third-party scripts with an integrity hash or self-host them. | yes |
 | `DPK-DAST-864` SVG use element referencing an external document | MEDIUM | CWE-829 | the response body (first 32,768 bytes) | Inline the icons at build time or reference only same-origin sprites. | yes |
+| `DPK-DAST-884` Content security policy reports sent to a third party | LOW | CWE-201 | the response body (first 32,768 bytes) | Collect the reports on a first-party endpoint. | yes |
+| `DPK-DAST-885` Content security policy allows eval | MEDIUM | CWE-693 | the response body (first 32,768 bytes) | Remove unsafe-eval and replace the dynamic evaluation with a bundled path. | yes |
+| `DPK-DAST-886` Content security policy default source is a wildcard | HIGH | CWE-693 | the response body (first 32,768 bytes) | Set default-src to the bank's own origin and add narrow directives per type. | yes |
+| `DPK-DAST-887` Content security policy allows scripts from any host | HIGH | CWE-693 | the response body (first 32,768 bytes) | Name the exact hosts the page needs and drop the wildcard. | yes |
+| `DPK-DAST-890` Policy delivered only in markup | LOW | CWE-693 | the response body (first 32,768 bytes) | Serve the policy as a response header and keep the meta tag out of production. | yes |
 
 ## Tier 3 — disclosure, fingerprints and debug surfaces
 
 *Artefacts, consoles and stack traces rarely cause a loss on their own; they shorten the attacker’s reconnaissance and are the cheapest findings to close.*
 
-**457 rules, 436 evaluable today.**
+**564 rules, 543 evaluable today.**
 
 | Rule | Severity | CWE | What it observes | What to do (first step) | Reachable |
 |---|---|---|---|---|---|
@@ -494,6 +523,23 @@ someone verified the observation on the target.
 | `DPK-DAST-089` phpinfo() configuration page disclosed | MEDIUM | CWE-489 | the response body (first 32,768 bytes) | Delete the diagnostic script from the served tree and treat the disclosed environment values as exposed. | yes |
 | `DPK-DAST-090` Rust panic message with source location disclosed in a response | MEDIUM | CWE-209 | the response body (first 32,768 bytes) | Catch panics at the request boundary (std::panic::catch_unwind or the framework's error layer) and return a generic error response. | yes |
 | `DPK-DAST-091` Git repository metadata served by the web server | MEDIUM | CWE-540 | the response body (first 32,768 bytes) | Deny dot-directories at the web server and deploy build output instead of the working tree. | yes |
+| `DPK-DAST-1001` GraphQL error returning the whole query | LOW | CWE-209 | the response body (first 32,768 bytes) | Return the message and the path only, and log the query on the server. | yes |
+| `DPK-DAST-1002` Handlebars template error returned to a client | MEDIUM | CWE-209 | the response body (first 32,768 bytes) | Catch template errors and return a generic page with a correlation id. | yes |
+| `DPK-DAST-1003` Internal address recorded in an echoed header | LOW | CWE-200 | the response body (first 32,768 bytes) | Drop forwarding headers from responses and trust only the edge proxy. | yes |
+| `DPK-DAST-1004` Internal host used as a link target in markup | LOW | CWE-200 | the response body (first 32,768 bytes) | Render links with the public origin and keep internal hosts out of markup. | yes |
+| `DPK-DAST-1005` Jinja2 template error returned to a client | MEDIUM | CWE-209 | the response body (first 32,768 bytes) | Catch template errors and return a generic page with a correlation id. | yes |
+| `DPK-DAST-1006` JSF template error returned to a client | MEDIUM | CWE-209 | the response body (first 32,768 bytes) | Catch template errors and return a generic page with a correlation id. | yes |
+| `DPK-DAST-1007` Monetary amount sent as a floating point number | MEDIUM | CWE-704 | the response body (first 32,768 bytes) | Serialise money as a string with a fixed scale or as integer minor units. | yes |
+| `DPK-DAST-1008` LDAP filter echoed in an error | MEDIUM | CWE-209 | the response body (first 32,768 bytes) | Return a generic authentication failure and keep the filter server-side. | yes |
+| `DPK-DAST-1009` Mustache template error returned to a client | MEDIUM | CWE-209 | the response body (first 32,768 bytes) | Catch template errors and return a generic page with a correlation id. | yes |
+| `DPK-DAST-1010` OGNL template error returned to a client | MEDIUM | CWE-209 | the response body (first 32,768 bytes) | Catch template errors and return a generic page with a correlation id. | yes |
+| `DPK-DAST-1011` Pug template error returned to a client | MEDIUM | CWE-209 | the response body (first 32,768 bytes) | Catch template errors and return a generic page with a correlation id. | yes |
+| `DPK-DAST-1012` ASP.NET Razor template error returned to a client | MEDIUM | CWE-209 | the response body (first 32,768 bytes) | Catch template errors and return a generic page with a correlation id. | yes |
+| `DPK-DAST-1013` Smarty template error returned to a client | MEDIUM | CWE-209 | the response body (first 32,768 bytes) | Catch template errors and return a generic page with a correlation id. | yes |
+| `DPK-DAST-1015` Thymeleaf template error returned to a client | MEDIUM | CWE-209 | the response body (first 32,768 bytes) | Catch template errors and return a generic page with a correlation id. | yes |
+| `DPK-DAST-1016` Timestamp without a zone in a money record | LOW | CWE-200 | the response body (first 32,768 bytes) | Serialise timestamps in UTC with an explicit offset. | yes |
+| `DPK-DAST-1017` Velocity template error returned to a client | MEDIUM | CWE-209 | the response body (first 32,768 bytes) | Catch template errors and return a generic page with a correlation id. | yes |
+| `DPK-DAST-1018` XPath error echoing the expression | MEDIUM | CWE-209 | the response body (first 32,768 bytes) | Return a generic search error and log the expression server-side. | yes |
 | `DPK-DAST-109` Laravel Whoops error page disclosed | MEDIUM | CWE-209 | the response body (first 32,768 bytes) | Set APP_DEBUG=false in production and render a generic error view. | yes |
 | `DPK-DAST-111` Spring Boot Whitelabel error page disclosed | MEDIUM | CWE-209 | the response body (first 32,768 bytes) | Replace server.error.whitelabel.enabled with a custom error page that returns a generic message and a correct status code. | yes |
 | `DPK-DAST-117` Referrer-Policy sends full URLs to cross-origin destinations | LOW | CWE-200 | the Referrer-Policy value against a pattern | Use strict-origin-when-cross-origin or same-origin. | **no** — needs `Referrer-Policy` |
@@ -920,6 +966,96 @@ someone verified the observation on the target.
 | `DPK-DAST-850` Internal identifier in a data attribute | LOW | CWE-200 | the response body (first 32,768 bytes) | Render the public reference only and map it server-side. | yes |
 | `DPK-DAST-853` Form submits to an external origin | MEDIUM | CWE-345 | the response body (first 32,768 bytes) | Post to a first-party route and forward server-side after validation. | yes |
 | `DPK-DAST-856` Development note left in served markup | LOW | CWE-200 | the response body (first 32,768 bytes) | Strip template comments from production output. | yes |
+| `DPK-DAST-900` ClickHouse play interface reachable | MEDIUM | CWE-200 | the response body (first 32,768 bytes) | Disable the play interface in production and bind the HTTP port to the internal network. | yes |
+| `DPK-DAST-901` Change data capture connectors exposed | MEDIUM | CWE-200 | the response body (first 32,768 bytes) | Restrict the connect API to the data platform network. | yes |
+| `DPK-DAST-902` Dict scheme echoed in a response | LOW | CWE-918 | the response body (first 32,768 bytes) | Restrict outbound requests to https and an explicit host allowlist. | yes |
+| `DPK-DAST-903` File scheme echoed in a response | MEDIUM | CWE-200 | the response body (first 32,768 bytes) | Accept only https destinations and reject local schemes before the request is made. | yes |
+| `DPK-DAST-904` Gopher scheme echoed in a response | MEDIUM | CWE-918 | the response body (first 32,768 bytes) | Allowlist https destinations and reject every other scheme at parse time. | yes |
+| `DPK-DAST-905` Time-series query API reachable | MEDIUM | CWE-200 | the response body (first 32,768 bytes) | Require a token for the query API and bind it to the internal network. | yes |
+| `DPK-DAST-906` Cluster API address in a response | MEDIUM | CWE-200 | the response body (first 32,768 bytes) | Keep the API address out of responses and restrict which service accounts may reach it. | yes |
+| `DPK-DAST-907` LDAP URL in a response | MEDIUM | CWE-200 | the response body (first 32,768 bytes) | Keep directory endpoints in configuration and never echo them in errors. | yes |
+| `DPK-DAST-908` Log aggregation query API reachable | MEDIUM | CWE-200 | the response body (first 32,768 bytes) | Restrict the log API to the observability network and require authentication. | yes |
+| `DPK-DAST-909` Loopback address used as an internal endpoint | LOW | CWE-200 | the response body (first 32,768 bytes) | Return a correlation id and keep internal endpoints in configuration. | yes |
+| `DPK-DAST-910` MySQL connection URI in a response | MEDIUM | CWE-200 | the response body (first 32,768 bytes) | Return a generic database error and keep the URI in the secret store. | yes |
+| `DPK-DAST-911` PostgreSQL URI naming an internal host | MEDIUM | CWE-200 | the response body (first 32,768 bytes) | Return a generic error and keep the URI in the secret store. | yes |
+| `DPK-DAST-912` Scrape target list exposed | MEDIUM | CWE-200 | the response body (first 32,768 bytes) | Restrict the targets endpoint and keep it off customer-facing hosts. | yes |
+| `DPK-DAST-913` Message broker management interface reachable | MEDIUM | CWE-200 | the response body (first 32,768 bytes) | Restrict the management plugin to an admin network and require strong authentication. | yes |
+| `DPK-DAST-914` SQL Server connection string in a response | MEDIUM | CWE-200 | the response body (first 32,768 bytes) | Catch the connection error and return a generic message with a reference. | yes |
+| `DPK-DAST-915` Long-term metrics query endpoint reachable | LOW | CWE-200 | the response body (first 32,768 bytes) | Restrict the query endpoint to the observability network. | yes |
+| `DPK-DAST-916` API blueprint document published | LOW | CWE-200 | the response body (first 32,768 bytes) | Keep the blueprint in the specification repository. | yes |
+| `DPK-DAST-917` Event API description published | LOW | CWE-200 | the response body (first 32,768 bytes) | Keep the event contract in the platform repository. | yes |
+| `DPK-DAST-919` Database schema dump in a response | HIGH | CWE-200 | the response body (first 32,768 bytes) | Remove schema exports from the deployed tree and keep them in migrations. | yes |
+| `DPK-DAST-921` Test fixture with customer records published | MEDIUM | CWE-200 | the response body (first 32,768 bytes) | Generate fixtures with synthetic identities and keep them out of the deployed tree. | yes |
+| `DPK-DAST-922` GraphQL schema definition published | LOW | CWE-200 | the response body (first 32,768 bytes) | Serve introspection and the SDL only to authenticated clients. | yes |
+| `DPK-DAST-923` gRPC service list exposed | LOW | CWE-200 | the response body (first 32,768 bytes) | Disable server reflection in production. | yes |
+| `DPK-DAST-924` Browser capture file published in a response | HIGH | CWE-200 | the response body (first 32,768 bytes) | Keep captures on the analyst's machine and never deploy them. | yes |
+| `DPK-DAST-925` Schema identifier pointing at an internal path | LOW | CWE-200 | the response body (first 32,768 bytes) | Host published schemas on the public domain with relative identifiers. | yes |
+| `DPK-DAST-926` Mock server scenarios published with the app | LOW | CWE-200 | the response body (first 32,768 bytes) | Run mocks on a developer host and keep them out of the deployment. | yes |
+| `DPK-DAST-927` API description advertising an internal server | MEDIUM | CWE-200 | the response body (first 32,768 bytes) | Publish a trimmed description with the public base URL only. | yes |
+| `DPK-DAST-928` API collection published with the app | MEDIUM | CWE-200 | the response body (first 32,768 bytes) | Keep collections in the repository and out of the deployed tree. | yes |
+| `DPK-DAST-929` RAML API specification published | LOW | CWE-200 | the response body (first 32,768 bytes) | Keep the specification with the source and out of the served tree. | yes |
+| `DPK-DAST-930` SOAP operation list in a response | LOW | CWE-200 | the response body (first 32,768 bytes) | Publish operations to partners out of band. | yes |
+| `DPK-DAST-932` Backup copy of a page served by the app | HIGH | CWE-530 | the response body (first 32,768 bytes) | Delete editor and backup copies from the deployment and block their suffixes at the edge. | yes |
+| `DPK-DAST-934` Compose file served with credentials | HIGH | CWE-538 | the response body (first 32,768 bytes) | Use a secret store in the deployment and keep compose files out of the served tree. | yes |
+| `DPK-DAST-935` Container build file served by the app | MEDIUM | CWE-200 | the response body (first 32,768 bytes) | Keep build files in the repository and out of the deployed artefact. | yes |
+| `DPK-DAST-936` Ignore file served by the app | LOW | CWE-200 | the response body (first 32,768 bytes) | Serve build output only and keep ignore files out of the deployment. | yes |
+| `DPK-DAST-938` Account merge history exposed | LOW | CWE-200 | the response body (first 32,768 bytes) | Keep the merge graph in the customer master and return only the surviving identifier. | yes |
+| `DPK-DAST-940` Deleted record still returned with its timestamp | MEDIUM | CWE-200 | the response body (first 32,768 bytes) | Exclude deleted rows from read models and purge the data on the retention schedule. | yes |
+| `DPK-DAST-941` Compressed database dump in the served tree | HIGH | CWE-530 | the response body (first 32,768 bytes) | Move backups to object storage outside the web root and rotate any exposed copy. | yes |
+| `DPK-DAST-942` Staff identity attached to a customer record | LOW | CWE-200 | the response body (first 32,768 bytes) | Return a role label instead of the officer identity. | yes |
+| `DPK-DAST-943` Editor swap file served by the app | MEDIUM | CWE-530 | the response body (first 32,768 bytes) | Block editor artefacts at the edge and keep working copies off the deployment. | yes |
+| `DPK-DAST-944` Source archive published under the web root | HIGH | CWE-530 | the response body (first 32,768 bytes) | Deploy build output only and keep source archives out of the served tree. | yes |
+| `DPK-DAST-945` Authentication method reported as none | HIGH | CWE-287 | the response body (first 32,768 bytes) | Reject the request at the guard and return no account data. | yes |
+| `DPK-DAST-946` Unlimited concurrent sessions reported | LOW | CWE-613 | the response body (first 32,768 bytes) | Cap concurrent sessions and notify on a new device. | yes |
+| `DPK-DAST-947` Consent bypass flag in the response | MEDIUM | CWE-359 | the response body (first 32,768 bytes) | Remove the bypass and make consent a precondition of the request. | yes |
+| `DPK-DAST-948` Administrative scope granted to a client token | HIGH | CWE-269 | the response body (first 32,768 bytes) | Grant administrative scopes only to console clients and review them quarterly. | yes |
+| `DPK-DAST-949` Impersonated session recorded in the response | HIGH | CWE-200 | the response body (first 32,768 bytes) | Restrict impersonation to an audited admin console and never return the marker to the customer app. | yes |
+| `DPK-DAST-950` Account lockout disabled | MEDIUM | CWE-307 | the response body (first 32,768 bytes) | Set a threshold with a delay and alert on repeated failures. | yes |
+| `DPK-DAST-952` Second factor disabled on a privileged account | HIGH | CWE-306 | the response body (first 32,768 bytes) | Enforce the second factor for privileged roles and report the state to monitoring. | yes |
+| `DPK-DAST-955` Session identifier kept across login | HIGH | CWE-384 | the response body (first 32,768 bytes) | Rotate the session identifier on every privilege change and on login. | yes |
+| `DPK-DAST-956` Access token issued with a very long lifetime | MEDIUM | CWE-613 | the response body (first 32,768 bytes) | Issue short-lived access tokens and refresh them with a rotating refresh token. | yes |
+| `DPK-DAST-957` Device trusted while unverified | MEDIUM | CWE-287 | the response body (first 32,768 bytes) | Trust a device only after a successful second factor and record when it happened. | yes |
+| `DPK-DAST-958` Access granted before the address was verified | MEDIUM | CWE-287 | the response body (first 32,768 bytes) | Hold the session at a limited scope until the address is verified. | yes |
+| `DPK-DAST-959` Weak password policy reported | MEDIUM | CWE-521 | the response body (first 32,768 bytes) | Require at least twelve characters and screen against breached lists. | yes |
+| `DPK-DAST-960` Apache httpd version disclosed in a response | LOW | CWE-200 | the response body (first 32,768 bytes) | Set ServerTokens to Prod and replace the default error pages. | yes |
+| `DPK-DAST-961` Express version disclosed in a response | LOW | CWE-200 | the response body (first 32,768 bytes) | Register a custom 404 handler that returns a generic payload. | yes |
+| `DPK-DAST-962` Gunicorn version disclosed in a response | LOW | CWE-200 | the response body (first 32,768 bytes) | Hide the server signature and alert on worker timeouts instead of returning them. | yes |
+| `DPK-DAST-963` Microsoft IIS version disclosed in a response | LOW | CWE-200 | the response body (first 32,768 bytes) | Disable version headers and detailed errors on production sites. | yes |
+| `DPK-DAST-964` Java version disclosed in a response | LOW | CWE-200 | the response body (first 32,768 bytes) | Return a generic error and keep runtime identifiers out of responses. | yes |
+| `DPK-DAST-965` JBoss version disclosed in a response | LOW | CWE-200 | the response body (first 32,768 bytes) | Remove the version from error pages and keep the server patched. | yes |
+| `DPK-DAST-966` Jetty version disclosed in a response | LOW | CWE-200 | the response body (first 32,768 bytes) | Remove the powered-by footer and keep the container patched. | yes |
+| `DPK-DAST-967` Nginx version disclosed in a response | LOW | CWE-200 | the response body (first 32,768 bytes) | Suppress the version in the server signature and patch on a schedule. | yes |
+| `DPK-DAST-968` Node.js version disclosed in a response | LOW | CWE-200 | the response body (first 32,768 bytes) | Return a generic error and keep the runtime version out of responses. | yes |
+| `DPK-DAST-969` OpenSSL version disclosed in a response | LOW | CWE-200 | the response body (first 32,768 bytes) | Return a generic handshake error and keep the TLS library patched. | yes |
+| `DPK-DAST-970` PHP version disclosed in a response | LOW | CWE-200 | the response body (first 32,768 bytes) | Turn display_errors off and never expose the version. | yes |
+| `DPK-DAST-971` phpMyAdmin version disclosed in a response | LOW | CWE-200 | the response body (first 32,768 bytes) | Remove the tool from production hosts and keep only the application's own interfaces. | yes |
+| `DPK-DAST-972` Python version disclosed in a response | LOW | CWE-200 | the response body (first 32,768 bytes) | Keep runtime banners out of responses and pin interpreter versions in the image. | yes |
+| `DPK-DAST-973` Spring Boot version disclosed in a response | LOW | CWE-200 | the response body (first 32,768 bytes) | Return a generic error body and keep the framework release out of it. | yes |
+| `DPK-DAST-974` Tomcat Catalina version disclosed in a response | LOW | CWE-200 | the response body (first 32,768 bytes) | Customise the error pages and remove the container version from them. | yes |
+| `DPK-DAST-975` Uvicorn version disclosed in a response | LOW | CWE-200 | the response body (first 32,768 bytes) | Run with the access log off for clients and keep the banner out of responses. | yes |
+| `DPK-DAST-976` Werkzeug version disclosed in a response | LOW | CWE-200 | the response body (first 32,768 bytes) | Disable the debugger in production and return a generic error page. | yes |
+| `DPK-DAST-977` Affected row count returned to the client | LOW | CWE-200 | the response body (first 32,768 bytes) | Return success and keep the affected count in the audit log. | yes |
+| `DPK-DAST-978` Cache statistics in a response | LOW | CWE-200 | the response body (first 32,768 bytes) | Keep cache statistics in the metrics pipeline. | yes |
+| `DPK-DAST-979` Cache key that names another tenant | LOW | CWE-200 | the response body (first 32,768 bytes) | Namespace every key by the authenticated tenant and assert it on read. | yes |
+| `DPK-DAST-980` Connection pool detail in a health response | LOW | CWE-200 | the response body (first 32,768 bytes) | Expose a single healthy flag and keep pool metrics in the monitoring stack. | yes |
+| `DPK-DAST-981` Pagination cursor that encodes a record identifier | LOW | CWE-200 | the response body (first 32,768 bytes) | Sign the cursor and keep the ordering key server-side. | yes |
+| `DPK-DAST-982` Search index name exposed in results | LOW | CWE-200 | the response body (first 32,768 bytes) | Strip index metadata from responses returned to clients. | yes |
+| `DPK-DAST-983` Insert identifier returned to the client | LOW | CWE-200 | the response body (first 32,768 bytes) | Return the public reference only and keep the row identifier server-side. | yes |
+| `DPK-DAST-984` Subscription plan and seat detail exposed | LOW | CWE-200 | the response body (first 32,768 bytes) | Return the feature flags the caller needs without the commercial detail. | yes |
+| `DPK-DAST-985` Query duration returned with results | LOW | CWE-200 | the response body (first 32,768 bytes) | Keep timings in the metrics pipeline and return the result only. | yes |
+| `DPK-DAST-986` Rate limit policy detail in a response | LOW | CWE-200 | the response body (first 32,768 bytes) | Return the remaining budget only and keep the policy server-side. | yes |
+| `DPK-DAST-987` Total record count returned with a filtered list | LOW | CWE-200 | the response body (first 32,768 bytes) | Return the page and a has-more flag, and keep exact counts behind authorisation. | yes |
+| `DPK-DAST-988` Query plan returned in a response | MEDIUM | CWE-200 | the response body (first 32,768 bytes) | Return the result set only and keep plans behind an operator role. | yes |
+| `DPK-DAST-989` Shard failure detail returned with results | LOW | CWE-200 | the response body (first 32,768 bytes) | Return partial results with a generic note and log the shard failure. | yes |
+| `DPK-DAST-990` Deleted record counter returned in stats | LOW | CWE-200 | the response body (first 32,768 bytes) | Report the live set only and keep retention metrics internal. | yes |
+| `DPK-DAST-991` Executed SQL returned in a response | MEDIUM | CWE-200 | the response body (first 32,768 bytes) | Never echo statements; | yes |
+| `DPK-DAST-992` Table and column names returned in a response | MEDIUM | CWE-200 | the response body (first 32,768 bytes) | Return the field labels the screen needs and keep schema metadata server-side. | yes |
+| `DPK-DAST-993` Laravel Blade template error returned to a client | MEDIUM | CWE-209 | the response body (first 32,768 bytes) | Catch template errors and return a generic page with a correlation id. | yes |
+| `DPK-DAST-994` Card number in a bulk export | HIGH | CWE-200 | the response body (first 32,768 bytes) | Tokenise card data in exports and restrict the columns to what the report needs. | yes |
+| `DPK-DAST-995` Spreadsheet formula in an exported cell | MEDIUM | CWE-1236 | the response body (first 32,768 bytes) | Prefix formula triggers with an apostrophe when exporting, and keep exports to the fields needed. | yes |
+| `DPK-DAST-996` EJS template error returned to a client | MEDIUM | CWE-209 | the response body (first 32,768 bytes) | Catch template errors and return a generic page with a correlation id. | yes |
+| `DPK-DAST-997` Mail subject carrying injected headers | MEDIUM | CWE-93 | the response body (first 32,768 bytes) | Strip newlines from every header value and build messages with a library that encodes them. | yes |
+| `DPK-DAST-999` FreeMarker template error returned to a client | MEDIUM | CWE-209 | the response body (first 32,768 bytes) | Catch template errors and return a generic page with a correlation id. | yes |
 
 ## Appendix — the 73 rules the App cannot evaluate today
 

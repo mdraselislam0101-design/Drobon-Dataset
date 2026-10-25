@@ -19,11 +19,11 @@ audiences, and this page says so instead of counting it four times as if it were
 | UserType | Selected | App-reachable | Cutoff score | SAST | SCA | Secrets | DAST | File |
 |---|---|---|---|---|---|---|---|---|
 | DEVELOPER | **1000** / 1000 | 788 | 3.90 | 972 | 0 | 28 | 0 | `views/developer-v1.json` |
-| STUDENT | **1000** / 1000 | 904 | 3.90 | 799 | 0 | 0 | 201 | `views/student-v1.json` |
-| SECURITY_PROFESSIONAL | **1000** / 1000 | 990 | 4.10 | 248 | 0 | 94 | 658 | `views/security-professional-v1.json` |
-| PENTESTER | **1000** / 1000 | 962 | 3.90 | 70 | 0 | 97 | 833 | `views/pentester-v1.json` |
+| STUDENT | **1000** / 1000 | 928 | 3.90 | 775 | 0 | 0 | 225 | `views/student-v1.json` |
+| SECURITY_PROFESSIONAL | **1000** / 1000 | 992 | 4.10 | 127 | 0 | 94 | 779 | `views/security-professional-v1.json` |
+| PENTESTER | **1000** / 1000 | 994 | 4.60 | 43 | 0 | 94 | 863 | `views/pentester-v1.json` |
 
-Candidates: **1968** rules across the four packs. Every lens selects the top 1000, so a rule
+Candidates: **2104** rules across the four packs. Every lens selects the top 1000, so a rule
 outside a lens is not rejected as wrong — it is simply past the cutoff for that audience.
 
 ## Scoring model (authored policy, printed so it can be argued with)
