@@ -116,7 +116,7 @@ Every rule below is original DROBON work: its detection logic, title, rationale,
 |---|---|---|---|
 | CSP grammar + directive fallback + duplicate-directive first-wins | `scripts/lib/csp.mjs` (`parseCspHeader`, `effectiveSources`, `declaresDirective`, `everyPolicy`) | rules 002/010/021/022/059/060/061/070/072/075/086/087/092/093/095/098/099/102–108/115 | `test-csp-semantics` 22,983/22,983 |
 | New CSP predicates: any-directive wildcard, directive plaintext, sandbox escapability, `report-uri` plaintext | `headerHasDirectiveWildcard`, `headerDirectiveAllowsPlaintext`, `headerSandboxEscapable`, `headerReportUriAllowsPlaintext` | 102–108, 115 | differential gate: 19 rules × 1,200 generated policies + 96 curated rows |
-| Set-Cookie attribute model (flag attributes ignore their value; discarded cookies set nothing; duplicate attributes last-wins) | `scripts/lib/set-cookie.mjs` (`parseSetCookie`, `cookieHasFlag`, `cookieStorageRejection`, `cookieWillBeStored`) | 004/006/008/071 | `test-cookie-semantics` 1,732/1,732 (22 curated, 600 generated, 325 cross-rule inputs) |
+| Set-Cookie attribute model (flag attributes ignore their value; discarded cookies set nothing; duplicate attributes last-wins) | `scripts/lib/set-cookie.mjs` (`parseSetCookie`, `cookieHasFlag`, `cookieStorageRejection`, `cookieWillBeStored`) | 004/006/008/071 | `test-cookie-semantics` 1,868/1,868 (22 curated, 600 generated, 325 cross-rule inputs) |
 | Single-header value matching (case-insensitive) | `evalDastCheck` `response-header-matches` | 66 rules | `test-packs` 4,834/4,834 |
 | Body signature matching | `response-body-matches` | 21 rules | `test-packs`, evaluation |
 | Absence semantics | `missing-response-header`, `response-header-missing-directive` | 24 rules | `test-packs`, evaluation |
@@ -136,7 +136,7 @@ Check vocabulary: **unchanged at 7 types**; no schema change and no new check ty
 | `node scripts/test-audiences.mjs` | 0 | 3,533/3,533 |
 | `node scripts/test-assets.mjs` | 0 | 9,322/9,322 |
 | `node scripts/test-csp-semantics.mjs` | 0 | 22,983/22,983 assertions; 96 curated rows; 22,800 generated rule/policy pairs |
-| `node scripts/test-cookie-semantics.mjs` | 0 | 1,732/1,732 assertions; 22 curated rows; 600 generated pairs; 325 cross-rule inputs |
+| `node scripts/test-cookie-semantics.mjs` | 0 | 1,868/1,868 assertions; 22 curated rows; 600 generated pairs; 325 cross-rule inputs |
 | `node scripts/test-consistency.mjs` | 0 | 222/222 |
 | `node scripts/test-rehearsal.mjs` | 0 | 78/78 |
 | `node scripts/test-eval.mjs` | 0 | 43/43 |

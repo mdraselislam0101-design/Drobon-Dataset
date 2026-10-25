@@ -1,0 +1,1820 @@
+[
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-azure-blob-listing",
+    "category": "exposed-interface",
+    "cwe": "CWE-200",
+    "severity": "HIGH",
+    "title": "Azure Blob container listing in a response",
+    "description": "An Azure blob enumeration document from the storage endpoint appears in the response body. The listing names every blob in the container, so a container that was meant to be private becomes an index of documents, dumps and exports that can then be fetched one by one.",
+    "remediation": "Disable anonymous container access and serve files through short-lived signed URLs.",
+    "limitation": "One response body, first 32,768 bytes. It matches the enumeration document from the blob host; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries an Azure blob enumeration document from the storage endpoint.",
+    "fp": "A page that documents the storage API without a listing is not reported.",
+    "recordDesc": "An Azure blob enumeration document from the storage endpoint in a response hands every reader the view the build or admin side kept: The listing names every blob in the container, so a container that was meant to be private becomes an index of documents, dumps and exports that can then be fetched one by one.",
+    "applicability": "Deployments that render an Azure blob enumeration document from the storage endpoint into a customer- or partner-facing response.",
+    "risk": "The listing names every blob in the container, so a container that was meant to be private becomes an index of documents, dumps and exports that can then be fetched one by one.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Disable anonymous container access and serve files through short-lived signed URLs.",
+      "Disable anonymous container access and hand out short-lived signed URLs."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries an Azure blob enumeration document from the storage endpoint.",
+    "cells": [
+      {
+        "suffix": "body-azure-blob-listing",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "EnumerationResults[\\s\\S]{0,200}?blob\\.core\\.windows\\.net|<EnumerationResults[\\s\\S]{0,120}?<Blobs>"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<EnumerationResults ServiceEndpoint=\"https://drobon.blob.core.windows.net/\"><Blobs><Blob><Name>kyc-8841.pdf</Name></Blob></Blobs></EnumerationResults>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<EnumerationResults ContainerName=\"https://statements.blob.core.windows.net/2026\"><Blobs>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"container listing is not permitted\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-azure-sas-url",
+    "category": "credential-exposure",
+    "cwe": "CWE-522",
+    "severity": "HIGH",
+    "title": "Azure SAS token in a response",
+    "description": "A storage URL that carries a shared access signature appears in the response body. The signature grants time-boxed access to the container or blob, so anyone who reads the response can download or overwrite the object until the signature expires.",
+    "remediation": "Mint SAS tokens per request with the shortest workable lifetime and audience.",
+    "limitation": "One response body, first 32,768 bytes. It matches the blob host with a signature parameter; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a storage URL that carries a shared access signature.",
+    "fp": "A documentation sample with a placeholder signature is not reported.",
+    "recordDesc": "A storage URL that carries a shared access signature in a response hands every reader the view the build or admin side kept: The signature grants time-boxed access to the container or blob, so anyone who reads the response can download or overwrite the object until the signature expires.",
+    "applicability": "Deployments that render a storage URL that carries a shared access signature into a customer- or partner-facing response.",
+    "risk": "The signature grants time-boxed access to the container or blob, so anyone who reads the response can download or overwrite the object until the signature expires.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Mint SAS tokens per request with the shortest workable lifetime and audience.",
+      "Mint per-request SAS tokens with the shortest lifetime that still works."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a storage URL that carries a shared access signature.",
+    "cells": [
+      {
+        "suffix": "body-azure-sas-url",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "blob\\.core\\.windows\\.net[\\s\\S]{0,200}?[?&]sig="
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"downloadUrl\":\"https://drobon.blob.core.windows.net/kyc/8841.pdf?sv=2024-05-04&sig=SYNTH3TIC&se=2026-01-01\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "https://statements.blob.core.windows.net/2026/03.pdf?sr=b&sig=SYNTH3TICSIGNATURE"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"downloadUrl\":\"/files/8841.pdf\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-spaces-bucket-listing",
+    "category": "exposed-interface",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "DigitalOcean Spaces bucket listing in a response",
+    "description": "An object listing from a Spaces bucket appears in the response body. A public listing turns the bucket into a browsable index, and Spaces buckets often hold the same exports and media that the App assumes are unguessable.",
+    "remediation": "Set the bucket policy to private and serve objects through the App or signed URLs.",
+    "limitation": "One response body, first 32,768 bytes. It matches the Spaces host with an object key listing; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries an object listing from a Spaces bucket.",
+    "fp": "A CDN URL for a single object is not reported.",
+    "recordDesc": "An object listing from a Spaces bucket in a response hands every reader the view the build or admin side kept: A public listing turns the bucket into a browsable index, and Spaces buckets often hold the same exports and media that the App assumes are unguessable.",
+    "applicability": "Deployments that render an object listing from a Spaces bucket into a customer- or partner-facing response.",
+    "risk": "A public listing turns the bucket into a browsable index, and Spaces buckets often hold the same exports and media that the App assumes are unguessable.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Set the bucket policy to private and serve objects through the App or signed URLs.",
+      "Set the bucket policy to private and serve objects through signed URLs."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries an object listing from a Spaces bucket.",
+    "cells": [
+      {
+        "suffix": "body-spaces-bucket-listing",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "digitaloceanspaces\\.com[\\s\\S]{0,200}?<Key>"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"url\":\"https://drobon.sgp1.digitaloceanspaces.com/?list-type=2\",\"keys\":[\"<Key>kyc/8841.pdf</Key>\",\"<Key>exports/2026-03.csv</Key>\"]}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "https://drobon.sgp1.digitaloceanspaces.com/?list-type=2 <ListBucketResult><Key>media/statement-8841.pdf</Key></ListBucketResult>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"url\":\"https://drobon.sgp1.cdn.digitaloceanspaces.com/logo.png\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-b2-bucket-listing",
+    "category": "exposed-interface",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "Backblaze B2 bucket listing in a response",
+    "description": "An object listing from a B2 bucket appears in the response body. The listing exposes every stored object name, which for a bank includes statement exports and identity documents whose names follow a predictable pattern.",
+    "remediation": "Keep the bucket private and expose only the objects a request is authorised for.",
+    "limitation": "One response body, first 32,768 bytes. It matches the B2 host with an object key listing; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries an object listing from a B2 bucket.",
+    "fp": "A signed download URL for one object is not reported.",
+    "recordDesc": "An object listing from a B2 bucket in a response hands every reader the view the build or admin side kept: The listing exposes every stored object name, which for a bank includes statement exports and identity documents whose names follow a predictable pattern.",
+    "applicability": "Deployments that render an object listing from a B2 bucket into a customer- or partner-facing response.",
+    "risk": "The listing exposes every stored object name, which for a bank includes statement exports and identity documents whose names follow a predictable pattern.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Keep the bucket private and expose only the objects a request is authorised for.",
+      "Keep the bucket private and authorise each object fetch."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries an object listing from a B2 bucket.",
+    "cells": [
+      {
+        "suffix": "body-b2-bucket-listing",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "backblazeb2\\.com[\\s\\S]{0,200}?<Key>"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "https://f004.backblazeb2.com/file/drobon-identity <ListBucketResult><Contents><Key>identity/8841-nid.pdf</Key></Contents></ListBucketResult>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "https://f004.backblazeb2.com/file/drobon-exports/ <ListBucketResult><Key>exports/2026-03.csv</Key></ListBucketResult>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "https://f004.backblazeb2.com/file/drobon-exports/one.pdf"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-r2-bucket-listing",
+    "category": "exposed-interface",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "Cloudflare R2 bucket listing in a response",
+    "description": "An object listing served from the R2 S3 endpoint appears in the response body. R2 keys describe the object layout of the application, and a public listing exposes uploads, exports and backups to anyone who knows the endpoint.",
+    "remediation": "Keep the bucket private, and serve through the App or a Worker that checks authorisation.",
+    "limitation": "One response body, first 32,768 bytes. It matches the R2 endpoint with an object key listing; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries an object listing served from the R2 S3 endpoint.",
+    "fp": "A public asset URL for one file is not reported.",
+    "recordDesc": "An object listing served from the R2 S3 endpoint in a response hands every reader the view the build or admin side kept: R2 keys describe the object layout of the application, and a public listing exposes uploads, exports and backups to anyone who knows the endpoint.",
+    "applicability": "Deployments that render an object listing served from the R2 S3 endpoint into a customer- or partner-facing response.",
+    "risk": "R2 keys describe the object layout of the application, and a public listing exposes uploads, exports and backups to anyone who knows the endpoint.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Keep the bucket private, and serve through the App or a Worker that checks authorisation.",
+      "Keep the bucket private and authorise each object through the App or a Worker."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries an object listing served from the R2 S3 endpoint.",
+    "cells": [
+      {
+        "suffix": "body-r2-bucket-listing",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "r2\\.cloudflarestorage\\.com[\\s\\S]{0,200}?<Key>"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"endpoint\":\"https://acc123.r2.cloudflarestorage.com/drobon?list-type=2\",\"contents\":[\"<Key>uploads/8841.pdf</Key>\"]}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "https://acc123.r2.cloudflarestorage.com/drobon <ListBucketResult><Key>backups/2026-03.sql.gz</Key></ListBucketResult>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"endpoint\":\"https://cdn.drobon.app/assets/logo.svg\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-wasabi-bucket-listing",
+    "category": "exposed-interface",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "Wasabi bucket listing in a response",
+    "description": "An object listing served from a Wasabi endpoint appears in the response body. The listing names the archive objects a bank keeps for audit and retention, which is a target list for anyone hunting unencrypted exports.",
+    "remediation": "Keep the bucket policy private and require signed requests for every object.",
+    "limitation": "One response body, first 32,768 bytes. It matches the Wasabi host with an object key listing; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries an object listing served from a Wasabi endpoint.",
+    "fp": "A presigned URL for a single object is not reported on its own.",
+    "recordDesc": "An object listing served from a Wasabi endpoint in a response hands every reader the view the build or admin side kept: The listing names the archive objects a bank keeps for audit and retention, which is a target list for anyone hunting unencrypted exports.",
+    "applicability": "Deployments that render an object listing served from a Wasabi endpoint into a customer- or partner-facing response.",
+    "risk": "The listing names the archive objects a bank keeps for audit and retention, which is a target list for anyone hunting unencrypted exports.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Keep the bucket policy private and require signed requests for every object.",
+      "Keep the bucket policy private and require signed requests."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries an object listing served from a Wasabi endpoint.",
+    "cells": [
+      {
+        "suffix": "body-wasabi-bucket-listing",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "wasabisys\\.com[\\s\\S]{0,200}?<Key>"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "https://s3.ap-southeast-1.wasabisys.com/drobon-audit <ListBucketResult><Key>audit/2026-02/batch-17.jsonl</Key></ListBucketResult>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"url\":\"https://s3.eu-central-1.wasabisys.com/drobon?list-type=2\",\"keys\":[\"<Key>retention/2024.tar</Key>\"]}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"url\":\"https://s3.ap-southeast-1.wasabisys.com/drobon/one.pdf\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-ceph-rgw-listing",
+    "category": "exposed-interface",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "Ceph RADOS gateway bucket listing in a response",
+    "description": "An object listing served by a Ceph RADOS gateway appears in the response body. The gateway is the bank's own storage tier, so a listing exposes internal bucket names, tenant layout and object naming that the App assumes are private.",
+    "remediation": "Require authenticated requests on the gateway and disable anonymous list on every bucket.",
+    "limitation": "One response body, first 32,768 bytes. It matches the gateway response header with an object key listing; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries an object listing served by a Ceph RADOS gateway.",
+    "fp": "A gateway health page without object names is not reported.",
+    "recordDesc": "An object listing served by a Ceph RADOS gateway in a response hands every reader the view the build or admin side kept: The gateway is the bank's own storage tier, so a listing exposes internal bucket names, tenant layout and object naming that the App assumes are private.",
+    "applicability": "Deployments that render an object listing served by a Ceph RADOS gateway into a customer- or partner-facing response.",
+    "risk": "The gateway is the bank's own storage tier, so a listing exposes internal bucket names, tenant layout and object naming that the App assumes are private.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Require authenticated requests on the gateway and disable anonymous list on every bucket.",
+      "Require authenticated requests and disable anonymous list on every bucket."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries an object listing served by a Ceph RADOS gateway.",
+    "cells": [
+      {
+        "suffix": "body-ceph-rgw-listing",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "x-amz-request-id[\\s\\S]{0,200}?<Key>|rgw[\\s\\S]{0,80}?<Key>"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "x-amz-request-id: tx0000000000001 <ListBucketResult><Key>core/ledger/2026-03.csv</Key></ListBucketResult>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "x-amz-request-id: tx0000000000042 rgw <Key>kyc/8841.pdf</Key>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "x-amz-request-id: tx0000000000042 (no listing)"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-swift-container-listing",
+    "category": "exposed-interface",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "OpenStack Swift container listing in a response",
+    "description": "A container index document from a Swift endpoint appears in the response body. The index names every object in the container along with its size and timestamp, which gives an attacker both the inventory and the change history.",
+    "remediation": "Set the container to private and serve objects through the App.",
+    "limitation": "One response body, first 32,768 bytes. It matches the Swift container document with object entries; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a container index document from a Swift endpoint.",
+    "fp": "A single object download is not reported.",
+    "recordDesc": "A container index document from a Swift endpoint in a response hands every reader the view the build or admin side kept: The index names every object in the container along with its size and timestamp, which gives an attacker both the inventory and the change history.",
+    "applicability": "Deployments that render a container index document from a Swift endpoint into a customer- or partner-facing response.",
+    "risk": "The index names every object in the container along with its size and timestamp, which gives an attacker both the inventory and the change history.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Set the container to private and serve objects through the App.",
+      "Set the container to private and serve objects through the App."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a container index document from a Swift endpoint.",
+    "cells": [
+      {
+        "suffix": "body-swift-container-listing",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "<container\\s+name=\\\"[^\\\"]{1,60}\\\"[\\s\\S]{0,200}?<object>"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<container name=\"statements\"><object><name>2026-03/8841.pdf</name><bytes>184220</bytes></object></container>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<container name=\"kyc\"><object><name>8841-nid.pdf</name></object></container>"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<container name=\"statements\"></container>"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-s3-access-point-arn",
+    "category": "information-disclosure",
+    "cwe": "CWE-200",
+    "severity": "LOW",
+    "title": "S3 access point ARN in a response",
+    "description": "An S3 access point ARN naming the account appears in the response body. The ARN carries the account id, region and access point name, which is the exact identifier another principal needs to attempt a cross-account policy mistake.",
+    "remediation": "Return aliases instead of ARNs and keep account identifiers out of client payloads.",
+    "limitation": "One response body, first 32,768 bytes. It matches the access point ARN; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries an S3 access point ARN naming the account.",
+    "fp": "A documentation example with an ellipsis is not reported.",
+    "recordDesc": "An S3 access point ARN naming the account in a response hands every reader the view the build or admin side kept: The ARN carries the account id, region and access point name, which is the exact identifier another principal needs to attempt a cross-account policy mistake.",
+    "applicability": "Deployments that render an S3 access point ARN naming the account into a customer- or partner-facing response.",
+    "risk": "The ARN carries the account id, region and access point name, which is the exact identifier another principal needs to attempt a cross-account policy mistake.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Return aliases instead of ARNs and keep account identifiers out of client payloads.",
+      "Return an alias instead of an ARN and keep account identifiers server-side."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries an S3 access point ARN naming the account.",
+    "cells": [
+      {
+        "suffix": "body-s3-access-point-arn",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "arn:aws:s3:[a-z0-9-]{2,20}:\\d{12}:accesspoint"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"storage\":\"arn:aws:s3:ap-south-1:123456789012:accesspoint/drobon-exports\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "arn:aws:s3:us-east-1:210987654321:accesspoint/statements"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"storage\":\"arn:aws:s3:::drobon-exports\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-gcs-public-iam",
+    "category": "exposed-interface",
+    "cwe": "CWE-200",
+    "severity": "HIGH",
+    "title": "Public IAM binding on a storage bucket",
+    "description": "A bucket IAM policy that grants a role to all users appears in the response body. A binding to allUsers makes every object in the bucket readable on the internet regardless of what the App checks, and the response confirms the binding is in place.",
+    "remediation": "Remove the allUsers binding and audit the bucket policy for public grants.",
+    "limitation": "One response body, first 32,768 bytes. It matches the allUsers member with a storage role; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a bucket IAM policy that grants a role to all users.",
+    "fp": "A policy document that lists domain-scoped members is not reported.",
+    "recordDesc": "A bucket IAM policy that grants a role to all users in a response hands every reader the view the build or admin side kept: A binding to allUsers makes every object in the bucket readable on the internet regardless of what the App checks, and the response confirms the binding is in place.",
+    "applicability": "Deployments that render a bucket IAM policy that grants a role to all users into a customer- or partner-facing response.",
+    "risk": "A binding to allUsers makes every object in the bucket readable on the internet regardless of what the App checks, and the response confirms the binding is in place.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Remove the allUsers binding and audit the bucket policy for public grants.",
+      "Remove the allUsers binding and audit for public grants."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a bucket IAM policy that grants a role to all users.",
+    "cells": [
+      {
+        "suffix": "body-gcs-public-iam",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\"member\"\\s*:\\s*\"allUsers\"[\\s\\S]{0,160}?\"roles/storage\\.|\"roles/storage\\.[A-Za-z]+\"[\\s\\S]{0,160}?\"allUsers\""
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"bindings\":[{\"role\":\"roles/storage.objectViewer\",\"members\":[\"allUsers\"]}]}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"member\":\"allUsers\",\"role\":\"roles/storage.objectAdmin\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"bindings\":[{\"role\":\"roles/storage.objectViewer\",\"members\":[\"group:audit@drobon.example\"]}]}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-iam-wildcard-principal",
+    "category": "information-disclosure",
+    "cwe": "CWE-200",
+    "severity": "HIGH",
+    "title": "IAM policy with a wildcard principal",
+    "description": "A policy statement that allows every principal appears in the response body. A wildcard principal in a resource policy makes the resource world-readable or world-writable as far as the cloud control plane is concerned, whatever the App intends.",
+    "remediation": "Scope the principal to specific roles or accounts and review the policy with an access analyser.",
+    "limitation": "One response body, first 32,768 bytes. It matches the wildcard principal next to an allow effect; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a policy statement that allows every principal.",
+    "fp": "A policy that documents the syntax in a comment is not reported.",
+    "recordDesc": "A policy statement that allows every principal in a response hands every reader the view the build or admin side kept: A wildcard principal in a resource policy makes the resource world-readable or world-writable as far as the cloud control plane is concerned, whatever the App intends.",
+    "applicability": "Deployments that render a policy statement that allows every principal into a customer- or partner-facing response.",
+    "risk": "A wildcard principal in a resource policy makes the resource world-readable or world-writable as far as the cloud control plane is concerned, whatever the App intends.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Scope the principal to specific roles or accounts and review the policy with an access analyser.",
+      "Scope the principal to named roles and review the policy with an access analyser."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a policy statement that allows every principal.",
+    "cells": [
+      {
+        "suffix": "body-iam-wildcard-principal",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\"(?:Principal\"\\s*:\\s*(?:\"\\*\"|\\{\\s*\"AWS\"\\s*:\\s*\"\\*\")[\\s\\S]{0,200}?Effect\"\\s*:\\s*\"Allow\"|Effect\"\\s*:\\s*\"Allow\"[\\s\\S]{0,200}?Principal\"\\s*:\\s*(?:\"\\*\"|\\{\\s*\"AWS\"\\s*:\\s*\"\\*\"))"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":\"*\",\"Action\":\"s3:GetObject\",\"Resource\":\"*\"}]}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"Statement\":[{\"Principal\":{\"AWS\":\"*\"},\"Effect\":\"Allow\",\"Action\":\"sqs:SendMessage\"}]}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"AWS\":\"arn:aws:iam::123456789012:root\"},\"Action\":\"s3:GetObject\"}]}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-kms-key-arn",
+    "category": "information-disclosure",
+    "cwe": "CWE-200",
+    "severity": "LOW",
+    "title": "KMS key ARN in a response",
+    "description": "A KMS key ARN with its alias appears in the response body. The ARN names the key that protects a data class, so an attacker learns which key to target and confirms the key lives in a different account or region from the data.",
+    "remediation": "Return a key alias reference and keep ARNs in the service configuration.",
+    "limitation": "One response body, first 32,768 bytes. It matches the KMS ARN; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a KMS key ARN with its alias.",
+    "fp": "A page that describes the encryption approach without an ARN is not reported.",
+    "recordDesc": "A KMS key ARN with its alias in a response hands every reader the view the build or admin side kept: The ARN names the key that protects a data class, so an attacker learns which key to target and confirms the key lives in a different account or region from the data.",
+    "applicability": "Deployments that render a KMS key ARN with its alias into a customer- or partner-facing response.",
+    "risk": "The ARN names the key that protects a data class, so an attacker learns which key to target and confirms the key lives in a different account or region from the data.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Return a key alias reference and keep ARNs in the service configuration.",
+      "Return a key reference and keep the ARN in service configuration."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a KMS key ARN with its alias.",
+    "cells": [
+      {
+        "suffix": "body-kms-key-arn",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "arn:aws:kms:[a-z0-9-]{2,20}:\\d{12}:(?:key|alias)/"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"encryption\":{\"kmsKey\":\"arn:aws:kms:ap-south-1:123456789012:key/9c1f-77aa\"}}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "arn:aws:kms:us-east-1:210987654321:alias/drobon-statements"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"encryption\":{\"algorithm\":\"AES-256-GCM\",\"keyRef\":\"statements-key\"}}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-keyvault-secret-uri",
+    "category": "information-disclosure",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "Key Vault secret URI in a response",
+    "description": "A Key Vault secret URI naming the vault and secret appears in the response body. The URI names the vault and the exact secret version, so a principal with any read grant on the vault has the precise path to the credential the App uses.",
+    "remediation": "Return a logical secret name and resolve it server-side through the managed identity.",
+    "limitation": "One response body, first 32,768 bytes. It matches the vault secret URI; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a Key Vault secret URI naming the vault and secret.",
+    "fp": "A page that describes the vault integration is not reported.",
+    "recordDesc": "A Key Vault secret URI naming the vault and secret in a response hands every reader the view the build or admin side kept: The URI names the vault and the exact secret version, so a principal with any read grant on the vault has the precise path to the credential the App uses.",
+    "applicability": "Deployments that render a Key Vault secret URI naming the vault and secret into a customer- or partner-facing response.",
+    "risk": "The URI names the vault and the exact secret version, so a principal with any read grant on the vault has the precise path to the credential the App uses.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Return a logical secret name and resolve it server-side through the managed identity.",
+      "Return a logical name and resolve the secret through the managed identity."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a Key Vault secret URI naming the vault and secret.",
+    "cells": [
+      {
+        "suffix": "body-keyvault-secret-uri",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "vault\\.azure\\.net/secrets/[A-Za-z0-9-]{2,60}"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"db\":{\"passwordRef\":\"https://drobon-prod.vault.azure.net/secrets/db-password/8f21\"}}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "https://drobon-prod.vault.azure.net/secrets/storage-key"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"db\":{\"passwordRef\":\"kv:db-password\"}}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-service-account-email",
+    "category": "information-disclosure",
+    "cwe": "CWE-200",
+    "severity": "LOW",
+    "title": "Google service account identity in a response",
+    "description": "A service account e-mail address appears in the response body. The address names the workload identity a bank runs, which tells an attacker which principal to target for a confused-deputy or impersonation attempt.",
+    "remediation": "Return a workload label rather than the service account identity.",
+    "limitation": "One response body, first 32,768 bytes. It matches the service account address; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a service account e-mail address.",
+    "fp": "A documentation sample using example.com is not reported.",
+    "recordDesc": "A service account e-mail address in a response hands every reader the view the build or admin side kept: The address names the workload identity a bank runs, which tells an attacker which principal to target for a confused-deputy or impersonation attempt.",
+    "applicability": "Deployments that render a service account e-mail address into a customer- or partner-facing response.",
+    "risk": "The address names the workload identity a bank runs, which tells an attacker which principal to target for a confused-deputy or impersonation attempt.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Return a workload label rather than the service account identity.",
+      "Return a workload label and keep the principal identity server-side."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a service account e-mail address.",
+    "cells": [
+      {
+        "suffix": "body-service-account-email",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "[a-z0-9-]{3,40}@[a-z0-9-]{3,30}\\.iam\\.gserviceaccount\\.com"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"caller\":\"drobon-reporting@drobon-prod.iam.gserviceaccount.com\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "writer@drobon-analytics.iam.gserviceaccount.com"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"caller\":\"workload:reporting\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-aws-account-id",
+    "category": "information-disclosure",
+    "cwe": "CWE-200",
+    "severity": "LOW",
+    "title": "AWS account identifier in a response",
+    "description": "A twelve-digit account identifier in a JSON field appears in the response body. The account id is the anchor for cross-account trust and support requests, so publishing it lets an attacker craft a believable support or trust-policy pretext.",
+    "remediation": "Keep account identifiers server-side and expose resource aliases to clients.",
+    "limitation": "One response body, first 32,768 bytes. It matches the account id field; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a twelve-digit account identifier in a JSON field.",
+    "fp": "A masked identifier is not reported.",
+    "recordDesc": "A twelve-digit account identifier in a JSON field in a response hands every reader the view the build or admin side kept: The account id is the anchor for cross-account trust and support requests, so publishing it lets an attacker craft a believable support or trust-policy pretext.",
+    "applicability": "Deployments that render a twelve-digit account identifier in a JSON field into a customer- or partner-facing response.",
+    "risk": "The account id is the anchor for cross-account trust and support requests, so publishing it lets an attacker craft a believable support or trust-policy pretext.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Keep account identifiers server-side and expose resource aliases to clients.",
+      "Keep account identifiers server-side and expose aliases to clients."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a twelve-digit account identifier in a JSON field.",
+    "cells": [
+      {
+        "suffix": "body-aws-account-id",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\"(?:accountId|awsAccountId)\"\\s*:\\s*\"?\\d{12}"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"accountId\":\"123456789012\",\"region\":\"ap-south-1\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"awsAccountId\": \"210987654321\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"accountId\":\"************\",\"region\":\"ap-south-1\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-sqs-queue-url",
+    "category": "information-disclosure",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "Queue URL and account path in a response",
+    "description": "An SQS queue URL that embeds the account id and queue name appears in the response body. The URL names the queue that carries transfer or notification events, and a policy mistake on that queue becomes directly reachable once the name is known.",
+    "remediation": "Return a logical queue name and keep queue URLs in service configuration.",
+    "limitation": "One response body, first 32,768 bytes. It matches the SQS URL with the account path; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries an SQS queue URL that embeds the account id and queue name.",
+    "fp": "A page that describes the messaging design is not reported.",
+    "recordDesc": "An SQS queue URL that embeds the account id and queue name in a response hands every reader the view the build or admin side kept: The URL names the queue that carries transfer or notification events, and a policy mistake on that queue becomes directly reachable once the name is known.",
+    "applicability": "Deployments that render an SQS queue URL that embeds the account id and queue name into a customer- or partner-facing response.",
+    "risk": "The URL names the queue that carries transfer or notification events, and a policy mistake on that queue becomes directly reachable once the name is known.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Return a logical queue name and keep queue URLs in service configuration.",
+      "Return a logical queue name and keep the URL in service configuration."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries an SQS queue URL that embeds the account id and queue name.",
+    "cells": [
+      {
+        "suffix": "body-sqs-queue-url",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "sqs\\.[a-z0-9-]{2,20}\\.amazonaws\\.com/\\d{12}/[A-Za-z0-9_-]{2,80}"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"queue\":\"https://sqs.ap-south-1.amazonaws.com/123456789012/transfers-out\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "https://sqs.us-east-1.amazonaws.com/210987654321/notifications-dlq"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"queue\":\"transfers-out\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-sns-topic-arn",
+    "category": "information-disclosure",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "SNS topic ARN in a response",
+    "description": "An SNS topic ARN with its account and region appears in the response body. The ARN identifies the fan-out channel the App publishes to, and a permissive topic policy then allows anyone who knows the ARN to publish forged events.",
+    "remediation": "Return a topic alias and restrict the topic policy to named publishers.",
+    "limitation": "One response body, first 32,768 bytes. It matches the SNS topic ARN; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries an SNS topic ARN with its account and region.",
+    "fp": "A masked ARN is not reported.",
+    "recordDesc": "An SNS topic ARN with its account and region in a response hands every reader the view the build or admin side kept: The ARN identifies the fan-out channel the App publishes to, and a permissive topic policy then allows anyone who knows the ARN to publish forged events.",
+    "applicability": "Deployments that render an SNS topic ARN with its account and region into a customer- or partner-facing response.",
+    "risk": "The ARN identifies the fan-out channel the App publishes to, and a permissive topic policy then allows anyone who knows the ARN to publish forged events.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Return a topic alias and restrict the topic policy to named publishers.",
+      "Return a topic alias and restrict publish rights to named principals."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries an SNS topic ARN with its account and region.",
+    "cells": [
+      {
+        "suffix": "body-sns-topic-arn",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "arn:aws:sns:[a-z0-9-]{2,20}:\\d{12}:[A-Za-z0-9_-]{2,80}"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"topic\":\"arn:aws:sns:ap-south-1:123456789012:transfer-events\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "arn:aws:sns:us-east-1:210987654321:customer-alerts"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"topic\":\"transfer-events\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-firestore-rules-error",
+    "category": "information-disclosure",
+    "cwe": "CWE-200",
+    "severity": "LOW",
+    "title": "Firestore rules rejection echoed to a client",
+    "description": "A Firestore permission error that names the project and path appears in the response body. The error confirms the project id and the exact document path that the rules rejected, which turns a blind enumeration into a guided one.",
+    "remediation": "Translate database permission errors into a generic denial in the App layer.",
+    "limitation": "One response body, first 32,768 bytes. It matches the missing-permission message with a project or path; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a Firestore permission error that names the project and path.",
+    "fp": "A generic permission denied page is not reported.",
+    "recordDesc": "A Firestore permission error that names the project and path in a response hands every reader the view the build or admin side kept: The error confirms the project id and the exact document path that the rules rejected, which turns a blind enumeration into a guided one.",
+    "applicability": "Deployments that render a Firestore permission error that names the project and path into a customer- or partner-facing response.",
+    "risk": "The error confirms the project id and the exact document path that the rules rejected, which turns a blind enumeration into a guided one.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Translate database permission errors into a generic denial in the App layer.",
+      "Translate database permission errors into a generic denial in the App layer."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a Firestore permission error that names the project and path.",
+    "cells": [
+      {
+        "suffix": "body-firestore-rules-error",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "Missing or insufficient permissions[\\s\\S]{0,200}?(?:firestore|projects/|document)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"Missing or insufficient permissions.\",\"path\":\"projects/drobon-prod/databases/(default)/documents/customers/8841\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "FirebaseError: Missing or insufficient permissions. (firestore/customers/8841/ledger)"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"permission denied\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  }
+]

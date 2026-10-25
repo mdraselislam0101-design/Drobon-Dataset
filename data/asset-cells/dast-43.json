@@ -1,0 +1,1618 @@
+[
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-newrelic-browser-key",
+    "category": "credential-exposure",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "New Relic browser agent key in a response",
+    "description": "A New Relic browser licence key rendered into the page appears in the response body. The browser key identifies the account to the ingest endpoint, so a third party can post forged browser data into the same account and skew the dashboards the bank alerts on.",
+    "remediation": "Load the browser agent from a server route that injects the key per session, or use a proxy that strips it.",
+    "limitation": "One response body, first 32,768 bytes. It matches the New Relic browser key prefix; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a New Relic browser licence key rendered into the page.",
+    "fp": "Documentation that shows a redacted example key is not reported.",
+    "recordDesc": "A New Relic browser licence key rendered into the page in a response hands every reader the view the build or admin side kept: The browser key identifies the account to the ingest endpoint, so a third party can post forged browser data into the same account and skew the dashboards the bank alerts on.",
+    "applicability": "Deployments that render a New Relic browser licence key rendered into the page into a customer- or partner-facing response.",
+    "risk": "The browser key identifies the account to the ingest endpoint, so a third party can post forged browser data into the same account and skew the dashboards the bank alerts on.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Load the browser agent from a server route that injects the key per session, or use a proxy that strips it.",
+      "Inject the agent key server-side per session instead of embedding it in the client bundle."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a New Relic browser licence key rendered into the page.",
+    "cells": [
+      {
+        "suffix": "body-newrelic-browser-key",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "NRJS-[0-9a-f]{10,}"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"agent\":\"newrelic\",\"licenseKey\":\"NRJS-1f2a3b4c5d6e7f809\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "NRJS-aa11bb22cc33dd44e"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"agent\":\"newrelic\",\"licenseKey\":\"<server-injected>\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-datadog-client-token",
+    "category": "credential-exposure",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "Datadog client token in a response",
+    "description": "A Datadog browser SDK client token appears in the response body. A client token is not a full API key, but it lets anyone send events and RUM data into the account, which pollutes the telemetry the bank uses for incident detection.",
+    "remediation": "Serve the client token from a route that scopes it per session, and rotate it on exposure.",
+    "limitation": "One response body, first 32,768 bytes. It matches the Datadog client token prefix; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a Datadog browser SDK client token.",
+    "fp": "A page that only names the SDK is not reported.",
+    "recordDesc": "A Datadog browser SDK client token in a response hands every reader the view the build or admin side kept: A client token is not a full API key, but it lets anyone send events and RUM data into the account, which pollutes the telemetry the bank uses for incident detection.",
+    "applicability": "Deployments that render a Datadog browser SDK client token into a customer- or partner-facing response.",
+    "risk": "A client token is not a full API key, but it lets anyone send events and RUM data into the account, which pollutes the telemetry the bank uses for incident detection.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Serve the client token from a route that scopes it per session, and rotate it on exposure.",
+      "Issue short-lived client tokens from an edge route and rotate any token already shipped."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a Datadog browser SDK client token.",
+    "cells": [
+      {
+        "suffix": "body-datadog-client-token",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "datadog[\\s\\S]{0,60}?pub[0-9a-f]{24,}|pub[0-9a-f]{32}[\\s\\S]{0,60}?datadog"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"vendor\":\"datadog\",\"clientToken\":\"pub7d1c2b3a4f5e6d7c8b9a0f1e2d3c4b5a\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"clientToken\":\"pub00112233445566778899aabbccddeeff\",\"vendor\":\"datadog\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"vendor\":\"datadog\",\"clientToken\":\"<injected-at-edge>\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-splunk-hec-endpoint",
+    "category": "credential-exposure",
+    "cwe": "CWE-200",
+    "severity": "HIGH",
+    "title": "Splunk HTTP event collector endpoint with a token",
+    "description": "A Splunk collector URL paired with an HEC token appears in the response body. An HEC token is a write credential for the SIEM index, so anyone holding it can inject events, bury a real alert under noise or forge an audit trail entry.",
+    "remediation": "Keep the HEC token on the log shipper, never in a page or API response.",
+    "limitation": "One response body, first 32,768 bytes. It matches the collector endpoint next to a long hex token; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a Splunk collector URL paired with an HEC token.",
+    "fp": "A runbook that names the endpoint without a token is not reported.",
+    "recordDesc": "A Splunk collector URL paired with an HEC token in a response hands every reader the view the build or admin side kept: An HEC token is a write credential for the SIEM index, so anyone holding it can inject events, bury a real alert under noise or forge an audit trail entry.",
+    "applicability": "Deployments that render a Splunk collector URL paired with an HEC token into a customer- or partner-facing response.",
+    "risk": "An HEC token is a write credential for the SIEM index, so anyone holding it can inject events, bury a real alert under noise or forge an audit trail entry.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Keep the HEC token on the log shipper, never in a page or API response.",
+      "Keep the HEC token on the collector side and rotate any token that reached a client."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a Splunk collector URL paired with an HEC token.",
+    "cells": [
+      {
+        "suffix": "body-splunk-hec-endpoint",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "splunk[\\s\\S]{0,80}?[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[0-9a-f]{4}-[0-9a-f]{12}"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"splunk\":{\"url\":\"https://splunk.internal:8088/services/collector\",\"token\":\"3f2a1b4c-9d8e-4f7a-b6c5-1e2d3c4b5a60\"}}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "https://splunk.internal:8088/services/collector token 8a9b7c6d-5e4f-4a3b-9c2d-0e1f2a3b4c5d"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"splunk\":{\"url\":\"https://splunk.internal:8088/services/collector\",\"token\":\"<ship-time-only>\"}}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-rollbar-access-token",
+    "category": "credential-exposure",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "Rollbar access token in a response",
+    "description": "A Rollbar access token inside client configuration appears in the response body. The token lets anyone post items to the project's item feed, so an attacker can flood the queue or hide a genuine crash report among synthetic ones.",
+    "remediation": "Use a scoped post-client item token minted per page load, never a project token.",
+    "limitation": "One response body, first 32,768 bytes. It matches the Rollbar access token field; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a Rollbar access token inside client configuration.",
+    "fp": "A page that names the service without a token is not reported.",
+    "recordDesc": "A Rollbar access token inside client configuration in a response hands every reader the view the build or admin side kept: The token lets anyone post items to the project's item feed, so an attacker can flood the queue or hide a genuine crash report among synthetic ones.",
+    "applicability": "Deployments that render a Rollbar access token inside client configuration into a customer- or partner-facing response.",
+    "risk": "The token lets anyone post items to the project's item feed, so an attacker can flood the queue or hide a genuine crash report among synthetic ones.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Use a scoped post-client item token minted per page load, never a project token.",
+      "Mint a scoped client token per page and never ship the project token."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a Rollbar access token inside client configuration.",
+    "cells": [
+      {
+        "suffix": "body-rollbar-access-token",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\"(?:rollbar\"[\\s\\S]{0,160}?\"accessToken\"\\s*:\\s*\"[0-9a-f]{32}\"|accessToken\"\\s*:\\s*\"[0-9a-f]{32}\"[\\s\\S]{0,160}?rollbar)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"rollbar\":{\"accessToken\":\"4c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f\",\"captureUncaught\":true}}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"accessToken\": \"9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d\", \"rollbar\": {\"enabled\": true}}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"rollbar\":{\"enabled\":true,\"accessToken\":\"<redacted>\"}}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-bugsnag-notify-key",
+    "category": "credential-exposure",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "Bugsnag notify key in a response",
+    "description": "A Bugsnag notify endpoint paired with an API key appears in the response body. The notify key accepts crash reports for the project, so forged reports can bury a real error feed and mislead the on-call responder during an incident.",
+    "remediation": "Point clients at a proxy that adds the key server-side.",
+    "limitation": "One response body, first 32,768 bytes. It matches the Bugsnag endpoint with an apiKey; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a Bugsnag notify endpoint paired with an API key.",
+    "fp": "A page that only links the Bugsnag dashboard is not reported.",
+    "recordDesc": "A Bugsnag notify endpoint paired with an API key in a response hands every reader the view the build or admin side kept: The notify key accepts crash reports for the project, so forged reports can bury a real error feed and mislead the on-call responder during an incident.",
+    "applicability": "Deployments that render a Bugsnag notify endpoint paired with an API key into a customer- or partner-facing response.",
+    "risk": "The notify key accepts crash reports for the project, so forged reports can bury a real error feed and mislead the on-call responder during an incident.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Point clients at a proxy that adds the key server-side.",
+      "Proxy crash reports so the notify key never reaches the browser."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a Bugsnag notify endpoint paired with an API key.",
+    "cells": [
+      {
+        "suffix": "body-bugsnag-notify-key",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "bugsnag\\.com[\\s\\S]{0,120}?apiKey|apiKey[\\s\\S]{0,120}?bugsnag\\.com"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"bugsnag\":{\"endpoint\":\"https://notify.bugsnag.com\",\"apiKey\":\"7d1c2b3a4f5e6d7c8b9a0f1e2d3c4b5a\"}}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"apiKey\":\"0011aabb2233ccdd4455eeff66778899\",\"notify\":\"https://notify.bugsnag.com\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"bugsnag\":{\"endpoint\":\"/api/telemetry/crash\"}}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-loggly-customer-token",
+    "category": "credential-exposure",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "Loggly customer token in a response",
+    "description": "A Loggly collector URL with a customer token appears in the response body. The customer token authorises writes to the account's log stream, so leaked tokens let an attacker inject entries that overwrite the timeline of an incident review.",
+    "remediation": "Send browser logs through a bank-owned collector and keep the token server-side.",
+    "limitation": "One response body, first 32,768 bytes. It matches the Loggly collector host with a long token; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a Loggly collector URL with a customer token.",
+    "fp": "A support note that mentions the host is not reported.",
+    "recordDesc": "A Loggly collector URL with a customer token in a response hands every reader the view the build or admin side kept: The customer token authorises writes to the account's log stream, so leaked tokens let an attacker inject entries that overwrite the timeline of an incident review.",
+    "applicability": "Deployments that render a Loggly collector URL with a customer token into a customer- or partner-facing response.",
+    "risk": "The customer token authorises writes to the account's log stream, so leaked tokens let an attacker inject entries that overwrite the timeline of an incident review.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Send browser logs through a bank-owned collector and keep the token server-side.",
+      "Forward browser logs to a bank-owned collector and keep the token off the client."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a Loggly collector URL with a customer token.",
+    "cells": [
+      {
+        "suffix": "body-loggly-customer-token",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "(?:logs-01\\.loggly\\.com[\\s\\S]{0,160}?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}[\\s\\S]{0,160}?logs-01\\.loggly\\.com)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"loggly\":{\"url\":\"https://logs-01.loggly.com/inputs/\",\"token\":\"a1b2c3d4-1111-4a2b-8c3d-9e8f7a6b5c4d\"}}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"token\":\"0099aabb-2233-4ccd-8eef-445566778899\",\"host\":\"logs-01.loggly.com\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"loggly\":{\"url\":\"/api/logs/forward\"}}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-otlp-collector-address",
+    "category": "information-disclosure",
+    "cwe": "CWE-200",
+    "severity": "LOW",
+    "title": "Trace collector address disclosed",
+    "description": "An OTLP exporter configured with an internal collector host and port appears in the response body. The collector host names internal topology, and reachability to it is often unauthenticated inside the perimeter, so the address is a pivot target for anyone reading the page.",
+    "remediation": "Route telemetry through a public gateway and keep collector addresses server-side.",
+    "limitation": "One response body, first 32,768 bytes. It matches the OTLP exporter setting with a collector host; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries an OTLP exporter configured with an internal collector host and port.",
+    "fp": "A diagram that names the collector without an address is not reported.",
+    "recordDesc": "An OTLP exporter configured with an internal collector host and port in a response hands every reader the view the build or admin side kept: The collector host names internal topology, and reachability to it is often unauthenticated inside the perimeter, so the address is a pivot target for anyone reading the page.",
+    "applicability": "Deployments that render an OTLP exporter configured with an internal collector host and port into a customer- or partner-facing response.",
+    "risk": "The collector host names internal topology, and reachability to it is often unauthenticated inside the perimeter, so the address is a pivot target for anyone reading the page.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Route telemetry through a public gateway and keep collector addresses server-side.",
+      "Terminate telemetry at a public gateway and keep the collector address server-side."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries an OTLP exporter configured with an internal collector host and port.",
+    "cells": [
+      {
+        "suffix": "body-otlp-collector-address",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "OTEL_EXPORTER_OTLP_ENDPOINT|otlp[\\s\\S]{0,40}?(?:grpc|http)[\\s\\S]{0,40}?:\\d{4,5}"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"telemetry\":{\"exporter\":\"otlp\",\"endpoint\":\"http://otel-collector.observability:4317\"}}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "OTEL_EXPORTER_OTLP_ENDPOINT=http://collector.internal:4317"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"telemetry\":{\"exporter\":\"none\"}}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-grafana-cloud-token",
+    "category": "credential-exposure",
+    "cwe": "CWE-200",
+    "severity": "HIGH",
+    "title": "Grafana Cloud access token in a response",
+    "description": "A Grafana Cloud access policy token appears in the response body. The token grants push access to metrics and logs, so an attacker can delete or overwrite series that back the dashboards an incident would be detected from.",
+    "remediation": "Keep the write token in the agent configuration and rotate on any exposure.",
+    "limitation": "One response body, first 32,768 bytes. It matches the Grafana Cloud token prefix; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a Grafana Cloud access policy token.",
+    "fp": "A dashboard URL without a token is not reported.",
+    "recordDesc": "A Grafana Cloud access policy token in a response hands every reader the view the build or admin side kept: The token grants push access to metrics and logs, so an attacker can delete or overwrite series that back the dashboards an incident would be detected from.",
+    "applicability": "Deployments that render a Grafana Cloud access policy token into a customer- or partner-facing response.",
+    "risk": "The token grants push access to metrics and logs, so an attacker can delete or overwrite series that back the dashboards an incident would be detected from.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Keep the write token in the agent configuration and rotate on any exposure.",
+      "Keep the write token in the agent config and rotate the one that leaked."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a Grafana Cloud access policy token.",
+    "cells": [
+      {
+        "suffix": "body-grafana-cloud-token",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "glc_[A-Za-z0-9+/]{16,}"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"grafana\":{\"remoteWrite\":\"https://prometheus-prod.grafana.net/api/prom/push\",\"token\":\"glc_eyJrIjoiYWJjZGVmZ2hpams\"}}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "glc_abcdefghijklmnopqrstuv"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"grafana\":{\"remoteWrite\":\"/api/metrics/push\"}}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-honeycomb-team-key",
+    "category": "credential-exposure",
+    "cwe": "CWE-200",
+    "severity": "HIGH",
+    "title": "Honeycomb ingest key in a response",
+    "description": "A Honeycomb ingest endpoint with the team header key appears in the response body. The ingest key writes events into the environment, so injected events can drown the traces an engineer would use to reconstruct an intrusion.",
+    "remediation": "Send browser telemetry to a bank-owned relay instead of exposing the ingest key.",
+    "limitation": "One response body, first 32,768 bytes. It matches the Honeycomb ingest host with a key; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a Honeycomb ingest endpoint with the team header key.",
+    "fp": "A page that names the vendor is not reported.",
+    "recordDesc": "A Honeycomb ingest endpoint with the team header key in a response hands every reader the view the build or admin side kept: The ingest key writes events into the environment, so injected events can drown the traces an engineer would use to reconstruct an intrusion.",
+    "applicability": "Deployments that render a Honeycomb ingest endpoint with the team header key into a customer- or partner-facing response.",
+    "risk": "The ingest key writes events into the environment, so injected events can drown the traces an engineer would use to reconstruct an intrusion.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Send browser telemetry to a bank-owned relay instead of exposing the ingest key.",
+      "Relay telemetry through a bank-owned collector and keep the ingest key server-side."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a Honeycomb ingest endpoint with the team header key.",
+    "cells": [
+      {
+        "suffix": "body-honeycomb-team-key",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "(?:api\\.honeycomb\\.io[\\s\\S]{0,200}?(?:x-honeycomb-team|ingestKey|apiKey)|(?:x-honeycomb-team|ingestKey|apiKey)[\\s\\S]{0,200}?api\\.honeycomb\\.io)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"honeycomb\":{\"host\":\"https://api.honeycomb.io\",\"x-honeycomb-team\":\"hcXY12abCD34efGH56ij\"}}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"apiKey\":\"hcAB12cdEF34ghIJ56kl\",\"endpoint\":\"https://api.honeycomb.io/1/events\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"honeycomb\":{\"host\":\"/api/telemetry\"}}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-elastic-apm-secret",
+    "category": "credential-exposure",
+    "cwe": "CWE-200",
+    "severity": "HIGH",
+    "title": "Elastic APM secret token in a response",
+    "description": "An APM server URL with a secret token appears in the response body. The secret token is full write access to the APM index, so leaking it lets an attacker erase or forge the transactions that prove what a request did.",
+    "remediation": "Keep the secret token on the APM agent running server-side only.",
+    "limitation": "One response body, first 32,768 bytes. It matches the APM server address with a secret token; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries an APM server URL with a secret token.",
+    "fp": "A page that documents the APM integration is not reported.",
+    "recordDesc": "An APM server URL with a secret token in a response hands every reader the view the build or admin side kept: The secret token is full write access to the APM index, so leaking it lets an attacker erase or forge the transactions that prove what a request did.",
+    "applicability": "Deployments that render an APM server URL with a secret token into a customer- or partner-facing response.",
+    "risk": "The secret token is full write access to the APM index, so leaking it lets an attacker erase or forge the transactions that prove what a request did.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Keep the secret token on the APM agent running server-side only.",
+      "Keep the APM secret token on the server-side agent only."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries an APM server URL with a secret token.",
+    "cells": [
+      {
+        "suffix": "body-elastic-apm-secret",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "apm-server[\\s\\S]{0,160}?secret_token|secret_token[\\s\\S]{0,160}?apm-server"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"apm\":{\"serverUrl\":\"http://apm-server.monitoring:8200\",\"secret_token\":\"c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6\"}}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"secret_token\":\"00112233445566778899aabbccddeeff\",\"serverUrl\":\"https://apm-server.monitoring:8200\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"apm\":{\"enabled\":false}}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-supabase-service-role",
+    "category": "credential-exposure",
+    "cwe": "CWE-200",
+    "severity": "CRITICAL",
+    "title": "Supabase service role key in a response",
+    "description": "A Supabase service role label next to a JWT appears in the response body. The service role key bypasses row-level security, so anyone holding it can read every table in the project, which makes it a full data breach rather than a scoped leak.",
+    "remediation": "Rotate the key and never let the service role reach a browser bundle.",
+    "limitation": "One response body, first 32,768 bytes. It matches the service role label with a JWT; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a Supabase service role label next to a JWT.",
+    "fp": "An anon key is a different privilege level; confirm which key is present.",
+    "recordDesc": "A Supabase service role label next to a JWT in a response hands every reader the view the build or admin side kept: The service role key bypasses row-level security, so anyone holding it can read every table in the project, which makes it a full data breach rather than a scoped leak.",
+    "applicability": "Deployments that render a Supabase service role label next to a JWT into a customer- or partner-facing response.",
+    "risk": "The service role key bypasses row-level security, so anyone holding it can read every table in the project, which makes it a full data breach rather than a scoped leak.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Rotate the key and never let the service role reach a browser bundle.",
+      "Rotate the service role key and keep it out of every client bundle."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a Supabase service role label next to a JWT.",
+    "cells": [
+      {
+        "suffix": "body-supabase-service-role",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "(?:service_role[\\s\\S]{0,160}?eyJ[A-Za-z0-9_-]{8,}|eyJ[A-Za-z0-9_-]{8,}[\\s\\S]{0,160}?service_role)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"supabase\":{\"role\":\"service_role\",\"key\":\"eyJhbGciOiJIUzI1NiJ9.SYNTHETIC.sig\"}}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"key\":\"eyJhbGciOiJIUzI1NiJ9.SYNTHETIC.sig\",\"role\":\"service_role\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"supabase\":{\"role\":\"anon\",\"key\":\"eyJhbGciOiJIUzI1NiJ9.PUBLIC.sig\"}}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-neon-postgres-uri",
+    "category": "credential-exposure",
+    "cwe": "CWE-200",
+    "severity": "HIGH",
+    "title": "Neon Postgres connection URI in a response",
+    "description": "A Postgres connection URI that points at a Neon host appears in the response body. The URI carries the role, password and database, so a leak grants direct SQL access to the branch, bypassing every authorisation check the App enforces.",
+    "remediation": "Rotate the role password and read the database through a server-side pooler only.",
+    "limitation": "One response body, first 32,768 bytes. It matches the Postgres URI with a Neon host; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a Postgres connection URI that points at a Neon host.",
+    "fp": "A host name without credentials is not reported.",
+    "recordDesc": "A Postgres connection URI that points at a Neon host in a response hands every reader the view the build or admin side kept: The URI carries the role, password and database, so a leak grants direct SQL access to the branch, bypassing every authorisation check the App enforces.",
+    "applicability": "Deployments that render a Postgres connection URI that points at a Neon host into a customer- or partner-facing response.",
+    "risk": "The URI carries the role, password and database, so a leak grants direct SQL access to the branch, bypassing every authorisation check the App enforces.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Rotate the role password and read the database through a server-side pooler only.",
+      "Rotate the role password and connect only from a server-side pooler."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a Postgres connection URI that points at a Neon host.",
+    "cells": [
+      {
+        "suffix": "body-neon-postgres-uri",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "postgres(?:ql)?://[^\\s\\\"'@]{1,40}:[^\\s\\\"'@]{6,}@[^\\s\\\"']{0,80}neon\\.tech"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"db\":\"postgresql://app_rw:SYNTH3T1C@ep-cool-1234.us-east-1.aws.neon.tech/drobon\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "\"DATABASE_URL=postgres://reporting:SYNTH3T1C@ep-shy-9.aws.neon.tech:5432/core\""
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"db\":\"postgresql://app_rw:****@ep-cool-1234.us-east-1.aws.neon.tech/drobon\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-upstash-redis-token",
+    "category": "credential-exposure",
+    "cwe": "CWE-200",
+    "severity": "HIGH",
+    "title": "Upstash Redis REST token in a response",
+    "description": "An Upstash REST endpoint with a bearer token appears in the response body. The token authorises arbitrary commands against the rate-limit or session store, so an attacker can flush a cache, reset a counter or read another tenant's keys.",
+    "remediation": "Keep the REST token server-side and route browser calls through the App.",
+    "limitation": "One response body, first 32,768 bytes. It matches the Upstash REST host with a bearer token; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries an Upstash REST endpoint with a bearer token.",
+    "fp": "A documentation link to the host is not reported.",
+    "recordDesc": "An Upstash REST endpoint with a bearer token in a response hands every reader the view the build or admin side kept: The token authorises arbitrary commands against the rate-limit or session store, so an attacker can flush a cache, reset a counter or read another tenant's keys.",
+    "applicability": "Deployments that render an Upstash REST endpoint with a bearer token into a customer- or partner-facing response.",
+    "risk": "The token authorises arbitrary commands against the rate-limit or session store, so an attacker can flush a cache, reset a counter or read another tenant's keys.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Keep the REST token server-side and route browser calls through the App.",
+      "Keep the REST token server-side and proxy browser traffic through the App."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries an Upstash REST endpoint with a bearer token.",
+    "cells": [
+      {
+        "suffix": "body-upstash-redis-token",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "(?:upstash\\.io[\\s\\S]{0,200}?(?:Bearer\\s+[A-Za-z0-9+/=_-]{20,}|token)|(?:Bearer\\s+[A-Za-z0-9+/=_-]{20,}|token)[\\s\\S]{0,200}?upstash\\.io)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"redis\":{\"url\":\"https://eu1-stable-camel-12345.upstash.io\",\"token\":\"Bearer QVpTT0N...SYNTHETIC\"}}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"token\":\"Bearer SYNTHETICVALUE000111222333\",\"url\":\"https://global-calm-999.upstash.io\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"redis\":{\"url\":\"/api/ratelimit\"}}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-render-deploy-hook",
+    "category": "credential-exposure",
+    "cwe": "CWE-200",
+    "severity": "HIGH",
+    "title": "Deployment hook URL in a response",
+    "description": "A Render deploy hook URL appears in the response body. The hook triggers a deploy of whatever is on the tracked branch, so a leaked hook lets an outsider force rollouts, exhaust build minutes, or pair with a repo write to ship code.",
+    "remediation": "Keep deploy hooks in the CI secret store and rotate the exposed hook.",
+    "limitation": "One response body, first 32,768 bytes. It matches the deploy hook path segment; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a Render deploy hook URL.",
+    "fp": "A dashboard link without the hook path is not reported.",
+    "recordDesc": "A Render deploy hook URL in a response hands every reader the view the build or admin side kept: The hook triggers a deploy of whatever is on the tracked branch, so a leaked hook lets an outsider force rollouts, exhaust build minutes, or pair with a repo write to ship code.",
+    "applicability": "Deployments that render a Render deploy hook URL into a customer- or partner-facing response.",
+    "risk": "The hook triggers a deploy of whatever is on the tracked branch, so a leaked hook lets an outsider force rollouts, exhaust build minutes, or pair with a repo write to ship code.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Keep deploy hooks in the CI secret store and rotate the exposed hook.",
+      "Move the hook into the CI secret store and rotate the exposed value."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a Render deploy hook URL.",
+    "cells": [
+      {
+        "suffix": "body-render-deploy-hook",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "api\\.render\\.com/deploy/srv-[A-Za-z0-9]{10,}"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"ci\":{\"hook\":\"https://api.render.com/deploy/srv-cl9a8b7c6d5e?key=SYNTH3T1C\"}}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "\"curl -X POST https://api.render.com/deploy/srv-abc123def456\""
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"ci\":{\"hook\":\"<secret-ref:render-deploy>\"}}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-fly-machines-api",
+    "category": "credential-exposure",
+    "cwe": "CWE-200",
+    "severity": "HIGH",
+    "title": "Fly Machines API endpoint with credentials",
+    "description": "A Fly Machines API endpoint paired with an app token appears in the response body. The Machines API can start, stop and replace the VM that serves the App, so a leaked token is remote control over the runtime even without repository access.",
+    "remediation": "Keep the app token in the platform secret store and rotate it after any exposure.",
+    "limitation": "One response body, first 32,768 bytes. It matches the Machines API host with a token; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a Fly Machines API endpoint paired with an app token.",
+    "fp": "A status page link is not reported.",
+    "recordDesc": "A Fly Machines API endpoint paired with an app token in a response hands every reader the view the build or admin side kept: The Machines API can start, stop and replace the VM that serves the App, so a leaked token is remote control over the runtime even without repository access.",
+    "applicability": "Deployments that render a Fly Machines API endpoint paired with an app token into a customer- or partner-facing response.",
+    "risk": "The Machines API can start, stop and replace the VM that serves the App, so a leaked token is remote control over the runtime even without repository access.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Keep the app token in the platform secret store and rotate it after any exposure.",
+      "Keep the app token in the platform secret store and rotate the exposed one."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a Fly Machines API endpoint paired with an app token.",
+    "cells": [
+      {
+        "suffix": "body-fly-machines-api",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "(?:api\\.machines\\.dev[\\s\\S]{0,200}?(?:Bearer|token|Authorization)|(?:Bearer|token|Authorization)[\\s\\S]{0,200}?api\\.machines\\.dev)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"fly\":{\"api\":\"https://api.machines.dev/v1\",\"token\":\"Bearer SYNTHETIC-fly-token\"}}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"Authorization\":\"Bearer SYNTHETICFLYTOKEN\",\"host\":\"api.machines.dev\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"fly\":{\"api\":\"/internal/runtime/status\"}}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-railway-project-token",
+    "category": "credential-exposure",
+    "cwe": "CWE-200",
+    "severity": "HIGH",
+    "title": "Railway project token in a response",
+    "description": "A Railway backboard endpoint with a project token appears in the response body. A project token can deploy and read variables for the linked services, so it exposes every secret the deployment depends on, not just the one page that leaked it.",
+    "remediation": "Keep project tokens in the CI secret store and rotate on exposure.",
+    "limitation": "One response body, first 32,768 bytes. It matches the Railway backboard API with a token; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a Railway backboard endpoint with a project token.",
+    "fp": "A project dashboard link without a token is not reported.",
+    "recordDesc": "A Railway backboard endpoint with a project token in a response hands every reader the view the build or admin side kept: A project token can deploy and read variables for the linked services, so it exposes every secret the deployment depends on, not just the one page that leaked it.",
+    "applicability": "Deployments that render a Railway backboard endpoint with a project token into a customer- or partner-facing response.",
+    "risk": "A project token can deploy and read variables for the linked services, so it exposes every secret the deployment depends on, not just the one page that leaked it.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Keep project tokens in the CI secret store and rotate on exposure.",
+      "Keep project tokens in the CI secret store and rotate the exposed token."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a Railway backboard endpoint with a project token.",
+    "cells": [
+      {
+        "suffix": "body-railway-project-token",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "(?:backboard\\.railway\\.app[\\s\\S]{0,200}?(?:Bearer|token|Project-Access-Token)|(?:Bearer|token|Project-Access-Token)[\\s\\S]{0,200}?backboard\\.railway\\.app)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"railway\":{\"api\":\"https://backboard.railway.app/graphql/v2\",\"token\":\"SYNTHETIC-project-token\"}}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"Project-Access-Token\":\"SYNTHETIC000111\",\"endpoint\":\"https://backboard.railway.app/graphql/v2\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"railway\":{\"api\":\"/internal/deploy/status\"}}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  }
+]
