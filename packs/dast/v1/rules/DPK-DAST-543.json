@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-543",
+  "title": "Tomcat container stack in a response",
+  "description": "An Apache Tomcat container exception class name appears in the response body. Container stack traces name the connector, the valve chain and often absolute deployment paths, which tells an attacker the exact server build and where the application lives on disk.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-209",
+  "category": "information-disclosure",
+  "remediation": "Return a generic error page with a correlation id and keep the container stack in the server log.",
+  "limitation": "One response body. It matches Tomcat's package-qualified class names, not other containers' traces.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "org\\.apache\\.catalina\\.[A-Za-z.]{5,60}(?:Exception|Error)"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://bank.example/portal/home",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "Cache-Control": "no-store"
+        },
+        "body": "<h1>HTTP Status 500</h1><p>org.apache.catalina.connector.ClientAbortException: java.io.IOException</p>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://bank.example/api/detail",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "Cache-Control": "no-store"
+        },
+        "body": "{\"error\":\"org.apache.catalina.core.StandardContextException\"}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://bank.example/help/security",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "Cache-Control": "no-store"
+        },
+        "body": "<h1>Something went wrong</h1><p>Reference c-4417. Our team has the details.</p>"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1662"
+  ]
+}

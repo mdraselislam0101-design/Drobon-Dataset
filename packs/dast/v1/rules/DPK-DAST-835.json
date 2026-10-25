@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-835",
+  "title": "GraphQL batch request accepted",
+  "description": "A batched GraphQL response array with several query results appears in the response body. Batching multiplies the work one HTTP request can trigger, which is how a small client becomes a query amplifier against the resolver layer.",
+  "severity": "LOW",
+  "cwe": "CWE-770",
+  "category": "exposed-interface",
+  "remediation": "Cap the batch size and charge each operation to the same rate limit.",
+  "limitation": "One response body, first 32,768 bytes. It matches a response array of query results; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "\\[\\s*\\{\\s*\"data\"\\s*:[\\s\\S]{0,300}?\\},\\s*\\{\\s*\"data\"\\s*:"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://bank.example/portal/home",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "Cache-Control": "no-store"
+        },
+        "body": "[{\"data\":{\"ledger\":{\"balance\":\"4500\"}}},{\"data\":{\"ledger\":{\"balance\":\"1200\"}}}]"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://bank.example/api/detail",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "Cache-Control": "no-store"
+        },
+        "body": "[{\"data\":{\"account\":{\"id\":\"8841\"}}},{\"data\":{\"account\":{\"id\":\"8842\"}}},{\"data\":{\"account\":{\"id\":\"8843\"}}}]"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://bank.example/help/security",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "Cache-Control": "no-store"
+        },
+        "body": "{\"data\":{\"ledger\":{\"balance\":\"4500\"}}}"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1954"
+  ]
+}

@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-802",
+  "title": "API secret returned in a response",
+  "description": "An API secret key next to its key id appears in the response body. The secret authenticates every signed call the key makes, so a leak lets an attacker replay the integration's authority until the key is rotated.",
+  "severity": "HIGH",
+  "cwe": "CWE-798",
+  "category": "credential-exposure",
+  "remediation": "Keep the secret in the server key store and rotate it on exposure.",
+  "limitation": "One response body, first 32,768 bytes. It matches the API secret field with a long value; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "\"(?:apiSecret|secretKey|apiSecretKey)\"\\s*:\\s*\"[A-Za-z0-9+/=_-]{16,}\""
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://bank.example/portal/home",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "Cache-Control": "no-store"
+        },
+        "body": "{\"keyId\":\"key_7712\",\"apiSecret\":\"SYNTH3TICAPISECRET000111222333\"}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://bank.example/api/detail",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "Cache-Control": "no-store"
+        },
+        "body": "{\"secretKey\": \"u7Yq2Nc0Lm4Xb9Rt1Vw6Zs3Pe8Hd5Kf\"}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://bank.example/help/security",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "Cache-Control": "no-store"
+        },
+        "body": "{\"keyId\":\"key_7712\",\"apiSecret\":\"****333\"}"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1921"
+  ]
+}

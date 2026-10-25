@@ -1,0 +1,1602 @@
+[
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-loopback-ip-endpoint",
+    "category": "information-disclosure",
+    "cwe": "CWE-200",
+    "severity": "LOW",
+    "title": "Loopback address used as an internal endpoint",
+    "description": "A loopback address with a service port in the response body appears in the response body. The URL shows that the handler talks to a service on the same host, which is the address an SSRF payload would use to reach it through the application.",
+    "remediation": "Return a correlation id and keep internal endpoints in configuration.",
+    "limitation": "One response body, first 32,768 bytes. It matches a loopback URL with a port; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a loopback address with a service port in the response body.",
+    "fp": "A page that documents the address as an example is not reported.",
+    "recordDesc": "A loopback address with a service port in the response body in a response hands every reader the view the build or admin side kept: The URL shows that the handler talks to a service on the same host, which is the address an SSRF payload would use to reach it through the application.",
+    "applicability": "Deployments that render a loopback address with a service port in the response body into a customer- or partner-facing response.",
+    "risk": "The URL shows that the handler talks to a service on the same host, which is the address an SSRF payload would use to reach it through the application.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Return a correlation id and keep internal endpoints in configuration."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a loopback address with a service port in the response body.",
+    "cells": [
+      {
+        "suffix": "body-loopback-ip-endpoint",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "http://127\\.0\\.0\\.1:\\d{2,5}"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"upstream refused\",\"target\":\"http://127.0.0.1:8080/internal/ledger\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "connect ECONNREFUSED http://127.0.0.1:9200"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"upstream refused\",\"ref\":\"c-7712\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-file-scheme-url",
+    "category": "information-disclosure",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "File scheme echoed in a response",
+    "description": "A file URL in the body appears in the response body. A file URL in an error shows the handler accepts a scheme it should never resolve, which is the pattern an attacker pushes toward an arbitrary file read.",
+    "remediation": "Accept only https destinations and reject local schemes before the request is made.",
+    "limitation": "One response body, first 32,768 bytes. It matches a file URL in the body; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a file URL in the body.",
+    "fp": "A page that lists blocked schemes is not reported.",
+    "recordDesc": "A file URL in the body in a response hands every reader the view the build or admin side kept: A file URL in an error shows the handler accepts a scheme it should never resolve, which is the pattern an attacker pushes toward an arbitrary file read.",
+    "applicability": "Deployments that render a file URL in the body into a customer- or partner-facing response.",
+    "risk": "A file URL in an error shows the handler accepts a scheme it should never resolve, which is the pattern an attacker pushes toward an arbitrary file read.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Accept only https destinations and reject local schemes before the request is made."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a file URL in the body.",
+    "cells": [
+      {
+        "suffix": "body-file-scheme-url",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "file:///"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"unsupported scheme\",\"url\":\"file:///etc/passwd\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "failed to fetch file:///srv/app/config.json"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"unsupported scheme\",\"ref\":\"c-1180\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-gopher-scheme-url",
+    "category": "information-disclosure",
+    "cwe": "CWE-918",
+    "severity": "MEDIUM",
+    "title": "Gopher scheme echoed in a response",
+    "description": "A gopher URL in the body appears in the response body. Gopher sends arbitrary bytes to a target port, so a handler that resolves it can be turned into a way to talk to internal services that expect a binary protocol.",
+    "remediation": "Allowlist https destinations and reject every other scheme at parse time.",
+    "limitation": "One response body, first 32,768 bytes. It matches a gopher URL in the body; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a gopher URL in the body.",
+    "fp": "A page about the retired protocol is not reported.",
+    "recordDesc": "A gopher URL in the body in a response hands every reader the view the build or admin side kept: Gopher sends arbitrary bytes to a target port, so a handler that resolves it can be turned into a way to talk to internal services that expect a binary protocol.",
+    "applicability": "Deployments that render a gopher URL in the body into a customer- or partner-facing response.",
+    "risk": "Gopher sends arbitrary bytes to a target port, so a handler that resolves it can be turned into a way to talk to internal services that expect a binary protocol.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Allowlist https destinations and reject every other scheme at parse time."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a gopher URL in the body.",
+    "cells": [
+      {
+        "suffix": "body-gopher-scheme-url",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "gopher://"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"fetch failed\",\"url\":\"gopher://127.0.0.1:6379/_INFO\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "proxying gopher://internal:11211/"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"fetch failed\",\"ref\":\"c-9912\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-dict-scheme-url",
+    "category": "information-disclosure",
+    "cwe": "CWE-918",
+    "severity": "LOW",
+    "title": "Dict scheme echoed in a response",
+    "description": "A dict URL in the body appears in the response body. The scheme reaches a dictionary service with attacker-chosen commands, which is one of the classic ways an SSRF probe confirms it can speak to internal protocols.",
+    "remediation": "Restrict outbound requests to https and an explicit host allowlist.",
+    "limitation": "One response body, first 32,768 bytes. It matches a dict URL in the body; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a dict URL in the body.",
+    "fp": "A documentation page about schemes is not reported.",
+    "recordDesc": "A dict URL in the body in a response hands every reader the view the build or admin side kept: The scheme reaches a dictionary service with attacker-chosen commands, which is one of the classic ways an SSRF probe confirms it can speak to internal protocols.",
+    "applicability": "Deployments that render a dict URL in the body into a customer- or partner-facing response.",
+    "risk": "The scheme reaches a dictionary service with attacker-chosen commands, which is one of the classic ways an SSRF probe confirms it can speak to internal protocols.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Restrict outbound requests to https and an explicit host allowlist."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a dict URL in the body.",
+    "cells": [
+      {
+        "suffix": "body-dict-scheme-url",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "dict://"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"fetch failed\",\"url\":\"dict://127.0.0.1:11211/stat\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "proxying dict://internal:2628/"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"fetch failed\",\"ref\":\"c-2210\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-ldap-url",
+    "category": "information-disclosure",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "LDAP URL in a response",
+    "description": "An ldap URL that names the directory host and a search base appears in the response body. The URL names the directory service and the base the application searches, which is a direct hint for an injection against the login path.",
+    "remediation": "Keep directory endpoints in configuration and never echo them in errors.",
+    "limitation": "One response body, first 32,768 bytes. It matches an ldap URL; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries an ldap URL that names the directory host and a search base.",
+    "fp": "A page that describes directory integration is not reported.",
+    "recordDesc": "An ldap URL that names the directory host and a search base in a response hands every reader the view the build or admin side kept: The URL names the directory service and the base the application searches, which is a direct hint for an injection against the login path.",
+    "applicability": "Deployments that render an ldap URL that names the directory host and a search base into a customer- or partner-facing response.",
+    "risk": "The URL names the directory service and the base the application searches, which is a direct hint for an injection against the login path.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Keep directory endpoints in configuration and never echo them in errors."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries an ldap URL that names the directory host and a search base.",
+    "cells": [
+      {
+        "suffix": "body-ldap-url",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "ldaps?://[a-z0-9.-]{3,40}(?::\\d{2,5})?"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"bind failed\",\"url\":\"ldap://dir.internal:389/dc=drobon,dc=local\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "search base ldaps://ad.corp/dc=bank,dc=example"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"bind failed\",\"ref\":\"c-3312\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-mysql-uri",
+    "category": "information-disclosure",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "MySQL connection URI in a response",
+    "description": "A MySQL URI that names the internal host appears in the response body. The URI carries the host, the port and the database name, which is the addressing an attacker needs once any query path is injectable.",
+    "remediation": "Return a generic database error and keep the URI in the secret store.",
+    "limitation": "One response body, first 32,768 bytes. It matches a MySQL URI with a host; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a MySQL URI that names the internal host.",
+    "fp": "A masked URI is not reported.",
+    "recordDesc": "A MySQL URI that names the internal host in a response hands every reader the view the build or admin side kept: The URI carries the host, the port and the database name, which is the addressing an attacker needs once any query path is injectable.",
+    "applicability": "Deployments that render a MySQL URI that names the internal host into a customer- or partner-facing response.",
+    "risk": "The URI carries the host, the port and the database name, which is the addressing an attacker needs once any query path is injectable.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Return a generic database error and keep the URI in the secret store."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a MySQL URI that names the internal host.",
+    "cells": [
+      {
+        "suffix": "body-mysql-uri",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "mysql://[^\\s\\\"']{0,40}@[a-z0-9.-]{3,40}"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"db unavailable\",\"dsn\":\"mysql://app_rw@db-mysql.internal:3306/core\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "\"DSN=mysql://reporting@mysql.core:3306/ledger\""
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"db unavailable\",\"ref\":\"c-4410\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-sqlserver-uri",
+    "category": "information-disclosure",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "SQL Server connection string in a response",
+    "description": "A sqlserver URI naming the server and the database appears in the response body. The string tells an attacker the engine, the host and the catalogue, which shortens the path from an injection finding to data access.",
+    "remediation": "Catch the connection error and return a generic message with a reference.",
+    "limitation": "One response body, first 32,768 bytes. It matches a sqlserver URI; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a sqlserver URI naming the server and the database.",
+    "fp": "A masked connection reference is not reported.",
+    "recordDesc": "A sqlserver URI naming the server and the database in a response hands every reader the view the build or admin side kept: The string tells an attacker the engine, the host and the catalogue, which shortens the path from an injection finding to data access.",
+    "applicability": "Deployments that render a sqlserver URI naming the server and the database into a customer- or partner-facing response.",
+    "risk": "The string tells an attacker the engine, the host and the catalogue, which shortens the path from an injection finding to data access.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Catch the connection error and return a generic message with a reference."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a sqlserver URI naming the server and the database.",
+    "cells": [
+      {
+        "suffix": "body-sqlserver-uri",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "sqlserver://[^\\s\\\"']{0,60}|[Ss]erver=[a-z0-9.-]{3,40}[,\\d]{0,6};\\s*[Dd]atabase="
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"login failed\",\"connection\":\"sqlserver://app@mssql.internal:1433/ledger\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "Server=mssql.core,1433;Database=core;User Id=app;"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"login failed\",\"ref\":\"c-5510\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-kubernetes-api-url",
+    "category": "information-disclosure",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "Cluster API address in a response",
+    "description": "The in-cluster Kubernetes API address or service host appears in the response body. The address is the control plane of the environment, and anything that can reach it with the pod's own token can read secrets for the whole namespace.",
+    "remediation": "Keep the API address out of responses and restrict which service accounts may reach it.",
+    "limitation": "One response body, first 32,768 bytes. It matches a cluster API URL; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries the in-cluster Kubernetes API address or service host.",
+    "fp": "A documentation page about Kubernetes is not reported.",
+    "recordDesc": "The in-cluster Kubernetes API address or service host in a response hands every reader the view the build or admin side kept: The address is the control plane of the environment, and anything that can reach it with the pod's own token can read secrets for the whole namespace.",
+    "applicability": "Deployments that render the in-cluster Kubernetes API address or service host into a customer- or partner-facing response.",
+    "risk": "The address is the control plane of the environment, and anything that can reach it with the pod's own token can read secrets for the whole namespace.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Keep the API address out of responses and restrict which service accounts may reach it."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries the in-cluster Kubernetes API address or service host.",
+    "cells": [
+      {
+        "suffix": "body-kubernetes-api-url",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "https://kubernetes\\.default\\.svc|KUBERNETES_SERVICE_HOST\\s*=\\s*\\d"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"upstream\":\"https://kubernetes.default.svc/api/v1/namespaces/core/secrets\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "KUBERNETES_SERVICE_HOST=10.96.0.1 KUBERNETES_SERVICE_PORT=443"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"upstream\":\"https://ledger-api:8443\",\"ref\":\"c-6612\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-postgres-uri-host",
+    "category": "information-disclosure",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "PostgreSQL URI naming an internal host",
+    "description": "A postgres URI that names the database host appears in the response body. The URI names the engine and the host, which is the addressing an attacker needs to try a direct connection once the network allows it.",
+    "remediation": "Return a generic error and keep the URI in the secret store.",
+    "limitation": "One response body, first 32,768 bytes. It matches a postgres URI with a host; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a postgres URI that names the database host.",
+    "fp": "A masked host is not reported.",
+    "recordDesc": "A postgres URI that names the database host in a response hands every reader the view the build or admin side kept: The URI names the engine and the host, which is the addressing an attacker needs to try a direct connection once the network allows it.",
+    "applicability": "Deployments that render a postgres URI that names the database host into a customer- or partner-facing response.",
+    "risk": "The URI names the engine and the host, which is the addressing an attacker needs to try a direct connection once the network allows it.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Return a generic error and keep the URI in the secret store."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a postgres URI that names the database host.",
+    "cells": [
+      {
+        "suffix": "body-postgres-uri-host",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "postgres(?:ql)?://[^\\s\\\"']{0,40}@[a-z0-9.-]{3,40}"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"db unavailable\",\"dsn\":\"postgresql://app_rw@db-pg.core:5432/ledger\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "\"DATABASE=postgres://reporting@pg.internal/analytics\""
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"db unavailable\",\"ref\":\"c-7712\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-clickhouse-play-url",
+    "category": "exposed-interface",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "ClickHouse play interface reachable",
+    "description": "The ClickHouse play page that accepts ad hoc queries appears in the response body. The play page runs queries with the server's own credentials, so reaching it turns an exposed port into full read access to the warehouse.",
+    "remediation": "Disable the play interface in production and bind the HTTP port to the internal network.",
+    "limitation": "One response body, first 32,768 bytes. It matches the play page marker; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries the ClickHouse play page that accepts ad hoc queries.",
+    "fp": "A page that documents the warehouse engine is not reported.",
+    "recordDesc": "The ClickHouse play page that accepts ad hoc queries in a response hands every reader the view the build or admin side kept: The play page runs queries with the server's own credentials, so reaching it turns an exposed port into full read access to the warehouse.",
+    "applicability": "Deployments that render the ClickHouse play page that accepts ad hoc queries into a customer- or partner-facing response.",
+    "risk": "The play page runs queries with the server's own credentials, so reaching it turns an exposed port into full read access to the warehouse.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Disable the play interface in production and bind the HTTP port to the internal network."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries the ClickHouse play page that accepts ad hoc queries.",
+    "cells": [
+      {
+        "suffix": "body-clickhouse-play-url",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "ClickHouse Playground|/play\\?query="
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "<title>ClickHouse Playground</title><form action=\"/play?query=\">"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"url\":\"https://bank.example:8123/play?query=SELECT%201\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"url\":\"https://bank.example/reports\",\"body\":\"Powered by ClickHouse\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-loki-query-api",
+    "category": "exposed-interface",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "Log aggregation query API reachable",
+    "description": "A Loki query endpoint or its label index appears in the response body. The log store holds the application's own diagnostics, including request bodies, so reachable query access exposes customer data that was never meant to leave the log pipeline.",
+    "remediation": "Restrict the log API to the observability network and require authentication.",
+    "limitation": "One response body, first 32,768 bytes. It matches a Loki API path with a query; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a Loki query endpoint or its label index.",
+    "fp": "A page that names the log system in a footer is not reported.",
+    "recordDesc": "A Loki query endpoint or its label index in a response hands every reader the view the build or admin side kept: The log store holds the application's own diagnostics, including request bodies, so reachable query access exposes customer data that was never meant to leave the log pipeline.",
+    "applicability": "Deployments that render a Loki query endpoint or its label index into a customer- or partner-facing response.",
+    "risk": "The log store holds the application's own diagnostics, including request bodies, so reachable query access exposes customer data that was never meant to leave the log pipeline.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Restrict the log API to the observability network and require authentication."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a Loki query endpoint or its label index.",
+    "cells": [
+      {
+        "suffix": "body-loki-query-api",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "/loki/api/v1/(?:query_range|labels)|/api/prom/query"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"url\":\"https://bank.example/loki/api/v1/query_range?query={app=\\\"ledger\\\"}\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"url\":\"https://bank.example/api/prom/query?query=%7Bjob%3D%22api%22%7D\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"url\":\"https://bank.example/docs/logging\",\"body\":\"Logs are shipped to the platform\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-influx-query-api",
+    "category": "exposed-interface",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "Time-series query API reachable",
+    "description": "An InfluxDB query endpoint and its database name appears in the response body. The metrics store carries per-customer counters in many designs, and an open query endpoint lets anyone read or delete them.",
+    "remediation": "Require a token for the query API and bind it to the internal network.",
+    "limitation": "One response body, first 32,768 bytes. It matches an Influx API path with a query; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries an InfluxDB query endpoint and its database name.",
+    "fp": "A dashboard link is not reported.",
+    "recordDesc": "An InfluxDB query endpoint and its database name in a response hands every reader the view the build or admin side kept: The metrics store carries per-customer counters in many designs, and an open query endpoint lets anyone read or delete them.",
+    "applicability": "Deployments that render an InfluxDB query endpoint and its database name into a customer- or partner-facing response.",
+    "risk": "The metrics store carries per-customer counters in many designs, and an open query endpoint lets anyone read or delete them.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Require a token for the query API and bind it to the internal network."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries an InfluxDB query endpoint and its database name.",
+    "cells": [
+      {
+        "suffix": "body-influx-query-api",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "/query\\?db=[a-z0-9_-]{2,30}|/api/v2/query\\?org="
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"url\":\"https://bank.example:8086/query?db=ledger&q=SELECT+*+FROM+txn\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"url\":\"https://bank.example/api/v2/query?org=drobon\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"url\":\"https://bank.example/api/v2/health\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-thanos-query-api",
+    "category": "exposed-interface",
+    "cwe": "CWE-200",
+    "severity": "LOW",
+    "title": "Long-term metrics query endpoint reachable",
+    "description": "A Thanos query endpoint with its store listing appears in the response body. The query layer sits in front of every tenant's metrics, so reaching it exposes cross-tenant series that the application never presents.",
+    "remediation": "Restrict the query endpoint to the observability network.",
+    "limitation": "One response body, first 32,768 bytes. It matches a Thanos API path or store listing; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a Thanos query endpoint with its store listing.",
+    "fp": "A page that documents the monitoring stack is not reported.",
+    "recordDesc": "A Thanos query endpoint with its store listing in a response hands every reader the view the build or admin side kept: The query layer sits in front of every tenant's metrics, so reaching it exposes cross-tenant series that the application never presents.",
+    "applicability": "Deployments that render a Thanos query endpoint with its store listing into a customer- or partner-facing response.",
+    "risk": "The query layer sits in front of every tenant's metrics, so reaching it exposes cross-tenant series that the application never presents.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Restrict the query endpoint to the observability network."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a Thanos query endpoint with its store listing.",
+    "cells": [
+      {
+        "suffix": "body-thanos-query-api",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "/api/v1/(?:stores|rules)|thanos[\\s\\S]{0,80}?/api/v1/query"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"url\":\"https://bank.example/api/v1/stores\",\"body\":[{\"name\":\"thanos-store-0\"}]}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "thanos-query /api/v1/query?query=up"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"url\":\"https://bank.example/api/v1/health\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-prometheus-target-list",
+    "category": "exposed-interface",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "Scrape target list exposed",
+    "description": "A Prometheus target list with internal addresses appears in the response body. The list names every monitored host and port, which is a ready inventory of the internal estate for anyone who can reach the endpoint.",
+    "remediation": "Restrict the targets endpoint and keep it off customer-facing hosts.",
+    "limitation": "One response body, first 32,768 bytes. It matches a targets payload with scrape URLs; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a Prometheus target list with internal addresses.",
+    "fp": "A page that documents monitoring is not reported.",
+    "recordDesc": "A Prometheus target list with internal addresses in a response hands every reader the view the build or admin side kept: The list names every monitored host and port, which is a ready inventory of the internal estate for anyone who can reach the endpoint.",
+    "applicability": "Deployments that render a Prometheus target list with internal addresses into a customer- or partner-facing response.",
+    "risk": "The list names every monitored host and port, which is a ready inventory of the internal estate for anyone who can reach the endpoint.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Restrict the targets endpoint and keep it off customer-facing hosts."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a Prometheus target list with internal addresses.",
+    "cells": [
+      {
+        "suffix": "body-prometheus-target-list",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\"activeTargets\"[\\s\\S]{0,200}?\"scrapeUrl\"\\s*:\\s*\"http"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"status\":\"success\",\"data\":{\"activeTargets\":[{\"scrapeUrl\":\"http://10.24.8.19:9100/metrics\",\"health\":\"up\"}]}}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"activeTargets\":[{\"scrapeUrl\":\"http://ledger.core:8080/actuator/prometheus\"}]}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"status\":\"success\",\"data\":{\"activeTargets\":[]}}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-rabbitmq-management",
+    "category": "exposed-interface",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "Message broker management interface reachable",
+    "description": "The RabbitMQ management overview with its version and node appears in the response body. The management interface can declare queues and publish messages, so reaching it lets an attacker inject events that the settlement workers consume.",
+    "remediation": "Restrict the management plugin to an admin network and require strong authentication.",
+    "limitation": "One response body, first 32,768 bytes. It matches the management overview payload; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries the RabbitMQ management overview with its version and node.",
+    "fp": "A page that names the broker in a footer is not reported.",
+    "recordDesc": "The RabbitMQ management overview with its version and node in a response hands every reader the view the build or admin side kept: The management interface can declare queues and publish messages, so reaching it lets an attacker inject events that the settlement workers consume.",
+    "applicability": "Deployments that render the RabbitMQ management overview with its version and node into a customer- or partner-facing response.",
+    "risk": "The management interface can declare queues and publish messages, so reaching it lets an attacker inject events that the settlement workers consume.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Restrict the management plugin to an admin network and require strong authentication."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries the RabbitMQ management overview with its version and node.",
+    "cells": [
+      {
+        "suffix": "body-rabbitmq-management",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\"rabbitmq_version\"|\"management_version\"[\\s\\S]{0,120}?\"node\""
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"rabbitmq_version\":\"3.13.2\",\"management_version\":\"3.13.2\",\"node\":\"rabbit@core-1\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"management_version\":\"3.12.0\",\"node\":\"rabbit@bank-2\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"broker\":\"rabbitmq\",\"status\":\"healthy\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-debezium-connector-list",
+    "category": "exposed-interface",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "Change data capture connectors exposed",
+    "description": "A connector list that names the databases being replicated appears in the response body. The list names every captured database and often the connection string behind it, which is both the data map and a credential hint.",
+    "remediation": "Restrict the connect API to the data platform network.",
+    "limitation": "One response body, first 32,768 bytes. It matches a connector list with a database name; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a connector list that names the databases being replicated.",
+    "fp": "A page that documents the pipeline is not reported.",
+    "recordDesc": "A connector list that names the databases being replicated in a response hands every reader the view the build or admin side kept: The list names every captured database and often the connection string behind it, which is both the data map and a credential hint.",
+    "applicability": "Deployments that render a connector list that names the databases being replicated into a customer- or partner-facing response.",
+    "risk": "The list names every captured database and often the connection string behind it, which is both the data map and a credential hint.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Restrict the connect API to the data platform network."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a connector list that names the databases being replicated.",
+    "cells": [
+      {
+        "suffix": "body-debezium-connector-list",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\"connector\"\\s*:\\s*\\{[\\s\\S]{0,300}?\"connector\\.class\"[\\s\\S]{0,300}?\"database\\.(?:hostname|dbname)\"|\"database\\.(?:dbname|hostname)\"[\\s\\S]{0,300}?\"connector\\.class\""
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"connector\":{\"connector.class\":\"io.debezium.connector.postgresql.PostgresConnector\",\"database.hostname\":\"db-pg.core\",\"database.dbname\":\"ledger\"}}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"connector\":{\"database.dbname\":\"kyc\",\"connector.class\":\"io.debezium.connector.mysql.MySqlConnector\"}}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"connectors\":[{\"name\":\"ledger\",\"state\":\"RUNNING\"}]"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  }
+]

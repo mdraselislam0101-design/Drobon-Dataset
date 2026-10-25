@@ -1,0 +1,2002 @@
+[
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-postgres-relation-error",
+    "category": "debug-exposure",
+    "cwe": "CWE-209",
+    "severity": "MEDIUM",
+    "title": "PostgreSQL error detail disclosed in a response",
+    "description": "A PostgreSQL relation-not-found error naming the missing table appears in the response body. The message confirms the schema name and the query shape, so an injection attempt learns which table names exist and which do not.",
+    "remediation": "Translate driver errors into a generic message and log the original with a correlation id.",
+    "limitation": "One response body, first 32,768 bytes. It matches one body marker: a migration guide that quotes the error text can match.; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a PostgreSQL relation-not-found error naming the missing table.",
+    "fp": "A developer console showing the error to a signed-in engineer is expected; confirm who reaches the response.",
+    "recordDesc": "A PostgreSQL relation-not-found error naming the missing table in a response hands every reader the view the build or admin side kept: The message confirms the schema name and the query shape, so an injection attempt learns which table names exist and which do not.",
+    "applicability": "Deployments that render a PostgreSQL relation-not-found error naming the missing table into a customer- or partner-facing response.",
+    "risk": "The message confirms the schema name and the query shape, so an injection attempt learns which table names exist and which do not.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Translate driver errors into a generic message and log the original with a correlation id."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a PostgreSQL relation-not-found error naming the missing table.",
+    "cells": [
+      {
+        "suffix": "body-postgres-relation-error",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "ERROR:\\s+relation\\s+\\\\?\"[^\"]{1,40}\\\\?\"\\s+does not exist"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"ERROR: relation \\\"internal_ledger_2024\\\" does not exist\",\"code\":\"42P01\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "ERROR:  relation \"kyc_documents\" does not exist at character 87"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "ERROR: could not process your request (ref 7c12)"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-postgres-auth-error",
+    "category": "debug-exposure",
+    "cwe": "CWE-209",
+    "severity": "MEDIUM",
+    "title": "PostgreSQL error detail disclosed in a response",
+    "description": "A PostgreSQL authentication failure naming the role appears in the response body. The message names a live database role, which is the first half of a credential guess and confirms the role exists.",
+    "remediation": "Return a generic authentication error and alert on repeated failures server-side.",
+    "limitation": "One response body, first 32,768 bytes. It matches one body marker: a DBA runbook that quotes the message can match.; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a PostgreSQL authentication failure naming the role.",
+    "fp": "A database console the operator opened directly is outside the App's surface.",
+    "recordDesc": "A PostgreSQL authentication failure naming the role in a response hands every reader the view the build or admin side kept: The message names a live database role, which is the first half of a credential guess and confirms the role exists.",
+    "applicability": "Deployments that render a PostgreSQL authentication failure naming the role into a customer- or partner-facing response.",
+    "risk": "The message names a live database role, which is the first half of a credential guess and confirms the role exists.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Return a generic authentication error and alert on repeated failures server-side."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a PostgreSQL authentication failure naming the role.",
+    "cells": [
+      {
+        "suffix": "body-postgres-auth-error",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "FATAL:\\s+password authentication failed for user\\s+\\\\?\"?[A-Za-z0-9_.-]{2,40}"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"FATAL: password authentication failed for user \\\"ledger_ro\\\"\",\"code\":\"28P01\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "connection failed: FATAL:  password authentication failed for user \"reporting\""
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "connection failed: credentials rejected (ref 91ba)"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-mssql-odbc-error",
+    "category": "debug-exposure",
+    "cwe": "CWE-209",
+    "severity": "MEDIUM",
+    "title": "SQL Server error detail disclosed in a response",
+    "description": "A SQL Server ODBC driver error block appears in the response body. The block names the driver, the server product and the failing object, which is a precise map of the data layer.",
+    "remediation": "Catch the exception and return a generic message with a correlation id.",
+    "limitation": "One response body, first 32,768 bytes. It matches one body marker: a driver troubleshooting page can match.; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a SQL Server ODBC driver error block.",
+    "fp": "An admin health page that the operator opens with a privileged session is expected.",
+    "recordDesc": "A SQL Server ODBC driver error block in a response hands every reader the view the build or admin side kept: The block names the driver, the server product and the failing object, which is a precise map of the data layer.",
+    "applicability": "Deployments that render a SQL Server ODBC driver error block into a customer- or partner-facing response.",
+    "risk": "The block names the driver, the server product and the failing object, which is a precise map of the data layer.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Catch the exception and return a generic message with a correlation id."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a SQL Server ODBC driver error block.",
+    "cells": [
+      {
+        "suffix": "body-mssql-odbc-error",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\\[(?:Microsoft|ODBC Driver \\d+ for SQL Server)\\]\\[[^\\]]{1,60}\\]"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"[Microsoft][ODBC Driver 18 for SQL Server][SQL Server]Invalid object name 'dbo.ledger'.\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "System.Data.Odbc.OdbcException: [Microsoft][ODBC Driver 17 for SQL Server][SQL Server]Login failed for user 'app_rw'."
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "System.Data.Odbc.OdbcException: the data source rejected the request."
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-mongo-duplicate-key",
+    "category": "debug-exposure",
+    "cwe": "CWE-209",
+    "severity": "MEDIUM",
+    "title": "MongoDB error detail disclosed in a response",
+    "description": "A MongoDB duplicate key error that echoes the index and the value appears in the response body. The message repeats the indexed value, so a response turns a uniqueness check into an oracle for whether a given national id or VPA is on file.",
+    "remediation": "Map duplicate-key errors to a generic conflict response without the value.",
+    "limitation": "One response body, first 32,768 bytes. It matches one body marker: a seed script that prints the raw driver error can match.; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a MongoDB duplicate key error that echoes the index and the value.",
+    "fp": "A local development console is outside the deployed surface.",
+    "recordDesc": "A MongoDB duplicate key error that echoes the index and the value in a response hands every reader the view the build or admin side kept: The message repeats the indexed value, so a response turns a uniqueness check into an oracle for whether a given national id or VPA is on file.",
+    "applicability": "Deployments that render a MongoDB duplicate key error that echoes the index and the value into a customer- or partner-facing response.",
+    "risk": "The message repeats the indexed value, so a response turns a uniqueness check into an oracle for whether a given national id or VPA is on file.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Map duplicate-key errors to a generic conflict response without the value."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a MongoDB duplicate key error that echoes the index and the value.",
+    "cells": [
+      {
+        "suffix": "body-mongo-duplicate-key",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "E11000 duplicate key error[\\s\\S]{0,120}?index:\\s*[A-Za-z0-9_.]{1,40}"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"E11000 duplicate key error collection: core.customers index: nid_1 dup key: { nid: \\\"1990123456789\\\" }\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "MongoServerError: E11000 duplicate key error index: upi_vpa_1 dup key { vpa: \"ravi@okaxis\" }"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"a record with these details already exists\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-mongo-topology-error",
+    "category": "debug-exposure",
+    "cwe": "CWE-209",
+    "severity": "MEDIUM",
+    "title": "MongoDB error detail disclosed in a response",
+    "description": "A MongoDB driver topology or server-selection error appears in the response body. The error lists shard hosts, ports and the replica-set shape, which is the topology an attacker needs to target the primary.",
+    "remediation": "Return a generic storage-unavailable message and keep topology in the server log.",
+    "limitation": "One response body, first 32,768 bytes. It matches one body marker: a driver upgrade note that quotes the error can match.; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a MongoDB driver topology or server-selection error.",
+    "fp": "An operator dashboard behind an authenticated admin session is expected.",
+    "recordDesc": "A MongoDB driver topology or server-selection error in a response hands every reader the view the build or admin side kept: The error lists shard hosts, ports and the replica-set shape, which is the topology an attacker needs to target the primary.",
+    "applicability": "Deployments that render a MongoDB driver topology or server-selection error into a customer- or partner-facing response.",
+    "risk": "The error lists shard hosts, ports and the replica-set shape, which is the topology an attacker needs to target the primary.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Return a generic storage-unavailable message and keep topology in the server log."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a MongoDB driver topology or server-selection error.",
+    "cells": [
+      {
+        "suffix": "body-mongo-topology-error",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "Mongo(?:ServerSelection|Server|Network|Timeout)Error[\\s\\S]{0,140}?(?:topology|replica set|host|:\\d{2,5}\\b)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"MongoServerSelectionError: connect ECONNREFUSED 10.24.9.31:27017\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "MongoNetworkError: connection 4 to ac-9b12-shard-00-02.mongo.internal:27017 closed"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"storage unavailable (ref 5d31)\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-redis-wrongtype",
+    "category": "debug-exposure",
+    "cwe": "CWE-209",
+    "severity": "MEDIUM",
+    "title": "Redis error detail disclosed in a response",
+    "description": "A Redis type mismatch error naming the key appears in the response body. The error confirms the key naming scheme and that the store is Redis, so an attacker learns how sessions, counters and OTP attempts are keyed.",
+    "remediation": "Wrap cache errors in a generic message and keep key names server-side.",
+    "limitation": "One response body, first 32,768 bytes. It matches one body marker: a Redis client test that prints the reply can match.; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a Redis type mismatch error naming the key.",
+    "fp": "A cache admin UI opened by an operator is outside the App's surface.",
+    "recordDesc": "A Redis type mismatch error naming the key in a response hands every reader the view the build or admin side kept: The error confirms the key naming scheme and that the store is Redis, so an attacker learns how sessions, counters and OTP attempts are keyed.",
+    "applicability": "Deployments that render a Redis type mismatch error naming the key into a customer- or partner-facing response.",
+    "risk": "The error confirms the key naming scheme and that the store is Redis, so an attacker learns how sessions, counters and OTP attempts are keyed.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Wrap cache errors in a generic message and keep key names server-side."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a Redis type mismatch error naming the key.",
+    "cells": [
+      {
+        "suffix": "body-redis-wrongtype",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "WRONGTYPE Operation against a key holding the wrong kind of value"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"WRONGTYPE Operation against a key holding the wrong kind of value\",\"key\":\"otp:attempts:8841\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "ReplyError: WRONGTYPE Operation against a key holding the wrong kind of value"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"cache operation failed (ref 3f81)\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-redis-noauth",
+    "category": "debug-exposure",
+    "cwe": "CWE-209",
+    "severity": "MEDIUM",
+    "title": "Redis error detail disclosed in a response",
+    "description": "A Redis NOAUTH error on an unauthenticated connection appears in the response body. The reply proves the endpoint reached Redis without credentials, which means the network path to the store is open from the request handler.",
+    "remediation": "Require authentication on the store and never surface driver replies to clients.",
+    "limitation": "One response body, first 32,768 bytes. It matches one body marker: a Redis tutorial that quotes the reply can match.; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a Redis NOAUTH error on an unauthenticated connection.",
+    "fp": "A local redis-cli session is outside the HTTP surface.",
+    "recordDesc": "A Redis NOAUTH error on an unauthenticated connection in a response hands every reader the view the build or admin side kept: The reply proves the endpoint reached Redis without credentials, which means the network path to the store is open from the request handler.",
+    "applicability": "Deployments that render a Redis NOAUTH error on an unauthenticated connection into a customer- or partner-facing response.",
+    "risk": "The reply proves the endpoint reached Redis without credentials, which means the network path to the store is open from the request handler.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Require authentication on the store and never surface driver replies to clients."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a Redis NOAUTH error on an unauthenticated connection.",
+    "cells": [
+      {
+        "suffix": "body-redis-noauth",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "NOAUTH Authentication required"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"NOAUTH Authentication required.\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "ReplyError: NOAUTH Authentication required."
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"cache operation failed (ref a1c9)\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-cassandra-query-error",
+    "category": "debug-exposure",
+    "cwe": "CWE-209",
+    "severity": "MEDIUM",
+    "title": "Cassandra error detail disclosed in a response",
+    "description": "A Cassandra query or host-availability error appears in the response body. The message names the keyspace, table or ring host, which discloses both the data model and the cluster layout.",
+    "remediation": "Return a generic storage error and keep the CQL failure in the server log.",
+    "limitation": "One response body, first 32,768 bytes. It matches one body marker: a CQL shell transcript can match.; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a Cassandra query or host-availability error.",
+    "fp": "A cluster monitoring page behind an operator session is expected.",
+    "recordDesc": "A Cassandra query or host-availability error in a response hands every reader the view the build or admin side kept: The message names the keyspace, table or ring host, which discloses both the data model and the cluster layout.",
+    "applicability": "Deployments that render a Cassandra query or host-availability error into a customer- or partner-facing response.",
+    "risk": "The message names the keyspace, table or ring host, which discloses both the data model and the cluster layout.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Return a generic storage error and keep the CQL failure in the server log."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a Cassandra query or host-availability error.",
+    "cells": [
+      {
+        "suffix": "body-cassandra-query-error",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "(?:InvalidQueryException|All host\\(s\\) tried for query failed)[\\s\\S]{0,120}?(?:keyspace|host|CQL)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"InvalidQueryException: unconfigured table transactions in keyspace core\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "NoHostAvailableException: All host(s) tried for query failed (host 10.24.7.5:9042)"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"ledger unavailable (ref 77bd)\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-neo4j-syntax-error",
+    "category": "debug-exposure",
+    "cwe": "CWE-209",
+    "severity": "MEDIUM",
+    "title": "Neo4j error detail disclosed in a response",
+    "description": "A Neo4j Cypher syntax error echoing the query appears in the response body. Cypher error text repeats the offending fragment of the query, which reveals labels and relationship names of the fraud graph.",
+    "remediation": "Map Cypher errors to a generic validation message without the query fragment.",
+    "limitation": "One response body, first 32,768 bytes. It matches one body marker: a Cypher tutorial can match.; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a Neo4j Cypher syntax error echoing the query.",
+    "fp": "A Neo4j browser session opened by an analyst is outside the App's surface.",
+    "recordDesc": "A Neo4j Cypher syntax error echoing the query in a response hands every reader the view the build or admin side kept: Cypher error text repeats the offending fragment of the query, which reveals labels and relationship names of the fraud graph.",
+    "applicability": "Deployments that render a Neo4j Cypher syntax error echoing the query into a customer- or partner-facing response.",
+    "risk": "Cypher error text repeats the offending fragment of the query, which reveals labels and relationship names of the fraud graph.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Map Cypher errors to a generic validation message without the query fragment."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a Neo4j Cypher syntax error echoing the query.",
+    "cells": [
+      {
+        "suffix": "body-neo4j-syntax-error",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "Neo\\.ClientError\\.Statement\\.SyntaxError[\\s\\S]{0,160}?Invalid input"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"Neo.ClientError.Statement.SyntaxError: Invalid input 'MACH': expected an identifier (line 1, column 24)\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "Neo.ClientError.Statement.SyntaxError: Invalid input: unexpected end of input"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"graph query rejected (ref c310)\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-clickhouse-exception",
+    "category": "debug-exposure",
+    "cwe": "CWE-209",
+    "severity": "MEDIUM",
+    "title": "ClickHouse error detail disclosed in a response",
+    "description": "A ClickHouse exception with its error code appears in the response body. The exception number and text identify the engine and often the failing clause, which narrows an injection attempt on the reporting path.",
+    "remediation": "Return a generic analytics error and keep the exception in the server log.",
+    "limitation": "One response body, first 32,768 bytes. It matches one body marker: an engine changelog entry can match.; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a ClickHouse exception with its error code.",
+    "fp": "A ClickHouse play console is outside the App's surface.",
+    "recordDesc": "A ClickHouse exception with its error code in a response hands every reader the view the build or admin side kept: The exception number and text identify the engine and often the failing clause, which narrows an injection attempt on the reporting path.",
+    "applicability": "Deployments that render a ClickHouse exception with its error code into a customer- or partner-facing response.",
+    "risk": "The exception number and text identify the engine and often the failing clause, which narrows an injection attempt on the reporting path.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Return a generic analytics error and keep the exception in the server log."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a ClickHouse exception with its error code.",
+    "cells": [
+      {
+        "suffix": "body-clickhouse-exception",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "Code:\\s*\\d{2,4}\\.\\s*DB::Exception"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"Code: 62. DB::Exception: Syntax error: failed at position 41 (\\\"WHERE\\\")\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "Code: 516. DB::Exception: default: Authentication failed"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"analytics unavailable (ref 2a71)\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-snowflake-compile-error",
+    "category": "debug-exposure",
+    "cwe": "CWE-209",
+    "severity": "MEDIUM",
+    "title": "Snowflake error detail disclosed in a response",
+    "description": "A Snowflake SQL compilation error appears in the response body. The message names the warehouse objects and columns, which is the schema an attacker would target through the reporting endpoint.",
+    "remediation": "Return a generic warehouse error and log the compilation failure server-side.",
+    "limitation": "One response body, first 32,768 bytes. It matches one body marker: a Snowflake error reference page can match.; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a Snowflake SQL compilation error.",
+    "fp": "A Snowflake worksheet an analyst opens directly is outside the App's surface.",
+    "recordDesc": "A Snowflake SQL compilation error in a response hands every reader the view the build or admin side kept: The message names the warehouse objects and columns, which is the schema an attacker would target through the reporting endpoint.",
+    "applicability": "Deployments that render a Snowflake SQL compilation error into a customer- or partner-facing response.",
+    "risk": "The message names the warehouse objects and columns, which is the schema an attacker would target through the reporting endpoint.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Return a generic warehouse error and log the compilation failure server-side."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a Snowflake SQL compilation error.",
+    "cells": [
+      {
+        "suffix": "body-snowflake-compile-error",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "SQL compilation error:[\\s\\S]{0,140}?(?:invalid identifier|does not exist|syntax error)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"SQL compilation error: invalid identifier 'CUSTOMER_TIN'\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "Snowflake error: SQL compilation error: Object 'CORE.LEDGER' does not exist or not authorized."
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"warehouse query failed (ref 88c1)\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-bigquery-syntax-error",
+    "category": "debug-exposure",
+    "cwe": "CWE-209",
+    "severity": "MEDIUM",
+    "title": "BigQuery error detail disclosed in a response",
+    "description": "A BigQuery syntax error with the job location appears in the response body. The message repeats the failing column and the job id, and the location reveals which regional dataset holds the data.",
+    "remediation": "Return a generic report error and keep the job reference in the operator log only.",
+    "limitation": "One response body, first 32,768 bytes. It matches one body marker: a BigQuery troubleshooting page can match.; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a BigQuery syntax error with the job location.",
+    "fp": "The BigQuery console an analyst opens with their own identity is expected.",
+    "recordDesc": "A BigQuery syntax error with the job location in a response hands every reader the view the build or admin side kept: The message repeats the failing column and the job id, and the location reveals which regional dataset holds the data.",
+    "applicability": "Deployments that render a BigQuery syntax error with the job location into a customer- or partner-facing response.",
+    "risk": "The message repeats the failing column and the job id, and the location reveals which regional dataset holds the data.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Return a generic report error and keep the job reference in the operator log only."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a BigQuery syntax error with the job location.",
+    "cells": [
+      {
+        "suffix": "body-bigquery-syntax-error",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "(?:Syntax error: Unexpected|Unrecognized name:)[\\s\\S]{0,160}?(?:at \\[\\d+:\\d+\\]|job)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"Syntax error: Unexpected keyword WHERE at [3:18], job: bq-job-9f21\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "Unrecognized name: cust_tin at [2:8]; location: asia-south1"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"report query failed (ref 4d02)\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-dynamodb-validation-error",
+    "category": "debug-exposure",
+    "cwe": "CWE-209",
+    "severity": "MEDIUM",
+    "title": "DynamoDB error detail disclosed in a response",
+    "description": "A DynamoDB validation error naming the table appears in the response body. The error confirms the table name and the key schema, which is the targeting information for a NoSQL injection or enumeration.",
+    "remediation": "Catch SDK exceptions and return a generic failure with a correlation id.",
+    "limitation": "One response body, first 32,768 bytes. It matches one body marker: an SDK issue thread that quotes the error can match.; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a DynamoDB validation error naming the table.",
+    "fp": "A local DynamoDB emulator console is outside the deployed surface.",
+    "recordDesc": "A DynamoDB validation error naming the table in a response hands every reader the view the build or admin side kept: The error confirms the table name and the key schema, which is the targeting information for a NoSQL injection or enumeration.",
+    "applicability": "Deployments that render a DynamoDB validation error naming the table into a customer- or partner-facing response.",
+    "risk": "The error confirms the table name and the key schema, which is the targeting information for a NoSQL injection or enumeration.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Catch SDK exceptions and return a generic failure with a correlation id."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a DynamoDB validation error naming the table.",
+    "cells": [
+      {
+        "suffix": "body-dynamodb-validation-error",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "ValidationException[\\s\\S]{0,160}?(?:dynamodb|TableName|table)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"ValidationException: 1 validation error detected: Value at 'tableName' failed to satisfy constraint: Member must not be null\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "com.amazonaws.services.dynamodbv2.model.ValidationException: The provided key element does not match the schema on table sessions_prod"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"session lookup failed (ref 0b71)\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-couchbase-lcb-error",
+    "category": "debug-exposure",
+    "cwe": "CWE-209",
+    "severity": "MEDIUM",
+    "title": "Couchbase error detail disclosed in a response",
+    "description": "A Couchbase client library error code appears in the response body. The library code and bucket name disclose the store product and the bucket that holds the records, which shortens a targeted attack.",
+    "remediation": "Wrap client errors in a generic message and keep bucket names server-side.",
+    "limitation": "One response body, first 32,768 bytes. It matches one body marker: a client library issue that quotes the code can match.; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a Couchbase client library error code.",
+    "fp": "A Couchbase console used by an operator is outside the App's surface.",
+    "recordDesc": "A Couchbase client library error code in a response hands every reader the view the build or admin side kept: The library code and bucket name disclose the store product and the bucket that holds the records, which shortens a targeted attack.",
+    "applicability": "Deployments that render a Couchbase client library error code into a customer- or partner-facing response.",
+    "risk": "The library code and bucket name disclose the store product and the bucket that holds the records, which shortens a targeted attack.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Wrap client errors in a generic message and keep bucket names server-side."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a Couchbase client library error code.",
+    "cells": [
+      {
+        "suffix": "body-couchbase-lcb-error",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "LCB_ERR_[A-Z_]{3,}(?:[\\s\\S]{0,120}?(?:couchbase|bucket))?"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"LCB_ERR_TIMEOUT (201) operation timed out on bucket ledger\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "CouchbaseException: LCB_ERR_AUTHENTICATION_FAILURE (34)"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"document store unavailable (ref 5a19)\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-solr-exception",
+    "category": "debug-exposure",
+    "cwe": "CWE-209",
+    "severity": "MEDIUM",
+    "title": "Solr error detail disclosed in a response",
+    "description": "An Apache Solr exception block appears in the response body. Solr errors repeat the core, collection and field names, which exposes the search schema of indexed customer records.",
+    "remediation": "Return a generic search error and keep the parser message in the server log.",
+    "limitation": "One response body, first 32,768 bytes. It matches one body marker: a Solr admin page that the operator opens deliberately can match.; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries an Apache Solr exception block.",
+    "fp": "A Solr admin UI bound to localhost is outside the App's surface.",
+    "recordDesc": "An Apache Solr exception block in a response hands every reader the view the build or admin side kept: Solr errors repeat the core, collection and field names, which exposes the search schema of indexed customer records.",
+    "applicability": "Deployments that render an Apache Solr exception block into a customer- or partner-facing response.",
+    "risk": "Solr errors repeat the core, collection and field names, which exposes the search schema of indexed customer records.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Return a generic search error and keep the parser message in the server log."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries an Apache Solr exception block.",
+    "cells": [
+      {
+        "suffix": "body-solr-exception",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "(?:SolrException|org\\.apache\\.solr)[\\s\\S]{0,140}?(?:SolrCore|SolrQuery|SolrClient|collection|/solr/)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"SolrException: undefined field customer_tin at org.apache.solr.search.SolrQueryParser\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "org.apache.solr.common.SolrException: Collection not found: ledger_2024"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"search unavailable (ref 3c88)\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-memcached-server-error",
+    "category": "debug-exposure",
+    "cwe": "CWE-209",
+    "severity": "MEDIUM",
+    "title": "memcached error detail disclosed in a response",
+    "description": "A memcached server error reply appears in the response body. The reply shows the cache protocol is reachable from the request path, so an attacker learns the store and its memory limits.",
+    "remediation": "Wrap cache replies in a generic failure and keep the protocol text server-side.",
+    "limitation": "One response body, first 32,768 bytes. It matches one body marker: a memcached protocol reference can match.; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a memcached server error reply.",
+    "fp": "A local telnet session to the cache is outside the HTTP surface.",
+    "recordDesc": "A memcached server error reply in a response hands every reader the view the build or admin side kept: The reply shows the cache protocol is reachable from the request path, so an attacker learns the store and its memory limits.",
+    "applicability": "Deployments that render a memcached server error reply into a customer- or partner-facing response.",
+    "risk": "The reply shows the cache protocol is reachable from the request path, so an attacker learns the store and its memory limits.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Wrap cache replies in a generic failure and keep the protocol text server-side."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a memcached server error reply.",
+    "cells": [
+      {
+        "suffix": "body-memcached-server-error",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "SERVER_ERROR (?:out of memory|object too large|bad command line format)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"SERVER_ERROR out of memory storing object\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "CacheError: SERVER_ERROR object too large for cache"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"cache write failed (ref 6e10)\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-cockroach-sql-state",
+    "category": "debug-exposure",
+    "cwe": "CWE-209",
+    "severity": "MEDIUM",
+    "title": "CockroachDB error detail disclosed in a response",
+    "description": "A CockroachDB error with its SQLSTATE code appears in the response body. The code and message pair the engine with the failing object, which tells an injection attempt exactly which dialect and schema it is talking to.",
+    "remediation": "Return a generic query error and log the SQLSTATE server-side.",
+    "limitation": "One response body, first 32,768 bytes. It matches one body marker: an engine error reference can match.; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a CockroachDB error with its SQLSTATE code.",
+    "fp": "A CockroachDB console opened by an operator is outside the App's surface.",
+    "recordDesc": "A CockroachDB error with its SQLSTATE code in a response hands every reader the view the build or admin side kept: The code and message pair the engine with the failing object, which tells an injection attempt exactly which dialect and schema it is talking to.",
+    "applicability": "Deployments that render a CockroachDB error with its SQLSTATE code into a customer- or partner-facing response.",
+    "risk": "The code and message pair the engine with the failing object, which tells an injection attempt exactly which dialect and schema it is talking to.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Return a generic query error and log the SQLSTATE server-side."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a CockroachDB error with its SQLSTATE code.",
+    "cells": [
+      {
+        "suffix": "body-cockroach-sql-state",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "ERROR:\\s+(?:syntax error at or near|relation .{0,40}does not exist)[\\s\\S]{0,160}?SQLSTATE:\\s*[0-9A-Z]{5}"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"ERROR: syntax error at or near \\\"SELCT\\\" SQLSTATE: 42601\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "ERROR: relation \"ledger_entries\" does not exist SQLSTATE: 42P01"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"query rejected (ref 91c0)\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-postgrest-error",
+    "category": "debug-exposure",
+    "cwe": "CWE-209",
+    "severity": "MEDIUM",
+    "title": "PostgREST error detail disclosed in a response",
+    "description": "A PostgREST error with its PGRST code appears in the response body. The PostgREST code names the exposed schema and function, which maps the REST surface generated directly over the database.",
+    "remediation": "Front the REST layer with the App's own routes and translate errors into a generic message.",
+    "limitation": "One response body, first 32,768 bytes. It matches one body marker: a PostgREST documentation table can match.; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a PostgREST error with its PGRST code.",
+    "fp": "A developer running PostgREST locally is outside the deployed surface.",
+    "recordDesc": "A PostgREST error with its PGRST code in a response hands every reader the view the build or admin side kept: The PostgREST code names the exposed schema and function, which maps the REST surface generated directly over the database.",
+    "applicability": "Deployments that render a PostgREST error with its PGRST code into a customer- or partner-facing response.",
+    "risk": "The PostgREST code names the exposed schema and function, which maps the REST surface generated directly over the database.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Front the REST layer with the App's own routes and translate errors into a generic message."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a PostgREST error with its PGRST code.",
+    "cells": [
+      {
+        "suffix": "body-postgrest-error",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "PGRST\\d{3}"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"code\":\"PGRST202\",\"message\":\"Could not find the public.ledger function in the schema cache\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":{\"code\":\"PGRST301\",\"message\":\"JWSError JWSInvalidSignature\"}}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"request rejected (ref 77a2)\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-sqlalchemy-trace",
+    "category": "debug-exposure",
+    "cwe": "CWE-209",
+    "severity": "MEDIUM",
+    "title": "debug-exposure error detail disclosed in a response",
+    "description": "A SQLAlchemy exception trace appears in the response body. The trace carries the ORM layer, the driver and the failing statement, which is a step-by-step map of the query the endpoint runs.",
+    "remediation": "Disable debug tracebacks in production and return a correlation id instead.",
+    "limitation": "One response body, first 32,768 bytes. It matches one body marker: a Stack Overflow answer that pastes the trace can match.; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a SQLAlchemy exception trace.",
+    "fp": "A development server bound to localhost is outside the deployed surface.",
+    "recordDesc": "A SQLAlchemy exception trace in a response hands every reader the view the build or admin side kept: The trace carries the ORM layer, the driver and the failing statement, which is a step-by-step map of the query the endpoint runs.",
+    "applicability": "Deployments that render a SQLAlchemy exception trace into a customer- or partner-facing response.",
+    "risk": "The trace carries the ORM layer, the driver and the failing statement, which is a step-by-step map of the query the endpoint runs.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Disable debug tracebacks in production and return a correlation id instead."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a SQLAlchemy exception trace.",
+    "cells": [
+      {
+        "suffix": "body-sqlalchemy-trace",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "sqlalchemy\\.exc\\.[A-Za-z]{3,}(?:Error|Exception)[\\s\\S]{0,140}?(?:SELECT|INSERT|UPDATE|no such table)"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"sqlalchemy.exc.ProgrammingError: (psycopg2.errors.SyntaxError) SELECT * FROM ledgr\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "Traceback (most recent call last): sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such table: ledger"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"request failed (ref 2b91)\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-mongoose-cast-error",
+    "category": "debug-exposure",
+    "cwe": "CWE-209",
+    "severity": "MEDIUM",
+    "title": "Mongoose error detail disclosed in a response",
+    "description": "A Mongoose cast error echoing the value appears in the response body. The error repeats the cast path and value, which tells an attacker which fields are typed and how the model is shaped.",
+    "remediation": "Validate input before the query and return a generic validation error.",
+    "limitation": "One response body, first 32,768 bytes. It matches one body marker: an ORM issue thread that quotes the error can match.; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a Mongoose cast error echoing the value.",
+    "fp": "A local Node inspector session is outside the HTTP surface.",
+    "recordDesc": "A Mongoose cast error echoing the value in a response hands every reader the view the build or admin side kept: The error repeats the cast path and value, which tells an attacker which fields are typed and how the model is shaped.",
+    "applicability": "Deployments that render a Mongoose cast error echoing the value into a customer- or partner-facing response.",
+    "risk": "The error repeats the cast path and value, which tells an attacker which fields are typed and how the model is shaped.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Validate input before the query and return a generic validation error."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a Mongoose cast error echoing the value.",
+    "cells": [
+      {
+        "suffix": "body-mongoose-cast-error",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "CastError[\\s\\S]{0,160}?(?:Mongoose|path\\s*\\\\?\"|value\\s*\\\\?\")"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"CastError: Cast to ObjectId failed for value \\\"abc123\\\" at path \\\"_id\\\"\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "MongooseError: CastError: Cast to Number failed for value \"NaN\" (type number) at path \"amount\""
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"error\":\"invalid request (ref 8d31)\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  }
+]

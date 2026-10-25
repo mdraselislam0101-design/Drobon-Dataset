@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-911",
+  "title": "PostgreSQL URI naming an internal host",
+  "description": "A postgres URI that names the database host appears in the response body. The URI names the engine and the host, which is the addressing an attacker needs to try a direct connection once the network allows it.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-200",
+  "category": "information-disclosure",
+  "remediation": "Return a generic error and keep the URI in the secret store.",
+  "limitation": "One response body, first 32,768 bytes. It matches a postgres URI with a host; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "postgres(?:ql)?://[^\\s\\\"']{0,40}@[a-z0-9.-]{3,40}"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://bank.example/portal/home",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "Cache-Control": "no-store"
+        },
+        "body": "{\"error\":\"db unavailable\",\"dsn\":\"postgresql://app_rw@db-pg.core:5432/ledger\"}"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://bank.example/api/detail",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "Cache-Control": "no-store"
+        },
+        "body": "\"DATABASE=postgres://reporting@pg.internal/analytics\""
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://bank.example/help/security",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "Cache-Control": "no-store"
+        },
+        "body": "{\"error\":\"db unavailable\",\"ref\":\"c-7712\"}"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2030"
+  ]
+}

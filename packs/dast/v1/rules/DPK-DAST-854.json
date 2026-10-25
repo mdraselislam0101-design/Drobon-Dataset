@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "drobon.pack.dast/v1",
+  "id": "DPK-DAST-854",
+  "title": "Card number carried in a hidden field",
+  "description": "A hidden input whose value is a full card number appears in the response body. The PAN sits in the page source where extensions, caches and screenshots can read it, which puts the card in scope even though the flow only needed the last four digits.",
+  "severity": "HIGH",
+  "cwe": "CWE-200",
+  "category": "weak-markup",
+  "remediation": "Tokenise the card at entry and never render the PAN back into the page.",
+  "limitation": "One response body, first 32,768 bytes. It matches a hidden input with a long digit value; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+  "check": {
+    "type": "response-body-matches",
+    "valuePattern": "<input[^>]{0,200}type\\s*=\\s*[\"\\']?hidden[\\s\\S]{0,200}?value\\s*=\\s*[\"\\']?\\d{13,19}"
+  },
+  "tests": [
+    {
+      "observation": {
+        "url": "https://bank.example/portal/home",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "Cache-Control": "no-store"
+        },
+        "body": "<input type=\"hidden\" name=\"pan\" value=\"4891234567894321\">"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://bank.example/api/detail",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "Cache-Control": "no-store"
+        },
+        "body": "<input type=hidden value='4111111111111111' name=card>"
+      },
+      "match": true
+    },
+    {
+      "observation": {
+        "url": "https://bank.example/help/security",
+        "status": 200,
+        "headers": {
+          "Content-Type": "text/html; charset=utf-8",
+          "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+          "X-Content-Type-Options": "nosniff",
+          "X-Frame-Options": "DENY",
+          "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+          "Referrer-Policy": "no-referrer",
+          "Cross-Origin-Embedder-Policy": "require-corp",
+          "Cross-Origin-Opener-Policy": "same-origin",
+          "Cross-Origin-Resource-Policy": "same-origin",
+          "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+          "X-Permitted-Cross-Domain-Policies": "none",
+          "Cache-Control": "no-store"
+        },
+        "body": "<input type=\"hidden\" name=\"pan\" value=\"****4321\">"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-1973"
+  ]
+}

@@ -6,7 +6,7 @@ App profile. **Do not edit by hand** — `npm test` fails when this file or
 
 - Main App reference: `mdraselislam0101-design/Drobon` @ `9360dd1abdf940cc1bffd942aab0702703aaaaef`
 - Profile source of truth: `apps/api/src/external/evaluator.ts`, `apps/api/src/external/packProvider.ts` (verified 2026-10-21)
-- Packs measured: SAST 950 · Secrets 97 · DAST 500
+- Packs measured: SAST 1000 · Secrets 97 · DAST 1007
 - Regenerate: `npm run app-conformance` · verify: `npm run validate:app-conformance`
 
 ## 1. Declared-test parity
@@ -18,9 +18,9 @@ would return for the same input.
 
 | Family | Rules | Declared tests | App accepts | Mismatches | Parity |
 |---|---|---|---|---|---|
-| SAST | 950 | 3,843 | 3,843 | 0 | 100% |
+| SAST | 1,000 | 4,043 | 4,043 | 0 | 100% |
 | Secrets | 97 | 441 | 441 | 0 | 100% |
-| DAST | 500 | 2,152 | 500 rules | 15 | 99.3% |
+| DAST | 1,007 | 3,673 | 1,007 rules | 15 | 99.6% |
 
 SAST and Secrets agree on every declared test: the App would reproduce this
 repository byte-for-byte on those two families. DAST does not, and the exact
@@ -40,7 +40,7 @@ failing set is listed below.
 | DPK-DAST-155 | response-header-matches | 2 | ARRAY_JOIN_CROSS_VALUE | false | true |
 | DPK-DAST-190 | response-header-matches | 2 | ARRAY_JOIN_CROSS_VALUE | false | true |
 
-Total: **15 divergences on 9 rules**, out of 2,152 declared DAST tests.
+Total: **15 divergences on 9 rules**, out of 3,673 declared DAST tests.
 
 Causes (from `interop/app-conformance.json → causes`):
 
@@ -62,7 +62,7 @@ header value boundary. Declared tests are unchanged by this register.
 | Resolved through a declared alias | 2 |
 | Need an App family (unresolved) | 66 |
 | Universal rules (language-agnostic) | 11 |
-| SAST rules reachable at runtime | 790 / 950 (83.2%) |
+| SAST rules reachable at runtime | 840 / 1,000 (84%) |
 | SAST rules unreachable at runtime | 160 |
 
 Unreachable rules are not defects in the rules: they cannot fire because the App

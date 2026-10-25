@@ -1,0 +1,152 @@
+[
+ {
+  "class": "js-document-write",
+  "kind": "sast",
+  "category": "xss",
+  "cwe": "CWE-79",
+  "severity": "MEDIUM",
+  "framing": "call",
+  "title": "Markup written directly into the document ({lang})",
+  "description": "The script writes markup with {sink}. The string is parsed as HTML in the current document, so any interpolated value becomes markup \u2014 including an event handler or a script element that the original page never contained.",
+  "remediation": "Build nodes with the DOM API and assign text, for example {safe}, so values are never parsed as markup.",
+  "limitation": "Lexical, line-based: matches the write without tracing the interpolated value.",
+  "scopeT": "Single-line lexical match on direct document writes in {lang} code.",
+  "fp": "A constant markup fragment with no interpolation is the common false positive.",
+  "recordDesc": "In {lang}, {sink} hands the string to the HTML parser. Interpolation is the whole risk: the parser does not distinguish developer text from a request value.",
+  "applicability": "Legacy front-end code, third-party widgets and analytics snippets.",
+  "risk": "Script execution in the page that issues authenticated requests; MEDIUM severity.",
+  "why": "{lang} parses the string as markup ({sink}).",
+  "fix": [
+   "Create nodes and set text content ({safe}).",
+   "If markup is required, sanitise it with an allowlist."
+  ],
+  "verifyT": "Rescan shows no direct document write carrying interpolated data.",
+  "sinks": {
+   "javascript:document": [
+    "document\\.write|document\\.writeln",
+    "document.write",
+    "createElement with textContent"
+   ]
+  }
+ },
+ {
+  "class": "csharp-xdoc-dtd",
+  "kind": "sast",
+  "category": "xml-injection",
+  "cwe": "CWE-611",
+  "severity": "MEDIUM",
+  "framing": "call",
+  "title": "XML document loaded with external entities enabled ({lang})",
+  "description": "The code loads a document with {sink} without disabling DTD processing. An XML input can then declare an external entity that reads a local file or an internal URL, and the parsed value carries the content back to the caller.",
+  "remediation": "Load with DTD processing disabled and a resolver that refuses external resources, for example {safe}.",
+  "limitation": "Lexical, line-based: matches the load without inspecting the reader settings.",
+  "scopeT": "Single-line lexical match on XML document loads in {lang} code.",
+  "fp": "Loading a document the service itself generated, with no external input, is the common false positive.",
+  "recordDesc": "In {lang}, {sink} applies the default reader settings. Those defaults historically allow DTDs, which is the whole mechanism behind an entity-expansion or file-read attack.",
+  "applicability": "Import endpoints, SOAP clients and configuration loaders in .NET.",
+  "risk": "Local file disclosure and server-side request forgery through entity expansion; MEDIUM severity.",
+  "why": "{lang} leaves DTD handling on by default ({sink}).",
+  "fix": [
+   "Disable DTD processing and set a null resolver ({safe}).",
+   "Reject documents that declare a DOCTYPE."
+  ],
+  "verifyT": "Rescan shows XML loads with DTD processing disabled.",
+  "sinks": {
+   "csharp:xml": [
+    "XDocument\\.Load|XmlDocument\\.Load",
+    "XDocument.Load",
+    "XmlReader with DtdProcessing.Prohibit"
+   ]
+  }
+ },
+ {
+  "class": "reflection-constructor",
+  "kind": "sast",
+  "category": "reflection",
+  "cwe": "CWE-470",
+  "severity": "MEDIUM",
+  "framing": "call",
+  "title": "Constructor selected by name at runtime ({lang})",
+  "description": "The code obtains a constructor through {sink}. The class and constructor are chosen from strings at runtime, so a value that reaches them instantiates a type the application never intended to create.",
+  "remediation": "Keep constructor lookup on constant types and an allowlist, for example {safe}.",
+  "limitation": "Lexical, line-based: matches the lookup without tracing the class name.",
+  "scopeT": "Single-line lexical match on reflective constructor lookup in {lang} code.",
+  "fp": "Dependency-injection frameworks that instantiate a fixed class name are the common false positive.",
+  "recordDesc": "In {lang}, {sink} turns a string into a constructor. Application code that passes a request value into the lookup lets the caller choose what gets built \u2014 often a class with side effects in its constructor.",
+  "applicability": "Plugin loaders, deserialisation helpers and generic mappers in Java.",
+  "risk": "Instantiation of unintended classes with attacker-controlled state; MEDIUM severity.",
+  "why": "{lang} selects the constructor by name ({sink}).",
+  "fix": [
+   "Use an allowlist of permitted classes ({safe}).",
+   "Prefer a factory with an explicit mapping."
+  ],
+  "verifyT": "Rescan shows constructor lookups restricted to an allowlist.",
+  "sinks": {
+   "java:ctor": [
+    "getDeclaredConstructor|getConstructor",
+    "cls.getDeclaredConstructor",
+    "a factory with an explicit class map"
+   ]
+  }
+ },
+ {
+  "class": "c-strsep-state",
+  "kind": "sast",
+  "category": "state-handling",
+  "cwe": "CWE-676",
+  "severity": "LOW",
+  "framing": "call",
+  "title": "String split advances a caller-owned cursor ({lang})",
+  "description": "The code splits with {sink}, which advances a pointer the caller owns. A nested loop that reuses the same cursor consumes the outer iteration's remaining input, and the bug shows up as missing fields, not as an error.",
+  "remediation": "Keep one cursor per parse, or copy the segment before splitting it, for example {safe}.",
+  "limitation": "Lexical, line-based: matches the call without tracking cursor ownership.",
+  "scopeT": "Single-line lexical match on cursor-based tokenisation in {lang} code.",
+  "fp": "A parse that finishes before the next begins is the common false positive.",
+  "recordDesc": "In {lang}, {sink} mutates the pointer passed to it. Reusing that pointer for a second, nested split silently truncates the first.",
+  "applicability": "Protocol header parsing and CSV handling in C.",
+  "risk": "Fields parsed from the wrong offset, which can mis-assign a value to a security-relevant field; LOW severity.",
+  "why": "{lang} advances the caller's cursor in place ({sink}).",
+  "fix": [
+   "Copy the segment before a nested split ({safe}).",
+   "Keep a separate cursor per parse level."
+  ],
+  "verifyT": "Rescan shows nested parses using independent cursors.",
+  "sinks": {
+   "c:strsep": [
+    "strsep",
+    "strsep",
+    "a copy of the segment for a nested parse"
+   ]
+  }
+ },
+ {
+  "class": "go-env-secret",
+  "kind": "sast",
+  "category": "secret-handling",
+  "cwe": "CWE-526",
+  "severity": "LOW",
+  "framing": "call",
+  "title": "Secret read from the environment in Go ({lang})",
+  "description": "The code reads a credential from the environment with {sink}. Environment values are inherited by every child process and appear in process listings and dumps, so the secret outlives the code that needed it.",
+  "remediation": "Load the secret from a restricted file or manager, for example {safe}, and keep it out of the environment.",
+  "limitation": "Lexical, line-based: matches the read without knowing whether the value is a secret.",
+  "scopeT": "Single-line lexical match on environment reads in {lang} code.",
+  "fp": "Reading a non-sensitive setting such as a port or a log level is the common false positive.",
+  "recordDesc": "In {lang}, {sink} copies the whole environment into the process. Anything the service starts inherits the same secret.",
+  "applicability": "Containerised Go services that inject credentials as environment variables.",
+  "risk": "Credential disclosure through child processes and host tooling; LOW severity.",
+  "why": "{lang} environment values are inherited and inspectable ({sink}).",
+  "fix": [
+   "Read the secret from a restricted source ({safe}).",
+   "Clear the variable after the client is built."
+  ],
+  "verifyT": "Rescan shows secrets loaded outside the environment.",
+  "sinks": {
+   "go:env": [
+    "os\\.Getenv|os\\.LookupEnv",
+    "os.Getenv",
+    "a 0600 secret file or a secret manager"
+   ]
+  }
+ }
+]

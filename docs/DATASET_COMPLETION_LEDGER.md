@@ -21,23 +21,23 @@ waiting on a legal decision rather than on engineering.
 
 | Dimension | Measured | Denominator | % | Status | Blocker |
 |---|---|---|---|---|---|
-| SAST rule pack against its planning target | 950 | 1000 | 95% | **PARTIAL** | EVIDENCE_GATED |
-| DAST check pack against its 500 target | 500 | 500 | 100% | **COMPLETE** | — |
+| SAST rule pack against its planning target | 1000 | 1000 | 100% | **PARTIAL** | EVIDENCE_GATED |
+| DAST check pack against its 500 target | 1007 | 500 | 100% | **COMPLETE** | — |
 | Secrets rule pack | 97 | — | — | **COMPLETE** | — |
-| Rule ↔ pattern ↔ record ↔ remediation graph | 1547 | 1547 | 100% | **COMPLETE** | — |
-| CWE reference coverage | 73 | 73 | 100% | **COMPLETE** | — |
-| Declared pack tests executed | 1547 | 1547 | 100% | **COMPLETE** | — |
-| Independent evaluation: rules with a positive case | 1539 | 1547 | 99.5% | **PARTIAL** | OWNER_DECISION_REQUIRED |
-| Independent evaluation: rules with a negative control | 1116 | 1547 | 72.1% | **PARTIAL** | EVIDENCE_GATED |
+| Rule ↔ pattern ↔ record ↔ remediation graph | 2104 | 2104 | 100% | **COMPLETE** | — |
+| CWE reference coverage | 100 | 100 | 100% | **COMPLETE** | — |
+| Declared pack tests executed | 2104 | 2104 | 100% | **COMPLETE** | — |
+| Independent evaluation: rules with a positive case | 1549 | 2104 | 73.6% | **PARTIAL** | OWNER_DECISION_REQUIRED |
+| Independent evaluation: rules with a negative control | 1126 | 2104 | 53.5% | **PARTIAL** | EVIDENCE_GATED |
 | Universal rules with both a positive case and a negative control | 11 | 11 | 100% | **COMPLETE** | — |
 | Evaluation outcome quality on assessed cases | — | — | — | **POLICY_BOUND** | POLICY_DECISION |
 | Production vulnerability intelligence | 84 | 100000 | 0.08% | **BLOCKED_OWNER** | LICENSE_AND_PRODUCTION_AUTH |
 | Licence grant | 0 | 1 | 0% | **BLOCKED_OWNER** | OWNER_DECISION_REQUIRED |
-| SAST rules reachable through the App language gate | 790 | 950 | 83.2% | **BLOCKED_APP** | APP_CATALOG |
-| DAST rules evaluable through the App response surface | 427 | 500 | 85.4% | **BLOCKED_APP** | APP_RESPONSE_SURFACE |
+| SAST rules reachable through the App language gate | 840 | 1000 | 84% | **BLOCKED_APP** | APP_CATALOG |
+| DAST rules evaluable through the App response surface | 934 | 1007 | 92.8% | **BLOCKED_APP** | APP_RESPONSE_SURFACE |
 | App loader checklist steps implemented | 2 | 6 | 33.3% | **BLOCKED_APP** | APP_LOADER |
-| DAST declared-test parity in the App evaluator | 2137 | 2152 | 99.3% | **BLOCKED_APP** | APP_EVALUATOR |
-| Remediation entries surfaced to users | 0 | 1547 | 0% | **BLOCKED_APP** | APP_LOADER |
+| DAST declared-test parity in the App evaluator | 3658 | 3673 | 99.6% | **BLOCKED_APP** | APP_EVALUATOR |
+| Remediation entries surfaced to users | 0 | 2104 | 0% | **BLOCKED_APP** | APP_LOADER |
 | Deterministic generation and whole-tree digest | pass | — | — | **COMPLETE** | — |
 | Dataset test suite | pass | — | — | **COMPLETE** | — |
 | Committed generated artefacts reproduce from the tree | 5 | 5 | 100% | **COMPLETE** | — |
@@ -48,7 +48,7 @@ waiting on a legal decision rather than on engineering.
 ### packs.sast — SAST rule pack against its planning target
 
 - Status: **PARTIAL** (blocker: `EVIDENCE_GATED`)
-- Measured: 950 of 1000 rules (95%)
+- Measured: 1000 of 1000 rules (100%)
 - Why: Every added rule needs published evidence and its own tests; padding is forbidden by docs/PACKS.md. 50 rules remain against the 1000-rule planning target (docs/EVAL_ID_CAPACITY_AND_FINAL_GAP_CLOSURE_2026-10-19.md §H found no reachable candidate that is not padding).
 - Next action: Author the next evidence-backed batch (one cell file per batch, pos+neg tests, remediation + CWE), then regenerate.
 - Verify: `npm run validate:packs`
@@ -56,8 +56,8 @@ waiting on a legal decision rather than on engineering.
 ### packs.dast — DAST check pack against its 500 target
 
 - Status: **COMPLETE**
-- Measured: 500 of 500 checks (100%)
-- Why: The 500-check planning target is authored: 500 rule files, each with a pattern, record, remediation entry, a declared positive and a declared negative observation test, and an independent evaluation case. This dimension counts authoring only; the App-side reachability limit is measured separately (`app.dast-reachability`) and is not offset by this number.
+- Measured: 1007 of 500 checks (100%)
+- Why: The 500-check planning target is authored: 1007 rule files (the 500 planning target plus bank-surface rules added on request on 2026-10-21), each with a pattern, record, remediation entry, a declared positive and a declared negative observation test, and an independent evaluation case. The target itself is unchanged at 500; the percentage is capped at 100 and the overshoot is stated here rather than netted out. This dimension counts authoring only; the App-side reachability limit is measured separately (`app.dast-reachability`) and is not offset by this number.
 - Next action: Keep the pack frozen at 500 unless a genuinely distinct, App-reachable question is found; the open work is App-side (GAP-048 header allowlist).
 - Verify: `npm run validate:packs`
 
@@ -72,15 +72,15 @@ waiting on a legal decision rather than on engineering.
 ### knowledge.graph — Rule ↔ pattern ↔ record ↔ remediation graph
 
 - Status: **COMPLETE**
-- Measured: 1547 of 1547 entries (weakest of the three trees) (100%)
-- Why: patterns 1547 / records 1547 / remediation 1547 against 1547 rules: strict 1:1:1:1 in both directions, 0 orphans, enforced by the consistency suite.
+- Measured: 2104 of 2104 entries (weakest of the three trees) (100%)
+- Why: patterns 2104 / records 2104 / remediation 2104 against 2104 rules: strict 1:1:1:1 in both directions, 0 orphans, enforced by the consistency suite.
 - Next action: None.
 - Verify: `node scripts/test-consistency.mjs`
 
 ### cwe.reference — CWE reference coverage
 
 - Status: **COMPLETE**
-- Measured: 73 of 73 CWE ids required by the pack rules (100%)
+- Measured: 100 of 100 CWE ids required by the pack rules (100%)
 - Why: Every pack rule CWE resolves to a knowledge/cwe entry with a pinned MITRE URL and cweVersion.
 - Next action: None; a new CWE id is added with the rule that needs it.
 - Verify: `npm run validate:cwe`
@@ -88,15 +88,15 @@ waiting on a legal decision rather than on engineering.
 ### tests.pack-level — Declared pack tests executed
 
 - Status: **COMPLETE**
-- Measured: 1547 of 1547 rules (100%)
-- Why: 1547 of 1547 rules declare at least one positive and one negative test; 6436 declared tests execute in the validator, with ReDoS lint and CWE checks.
+- Measured: 2104 of 2104 rules (100%)
+- Why: 2104 of 2104 rules declare at least one positive and one negative test; 8157 declared tests execute in the validator, with ReDoS lint and CWE checks.
 - Next action: None.
 - Verify: `npm run validate:packs`
 
 ### eval.positive — Independent evaluation: rules with a positive case
 
 - Status: **PARTIAL** (blocker: `OWNER_DECISION_REQUIRED`)
-- Measured: 1539 of 1547 rules (99.5%)
+- Measured: 1549 of 2104 rules (73.6%)
 - Why: 8 SAST rules match 2–3 characters while the evidence contract requires mustContain >= 4, so no authored positive case can satisfy the validator (BLK-EVAL-01). Every other rule has one.
 - Next action: Owner picks: (a) allow the full match as evidence when it is shorter than 4 characters, (b) extend those 8 detectors with context, or (c) accept the gap in writing as a permanent limitation.
 - Verify: `npm run test:eval`
@@ -104,7 +104,7 @@ waiting on a legal decision rather than on engineering.
 ### eval.negative — Independent evaluation: rules with a negative control
 
 - Status: **PARTIAL** (blocker: `EVIDENCE_GATED`)
-- Measured: 1116 of 1547 rules (72.1%)
+- Measured: 1126 of 2104 rules (53.5%)
 - Why: A negative control has to be an authored fixture that the rule must not fire on; deriving them mechanically from each rule's own negative test would be circular and is explicitly not counted (counting rule in scripts/eval-coverage-report.mjs). Closed on 2026-10-21: all 11 universal rules (EVAL-SAST-256…264) and one ordinary-code control per language (EVAL-SAST-265…270: python, javascript, java, php, ruby, csharp), where every language-gated detector is named and must stay silent on benign, idiomatic code.
 - Next action: Continue in batches, highest false-positive risk first: high-severity lexical rules with short literals, then one control per category.
 - Verify: `npm run test:eval`
@@ -121,7 +121,7 @@ waiting on a legal decision rather than on engineering.
 
 - Status: **POLICY_BOUND** (blocker: `POLICY_DECISION`)
 - Measured: see note cases
-- Why: 1876 cases (1865 assessed, 11 UNASSESSED). The UNASSESSED cases are excluded from scoring by policy and the one preserved false positive (EVAL-SAST-008) stays visible. Precision/recall are reported by the runner, not stored here, so they cannot go stale.
+- Why: 1888 cases (1877 assessed, 11 UNASSESSED). The UNASSESSED cases are excluded from scoring by policy and the one preserved false positive (EVAL-SAST-008) stays visible. Precision/recall are reported by the runner, not stored here, so they cannot go stale.
 - Next action: None until the scoring policy for the 11 UNASSESSED shapes is decided (GAP-038).
 - Verify: `node scripts/run-eval.mjs`
 
@@ -144,7 +144,7 @@ waiting on a legal decision rather than on engineering.
 ### app.reachability — SAST rules reachable through the App language gate
 
 - Status: **BLOCKED_APP** (blocker: `APP_CATALOG`)
-- Measured: 790 of 950 rules (83.2%)
+- Measured: 840 of 1000 rules (84%)
 - Why: 66 pack language ids have no App family (sshd, k8s, nginx, ini, properties, config formats), so 160 rules cannot fire. Two aliases (shell→shell-posix, gha→github-actions) are already declared and would restore 36 rules once the App accepts the dataset id.
 - Next action: App adds the config-format families or accepts the dataset ids; this repository keeps docs/APP_LANGUAGE_ID_MAPPING.md + the gate green.
 - Verify: `node scripts/validate-app-language-ids.mjs`
@@ -152,7 +152,7 @@ waiting on a legal decision rather than on engineering.
 ### app.dast-reachability — DAST rules evaluable through the App response surface
 
 - Status: **BLOCKED_APP** (blocker: `APP_RESPONSE_SURFACE`)
-- Measured: 427 of 500 rules (85.4%)
+- Measured: 934 of 1007 rules (92.8%)
 - Why: Both App DAST engines hand the evaluator only 11 response headers (apps/api/src/scans/dast/engine.ts, activeEngine.ts) and clip the body to 32768 bytes, so 73 rules can never fire in the product even though they are correct: Permissions-Policy (6), Refresh (5), Cross-Origin-Embedder-Policy (3), Cross-Origin-Opener-Policy (3) and 43 more headers. Body rules are reachable but bounded by the clip.
 - Next action: App forwards the header names in interop/app-dast-reachability.json (headerActions) or the dataset stops counting those rules as product coverage; the register is machine-checked by scripts/validate-app-dast-reachability.mjs.
 - Verify: `node scripts/validate-app-dast-reachability.mjs --check`
@@ -168,7 +168,7 @@ waiting on a legal decision rather than on engineering.
 ### app.dast-parity — DAST declared-test parity in the App evaluator
 
 - Status: **BLOCKED_APP** (blocker: `APP_EVALUATOR`)
-- Measured: 2137 of 2152 declared tests (99.3%)
+- Measured: 3658 of 3673 declared tests (99.6%)
 - Why: 15 divergences on 9 rules (cookie model, blank header values, cross-value array joins), measured by replaying every declared test through scripts/lib/app-evaluator-profile.mjs (a port of the App evaluator at 9360dd1), not by driving a running App. The dataset keeps the browser-accurate semantics; the App must port them.
 - Next action: App ports scripts/lib/set-cookie.mjs semantics and fixes the blank-value branch; interop/app-conformance.json lists every affected test.
 - Verify: `node scripts/gen-app-conformance.mjs --check`
@@ -176,8 +176,8 @@ waiting on a legal decision rather than on engineering.
 ### app.remediation-surface — Remediation entries surfaced to users
 
 - Status: **BLOCKED_APP** (blocker: `APP_LOADER`)
-- Measured: 0 of 1547 entries (0%)
-- Why: All 1547 entries load into the App dataset service, but getRemediationMap has no caller and remediationGuidanceForFinding still returns UNAVAILABLE.
+- Measured: 0 of 2104 entries (0%)
+- Why: All 2104 entries load into the App dataset service, but getRemediationMap has no caller and remediationGuidanceForFinding still returns UNAVAILABLE.
 - Next action: App wires the resolver into findings, reports and the assistant (GAP-008).
 - Verify: `node scripts/test-consistency.mjs`
 

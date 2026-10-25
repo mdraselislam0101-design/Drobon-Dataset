@@ -1,0 +1,667 @@
+[
+ {
+  "class": "c-strncat-terminal",
+  "kind": "sast",
+  "category": "buffer-overflow",
+  "cwe": "CWE-193",
+  "severity": "HIGH",
+  "framing": "call",
+  "title": "Unbounded append with strncat ({lang})",
+  "description": "The code appends with {sink}, whose size argument counts only the bytes copied, not the terminator or the existing length. A loop that appends into the same buffer therefore writes one byte past the end each time. This lexical rule flags the call; the reviewer checks the destination capacity.",
+  "remediation": "Size the destination first and append with the remaining capacity, for example {safe}.",
+  "limitation": "Lexical, line-based: matches the call without tracking destination capacity across statements.",
+  "scopeT": "Single-line lexical match on strncat-style appends in {lang} code.",
+  "fp": "An append into a buffer whose capacity is proven larger than every possible write is the common false positive.",
+  "recordDesc": "In {lang}, {sink} appends without knowing how much room is left. The classic off-by-one writes a terminator one byte past the allocation and corrupts the neighbouring object.",
+  "applicability": "C and C++ string building in parsers, log formatters and protocol handlers.",
+  "risk": "Heap or stack corruption that adjacent data can turn into control-flow hijack; HIGH severity.",
+  "why": "{lang} counts only the copied bytes, not the remaining capacity ({sink}).",
+  "fix": [
+   "Track remaining capacity and pass it to the append.",
+   "Prefer a bounds-checking container ({safe})."
+  ],
+  "verifyT": "Rescan shows no fixed-capacity append whose bound is independent of the destination size.",
+  "sinks": {
+   "c:strncat": [
+    "strncat",
+    "strncat",
+    "a container append with a checked capacity"
+   ]
+  }
+ },
+ {
+  "class": "c-wcscpy-unbounded",
+  "kind": "sast",
+  "category": "buffer-overflow",
+  "cwe": "CWE-120",
+  "severity": "HIGH",
+  "framing": "call",
+  "title": "Unbounded wide-string copy ({lang})",
+  "description": "The code copies a wide string with {sink}, which has no destination size parameter. A source longer than the destination overwrites whatever follows it, and each wide character is two or four bytes. This lexical rule flags the copy; the reviewer checks the destination size.",
+  "remediation": "Copy with an explicit element count and terminate, or use a wide-string container, for example {safe}.",
+  "limitation": "Lexical, line-based: matches the copy without tracking source length.",
+  "scopeT": "Single-line lexical match on unbounded wide-string copies in {lang} code.",
+  "fp": "Copies into a destination that is provably larger than a constant source are the common false positive.",
+  "recordDesc": "In {lang}, {sink} continues until the source terminator, so any source not fully under the program's control chooses how much memory is written.",
+  "applicability": "Windows-oriented C code that handles UTF-16 paths, registry values and command lines.",
+  "risk": "Stack corruption with attacker-influenced content, a standard code-execution primitive; HIGH severity.",
+  "why": "{lang} has no destination bound in the copy ({sink}).",
+  "fix": [
+   "Switch to a copy that takes the element count ({safe}).",
+   "Validate source length before copying."
+  ],
+  "verifyT": "Rescan shows no unbounded wide-string copy.",
+  "sinks": {
+   "c:widebuf": [
+    "wcscpy",
+    "wcscpy",
+    "wcsncpy_s with the destination element count"
+   ]
+  }
+ },
+ {
+  "class": "c-memcpy-overlap",
+  "kind": "sast",
+  "category": "memory-safety",
+  "cwe": "CWE-787",
+  "severity": "MEDIUM",
+  "framing": "call",
+  "title": "Overlapping memory copy ({lang})",
+  "description": "The code copies bytes with {sink}, which is undefined when the regions overlap. Overlap happens routinely when a buffer is shifted, truncated or reassembled in place, and the result is silent corruption rather than a crash. This lexical rule flags the copy; the reviewer checks whether the regions can overlap.",
+  "remediation": "Use the overlap-safe variant for in-place moves, for example {safe}, and assert non-overlap where the fast copy is kept.",
+  "limitation": "Lexical, line-based: matches every copy, including provably disjoint ones.",
+  "scopeT": "Single-line lexical match on byte copies in {lang} code.",
+  "fp": "Copies between separately allocated buffers are the common false positive.",
+  "recordDesc": "In {lang}, {sink} assumes the source and destination never overlap. A caller that compacts or shifts data in place breaks that assumption and corrupts the copied bytes.",
+  "applicability": "Buffer compaction, in-place decoding and packet reassembly in C code.",
+  "risk": "Silent data corruption that can be steered into parsing decisions; MEDIUM severity.",
+  "why": "{lang} does not define the result when the regions overlap ({sink}).",
+  "fix": [
+   "Use the overlap-safe copy for in-place moves ({safe}).",
+   "Assert non-overlap before the fast copy."
+  ],
+  "verifyT": "Rescan shows overlap-safe copies on every in-place path.",
+  "sinks": {
+   "c:memcpy": [
+    "memcpy|memmove",
+    "memcpy",
+    "memmove for in-place copies"
+   ]
+  }
+ },
+ {
+  "class": "c-strncpy-termination",
+  "kind": "sast",
+  "category": "memory-safety",
+  "cwe": "CWE-170",
+  "severity": "MEDIUM",
+  "framing": "call",
+  "title": "Fixed-length copy may leave the string unterminated ({lang})",
+  "description": "The code copies with {sink}. When the source is at least as long as the destination no terminator is written, and every later string operation reads past the buffer. This lexical rule flags the copy; the reviewer checks the terminator.",
+  "remediation": "Terminate explicitly after the copy or use a helper that always terminates, for example {safe}.",
+  "limitation": "Lexical, line-based: matches the copy without proving the source is shorter than the destination.",
+  "scopeT": "Single-line lexical match on fixed-length copies in {lang} code.",
+  "fp": "Copies from a constant shorter than the destination are the common false positive.",
+  "recordDesc": "In {lang}, {sink} copies at most n bytes and does not promise a terminator. Truncation then becomes an out-of-bounds read at the first length, print or compare call.",
+  "applicability": "Path and hostname handling in C code, where 63-byte limits are common.",
+  "risk": "Out-of-bounds read that leaks adjacent memory or crashes the process; MEDIUM severity.",
+  "why": "{lang} truncates without terminating ({sink}).",
+  "fix": [
+   "Write the terminator after a truncated copy.",
+   "Use a bounded helper that always terminates ({safe})."
+  ],
+  "verifyT": "Rescan shows every fixed-length copy followed by an explicit terminator.",
+  "sinks": {
+   "c:strncpy": [
+    "strncpy",
+    "strncpy",
+    "snprintf with an explicit format"
+   ]
+  }
+ },
+ {
+  "class": "c-fscanf-unbounded",
+  "kind": "sast",
+  "category": "buffer-overflow",
+  "cwe": "CWE-120",
+  "severity": "HIGH",
+  "framing": "call",
+  "title": "Scan into a buffer without a width ({lang})",
+  "description": "The code reads formatted input with {sink} and a plain string conversion. Those conversions carry no width, so any input longer than the destination overflows it. This lexical rule flags the scan; the reviewer adds widths or switches parser.",
+  "remediation": "Give every string conversion a width tied to the destination, or read a bounded line and parse it, for example {safe}.",
+  "limitation": "Lexical, line-based: matches the scan call without inspecting the format string.",
+  "scopeT": "Single-line lexical match on formatted input reads in {lang} code.",
+  "fp": "Scans whose format string already bounds every conversion are the common false positive.",
+  "recordDesc": "In {lang}, {sink} lets the input decide how many bytes are written. A file, socket or user prompt is enough to drive the overflow.",
+  "applicability": "Configuration and protocol parsers in C code.",
+  "risk": "Stack overflow controlled by the input source; HIGH severity.",
+  "why": "{lang} conversions without a width are unbounded ({sink}).",
+  "fix": [
+   "Add a width to every string conversion.",
+   "Read a bounded line and parse it in memory ({safe})."
+  ],
+  "verifyT": "Rescan shows no unbounded conversion in a scan call.",
+  "sinks": {
+   "c:scanf": [
+    "fscanf",
+    "fscanf",
+    "fgets into a bounded buffer, then parse"
+   ]
+  }
+ },
+ {
+  "class": "c-dlopen-path",
+  "kind": "sast",
+  "category": "code-loading",
+  "cwe": "CWE-426",
+  "severity": "HIGH",
+  "framing": "call",
+  "title": "Library loaded from a search path ({lang})",
+  "description": "The code loads a shared object with {sink} and a name that is not an absolute path. The loader then searches relative directories, so a library planted next to the working directory is loaded instead of the intended one. This lexical rule flags the load; the reviewer checks the path.",
+  "remediation": "Load with an absolute, packaged path, for example {safe}.",
+  "limitation": "Lexical, line-based: matches the load without resolving the path at runtime.",
+  "scopeT": "Single-line lexical match on dynamic library loads in {lang} code.",
+  "fp": "Loads of libraries that ship in the same trusted directory are the common false positive.",
+  "recordDesc": "In {lang}, {sink} delegates path resolution to the loader. On a writable working directory an attacker only has to drop a file with the expected name.",
+  "applicability": "Plugin hosts, native extensions and CLI tools that load optional libraries.",
+  "risk": "Arbitrary code execution under the process account; HIGH severity.",
+  "why": "{lang} searches relative paths for a bare library name ({sink}).",
+  "fix": [
+   "Pass an absolute path to the packaged library ({safe}).",
+   "Clear the library search path and run from a non-writable directory."
+  ],
+  "verifyT": "Rescan shows every load using an absolute packaged path.",
+  "sinks": {
+   "c:dlopen": [
+    "dlopen",
+    "dlopen",
+    "dlopen with an absolute packaged path"
+   ]
+  }
+ },
+ {
+  "class": "c-exec-family",
+  "kind": "sast",
+  "category": "process-execution",
+  "cwe": "CWE-78",
+  "severity": "HIGH",
+  "framing": "call",
+  "title": "Process launched through an exec wrapper ({lang})",
+  "description": "The code launches a program with {sink}. Some variants search the path, some do not, and every variant passes its arguments straight through, so a value reaching the program name or argv becomes part of the command. This lexical rule flags the launch; the reviewer checks the argument source.",
+  "remediation": "Use an API that takes an argument vector with a fixed program path, for example {safe}, and never build the program name from input.",
+  "limitation": "Lexical, line-based: matches the launch without tracing the arguments.",
+  "scopeT": "Single-line lexical match on exec-family launches in {lang} code.",
+  "fp": "Launches with a constant program and constant arguments are the common false positive.",
+  "recordDesc": "In {lang}, {sink} hands the program name and arguments to the kernel. A caller that interpolates input into either changes what runs.",
+  "applicability": "Service helpers, CGI-style handlers and deployment scripts written in C.",
+  "risk": "Command execution with the process privileges; HIGH severity.",
+  "why": "{lang} passes the caller strings straight to the new program ({sink}).",
+  "fix": [
+   "Fix the program path and pass an argument vector ({safe}).",
+   "Reject input containing path separators or shell metacharacters."
+  ],
+  "verifyT": "Rescan shows launches whose program and arguments are constants.",
+  "sinks": {
+   "c:exec": [
+    "execl|execlp|execle|execve|execvp|posix_spawn|posix_spawnp",
+    "execl",
+    "posix_spawn with a fixed program path"
+   ]
+  }
+ },
+ {
+  "class": "c-symlink-race",
+  "kind": "sast",
+  "category": "filesystem-race",
+  "cwe": "CWE-59",
+  "severity": "MEDIUM",
+  "framing": "call",
+  "title": "Symbolic link created in a shared directory ({lang})",
+  "description": "The code creates a symbolic link with {sink}. Between the check that the name is free and the creation another process can take the name, which turns a replace step into a write through an attacker-chosen link. This lexical rule flags the call; the reviewer checks the directory permissions.",
+  "remediation": "Create links only in a directory the service alone can write, or use an exclusive primitive, for example {safe}.",
+  "limitation": "Lexical, line-based: matches link creation without inspecting directory permissions.",
+  "scopeT": "Single-line lexical match on symbolic-link creation in {lang} code.",
+  "fp": "Links created inside a directory owned by the service with owner-only mode are the common false positive.",
+  "recordDesc": "In {lang}, {sink} binds a name to a path without exclusivity. A shared temp or upload directory lets another account win the race and redirect the write.",
+  "applicability": "Cache and upload directories, deployment tooling and log rotation.",
+  "risk": "Overwrite of arbitrary files the service can write, including its own configuration; MEDIUM severity.",
+  "why": "{lang} does not reserve the link name atomically ({sink}).",
+  "fix": [
+   "Use an exclusive creation primitive ({safe}).",
+   "Keep the directory private to the service account."
+  ],
+  "verifyT": "Rescan shows link creation only inside private directories.",
+  "sinks": {
+   "c:symlink": [
+    "symlink",
+    "symlink",
+    "symlinkat inside a private directory"
+   ]
+  }
+ },
+ {
+  "class": "c-tmpfile-shared",
+  "kind": "sast",
+  "category": "insecure-temp-file",
+  "cwe": "CWE-377",
+  "severity": "MEDIUM",
+  "framing": "call",
+  "title": "Temporary file created with default permissions ({lang})",
+  "description": "The code opens a temporary file with {sink}. The standard leaves permissions and naming policy to the implementation, and on some platforms the file is created world-readable. This lexical rule flags the call; the reviewer checks how sensitive the content is.",
+  "remediation": "Create the temporary file with exclusive creation and owner-only mode, for example {safe}.",
+  "limitation": "Lexical, line-based: matches temp-file creation without checking the resulting mode.",
+  "scopeT": "Single-line lexical match on temporary-file creation in {lang} code.",
+  "fp": "Temp files that only hold public data are the common false positive.",
+  "recordDesc": "In {lang}, {sink} may produce a shared, predictable file. Sensitive content written there survives the process and is readable by other accounts.",
+  "applicability": "Export jobs, report builders and archive handling in C.",
+  "risk": "Disclosure of exported data to other local accounts; MEDIUM severity.",
+  "why": "{lang} leaves mode and naming to the C library ({sink}).",
+  "fix": [
+   "Use an exclusive, owner-only temp file ({safe}).",
+   "Unlink the file as soon as it is opened."
+  ],
+  "verifyT": "Rescan shows temp files created exclusively with owner-only permissions.",
+  "sinks": {
+   "c:tmpfile": [
+    "tmpfile",
+    "tmpfile",
+    "mkstemp with fchmod 0600"
+   ]
+  }
+ },
+ {
+  "class": "c-putenv-injection",
+  "kind": "sast",
+  "category": "environment-injection",
+  "cwe": "CWE-78",
+  "severity": "MEDIUM",
+  "framing": "call",
+  "title": "Environment variable set from variable data ({lang})",
+  "description": "The code sets an environment variable with {sink}. The string is not copied, and a value containing a separator can change how later library loads and child processes behave. This lexical rule flags the call; the reviewer checks the value source.",
+  "remediation": "Set only constant environment entries, or validate the value against a strict pattern, for example {safe}.",
+  "limitation": "Lexical, line-based: matches the call without tracing the value.",
+  "scopeT": "Single-line lexical match on environment mutation in {lang} code.",
+  "fp": "A constant entry set at startup is the common false positive.",
+  "recordDesc": "In {lang}, {sink} rewrites the environment for every later library load and child process, so a request value can change what a later load or launch resolves.",
+  "applicability": "Plugins, language runtimes and tests that mutate the environment at runtime.",
+  "risk": "Indirect code or library loading through a rewritten environment; MEDIUM severity.",
+  "why": "{lang} keeps a pointer into the caller buffer and accepts any name ({sink}).",
+  "fix": [
+   "Set constant, validated entries only ({safe}).",
+   "Copy the value and reject embedded separators."
+  ],
+  "verifyT": "Rescan shows no environment entry built from request data.",
+  "sinks": {
+   "c:putenv": [
+    "putenv",
+    "putenv",
+    "setenv with a validated constant value"
+   ]
+  }
+ },
+ {
+  "class": "c-chown-user-path",
+  "kind": "sast",
+  "category": "privilege-management",
+  "cwe": "CWE-732",
+  "severity": "MEDIUM",
+  "framing": "call",
+  "title": "Ownership changed on a path built from input ({lang})",
+  "description": "The code changes file ownership with {sink} and a path assembled at runtime. Resolution happens at call time, so a symlink or a renamed parent redirects the change onto a file the caller did not intend. This lexical rule flags the call; the reviewer checks the path source.",
+  "remediation": "Operate on an already-open descriptor, or resolve and validate the path first, for example {safe}.",
+  "limitation": "Lexical, line-based: matches the call without resolving the path at runtime.",
+  "scopeT": "Single-line lexical match on ownership changes in {lang} code.",
+  "fp": "Ownership changes on fixed, packaged paths are the common false positive.",
+  "recordDesc": "In {lang}, {sink} resolves the path when it runs. An attacker who controls a path component hands the service a different file to re-own.",
+  "applicability": "Upload handlers, deployment scripts and cron jobs that fix permissions.",
+  "risk": "Privilege change applied to the wrong file, including configuration the service later executes; MEDIUM severity.",
+  "why": "{lang} resolves the path at call time ({sink}).",
+  "fix": [
+   "Use the descriptor variant after an exclusive open ({safe}).",
+   "Validate the resolved path against an allowlist."
+  ],
+  "verifyT": "Rescan shows ownership changes only on descriptors or validated paths.",
+  "sinks": {
+   "c:chown": [
+    "chown",
+    "chown",
+    "fchown on an already-open descriptor"
+   ]
+  }
+ },
+ {
+  "class": "c-fork-unbounded",
+  "kind": "sast",
+  "category": "resource-exhaustion",
+  "cwe": "CWE-400",
+  "severity": "MEDIUM",
+  "framing": "call",
+  "title": "Process forked per request without a cap ({lang})",
+  "description": "The code forks with {sink} on a path that can run once per request or per connection. Forks are cheap to request and expensive to serve, so a client can exhaust the process table and the memory of every child. This lexical rule flags the fork; the reviewer checks the rate.",
+  "remediation": "Serve work from a bounded worker pool, or gate the fork behind a semaphore, for example {safe}.",
+  "limitation": "Lexical, line-based: matches the fork without knowing the request rate.",
+  "scopeT": "Single-line lexical match on process forking in {lang} code.",
+  "fp": "A server that forks a fixed set of workers at startup is the common false positive.",
+  "recordDesc": "In {lang}, {sink} creates a new address space per call. Concurrent requests multiply memory and scheduler pressure until the host refuses new processes.",
+  "applicability": "CGI-style handlers, shell-like tools and per-connection workers in C.",
+  "risk": "Denial of service through process-table and memory exhaustion; MEDIUM severity.",
+  "why": "{lang} has no global cap on concurrent children here ({sink}).",
+  "fix": [
+   "Use a fixed worker pool ({safe}).",
+   "Cap concurrency with a semaphore."
+  ],
+  "verifyT": "Rescan shows forking bounded by a pool or a semaphore.",
+  "sinks": {
+   "c:fork": [
+    "fork|vfork",
+    "fork",
+    "a pre-sized worker pool"
+   ]
+  }
+ },
+ {
+  "class": "c-atoi-unchecked",
+  "kind": "sast",
+  "category": "numeric-handling",
+  "cwe": "CWE-190",
+  "severity": "MEDIUM",
+  "framing": "call",
+  "title": "Numeric conversion without error checking ({lang})",
+  "description": "The code parses a number with {sink}, which returns zero on invalid input and has no defined behaviour on overflow. A length, offset or identifier taken from input therefore becomes a value the caller never supplied. This lexical rule flags the conversion; the reviewer checks the range.",
+  "remediation": "Parse with a function that reports errors and bounds, for example {safe}, and reject out-of-range values.",
+  "limitation": "Lexical, line-based: matches the conversion without tracing the value into its uses.",
+  "scopeT": "Single-line lexical match on unchecked numeric conversion in {lang} code.",
+  "fp": "Conversions from values already validated by a parser are the common false positive.",
+  "recordDesc": "In {lang}, {sink} turns a malformed or oversized string into a plausible integer. Used as a length or index, the result reads or writes outside the intended region.",
+  "applicability": "Header and query parsing in C services and tools.",
+  "risk": "Out-of-bounds access or a wrong-size allocation driven by an oversized number; MEDIUM severity.",
+  "why": "{lang} cannot signal failure from the conversion ({sink}).",
+  "fix": [
+   "Use a parse that reports the end pointer and check the range ({safe}).",
+   "Reject values outside the documented bounds."
+  ],
+  "verifyT": "Rescan shows every numeric parse followed by a range check.",
+  "sinks": {
+   "c:atoi": [
+    "atoi",
+    "atoi",
+    "strtol with an end pointer and a range check"
+   ]
+  }
+ },
+ {
+  "class": "c-rand-predictable",
+  "kind": "sast",
+  "category": "weak-randomness",
+  "cwe": "CWE-338",
+  "severity": "HIGH",
+  "framing": "call",
+  "title": "Predictable pseudo-random generator used ({lang})",
+  "description": "The code draws values from {sink}. The C library generator is a shared, deterministic sequence seeded from the clock, so two processes started together produce the same numbers and an observer can predict the next ones. This lexical rule flags the call; the reviewer checks what the value protects.",
+  "remediation": "Use the operating system generator for anything security-relevant, for example {safe}.",
+  "limitation": "Lexical, line-based: matches the generator regardless of what the value is used for.",
+  "scopeT": "Single-line lexical match on C library random generation in {lang} code.",
+  "fp": "Generating cosmetic values such as a test order number is the common false positive.",
+  "recordDesc": "In {lang}, {sink} produces a sequence reproducible from its seed. Tokens, session identifiers and reset codes built this way are guessable.",
+  "applicability": "Session and token generation in C services and embedded code.",
+  "risk": "Predictable session identifiers and reset codes, which lead to account takeover; HIGH severity.",
+  "why": "{lang} seeds from the clock and shares state per process ({sink}).",
+  "fix": [
+   "Use the kernel generator ({safe}).",
+   "Never derive tokens from the C library generator."
+  ],
+  "verifyT": "Rescan shows no security-relevant value derived from the C library generator.",
+  "sinks": {
+   "c:rand": [
+    "rand|srand",
+    "rand",
+    "getrandom or arc4random_buf"
+   ]
+  }
+ },
+ {
+  "class": "c-realpath-race",
+  "kind": "sast",
+  "category": "filesystem-race",
+  "cwe": "CWE-367",
+  "severity": "MEDIUM",
+  "framing": "call",
+  "title": "Path resolved and then used separately ({lang})",
+  "description": "The code canonicalises a path with {sink} and then opens or deletes that path in a later call. Between the two calls the path can be replaced, so the file that was checked is not the file that is used. This lexical rule flags the resolution; the reviewer checks for the split.",
+  "remediation": "Open the file first and operate on the descriptor, for example {safe}.",
+  "limitation": "Lexical, line-based: flags the resolution even when an open on the same path follows immediately.",
+  "scopeT": "Single-line lexical match on path canonicalisation in {lang} code.",
+  "fp": "A canonicalisation used only for logging is the common false positive.",
+  "recordDesc": "In {lang}, {sink} returns a string, and a string carries no guarantee that the name still refers to the same object at the next call.",
+  "applicability": "Upload validation, archive extraction and cache lookups in C.",
+  "risk": "Time-of-check to time-of-use redirect, letting an attacker swap the validated file; MEDIUM severity.",
+  "why": "{lang} resolves to a name, not a handle ({sink}).",
+  "fix": [
+   "Open first, then validate the descriptor ({safe}).",
+   "Reject paths whose parents are symlinks."
+  ],
+  "verifyT": "Rescan shows validation and use operating on one descriptor.",
+  "sinks": {
+   "c:realpath": [
+    "realpath",
+    "realpath",
+    "open with no-follow flags, then validate"
+   ]
+  }
+ },
+ {
+  "class": "env-secret-read",
+  "kind": "sast",
+  "category": "secret-handling",
+  "cwe": "CWE-526",
+  "severity": "LOW",
+  "framing": "call",
+  "title": "Secret read from the process environment ({lang})",
+  "description": "The code reads a secret from the environment with {sink}. The environment is visible in process listings, inherited by every child and captured in dumps, so a credential placed there leaks to anything that can look. This lexical rule flags the read; the reviewer checks what it protects.",
+  "remediation": "Load secrets from a restricted file or a secret manager, for example {safe}, and keep them out of the environment.",
+  "limitation": "Lexical, line-based: matches the read without knowing whether the value is a secret.",
+  "scopeT": "Single-line lexical match on environment reads in {lang} code.",
+  "fp": "Reading a non-sensitive setting such as a log level is the common false positive.",
+  "recordDesc": "In {lang}, {sink} pulls a value from an environment block that children and debugging tools inherit, so the secret outlives the code that needed it.",
+  "applicability": "Containerised services and build scripts that inject credentials as environment variables.",
+  "risk": "Credential disclosure to child processes, dumps and host tooling; LOW severity.",
+  "why": "{lang} environment values are inherited and inspectable ({sink}).",
+  "fix": [
+   "Read the secret from a restricted file or manager ({safe}).",
+   "Scrub the variable after use."
+  ],
+  "verifyT": "Rescan shows secrets loaded outside the environment.",
+  "sinks": {
+   "c:env": [
+    "getenv",
+    "getenv",
+    "a 0600 secret file or a secret manager"
+   ],
+   "csharp:env": [
+    "GetEnvironmentVariable",
+    "Environment.GetEnvironmentVariable",
+    "a 0600 secret file or a secret manager"
+   ]
+  }
+ },
+ {
+  "class": "nonreentrant-time",
+  "kind": "sast",
+  "category": "thread-safety",
+  "cwe": "CWE-676",
+  "severity": "LOW",
+  "framing": "call",
+  "title": "Non-reentrant time function used ({lang})",
+  "description": "The code formats time with {sink}. These functions return a pointer into a shared static buffer, so two threads calling them concurrently can each print the other's timestamp, hiding a data race behind an innocuous log line.",
+  "remediation": "Use the reentrant variant that writes into a caller buffer, for example {safe}.",
+  "limitation": "Lexical, line-based: matches the function without proving concurrent use.",
+  "scopeT": "Single-line lexical match on non-reentrant time formatting in {lang} code.",
+  "fp": "Single-threaded tools that format one timestamp at startup are the common false positive.",
+  "recordDesc": "In {lang}, {sink} shares one buffer across all threads. Audit timestamps that swap between requests undermine the evidence trail precisely when it matters.",
+  "applicability": "Servers and libraries that log timestamps from worker threads.",
+  "risk": "Corrupted audit timestamps and a latent data race; LOW severity.",
+  "why": "{lang} keeps the result in static storage ({sink}).",
+  "fix": [
+   "Use the reentrant variant with a local buffer ({safe}).",
+   "Format into a caller-owned buffer."
+  ],
+  "verifyT": "Rescan shows reentrant time formatting on every threaded path.",
+  "sinks": {
+   "c:time": [
+    "ctime|asctime|gmtime|localtime",
+    "ctime",
+    "a reentrant variant with a caller buffer"
+   ]
+  }
+ },
+ {
+  "class": "c-strtok-global",
+  "kind": "sast",
+  "category": "state-handling",
+  "cwe": "CWE-676",
+  "severity": "LOW",
+  "framing": "call",
+  "title": "Tokenizer keeps state in a global ({lang})",
+  "description": "The code splits a string with {sink}, which stores the cursor in global state. A nested or concurrent parse silently resumes somebody else's string and the two parses interleave.",
+  "remediation": "Use the reentrant variant with an explicit cursor, for example {safe}.",
+  "limitation": "Lexical, line-based: matches the call without proving nesting or concurrency.",
+  "scopeT": "Single-line lexical match on stateful tokenisation in {lang} code.",
+  "fp": "A single, sequential parse that finishes before the next begins is the common false positive.",
+  "recordDesc": "In {lang}, {sink} is not safe to nest. A parser that tokenises a sub-value inside a loop over tokens loses its place without any error.",
+  "applicability": "Configuration, CSV and command parsers in C.",
+  "risk": "Parsed values attributed to the wrong field, and races in threaded code; LOW severity.",
+  "why": "{lang} stores the token cursor globally ({sink}).",
+  "fix": [
+   "Switch to the reentrant tokenizer ({safe}).",
+   "Keep an explicit cursor per parse."
+  ],
+  "verifyT": "Rescan shows no stateful tokenisation in nested parsers.",
+  "sinks": {
+   "c:strtok": [
+    "strtok",
+    "strtok",
+    "the reentrant tokenizer with an explicit cursor"
+   ]
+  }
+ },
+ {
+  "class": "c-getpass",
+  "kind": "sast",
+  "category": "credential-entry",
+  "cwe": "CWE-521",
+  "severity": "LOW",
+  "framing": "call",
+  "title": "Password read through the legacy prompt ({lang})",
+  "description": "The code reads a password with {sink}, the legacy terminal prompt. Its buffer is static and limited, it does not restore terminal state on every error path, and it cannot read from a non-terminal input.",
+  "remediation": "Read the secret on a descriptor you control with echo disabled, for example {safe}.",
+  "limitation": "Lexical, line-based: matches the call without inspecting terminal restoration.",
+  "scopeT": "Single-line lexical match on legacy password prompts in {lang} code.",
+  "fp": "Tests that never run against a real terminal are the common false positive.",
+  "recordDesc": "In {lang}, {sink} writes into a fixed static buffer. Long passphrases are silently truncated, and an interrupted prompt can leave echo disabled.",
+  "applicability": "CLI tools that ask for a passphrase or a key password.",
+  "risk": "Truncated credentials and leftover terminal state; LOW severity.",
+  "why": "{lang} caps and shares the prompt buffer ({sink}).",
+  "fix": [
+   "Read with a caller-owned buffer and restore the terminal on every path ({safe}).",
+   "Reject over-long input instead of truncating."
+  ],
+  "verifyT": "Rescan shows no legacy password prompt.",
+  "sinks": {
+   "c:getpass": [
+    "getpass",
+    "getpass",
+    "a termios read with echo disabled"
+   ]
+  }
+ },
+ {
+  "class": "python-os-exec",
+  "kind": "sast",
+  "category": "process-execution",
+  "cwe": "CWE-78",
+  "severity": "HIGH",
+  "framing": "call",
+  "title": "Process image replaced from Python ({lang})",
+  "description": "Python code replaces the process image with {sink}. The argument list goes straight to the kernel, so any element that came from a request decides what runs.",
+  "remediation": "Fix the program path and build the argument vector from validated values, for example {safe}.",
+  "limitation": "Lexical, line-based: matches the call without tracing the arguments.",
+  "scopeT": "Single-line lexical match on exec calls in {lang} code.",
+  "fp": "Launches with constant program and constant arguments are the common false positive.",
+  "recordDesc": "In {lang}, {sink} installs a new program in the current process. Interpolated input becomes argv of a program the service account can run.",
+  "applicability": "CLI wrappers, job runners and services that re-exec themselves.",
+  "risk": "Command execution with the service privileges; HIGH severity.",
+  "why": "{lang} passes caller strings directly to the kernel ({sink}).",
+  "fix": [
+   "Use a constant program path and a validated argument vector ({safe}).",
+   "Drop privileges before the exec."
+  ],
+  "verifyT": "Rescan shows exec calls with constant program paths.",
+  "sinks": {
+   "python:exec": [
+    "os\\.execv|os\\.execvp",
+    "os.execv",
+    "subprocess.run with a fixed argv list"
+   ]
+  }
+ },
+ {
+  "class": "ruby-kernel-exec",
+  "kind": "sast",
+  "category": "process-execution",
+  "cwe": "CWE-78",
+  "severity": "HIGH",
+  "framing": "call",
+  "title": "Process replaced from Ruby ({lang})",
+  "description": "Ruby code replaces the process image with {sink}. With a single string argument the shell interprets the whole line, so any interpolated value is shell syntax.",
+  "remediation": "Pass an argument vector and a fixed program, for example {safe}.",
+  "limitation": "Lexical, line-based: matches the call without inspecting the argument form.",
+  "scopeT": "Single-line lexical match on exec calls in {lang} code.",
+  "fp": "A constant command line with no interpolation is the common false positive.",
+  "recordDesc": "In {lang}, {sink} runs the string through the shell when given one argument. A single interpolated value turns a fixed command into an arbitrary one.",
+  "applicability": "Deployment scripts, job runners and rake tasks written in Ruby.",
+  "risk": "Command execution with the service privileges; HIGH severity.",
+  "why": "{lang} treats a one-string exec as a shell command ({sink}).",
+  "fix": [
+   "Pass an array of arguments ({safe}).",
+   "Never interpolate request data into a command string."
+  ],
+  "verifyT": "Rescan shows exec calls with an argument array.",
+  "sinks": {
+   "ruby:exec": [
+    "Kernel\\.exec",
+    "Kernel.exec",
+    "Kernel.exec with a program and an argument array"
+   ]
+  }
+ },
+ {
+  "class": "go-unsafe-pointer",
+  "kind": "sast",
+  "category": "memory-safety",
+  "cwe": "CWE-843",
+  "severity": "MEDIUM",
+  "framing": "call",
+  "title": "Unsafe pointer conversion in Go ({lang})",
+  "description": "Go code converts through {sink}. The conversion steps outside the type system, so the collector may move or free the object while a pointer still refers to it, and a wrong cast reinterprets memory as another type.",
+  "remediation": "Keep the data in a typed structure, or hold the pointer only for a bounded region with the object pinned, for example {safe}.",
+  "limitation": "Lexical, line-based: matches the conversion without checking the lifetime.",
+  "scopeT": "Single-line lexical match on unsafe conversions in {lang} code.",
+  "fp": "Handles exposed by a runtime package that document their pinning are the common false positive.",
+  "recordDesc": "In {lang}, {sink} removes the compiler's type guarantee. A buffer reused after the conversion is exactly the case the runtime cannot check.",
+  "applicability": "High-performance parsers, zero-copy protocols and foreign-function boundaries.",
+  "risk": "Memory corruption reachable from parsed input; MEDIUM severity.",
+  "why": "{lang} bypasses type and lifetime guarantees ({sink}).",
+  "fix": [
+   "Keep a typed representation ({safe}).",
+   "Pin the object for the whole region that holds the pointer."
+  ],
+  "verifyT": "Rescan shows unsafe conversions confined to one reviewed package.",
+  "sinks": {
+   "go:unsafe": [
+    "unsafe\\.Pointer",
+    "unsafe.Pointer",
+    "a typed slice with an explicit copy"
+   ]
+  }
+ }
+]

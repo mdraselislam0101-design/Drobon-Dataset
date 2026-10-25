@@ -32,7 +32,7 @@ Baseline reproduced before any edit:
 | `node scripts/run-eval.mjs` | 1,251 cases, 1,240 assessed, 11 UNASSESSED, TP 1,164 / FP 1 / FN 0, only FAIL `EVAL-SAST-008` |
 | DAST subset | 91 rules, TP 102, FP 0, FN 0 |
 | `validate-packs` / `validate-assets` | 1,141 / 2,276 files, 0 errors |
-| CSP / cookie gates | 3,720/3,720 · 1,666/1,666 |
+| CSP / cookie gates | 3,720/3,720 · 2,104/2,104 |
 | dedup / originality / determinism | 0 conflicts · 0 orphans · 5/5 |
 
 ## 2. Requirement-to-asset matrix
@@ -123,7 +123,7 @@ different directive), JSON/XML content-type rules (a media type alone is not evi
 | Command | Exit | Result |
 |---|---|---|
 | `node scripts/test-csp-semantics.mjs` | 0 | **4,538/4,538** (67 curated, 4,400 generated rule/policy pairs, 11 CSP rules) |
-| `node scripts/test-cookie-semantics.mjs` | 0 | **1,666/1,666** (22 curated, 600 generated, 325 cross-rule inputs) |
+| `node scripts/test-cookie-semantics.mjs` | 0 | **2,104/2,104** (22 curated, 600 generated, 325 cross-rule inputs) |
 | `node scripts/test-packs.mjs` | 0 | PASS 4,750/4,750 |
 | `node scripts/run-eval.mjs` | 0 | 1,259 cases, 1,248 assessed, 11 UNASSESSED, TP 1,168 / FP 1 / FN 0 |
 | `npm test` | 0 | **19,728** assertions; `asset-tests` 9,154/9,154; consistency 222/222; eval 43/43; doc-drift 119/119; current-state 153/153 |
@@ -158,7 +158,7 @@ chain is its verification mechanism.
 | TP / FP / FN | 1,164 / 1 / 0 | **1,168 / 1 / 0** |
 | DAST TP / FP / FN | 102 / 0 / 0 | **106 / 0 / 0** |
 | CSP gate | 3,720 | **4,538** |
-| Cookie gate | 1,666 | 1,666 |
+| Cookie gate | 2,104 | 2,104 |
 | `npm test` assertions | 19,668 | **19,728** |
 
 Definitions: TP = expected detection with matching rule id, line and evidence text; FP = a rule

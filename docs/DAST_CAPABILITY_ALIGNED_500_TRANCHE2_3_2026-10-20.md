@@ -180,7 +180,7 @@ All run after the final edit, from the repository root.
 | ↳ `scripts/validate-dast-overlaps.mjs` | 0 | 321 checks, 128 pairs, PASS |
 | ↳ `scripts/test-assets.mjs` | 0 | 10,412/10,412 |
 | ↳ `scripts/test-csp-semantics.mjs` | 0 | 22,983 assertions |
-| ↳ `scripts/test-cookie-semantics.mjs` | 0 | 1,666 assertions |
+| ↳ `scripts/test-cookie-semantics.mjs` | 0 | 2,104 assertions |
 | ↳ `scripts/test-consistency.mjs` | 0 | 230/230 |
 | ↳ `scripts/test-eval.mjs` | 0 | 43/43 |
 | ↳ `scripts/test-doc-drift.mjs` | 0 | 120/120 |

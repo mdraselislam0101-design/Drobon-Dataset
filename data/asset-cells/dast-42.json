@@ -1,0 +1,1618 @@
+[
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-transaction-narration",
+    "category": "privacy-exposure",
+    "cwe": "CWE-359",
+    "severity": "MEDIUM",
+    "title": "Free-text transaction narration exposed in a response",
+    "description": "A transaction object that carries a free-text narration next to its amount appears in the response body. Narrations are typed by operators and often name the payer, the purpose or a reference that ties the account to a person, so echoing them widens who can read the payment history.",
+    "remediation": "Return a category code and a short masked reference instead of the operator narration.",
+    "limitation": "One response body, first 32,768 bytes. It matches the narration field followed by an amount field; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a transaction object that carries a free-text narration next to its amount.",
+    "fp": "A statement export that the account owner requested carries their own narration; confirm the caller.",
+    "recordDesc": "A transaction object that carries a free-text narration next to its amount in a response hands every reader the view the build or admin side kept: Narrations are typed by operators and often name the payer, the purpose or a reference that ties the account to a person, so echoing them widens who can read the payment history.",
+    "applicability": "Deployments that render a transaction object that carries a free-text narration next to its amount into a customer- or partner-facing response.",
+    "risk": "Narrations are typed by operators and often name the payer, the purpose or a reference that ties the account to a person, so echoing them widens who can read the payment history.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Return a category code and a short masked reference instead of the operator narration.",
+      "Map narrations to categories before rendering the ledger."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a transaction object that carries a free-text narration next to its amount.",
+    "cells": [
+      {
+        "suffix": "body-transaction-narration",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\"(?:narration\"[\\s\\S]{0,200}?\"amount|amount\"[\\s\\S]{0,200}?\"narration)\"\\s*:"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"txnId\":\"T-9931\",\"narration\":\"IMPS FROM SALARY AC R AHMED\",\"amount\":\"8450.00\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"amount\":1200,\"narration\":\"UPI\\/merchant@ybl\\/grocery\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"txnId\":\"T-9931\",\"category\":\"SALARY\",\"amount\":\"8450.00\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-merchant-settlement-account",
+    "category": "information-disclosure",
+    "cwe": "CWE-200",
+    "severity": "HIGH",
+    "title": "Merchant settlement account disclosed in a response",
+    "description": "A merchant object that pairs the merchant id with a settlement account appears in the response body. The settlement account is where a merchant's takings land, so exposing the pair in an API response gives an attacker the destination for a payout or refund diversion.",
+    "remediation": "Keep the settlement account server-side and show only the masked last four digits to the merchant.",
+    "limitation": "One response body, first 32,768 bytes. It matches the merchant id and settlement account keys; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a merchant object that pairs the merchant id with a settlement account.",
+    "fp": "A settlement report for the merchant's own account may show it; check who the caller is.",
+    "recordDesc": "A merchant object that pairs the merchant id with a settlement account in a response hands every reader the view the build or admin side kept: The settlement account is where a merchant's takings land, so exposing the pair in an API response gives an attacker the destination for a payout or refund diversion.",
+    "applicability": "Deployments that render a merchant object that pairs the merchant id with a settlement account into a customer- or partner-facing response.",
+    "risk": "The settlement account is where a merchant's takings land, so exposing the pair in an API response gives an attacker the destination for a payout or refund diversion.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Keep the settlement account server-side and show only the masked last four digits to the merchant.",
+      "Store the settlement account server-side and return only the masked tail."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a merchant object that pairs the merchant id with a settlement account.",
+    "cells": [
+      {
+        "suffix": "body-merchant-settlement-account",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\"(?:merchantId\"[\\s\\S]{0,200}?settlementAccount\"\\s*:\\s*\"?\\d{4}|settlementAccount\"\\s*:\\s*\"?\\d{4})"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"merchantId\":\"M-4471\",\"settlementAccount\":\"0172100044712\",\"cycle\":\"T+1\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"settlementAccount\":\"0123400099123\",\"merchantId\":\"M-1180\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"merchantId\":\"M-4471\",\"settlementAccount\":\"****4712\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-counterparty-account-number",
+    "category": "data-exposure",
+    "cwe": "CWE-200",
+    "severity": "HIGH",
+    "title": "Full counterparty account number in a response",
+    "description": "A counterparty account field holding a long digit string appears in the response body. Payment APIs echo the counterparty account back to the browser, and a full account number plus the IFSC is enough to raise a mandate or a collect request against the payer.",
+    "remediation": "Mask all but the last four digits of the counterparty account.",
+    "limitation": "One response body, first 32,768 bytes. It matches the counterparty account field with six or more digits; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a counterparty account field holding a long digit string.",
+    "fp": "A payment receipt the payer owns may show the full number; confirm the caller.",
+    "recordDesc": "A counterparty account field holding a long digit string in a response hands every reader the view the build or admin side kept: Payment APIs echo the counterparty account back to the browser, and a full account number plus the IFSC is enough to raise a mandate or a collect request against the payer.",
+    "applicability": "Deployments that render a counterparty account field holding a long digit string into a customer- or partner-facing response.",
+    "risk": "Payment APIs echo the counterparty account back to the browser, and a full account number plus the IFSC is enough to raise a mandate or a collect request against the payer.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Mask all but the last four digits of the counterparty account.",
+      "Mask the counterparty account to its last four digits in every read model."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a counterparty account field holding a long digit string.",
+    "cells": [
+      {
+        "suffix": "body-counterparty-account-number",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\"counterpartyAccount\"\\s*:\\s*\"?\\d{6,}"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"counterpartyAccount\":\"50100234998120\",\"ifsc\":\"HDFC0000123\",\"amount\":\"2500\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"counterpartyAccount\": \"911010067345678\", \"vpa\":\"ravi@okhdfcbank\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"counterpartyAccount\":\"********8120\",\"ifsc\":\"HDFC0000123\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-branch-code-with-address",
+    "category": "information-disclosure",
+    "cwe": "CWE-200",
+    "severity": "LOW",
+    "title": "Branch record carries an internal address block",
+    "description": "A branch object that pairs the branch code with a free-text address appears in the response body. The branch address and code are printed on statements, so a response that returns them for any account id discloses where a customer banks to anyone who can guess an id.",
+    "remediation": "Return the branch name only, or require the account owner's session for address fields.",
+    "limitation": "One response body, first 32,768 bytes. It matches the branch code and address keys; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a branch object that pairs the branch code with a free-text address.",
+    "fp": "A branch locator that lists public addresses is expected; confirm the endpoint.",
+    "recordDesc": "A branch object that pairs the branch code with a free-text address in a response hands every reader the view the build or admin side kept: The branch address and code are printed on statements, so a response that returns them for any account id discloses where a customer banks to anyone who can guess an id.",
+    "applicability": "Deployments that render a branch object that pairs the branch code with a free-text address into a customer- or partner-facing response.",
+    "risk": "The branch address and code are printed on statements, so a response that returns them for any account id discloses where a customer banks to anyone who can guess an id.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Return the branch name only, or require the account owner's session for address fields.",
+      "Return branch name only for account views and keep the address internal."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a branch object that pairs the branch code with a free-text address.",
+    "cells": [
+      {
+        "suffix": "body-branch-code-with-address",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\"(?:branchCode\"\\s*:\\s*\"[^\"]{1,20}\"[\\s\\S]{0,200}?\"address|address\"\\s*:\\s*\"[^\"]{6,}\"[\\s\\S]{0,200}?\"branchCode)\"\\s*:"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"branchCode\":\"0142\",\"address\":\"27 Kazi Nazrul Ave, Dhaka 1000\",\"ifsc\":\"DBBL0000142\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"address\":\"Plot 4, Road 11, Banani\",\"branchCode\":\"0088\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"branchCode\":\"0142\",\"branchName\":\"Motijheel\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-cheque-leaf-series",
+    "category": "privacy-exposure",
+    "cwe": "CWE-359",
+    "severity": "MEDIUM",
+    "title": "Cheque leaf series disclosed in a response",
+    "description": "A cheque book object that exposes the leaf series range appears in the response body. The leaf series identifies the exact paper instruments a customer holds, and with the series an attacker can pre-empt a stop-payment instruction or forge a leaf that looks in range.",
+    "remediation": "Show the number of available leaves, not the series range.",
+    "limitation": "One response body, first 32,768 bytes. It matches the cheque series keys; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a cheque book object that exposes the leaf series range.",
+    "fp": "The account owner's own cheque book view legitimately needs the range; confirm the caller.",
+    "recordDesc": "A cheque book object that exposes the leaf series range in a response hands every reader the view the build or admin side kept: The leaf series identifies the exact paper instruments a customer holds, and with the series an attacker can pre-empt a stop-payment instruction or forge a leaf that looks in range.",
+    "applicability": "Deployments that render a cheque book object that exposes the leaf series range into a customer- or partner-facing response.",
+    "risk": "The leaf series identifies the exact paper instruments a customer holds, and with the series an attacker can pre-empt a stop-payment instruction or forge a leaf that looks in range.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Show the number of available leaves, not the series range.",
+      "Expose only the count of unused leaves; keep the series server-side."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a cheque book object that exposes the leaf series range.",
+    "cells": [
+      {
+        "suffix": "body-cheque-leaf-series",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\"cheque(?:Book)?Series\"\\s*:\\s*\"[^\"]{1,30}\"|\"leafFrom\"\\s*:\\s*\\d{6}"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"chequeBookSeries\":\"441002-441024\",\"leafFrom\":441002,\"status\":\"ACTIVE\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"leafFrom\":551038,\"leafTo\":551060}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"chequeBook\":{\"leavesAvailable\":18,\"status\":\"ACTIVE\"}}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-kyc-verification-level",
+    "category": "privacy-exposure",
+    "cwe": "CWE-359",
+    "severity": "MEDIUM",
+    "title": "Customer KYC verification level exposed",
+    "description": "A customer object that returns the KYC level with the officer who verified it appears in the response body. The verification level states how much identity evidence a bank holds, so it is a targeting signal for social engineering, and the officer name adds an internal contact to impersonate.",
+    "remediation": "Return a boolean verified flag and keep the level and officer in the back office.",
+    "limitation": "One response body, first 32,768 bytes. It matches the KYC level key followed by an officer or verifier field; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a customer object that returns the KYC level with the officer who verified it.",
+    "fp": "A staff-only servicing screen may show it; confirm the caller's role.",
+    "recordDesc": "A customer object that returns the KYC level with the officer who verified it in a response hands every reader the view the build or admin side kept: The verification level states how much identity evidence a bank holds, so it is a targeting signal for social engineering, and the officer name adds an internal contact to impersonate.",
+    "applicability": "Deployments that render a customer object that returns the KYC level with the officer who verified it into a customer- or partner-facing response.",
+    "risk": "The verification level states how much identity evidence a bank holds, so it is a targeting signal for social engineering, and the officer name adds an internal contact to impersonate.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Return a boolean verified flag and keep the level and officer in the back office.",
+      "Return a verified boolean to the client and keep the level in the back office."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a customer object that returns the KYC level with the officer who verified it.",
+    "cells": [
+      {
+        "suffix": "body-kyc-verification-level",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\"(?:kyc(?:Level|Status)\"[\\s\\S]{0,200}?\"(?:verifiedBy|verifierOfficer)|(?:verifiedBy|verifierOfficer)\"[\\s\\S]{0,200}?\"kyc(?:Level|Status))\""
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"kycLevel\":\"FULL_VIDEO\",\"verifiedBy\":\"officer.rahman\",\"verifiedOn\":\"2025-04-11\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"verifiedBy\":\"ops.desk.2\",\"kycStatus\":\"MINIMAL\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"kycVerified\":true}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-aml-risk-grade",
+    "category": "privacy-exposure",
+    "cwe": "CWE-359",
+    "severity": "HIGH",
+    "title": "AML risk grade exposed in a customer payload",
+    "description": "An AML risk score or grade field on a customer record appears in the response body. An AML grade tells an attacker which customers the bank watches least, and the grade itself is derived from suspicion data the customer must never see.",
+    "remediation": "Keep the score in the compliance platform and return only flags that drive a customer action.",
+    "limitation": "One response body, first 32,768 bytes. It matches the AML score or grade key; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries an AML risk score or grade field on a customer record.",
+    "fp": "A compliance console may show it; confirm the caller's role.",
+    "recordDesc": "An AML risk score or grade field on a customer record in a response hands every reader the view the build or admin side kept: An AML grade tells an attacker which customers the bank watches least, and the grade itself is derived from suspicion data the customer must never see.",
+    "applicability": "Deployments that render an AML risk score or grade field on a customer record into a customer- or partner-facing response.",
+    "risk": "An AML grade tells an attacker which customers the bank watches least, and the grade itself is derived from suspicion data the customer must never see.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Keep the score in the compliance platform and return only flags that drive a customer action.",
+      "Move AML scoring behind the compliance service and never serialise it to the app."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries an AML risk score or grade field on a customer record.",
+    "cells": [
+      {
+        "suffix": "body-aml-risk-grade",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\"(?:aml|amlRisk)(?:Score|Grade|Rating)\"\\s*:"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"customerId\":\"C-8841\",\"amlRiskScore\":12,\"band\":\"LOW\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"amlGrade\":\"MEDIUM\",\"nextReview\":\"2026-02-01\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"reviewRequired\":false}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-asset-classification",
+    "category": "privacy-exposure",
+    "cwe": "CWE-359",
+    "severity": "HIGH",
+    "title": "Loan asset classification exposed",
+    "description": "An asset classification field set to a non-performing class appears in the response body. The classification is the bank's internal judgement on whether a loan is being repaid, and disclosing it to the borrower's app, or to anyone who can reach the endpoint, invites disputes and collection avoidance.",
+    "remediation": "Return payment status only; keep supervision classifications internal.",
+    "limitation": "One response body, first 32,768 bytes. It matches the asset classification key with a classified value; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries an asset classification field set to a non-performing class.",
+    "fp": "A regulatory reporting export handled by staff is expected; confirm the caller.",
+    "recordDesc": "An asset classification field set to a non-performing class in a response hands every reader the view the build or admin side kept: The classification is the bank's internal judgement on whether a loan is being repaid, and disclosing it to the borrower's app, or to anyone who can reach the endpoint, invites disputes and collection avoidance.",
+    "applicability": "Deployments that render an asset classification field set to a non-performing class into a customer- or partner-facing response.",
+    "risk": "The classification is the bank's internal judgement on whether a loan is being repaid, and disclosing it to the borrower's app, or to anyone who can reach the endpoint, invites disputes and collection avoidance.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Return payment status only; keep supervision classifications internal.",
+      "Keep the classification inside the credit-monitoring system and return payment status."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries an asset classification field set to a non-performing class.",
+    "cells": [
+      {
+        "suffix": "body-asset-classification",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\"assetClassification\"\\s*:\\s*\"(?:sub-?standard|doubtful|loss|npa)\""
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"loanAccount\":\"LN-778120\",\"assetClassification\":\"DOUBTFUL\",\"dpd\":94}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"assetClassification\":\"sub-standard\",\"dpd\":45}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"loanAccount\":\"LN-778120\",\"paymentStatus\":\"OVERDUE\",\"dpd\":12}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-loan-restructure-flag",
+    "category": "information-disclosure",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "Loan restructuring flag exposed",
+    "description": "A restructured flag on a loan object appears in the response body. A restructuring flag records that a loan was rescheduled under distress, and it follows the borrower into future credit decisions, so it is sensitive even when the balance is public.",
+    "remediation": "Return the current schedule and keep the restructuring history in the credit system.",
+    "limitation": "One response body, first 32,768 bytes. It matches the restructured flag next to a loan account; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a restructured flag on a loan object.",
+    "fp": "The borrower's own credit report view may include it; confirm the caller.",
+    "recordDesc": "A restructured flag on a loan object in a response hands every reader the view the build or admin side kept: A restructuring flag records that a loan was rescheduled under distress, and it follows the borrower into future credit decisions, so it is sensitive even when the balance is public.",
+    "applicability": "Deployments that render a restructured flag on a loan object into a customer- or partner-facing response.",
+    "risk": "A restructuring flag records that a loan was rescheduled under distress, and it follows the borrower into future credit decisions, so it is sensitive even when the balance is public.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Return the current schedule and keep the restructuring history in the credit system.",
+      "Serve the current schedule only; keep restructuring history internal."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a restructured flag on a loan object.",
+    "cells": [
+      {
+        "suffix": "body-loan-restructure-flag",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\"restructured\"\\s*:\\s*true[\\s\\S]{0,120}?\"loan(?:Account)?\"|\"loan(?:Account)?\"[\\s\\S]{0,120}?\"restructured\"\\s*:\\s*true"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"loanAccount\":\"LN-220145\",\"restructured\":true,\"reason\":\"COVID-19 relief\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"restructured\": true, \"loanAccount\": \"LN-993001\", \"moratorium\": 6}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"loanAccount\":\"LN-220145\",\"status\":\"CURRENT\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-collateral-valuation",
+    "category": "information-disclosure",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "Collateral valuation exposed",
+    "description": "A collateral value paired with a valuation date appears in the response body. The valuation states what the bank believes a pledged asset is worth, which is commercially sensitive and lets a borrower or a third party infer the bank's exposure and headroom.",
+    "remediation": "Return the loan-to-value band, not the underlying valuation.",
+    "limitation": "One response body, first 32,768 bytes. It matches the collateral value and valuation date keys; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a collateral value paired with a valuation date.",
+    "fp": "A valuation report shared with the borrower on request may include it; confirm the channel.",
+    "recordDesc": "A collateral value paired with a valuation date in a response hands every reader the view the build or admin side kept: The valuation states what the bank believes a pledged asset is worth, which is commercially sensitive and lets a borrower or a third party infer the bank's exposure and headroom.",
+    "applicability": "Deployments that render a collateral value paired with a valuation date into a customer- or partner-facing response.",
+    "risk": "The valuation states what the bank believes a pledged asset is worth, which is commercially sensitive and lets a borrower or a third party infer the bank's exposure and headroom.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Return the loan-to-value band, not the underlying valuation.",
+      "Return an LTV band and keep the valuation in the credit system."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a collateral value paired with a valuation date.",
+    "cells": [
+      {
+        "suffix": "body-collateral-valuation",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\"collateralValue\"\\s*:[\\s\\S]{0,140}?\"valuationDate\"|\"valuationDate\"\\s*:[\\s\\S]{0,140}?\"collateralValue\""
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"collateralValue\":8450000,\"valuationDate\":\"2025-11-02\",\"property\":\"Plot 12\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"valuationDate\":\"2025-08-19\",\"collateralValue\": 3250000}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"ltvBand\":\"60-70%\",\"valuationAgeMonths\":3}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-guarantor-contact",
+    "category": "privacy-exposure",
+    "cwe": "CWE-359",
+    "severity": "HIGH",
+    "title": "Guarantor contact details exposed",
+    "description": "A guarantor block that carries a mobile or e-mail alongside the guarantor name appears in the response body. A guarantor has not consented to the borrower seeing their contact details, and the pair is exactly what a coercion or impersonation attempt against the guarantor needs.",
+    "remediation": "Return the guarantor name masked and route all contact through the bank.",
+    "limitation": "One response body, first 32,768 bytes. It matches the guarantor key with a mobile or email beside it; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a guarantor block that carries a mobile or e-mail alongside the guarantor name.",
+    "fp": "A staff servicing screen that handles guarantees may show it; confirm the role.",
+    "recordDesc": "A guarantor block that carries a mobile or e-mail alongside the guarantor name in a response hands every reader the view the build or admin side kept: A guarantor has not consented to the borrower seeing their contact details, and the pair is exactly what a coercion or impersonation attempt against the guarantor needs.",
+    "applicability": "Deployments that render a guarantor block that carries a mobile or e-mail alongside the guarantor name into a customer- or partner-facing response.",
+    "risk": "A guarantor has not consented to the borrower seeing their contact details, and the pair is exactly what a coercion or impersonation attempt against the guarantor needs.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Return the guarantor name masked and route all contact through the bank.",
+      "Mask guarantor identity and never serialise their contact details to the borrower app."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a guarantor block that carries a mobile or e-mail alongside the guarantor name.",
+    "cells": [
+      {
+        "suffix": "body-guarantor-contact",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\"guarantor\"\\s*:\\s*\\{[^}]{0,200}?\"(?:mobile|phone|email)\""
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"guarantor\":{\"name\":\"S. Karim\",\"mobile\":\"+8801711000222\",\"relation\":\"FATHER\"}}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"guarantor\":{\"email\":\"karim.g@example.test\",\"relation\":\"SPOUSE\"}}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"guarantor\":{\"name\":\"S. K****\",\"relation\":\"FATHER\"}}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-base-rate-margin",
+    "category": "information-disclosure",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "Pricing components of a loan exposed",
+    "description": "A base rate paired with the margin applied to it appears in the response body. The pair reveals the bank's pricing floor and the spread charged on this relationship, which is competitively sensitive and shows how much room a negotiation has.",
+    "remediation": "Return the final rate only and keep the components in the pricing engine.",
+    "limitation": "One response body, first 32,768 bytes. It matches the base rate and margin keys; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a base rate paired with the margin applied to it.",
+    "fp": "A pricing quote generated for the customer by staff may include them; confirm the channel.",
+    "recordDesc": "A base rate paired with the margin applied to it in a response hands every reader the view the build or admin side kept: The pair reveals the bank's pricing floor and the spread charged on this relationship, which is competitively sensitive and shows how much room a negotiation has.",
+    "applicability": "Deployments that render a base rate paired with the margin applied to it into a customer- or partner-facing response.",
+    "risk": "The pair reveals the bank's pricing floor and the spread charged on this relationship, which is competitively sensitive and shows how much room a negotiation has.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Return the final rate only and keep the components in the pricing engine.",
+      "Return the effective rate only; keep the pricing components internal."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a base rate paired with the margin applied to it.",
+    "cells": [
+      {
+        "suffix": "body-base-rate-margin",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\"baseRate\"\\s*:[\\s\\S]{0,140}?\"margin\"|\"margin\"\\s*:[\\s\\S]{0,140}?\"baseRate\""
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"baseRate\":\"8.75\",\"margin\":\"2.25\",\"effectiveRate\":\"11.00\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"margin\": 3.1, \"baseRate\": \"9.05\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"effectiveRate\":\"11.00\",\"resetOn\":\"2026-01-01\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-amortisation-schedule",
+    "category": "data-exposure",
+    "cwe": "CWE-200",
+    "severity": "LOW",
+    "title": "Full amortisation schedule returned in a response",
+    "description": "An amortisation schedule array with principal and interest splits per period appears in the response body. A full schedule discloses the interest the bank expects to earn over the life of the loan, and it is a large payload the client does not need to render a single instalment.",
+    "remediation": "Return the next instalment and page the history on demand.",
+    "limitation": "One response body, first 32,768 bytes. It matches the schedule key followed by principal and interest components; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries an amortisation schedule array with principal and interest splits per period.",
+    "fp": "A statement the borrower requested may carry the schedule; confirm the caller.",
+    "recordDesc": "An amortisation schedule array with principal and interest splits per period in a response hands every reader the view the build or admin side kept: A full schedule discloses the interest the bank expects to earn over the life of the loan, and it is a large payload the client does not need to render a single instalment.",
+    "applicability": "Deployments that render an amortisation schedule array with principal and interest splits per period into a customer- or partner-facing response.",
+    "risk": "A full schedule discloses the interest the bank expects to earn over the life of the loan, and it is a large payload the client does not need to render a single instalment.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Return the next instalment and page the history on demand.",
+      "Return the next instalment and page the schedule behind an explicit request."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries an amortisation schedule array with principal and interest splits per period.",
+    "cells": [
+      {
+        "suffix": "body-amortisation-schedule",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\"(?:amorti[sz]ation(?:Schedule)?|repaymentSchedule)\"\\s*:\\s*\\[[\\s\\S]{0,200}?\"(?:principal|interest)\""
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"amortisationSchedule\":[{\"period\":1,\"principal\":12840,\"interest\":9160}]}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"repaymentSchedule\":[{\"period\":7,\"interest\":8210,\"principal\":13790}]}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"nextInstalment\":{\"dueOn\":\"2026-11-05\",\"total\":22000}}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-disbursement-account",
+    "category": "information-disclosure",
+    "cwe": "CWE-200",
+    "severity": "MEDIUM",
+    "title": "Disbursement account exposed on a loan",
+    "description": "A disbursement account field on a loan record appears in the response body. The disbursement account is where the bank credits a sanctioned amount, so changing it is a direct path to diverting a payout, and exposing it in a response hands over the target.",
+    "remediation": "Keep the disbursement account server-side and confirm changes out of band.",
+    "limitation": "One response body, first 32,768 bytes. It matches the disbursement account key; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a disbursement account field on a loan record.",
+    "fp": "A sanction letter issued to the borrower may show it; confirm the channel.",
+    "recordDesc": "A disbursement account field on a loan record in a response hands every reader the view the build or admin side kept: The disbursement account is where the bank credits a sanctioned amount, so changing it is a direct path to diverting a payout, and exposing it in a response hands over the target.",
+    "applicability": "Deployments that render a disbursement account field on a loan record into a customer- or partner-facing response.",
+    "risk": "The disbursement account is where the bank credits a sanctioned amount, so changing it is a direct path to diverting a payout, and exposing it in a response hands over the target.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Keep the disbursement account server-side and confirm changes out of band.",
+      "Mask the disbursement account and require out-of-band confirmation to change it."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a disbursement account field on a loan record.",
+    "cells": [
+      {
+        "suffix": "body-disbursement-account",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\"disbursementAccount\"\\s*:\\s*\"?\\d{6,}"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"loanAccount\":\"LN-778120\",\"disbursementAccount\":\"0172100099887\",\"amount\":500000}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"disbursementAccount\": \"0123400066112\", \"loanAccount\": \"LN-551234\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"loanAccount\":\"LN-778120\",\"disbursementAccount\":\"****9887\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-joint-holder-name",
+    "category": "privacy-exposure",
+    "cwe": "CWE-359",
+    "severity": "MEDIUM",
+    "title": "Joint holder identity disclosed",
+    "description": "A joint holder block that returns a full name or relationship appears in the response body. A joint holder's name lets anyone with the account number learn who else has access to the money, which is the first step in a family or coercion fraud against that person.",
+    "remediation": "Return a masked joint holder label and keep the identity behind the account owner's session.",
+    "limitation": "One response body, first 32,768 bytes. It matches the joint holder key with a name or relation; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a joint holder block that returns a full name or relationship.",
+    "fp": "The joint holder's own view of the account may show both names; confirm the caller.",
+    "recordDesc": "A joint holder block that returns a full name or relationship in a response hands every reader the view the build or admin side kept: A joint holder's name lets anyone with the account number learn who else has access to the money, which is the first step in a family or coercion fraud against that person.",
+    "applicability": "Deployments that render a joint holder block that returns a full name or relationship into a customer- or partner-facing response.",
+    "risk": "A joint holder's name lets anyone with the account number learn who else has access to the money, which is the first step in a family or coercion fraud against that person.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Return a masked joint holder label and keep the identity behind the account owner's session.",
+      "Return a generic joint holder label and resolve the identity server-side."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a joint holder block that returns a full name or relationship.",
+    "cells": [
+      {
+        "suffix": "body-joint-holder-name",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\"jointHolder\"\\s*:\\s*\\{[^}]{0,160}?\"(?:name|relation)\""
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"jointHolder\":{\"name\":\"Nusrat Jahan\",\"relation\":\"SPOUSE\"}}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"jointHolder\":{\"relation\":\"MOTHER\",\"name\":\"R. Begum\"}}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"jointHolder\":{\"label\":\"Joint holder 1\",\"active\":true}}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "kind": "dast",
+    "framing": "custom",
+    "class": "body-pep-status",
+    "category": "privacy-exposure",
+    "cwe": "CWE-359",
+    "severity": "HIGH",
+    "title": "Politically exposed person status exposed",
+    "description": "A PEP status field on a customer or beneficiary record appears in the response body. PEP status is derived from screening data about public office, so exposing it tells the subject they are flagged and gives an attacker a profile of which relationships the bank scrutinises.",
+    "remediation": "Keep PEP screening in the compliance platform and expose only the resulting action a customer must take.",
+    "limitation": "One response body, first 32,768 bytes. It matches the PEP status key; it cannot tell whether the value behind the marker is live or whether the page needs authentication.",
+    "scopeT": "A response body that carries a PEP status field on a customer or beneficiary record.",
+    "fp": "A compliance workflow tool may show it; confirm the caller's role.",
+    "recordDesc": "A PEP status field on a customer or beneficiary record in a response hands every reader the view the build or admin side kept: PEP status is derived from screening data about public office, so exposing it tells the subject they are flagged and gives an attacker a profile of which relationships the bank scrutinises.",
+    "applicability": "Deployments that render a PEP status field on a customer or beneficiary record into a customer- or partner-facing response.",
+    "risk": "PEP status is derived from screening data about public office, so exposing it tells the subject they are flagged and gives an attacker a profile of which relationships the bank scrutinises.",
+    "why": "The marker exists for the build or administrator and answers a question an attacker would otherwise have to guess.",
+    "fix": [
+      "Keep PEP screening in the compliance platform and expose only the resulting action a customer must take.",
+      "Move PEP screening behind the compliance service and never serialise the flag."
+    ],
+    "verifyT": "Request the page again and confirm the response no longer carries a PEP status field on a customer or beneficiary record.",
+    "cells": [
+      {
+        "suffix": "body-pep-status",
+        "lang": "http",
+        "check": {
+          "type": "response-body-matches",
+          "valuePattern": "\"pep(?:Status|Flag)\"\\s*:\\s*(?:true|\"[^\"]{1,20}\")"
+        },
+        "tests": [
+          {
+            "observation": {
+              "url": "https://bank.example/portal/home",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"customerId\":\"C-8841\",\"pepStatus\":true,\"reviewCycle\":\"ANNUAL\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/api/detail",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"pepFlag\":\"RELATIVE\"}"
+            },
+            "match": true
+          },
+          {
+            "observation": {
+              "url": "https://bank.example/help/security",
+              "status": 200,
+              "headers": {
+                "Content-Type": "text/html; charset=utf-8",
+                "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'",
+                "Referrer-Policy": "no-referrer",
+                "Cross-Origin-Embedder-Policy": "require-corp",
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Cross-Origin-Resource-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+                "X-Permitted-Cross-Domain-Policies": "none",
+                "Cache-Control": "no-store"
+              },
+              "body": "{\"enhancedReviewDue\":\"2026-03-01\"}"
+            },
+            "match": false
+          }
+        ]
+      }
+    ]
+  }
+]

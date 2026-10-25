@@ -1,0 +1,373 @@
+[
+  {
+    "class": "paramiko-auto-host-key",
+    "kind": "sast",
+    "category": "tls-verification",
+    "cwe": "CWE-295",
+    "severity": "HIGH",
+    "framing": "call",
+    "title": "SSH client accepts any host key ({lang})",
+    "description": "{lang} code installs an SSH host-key policy that accepts every key it is offered ({sink}). Without a known-hosts check the client cannot tell the bank's server from an interposed one, so the session that carries commands, files and credentials is open to a man in the middle. This lexical rule flags the policy; the reviewer replaces it with a loaded known-hosts file.",
+    "remediation": "Load and verify the server key against a pinned known-hosts file, for example {safe}. Treat an unknown host key as a failed connection, not as a prompt to continue.",
+    "limitation": "Lexical, line-based: matches the policy call regardless of whether the target is reachable or trusted by other means.",
+    "scopeT": "Single-line lexical match on host-key policy calls in {lang} SSH clients.",
+    "fp": "Test harnesses that connect to a throwaway container they started themselves are the common false positive.",
+    "recordDesc": "In {lang}, {sink} disables host-key verification for the SSH client. The first connection is exactly where an interposed server wins, and nothing later in the session re-checks the peer.",
+    "applicability": "Deployment scripts, backup jobs and admin tooling that open SSH sessions from {lang}; single-line lexical scope.",
+    "risk": "Command, file and credential interception on every connection the client makes; HIGH severity.",
+    "why": "{lang} only pins the peer when a host-key policy other than the permissive one is installed.",
+    "fix": [
+      "Load a known-hosts file and reject unknown keys ({safe}).",
+      "Ship the pinned key with the deployment so first use is already verified."
+    ],
+    "verifyT": "Rescan shows no permissive host-key policy and the pinned known-hosts file is referenced.",
+    "sinks": {
+      "python:paramiko": [
+        "AutoAddPolicy|WarningPolicy",
+        "paramiko.AutoAddPolicy",
+        "client.load_system_host_keys() followed by RejectPolicy()"
+      ]
+    }
+  },
+  {
+    "class": "jndi-lookup",
+    "kind": "sast",
+    "category": "injection",
+    "cwe": "CWE-917",
+    "severity": "HIGH",
+    "framing": "call",
+    "title": "JNDI name lookup in application code ({lang})",
+    "description": "{lang} code performs a JNDI lookup ({sink}). A lookup name that any part of the request can influence lets an attacker choose the naming provider that answers, and older runtimes will then load and instantiate a remote class \u2014 the mechanism behind the log4j family of exploits. This lexical rule flags the lookup; the reviewer confirms the name is a constant.",
+    "remediation": "Keep lookup names as constants, and where a name must be configurable, validate it against a fixed allowlist with {safe} before resolving.",
+    "limitation": "Lexical, line-based: flags every JNDI lookup, including the constant-name lookups that are safe.",
+    "scopeT": "Single-line lexical match on JNDI lookup calls in {lang} code.",
+    "fp": "Application servers that look up their own constant-bound datasource names are the common false positive.",
+    "recordDesc": "In {lang}, {sink} resolves a name at runtime. If the name can be influenced, the resolver \u2014 not the application \u2014 decides what gets loaded, which is remote code execution on older JDKs.",
+    "applicability": "Java services that use JNDI for datasources, LDAP or messaging; single-line lexical scope.",
+    "risk": "Remote class loading and code execution through a controlled naming provider; HIGH severity.",
+    "why": "{lang} resolves the name through a provider that can be remote ({sink}).",
+    "fix": [
+      "Resolve only constant or allowlisted names ({safe}).",
+      "Disable remote codebases and restrict egress from application servers."
+    ],
+    "verifyT": "Rescan shows no lookup whose name derives from request data.",
+    "sinks": {
+      "java:jndi": [
+        "InitialContext|NamingManager",
+        "new InitialContext",
+        "a constant name verified against an allowlist"
+      ]
+    }
+  },
+  {
+    "class": "hostname-verifier-off",
+    "kind": "sast",
+    "category": "tls-verification",
+    "cwe": "CWE-295",
+    "severity": "HIGH",
+    "framing": "call",
+    "title": "TLS hostname verifier replaced ({lang})",
+    "description": "{lang} code installs its own hostname verifier ({sink}). When that verifier returns true for every host, the certificate still validates the chain but no longer validates the name, so any certificate for any domain satisfies the connection. This lexical rule flags the replacement; the reviewer confirms a real name check remains.",
+    "remediation": "Remove the custom verifier and rely on the platform check, or implement one that compares the peer host with {safe}.",
+    "limitation": "Lexical, line-based: cannot tell a permissive verifier from a strict custom one.",
+    "scopeT": "Single-line lexical match on hostname-verifier installation in {lang} TLS clients.",
+    "fp": "Strict custom verifiers that pin a certificate are the common false positive.",
+    "recordDesc": "In {lang}, {sink} takes the decision about which host a certificate belongs to away from the platform. A verifier that always answers yes survives every review that only looks at the certificate chain.",
+    "applicability": "Android, desktop and service code that customises TLS verification; single-line lexical scope.",
+    "risk": "Any valid certificate intercepts the connection, including traffic that carries credentials; HIGH severity.",
+    "why": "{lang} delegates the host identity check to application code ({sink}).",
+    "fix": [
+      "Delete the custom verifier.",
+      "If pinning is required, compare against a pinned value ({safe}) and still check the name."
+    ],
+    "verifyT": "Rescan shows no hostname-verifier override, or an override that compares the expected host.",
+    "sinks": {
+      "java:tls": [
+        "setHostnameVerifier|setDefaultHostnameVerifier",
+        "connection.setHostnameVerifier",
+        "the platform verifier, unchanged"
+      ]
+    }
+  },
+  {
+    "class": "netdatacontract-deser",
+    "kind": "sast",
+    "category": "unsafe-deserialization",
+    "cwe": "CWE-502",
+    "severity": "HIGH",
+    "framing": "call",
+    "title": "Type-preserving deserializer used ({lang})",
+    "description": "{lang} code deserializes with a formatter that records CLR types in the stream ({sink}). The payload chooses which type is constructed, and a gadget chain in any loaded assembly then runs during deserialization. This lexical rule flags the formatter; the reviewer replaces it with a data-only format.",
+    "remediation": "Use a data-only serializer such as System.Text.Json with explicit types, or {safe}, for anything that crosses a trust boundary.",
+    "limitation": "Lexical, line-based: matches the formatter regardless of where the bytes came from.",
+    "scopeT": "Single-line lexical match on type-preserving formatter use in {lang} code.",
+    "fp": "Serialization of in-process state that never leaves the machine is the common false positive.",
+    "recordDesc": "In {lang}, {sink} rebuilds objects from type metadata carried in the payload. That metadata is attacker-controlled whenever the bytes crossed a boundary, so deserialization becomes object construction on demand.",
+    "applicability": "Legacy .NET services, remoting endpoints, session state and cache formats; single-line lexical scope.",
+    "risk": "Remote code execution through gadget chains during deserialization; HIGH severity.",
+    "why": "{lang} trusts the type names in the stream ({sink}).",
+    "fix": [
+      "Move to a data-only serializer with explicit types ({safe}).",
+      "If the legacy format must stay, restrict the allowed types with a binder and never accept bytes from outside the process."
+    ],
+    "verifyT": "Rescan shows no type-preserving formatter on an untrusted input path.",
+    "sinks": {
+      "csharp:deser": [
+        "NetDataContractSerializer|ObjectStateFormatter",
+        "new NetDataContractSerializer",
+        "System.Text.Json with explicit types"
+      ]
+    }
+  },
+  {
+    "class": "vm-context-escape",
+    "kind": "sast",
+    "category": "code-execution",
+    "cwe": "CWE-95",
+    "severity": "MEDIUM",
+    "framing": "call",
+    "title": "Script executed in the host context ({lang})",
+    "description": "{lang} code compiles or runs a script in the current context ({sink}). The sandbox that protects a fresh context is gone, so the script reaches the process globals, its environment and its loaded modules. This lexical rule flags the call; the reviewer confirms the input is trusted.",
+    "remediation": "Run untrusted scripts in an isolated context or a separate process with no host objects, or replace the mechanism with {safe}.",
+    "limitation": "Lexical, line-based: matches the call even when the script text is a constant shipped with the program.",
+    "scopeT": "Single-line lexical match on host-context script execution in {lang} code.",
+    "fp": "Template engines that compile a constant, developer-authored script at startup are the common false positive.",
+    "recordDesc": "In {lang}, {sink} evaluates code with the process's own globals in reach. Any interpolation into that string becomes arbitrary code in the service account's context.",
+    "applicability": "Plugin hosts, rule engines, templating helpers and 'evaluate this expression' features; single-line lexical scope.",
+    "risk": "Arbitrary code execution in the service account, with access to its secrets and network position; MEDIUM severity.",
+    "why": "{lang} keeps the host context when it executes the script ({sink}).",
+    "fix": [
+      "Use an isolated context or a separate worker process.",
+      "Compile only developer-authored code, never request data ({safe})."
+    ],
+    "verifyT": "Rescan shows no host-context execution on a path that accepts external input.",
+    "sinks": {
+      "javascript:vm": [
+        "runInThisContext",
+        "vm.runInThisContext",
+        "vm.runInNewContext with an empty sandbox"
+      ]
+    }
+  },
+  {
+    "class": "kotlin-external-storage-secret",
+    "kind": "sast",
+    "category": "insecure-storage",
+    "cwe": "CWE-312",
+    "severity": "MEDIUM",
+    "framing": "call",
+    "title": "Credential written to external storage ({lang})",
+    "description": "{lang} code writes through an external-storage path ({sink}). Files there are readable by other applications with storage permission and are included in device backups, so a token or PIN written this way leaves the app sandbox. This lexical rule flags the path use; the reviewer confirms what is written.",
+    "remediation": "Keep credentials in the platform keystore or in app-private storage, for example {safe}, and never in a directory other apps can read.",
+    "limitation": "Lexical, line-based: flags the external path regardless of the file's contents.",
+    "scopeT": "Single-line lexical match on external-storage path use in {lang} mobile code.",
+    "fp": "Caching a downloaded, non-sensitive image in external storage is the common false positive.",
+    "recordDesc": "In {lang}, {sink} places a file outside the app sandbox. On Android the external directory is shared and backup-eligible, so a session token written there is readable by other apps and by anyone with the device.",
+    "applicability": "Android apps that persist tokens, PINs or account data; single-line lexical scope.",
+    "risk": "Credential disclosure to other applications and to backups; MEDIUM severity.",
+    "why": "{lang} external storage is shared by design ({sink}).",
+    "fix": [
+      "Store secrets in the Keystore or EncryptedSharedPreferences ({safe}).",
+      "Keep ordinary files in app-private storage and disable backup for directories that hold them."
+    ],
+    "verifyT": "Rescan shows no credential write outside app-private storage.",
+    "sinks": {
+      "kotlin:storage": [
+        "getExternalFilesDir|getExternalStorageDirectory",
+        "context.getExternalFilesDir",
+        "EncryptedSharedPreferences or the Keystore"
+      ]
+    }
+  },
+  {
+    "class": "ios-userdefaults-secret",
+    "kind": "sast",
+    "category": "insecure-storage",
+    "cwe": "CWE-312",
+    "severity": "MEDIUM",
+    "framing": "call",
+    "title": "Credential stored in user defaults ({lang})",
+    "description": "{lang} code stores a value in the user-defaults store ({sink}). That store is a plist inside the app container: it is not encrypted at rest, it is copied into backups and it is readable on a jailbroken device or from a filesystem image. This lexical rule flags the write; the reviewer confirms the value is not a credential.",
+    "remediation": "Store tokens and passwords in the Keychain with an appropriate accessibility class, for example {safe}, and keep user defaults for preferences only.",
+    "limitation": "Lexical, line-based: flags every write to the defaults store, including harmless preferences.",
+    "scopeT": "Single-line lexical match on user-defaults writes in {lang} app code.",
+    "fp": "Storing a display preference or a last-used tab is the common false positive.",
+    "recordDesc": "In {lang}, {sink} writes into a plist that backups and forensic images expose. A refresh token kept there survives every lock screen and is readable without the passcode.",
+    "applicability": "iOS apps that persist session or account values; single-line lexical scope.",
+    "risk": "Session and credential disclosure from a backup or an extracted image; MEDIUM severity.",
+    "why": "{lang} user defaults are not a secret store ({sink}).",
+    "fix": [
+      "Move secrets to the Keychain with kSecAttrAccessibleWhenUnlockedThisDeviceOnly ({safe}).",
+      "Keep user defaults for non-sensitive preferences only."
+    ],
+    "verifyT": "Rescan shows no credential written to user defaults.",
+    "sinks": {
+      "swift:storage": [
+        "UserDefaults\\.standard\\.set|UserDefaults\\.standard\\.setValue",
+        "UserDefaults.standard.set",
+        "Keychain with a device-only accessibility class"
+      ]
+    }
+  },
+  {
+    "class": "plaintext-ftp-client",
+    "kind": "sast",
+    "category": "transport-security",
+    "cwe": "CWE-319",
+    "severity": "MEDIUM",
+    "framing": "call",
+    "title": "File transfer over plaintext FTP ({lang})",
+    "description": "{lang} code opens a plain FTP connection ({sink}). FTP sends the password and the file bytes unencrypted, so anyone on the path reads both; the same call is also the usual delivery path for a stolen backup. This lexical rule flags the client; the reviewer confirms whether SFTP or FTPS is available.",
+    "remediation": "Use SFTP or FTPS, for example {safe}, and disable plaintext FTP at the network edge so a future call fails loudly.",
+    "limitation": "Lexical, line-based: cannot tell an internal, isolated FTP hop from one that crosses an untrusted network.",
+    "scopeT": "Single-line lexical match on plaintext FTP client construction in {lang} code.",
+    "fp": "A test double that starts a local FTP server on loopback is the common false positive.",
+    "recordDesc": "In {lang}, {sink} authenticates and transfers without encryption. Credentials and file contents are visible to every hop, and the failure is silent because the transfer still succeeds.",
+    "applicability": "Batch jobs, partner integrations and backup scripts; single-line lexical scope.",
+    "risk": "Credential theft and file tampering on the transfer path; MEDIUM severity.",
+    "why": "{lang} plain FTP has no encryption layer ({sink}).",
+    "fix": [
+      "Switch to SFTP or FTPS ({safe}).",
+      "Block outbound port 21 so a future plaintext call cannot succeed."
+    ],
+    "verifyT": "Rescan shows no plaintext FTP client on an active code path.",
+    "sinks": {
+      "python:ftp": [
+        "ftplib\\.FTP",
+        "ftplib.FTP",
+        "paramiko SFTP over a verified host key"
+      ],
+      "ruby:ftp": [
+        "Net::FTP\\.new|Net::FTP\\.open",
+        "Net::FTP.new",
+        "Net::SFTP with a verified host key"
+      ]
+    }
+  },
+  {
+    "class": "plaintext-smtp-client",
+    "kind": "sast",
+    "category": "transport-security",
+    "cwe": "CWE-319",
+    "severity": "MEDIUM",
+    "framing": "call",
+    "title": "Mail sent without transport encryption ({lang})",
+    "description": "{lang} code constructs a mail client without an encrypted transport ({sink}). Credentials for the relay and the body of every message \u2014 often a password reset link \u2014 cross the network in clear text. This lexical rule flags the client; the reviewer confirms STARTTLS or implicit TLS is configured.",
+    "remediation": "Use SMTP over TLS with certificate verification, for example {safe}, and refuse to send when the server does not offer it.",
+    "limitation": "Lexical, line-based: flags the constructor even when STARTTLS is issued immediately afterwards.",
+    "scopeT": "Single-line lexical match on mail-client construction in {lang} code.",
+    "fp": "A mail catcher on loopback used by the test suite is the common false positive.",
+    "recordDesc": "In {lang}, {sink} opens a mail session that is not protected by TLS. Password-reset links and one-time codes travel in those bodies, which makes the mail path a credential path.",
+    "applicability": "Notification services, password-reset flows and cron-driven reports; single-line lexical scope.",
+    "risk": "Credential and reset-link interception on the mail path; MEDIUM severity.",
+    "why": "{lang} does not encrypt the session unless the code asks for it ({sink}).",
+    "fix": [
+      "Enable STARTTLS and verify the server certificate ({safe}).",
+      "Fail closed when the relay does not offer TLS."
+    ],
+    "verifyT": "Rescan shows no mail client that sends without TLS.",
+    "sinks": {
+      "python:smtp": [
+        "smtplib\\.SMTP",
+        "smtplib.SMTP",
+        "smtplib.SMTP_SSL with a verified context"
+      ]
+    }
+  },
+  {
+    "class": "gha-pr-target-checkout",
+    "kind": "sast",
+    "category": "ci-security",
+    "cwe": "CWE-94",
+    "severity": "HIGH",
+    "framing": "flag",
+    "title": "Workflow checks out the pull-request head ref ({lang})",
+    "description": "A {lang} workflow checks out the contributor's head ref ({sink}). When the workflow is also triggered by pull_request_target it runs with the base repository's secrets and a write token, so code from a fork executes with maintainer permissions; the checkout of the head is the step that introduces the untrusted code. This lexical rule flags that checkout; the reviewer removes it or switches to a two-step artifact hand-off.",
+    "remediation": "Use pull_request for untrusted code, or keep pull_request_target and never check out the head; when the head must be built, {safe}.",
+    "limitation": "Line-based on the workflow file: it flags a checkout step that names the pull-request head ref, not the job's trigger or the full job graph, so a head checkout in an unprivileged pull_request workflow is also reported.",
+    "scopeT": "A workflow file that declares pull_request_target and also checks out the head ref.",
+    "fp": "A pull_request workflow that checks out the head under read-only defaults is a common false positive.",
+    "recordDesc": "In a {lang} workflow, {sink} places the contributor's own commit on the runner. In a pull_request_target workflow the runner already holds the repository token and any configured secrets, so the first step that executes that commit ends the trust boundary.",
+    "applicability": "GitHub Actions workflows that comment, label or build from forks; line-based lexical scope.",
+    "risk": "Repository takeover and secret exfiltration through a pull request; HIGH severity.",
+    "why": "{lang} pull_request_target gives the job base-repository privileges ({sink}).",
+    "fix": [
+      "Prefer the pull_request trigger for anything that executes contributor code.",
+      "If the privileged trigger must stay, check out the base ref only ({safe}) and pass data through artifacts."
+    ],
+    "verifyT": "Rescan shows no workflow that checks out the pull-request head ref; head builds go through artifacts instead.",
+    "sinks": {
+      "gha:workflow": [
+        "ref:\\s*\\$\\{\\{\\s*github\\.event\\.pull_request\\.head\\.sha",
+        "          ref: ${{ github.event.pull_request.head.sha }}",
+        "          ref: ${{ github.sha }}",
+        "check out the base ref instead"
+      ]
+    }
+  },
+  {
+    "class": "unbounded-read",
+    "kind": "sast",
+    "category": "resource-exhaustion",
+    "cwe": "CWE-400",
+    "severity": "MEDIUM",
+    "framing": "call",
+    "title": "Whole input read into memory without a limit ({lang})",
+    "description": "{lang} code reads an entire stream or file into memory ({sink}). Nothing bounds the size, so a large or hostile input \u2014 a decompression bomb, a huge upload, a slow stream \u2014 exhausts the worker and takes the endpoint down. This lexical rule flags the read; the reviewer adds a limit.",
+    "remediation": "Stream the data, or cap it before reading (for example {safe}) and reject inputs above the cap with a clear error.",
+    "limitation": "Lexical, line-based: flags the read even where the source is a small internal file.",
+    "scopeT": "Single-line lexical match on whole-input reads in {lang} code.",
+    "fp": "Reading a small configuration file that ships with the program is the common false positive.",
+    "recordDesc": "In {lang}, {sink} copies the whole input into memory. The size is chosen by whoever supplies the input, so one request can allocate gigabytes and stall every other request on the worker.",
+    "applicability": "Upload handlers, proxies, archive extractors and API clients; single-line lexical scope.",
+    "risk": "Denial of service through memory exhaustion; MEDIUM severity.",
+    "why": "{lang} reads until end-of-stream when no limit is supplied ({sink}).",
+    "fix": [
+      "Cap the read at a documented maximum ({safe}).",
+      "Stream to disk or to the consumer instead of buffering."
+    ],
+    "verifyT": "Rescan shows every unbounded read replaced by a capped or streamed read.",
+    "sinks": {
+      "go:io": [
+        "ioutil\\.ReadAll|io\\.ReadAll",
+        "ioutil.ReadAll",
+        "io.Copy with a LimitReader"
+      ],
+      "javascript:fs": [
+        "readFileSync|readFile",
+        "fs.readFileSync",
+        "a bounded stream with a byte limit"
+      ]
+    }
+  },
+  {
+    "class": "java-temp-file-permissions",
+    "kind": "sast",
+    "category": "insecure-temp-file",
+    "cwe": "CWE-377",
+    "severity": "MEDIUM",
+    "framing": "call",
+    "title": "Temporary file created without owner-only permissions ({lang})",
+    "description": "{lang} code creates a temporary file ({sink}). On a shared host the default permissions can let another account read the file, and a predictable name lets it be pre-created as a symlink. This lexical rule flags the creation; the reviewer confirms the permissions and the name source.",
+    "remediation": "Create the file with owner-only permissions and a random name, for example {safe}, and delete it in a finally block.",
+    "limitation": "Lexical, line-based: flags temp-file creation without inspecting the resulting permissions.",
+    "scopeT": "Single-line lexical match on temporary-file creation in {lang} code.",
+    "fp": "Temp files that only ever hold non-sensitive, already-public data are the common false positive.",
+    "recordDesc": "In {lang}, {sink} creates a file in a shared directory. Between creation and use, another account can read it or swap it, which turns a scratch file into a disclosure or a symlink attack.",
+    "applicability": "Export jobs, report generation and archive handling; single-line lexical scope.",
+    "risk": "Local disclosure of exported data and symlink-based file clobbering; MEDIUM severity.",
+    "why": "{lang} temp-file defaults are not owner-only on every platform ({sink}).",
+    "fix": [
+      "Set owner-only permissions at creation ({safe}).",
+      "Use a random name and delete the file in a finally block."
+    ],
+    "verifyT": "Rescan shows temp files created with owner-only permissions and a random name.",
+    "sinks": {
+      "java:tempfile": [
+        "createTempFile",
+        "File.createTempFile",
+        "Files.createTempFile with POSIX owner-only permissions"
+      ]
+    }
+  }
+]

@@ -1,6 +1,6 @@
-# ASSET_METHODOLOGY.md — how the generated intelligence set is authored (1547 pack rules, 1547 patterns, 1547 generated records)
+# ASSET_METHODOLOGY.md — how the generated intelligence set is authored (2104 pack rules, 2104 patterns, 2104 generated records)
 
-Date: 2026-10-15; counts refreshed 2026-10-21 from `docs/CURRENT_INVENTORY.json` (1,547 packs / 1,547 patterns / 1,547 records / 1,547 remediation / 69 CWE). The earlier 1,353 counts were the 2026-10-21 batch-26 state. The earlier 954/954/914 header was the 2026-10-18 state and is kept here only as history.
+Date: 2026-10-15; counts refreshed 2026-10-21 from `docs/CURRENT_INVENTORY.json` (2,104 packs / 2,104 patterns / 2,104 records / 2,104 remediation / 69 CWE). The earlier 1,353 counts were the 2026-10-21 batch-26 state. The earlier 954/954/914 header was the 2026-10-18 state and is kept here only as history.
 This document states the authoring method so an auditor
 can tell systematic original work from padding. The generator
 (`scripts/generate-assets.mjs`) is a deterministic compiler: every byte it
@@ -97,7 +97,7 @@ re-running the generator on unchanged data produces byte-identical files.
 generated file independently (schema, execution, linkage, leak scan,
 inventory), so generator output is evidence, never self-certification.
 
-Retired reservations (31): the manifest keeps the IDs of cells whose source
+Retired reservations (33): the manifest keeps the IDs of cells whose source
 was removed from `data/asset-cells/` and whose rule files are not on disk.
 Those IDs stay reserved, because `docs/PACKS.md` says rule IDs are never
 reused. The consistency suite pins this list: any other manifest cell
@@ -112,11 +112,20 @@ ID allocation because its evidence pattern needed 784 characters against the
 500-character schema limit.
 Retired: DPK-DAST-015, DPK-DAST-018, DPK-DAST-019, DPK-DAST-020, DPK-DAST-048, DPK-DAST-151, DPK-DAST-154,
 DPK-DAST-283, DPK-DAST-284,
+DPK-DAST-525, DPK-DAST-527,
 DPK-SAST-048, DPK-SAST-508,
 DPK-SAST-518, DPK-SAST-535, DPK-SAST-538, DPK-SAST-539, DPK-SAST-551,
 DPK-SAST-595, DPK-SAST-631, DPK-SAST-634, DPK-SAST-960, DPK-SEC-009, DPK-SEC-012,
 DPK-SEC-013, DPK-SEC-027, DPK-SEC-035, DPK-SEC-038, DPK-SEC-041,
 DPK-SEC-042, DPK-SEC-053, DPK-SEC-062, DPK-SEC-066.
+
+DPK-DAST-525 (Kubernetes `kind: Secret`) and DPK-DAST-527 (Slack incoming webhook)
+were authored on 2026-10-21 and withdrawn before the branch was pushed: 525 asked a
+question DPK-DAST-325 already asks with a tighter pattern (`kind: Secret` plus a
+`data:`/`stringData:` block), and 527 repeated DPK-DAST-330, which already matches a
+Slack webhook URL in a body. The replacement classes added in the same batch were
+inline event handlers and absolute return-URL links, so the DAST total stayed at 520.
+Both IDs stay reserved.
 
 DPK-DAST-151 (`script-src-attr` unsafe-inline) and DPK-DAST-154 (`style-src-attr` unsafe-inline)
 were composed and then withdrawn inside the 2026-10-20 pump: their evidence is a
