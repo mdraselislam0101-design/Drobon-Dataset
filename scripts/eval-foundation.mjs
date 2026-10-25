@@ -27,6 +27,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { evalDastCheck } from './validate-packs.mjs';
+import { evaluateScaCheck } from './sca-rule-engine.mjs';
 
 export const EVAL_CASE_SCHEMA = 'drobon.eval.case/v1';
 export const EVAL_REPORT_SCHEMA = 'drobon.eval.report/v1';
@@ -37,7 +38,7 @@ export const GROUND_TRUTH_STATES = Object.freeze(['ASSESSED', 'UNASSESSED']);
 /** Case variants (labels only; the runner does not interpret them). */
 export const VARIANTS = Object.freeze(['positive', 'negative', 'boundary', 'near-miss', 'mutation']);
 /** Analysis modes supported in this phase. */
-export const MODES = Object.freeze(['line-regex', 'observation']);
+export const MODES = Object.freeze(['line-regex', 'observation', 'sca-document']);
 
 /** sha256 helper used to prove the runner does not mutate case files. */
 export function sha256(text) {
@@ -61,7 +62,7 @@ export function validateCase(value, idHint = '<case>') {
   const allowed = [
     'schemaVersion', 'id', 'variant', 'synthetic', 'testOnly', 'purpose',
     'language', 'framework', 'mode', 'groundTruth', 'fixture', 'expected',
-    'limitations', 'testCommand', 'provenance', 'cohort',
+    'limitations', 'testCommand', 'provenance', 'cohort', 'shortEvidence',
   ];
   for (const key of Object.keys(value)) {
     if (!allowed.includes(key)) fail(errors, id, `unknown property "${key}"`);
@@ -69,8 +70,8 @@ export function validateCase(value, idHint = '<case>') {
   if (value.schemaVersion !== EVAL_CASE_SCHEMA) {
     fail(errors, id, `schemaVersion: unsupported schema (want "${EVAL_CASE_SCHEMA}", got ${JSON.stringify(value.schemaVersion)})`);
   }
-  if (typeof value.id !== 'string' || !/^EVAL-[A-Z]+-[0-9]{3}$/.test(value.id)) {
-    fail(errors, id, 'id: must match ^EVAL-[A-Z]+-[0-9]{3}$');
+  if (typeof value.id !== 'string' || !/^EVAL-[A-Z]+-[0-9]{3,4}$/.test(value.id)) {
+    fail(errors, id, 'id: must match ^EVAL-[A-Z]+-[0-9]{3,4}$');
   }
   if (!VARIANTS.includes(value.variant)) {
     fail(errors, id, `variant: must be one of ${VARIANTS.join('|')}`);
@@ -113,7 +114,11 @@ export function validateCase(value, idHint = '<case>') {
     if (typeof fixture.name !== 'string' || fixture.name.length === 0) {
       fail(errors, id, 'fixture.name: required string');
     }
-    if (value.mode === 'observation') {
+    if (value.mode === 'sca-document') {
+      if (typeof fixture.document !== 'object' || fixture.document === null || Array.isArray(fixture.document)) {
+        fail(errors, id, 'fixture.document: required object for sca-document mode (the already-parsed artifact)');
+      }
+    } else if (value.mode === 'observation') {
       if (typeof fixture.observation !== 'object' || fixture.observation === null || Array.isArray(fixture.observation)) {
         fail(errors, id, 'fixture.observation: required object for observation mode');
       }
@@ -141,16 +146,24 @@ export function validateCase(value, idHint = '<case>') {
       if (typeof d.ruleId !== 'string' || d.ruleId.length === 0) {
         fail(errors, id, `expected.detections[${i}].ruleId: required`);
       }
-      if (!Number.isInteger(d.lineNo) || d.lineNo < 1) {
+      if (value.mode !== 'sca-document' && (!Number.isInteger(d.lineNo) || d.lineNo < 1)) {
         fail(errors, id, `expected.detections[${i}].lineNo: required positive integer (exact source evidence)`);
       }
-      if (typeof d.mustContain !== 'string' || d.mustContain.length < 4) {
-        fail(errors, id, `expected.detections[${i}].mustContain: required evidence text (>=4 chars)`);
+      if (value.mode === 'sca-document' && d.lineNo !== undefined) {
+        fail(errors, id, `expected.detections[${i}].lineNo: not used in sca-document mode (evidence is the document text)`);
+      }
+      if (typeof d.mustContain !== 'string' || d.mustContain.length < 2) {
+        fail(errors, id, `expected.detections[${i}].mustContain: required evidence text (>=2 chars)`);
+      } else if (d.mustContain.length < 4 && value.shortEvidence !== true) {
+        fail(errors, id, `expected.detections[${i}].mustContain: under 4 characters needs "shortEvidence": true (evidence must then equal the detector's complete match)`);
       }
       if (value.mode !== 'observation' && Array.isArray(fixture?.lines) && Number.isInteger(d.lineNo) && d.lineNo > fixture.lines.length) {
         fail(errors, id, `expected.detections[${i}].lineNo: beyond fixture line count`);
       }
     });
+  }
+  if (value.shortEvidence !== undefined && value.shortEvidence !== true) {
+    fail(errors, id, 'shortEvidence: must be true when present (it allows evidence shorter than 4 characters only as a complete-match proof)');
   }
   if (expected.forbiddenDetections !== undefined
     && (!Array.isArray(expected.forbiddenDetections) || expected.forbiddenDetections.some((r) => typeof r !== 'string'))) {
@@ -260,7 +273,10 @@ export function loadCases(root, ruleRoot = root) {
  * packs/ (the dataset's own detectors — never external logic).
  */
 function loadRule(root, ruleId) {
-  const kind = ruleId.includes('-SAST-') ? 'sast' : ruleId.includes('-SEC-') ? 'secrets' : ruleId.includes('-DAST-') ? 'dast' : null;
+  const kind = ruleId.includes('-SAST-') ? 'sast'
+    : ruleId.includes('-SEC-') ? 'secrets'
+      : ruleId.includes('-DAST-') ? 'dast'
+        : ruleId.includes('-SCA-') ? 'sca' : null;
   if (kind === null) return null;
   try {
     return JSON.parse(readFileSync(join(root, 'packs', kind, 'v1', 'rules', `${ruleId}.json`), 'utf8'));
@@ -295,7 +311,11 @@ export function evaluateCase(root, testCase) {
     truePositives: 0,
     falseNegatives: 0,
     falsePositives: 0,
-    expected: testCase.expected.detections.map((d) => ({ ruleId: d.ruleId, lineNo: d.lineNo, mustContain: d.mustContain })),
+    expected: testCase.expected.detections.map((d) => ({
+      ruleId: d.ruleId,
+      lineNo: testCase.mode === 'sca-document' ? 0 : d.lineNo,
+      mustContain: d.mustContain,
+    })),
     actual: [],
     notes: [],
   };
@@ -305,7 +325,34 @@ export function evaluateCase(root, testCase) {
   ];
   const uniqueRuleIds = [...new Set(ruleIds)].sort();
 
-  if (testCase.mode === 'observation') {
+  if (testCase.mode === 'sca-document') {
+    // SCA mode: each named rule's declared predicate is evaluated against the
+    // fixture's already-parsed artifact, exactly as a consumer would evaluate it.
+    const document = testCase.fixture.document ?? {};
+    const text = JSON.stringify(document);
+    for (const ruleId of uniqueRuleIds) {
+      const rule = loadRule(root, ruleId);
+      if (rule === null || rule.check === undefined) {
+        result.notes.push(`detector ${ruleId}: not loadable as an SCA rule`);
+        continue;
+      }
+      const forbidden = (testCase.expected.forbiddenDetections ?? []).includes(ruleId);
+      let fired;
+      try {
+        fired = evaluateScaCheck(rule.check, { document }) === true;
+      } catch (err) {
+        result.notes.push(`detector ${ruleId}: predicate refused the document (${err.message})`);
+        continue;
+      }
+      if (!fired) continue;
+      const declared = result.expected.find((e) => e.ruleId === ruleId);
+      const evidence = declared !== undefined && text.includes(declared.mustContain)
+        ? declared.mustContain
+        : text.slice(0, 80);
+      result.actual.push({ ruleId, lineNo: 0, matchedText: evidence });
+      if (forbidden) result.notes.push(`forbidden detection ${ruleId} fired on the document`);
+    }
+  } else if (testCase.mode === 'observation') {
     // Observation mode: each expected detection names a rule whose `check` is
     // evaluated against the fixture's declared observation object.
     for (const ruleId of uniqueRuleIds) {
@@ -354,11 +401,17 @@ export function evaluateCase(root, testCase) {
   const remaining = [...result.expected];
   const matchedActual = new Set();
   for (const exp of [...remaining]) {
+    // Evidence is a substring proof at >=4 characters. Shorter evidence is only
+    // accepted when the case opts in (`shortEvidence`) and the declared text is the
+    // detector's COMPLETE match — a partial 2–3 character keyword is never evidence.
+    const evidenceMatches = (matchedText) => (exp.mustContain.length >= 4
+      ? matchedText.includes(exp.mustContain)
+      : (testCase.shortEvidence === true && matchedText === exp.mustContain));
     const hitIndex = result.actual.findIndex((a, i) =>
       !matchedActual.has(i)
       && a.ruleId === exp.ruleId
       && a.lineNo === exp.lineNo
-      && a.matchedText.includes(exp.mustContain));
+      && evidenceMatches(a.matchedText));
     if (hitIndex >= 0) {
       matchedActual.add(hitIndex);
       remaining.splice(remaining.indexOf(exp), 1);

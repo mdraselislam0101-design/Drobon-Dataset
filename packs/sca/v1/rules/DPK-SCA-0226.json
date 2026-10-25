@@ -1,0 +1,82 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0226",
+  "title": "Swift package fetched over cleartext",
+  "description": "Package.swift declares a package URL that uses cleartext http. The checkout crosses the network unencrypted, so the source that compiles can be replaced in flight.",
+  "severity": "HIGH",
+  "cwe": "CWE-319",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "swift"
+  ],
+  "artifact": "Package.swift",
+  "parser": "lockfile-text",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "dependencies[].url",
+    "valuePattern": "^http://"
+  },
+  "tests": [
+    {
+      "file": "Package.swift",
+      "document": {
+        "dependencies": [
+          {
+            "url": "http://git.acme.example/sdk.git",
+            "requirement": {
+              "from": "4.2.0"
+            }
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "Package.swift",
+      "document": {
+        "dependencies": [
+          {
+            "url": "http://10.24.8.9/sdk.git",
+            "requirement": {
+              "exact": "4.2.0"
+            }
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "Package.swift",
+      "document": {
+        "dependencies": [
+          {
+            "url": "https://github.com/acme/sdk",
+            "requirement": {
+              "from": "4.2.0"
+            }
+          }
+        ]
+      },
+      "match": false
+    },
+    {
+      "file": "Package.swift",
+      "document": {
+        "dependencies": [
+          {
+            "url": "https://github.com/acme/cli",
+            "requirement": {
+              "exact": "2.1.0"
+            }
+          }
+        ]
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2363"
+  ],
+  "remediation": "Use an https URL with a valid certificate.",
+  "limitation": "It matches a package URL that uses cleartext http in the parsed Package.swift; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

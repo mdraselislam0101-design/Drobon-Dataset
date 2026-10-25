@@ -1,0 +1,102 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0160",
+  "title": "Maven dependency on a snapshot build",
+  "description": "pom.xml declares a `-SNAPSHOT` dependency, which is rebuilt by its publisher at any time. The artifact behind a snapshot changes without a version change, so the build is not reproducible and no hash can pin it.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1104",
+  "category": "dependency-hygiene",
+  "ecosystems": [
+    "maven"
+  ],
+  "artifact": "pom.xml",
+  "parser": "xml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "project.dependencies[].version",
+    "valuePattern": "-SNAPSHOT$"
+  },
+  "tests": [
+    {
+      "file": "pom.xml",
+      "document": {
+        "project": {
+          "modelVersion": "4.0.0",
+          "groupId": "com.acme",
+          "artifactId": "demo-service",
+          "version": "1.4.0",
+          "dependencies": [
+            {
+              "groupId": "com.acme",
+              "artifactId": "internal-core",
+              "version": "1.5.0-SNAPSHOT"
+            }
+          ]
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "pom.xml",
+      "document": {
+        "project": {
+          "modelVersion": "4.0.0",
+          "groupId": "com.acme",
+          "artifactId": "demo-service",
+          "version": "1.4.0",
+          "dependencies": [
+            {
+              "groupId": "com.acme",
+              "artifactId": "internal-util",
+              "version": "2.0.0-SNAPSHOT"
+            }
+          ]
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "pom.xml",
+      "document": {
+        "project": {
+          "modelVersion": "4.0.0",
+          "groupId": "com.acme",
+          "artifactId": "demo-service",
+          "version": "1.4.0",
+          "dependencies": [
+            {
+              "groupId": "com.acme",
+              "artifactId": "internal-core",
+              "version": "1.5.0"
+            }
+          ]
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "pom.xml",
+      "document": {
+        "project": {
+          "modelVersion": "4.0.0",
+          "groupId": "com.acme",
+          "artifactId": "demo-service",
+          "version": "1.4.0",
+          "dependencies": [
+            {
+              "groupId": "com.acme",
+              "artifactId": "internal-util",
+              "version": "2.0.0"
+            }
+          ]
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2297"
+  ],
+  "remediation": "Depend on a released version.",
+  "limitation": "It matches a `-SNAPSHOT` dependency, which is rebuilt by its publisher at any time in the parsed pom.xml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

@@ -1,0 +1,87 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0224",
+  "title": "pubspec.lock pins a non-hosted source",
+  "description": "pubspec.lock declares a locked package whose source is git or a local path. The locked version is not a hosted artifact, so nothing on the package server can attest or revoke it.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-829",
+  "category": "lockfile-integrity",
+  "ecosystems": [
+    "pub"
+  ],
+  "artifact": "pubspec.lock",
+  "parser": "yaml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "packages.*.source",
+    "valuePattern": "^(?:git|path)$"
+  },
+  "tests": [
+    {
+      "file": "pubspec.lock",
+      "document": {
+        "packages": {
+          "acme_sdk": {
+            "version": "4.2.0",
+            "source": "git",
+            "description": {
+              "url": "https://github.com/acme/sdk.git",
+              "resolved-ref": "9f2c4a1"
+            }
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "pubspec.lock",
+      "document": {
+        "packages": {
+          "acme_shared": {
+            "version": "1.2.0",
+            "source": "path",
+            "description": {
+              "path": "../acme-shared"
+            }
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "pubspec.lock",
+      "document": {
+        "packages": {
+          "http": {
+            "version": "1.2.0",
+            "source": "hosted",
+            "description": {
+              "url": "https://pub.dev"
+            }
+          }
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "pubspec.lock",
+      "document": {
+        "packages": {
+          "path": {
+            "version": "1.9.0",
+            "source": "hosted",
+            "description": {
+              "url": "https://pub.dev"
+            }
+          }
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2361"
+  ],
+  "remediation": "Depend on a hosted package for released builds.",
+  "limitation": "It matches a locked package whose source is git or a local path in the parsed pubspec.lock; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

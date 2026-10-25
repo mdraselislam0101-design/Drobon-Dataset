@@ -1,0 +1,76 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0217",
+  "title": "mix.lock entry without a checksum",
+  "description": "mix.lock declares a locked package that records no hash. Mix cannot verify the fetched package against the lockfile, so a mirror can serve different code for the same version.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-494",
+  "category": "lockfile-integrity",
+  "ecosystems": [
+    "hex"
+  ],
+  "artifact": "mix.lock",
+  "parser": "lockfile-text",
+  "check": {
+    "type": "sca-entry-missing-field",
+    "path": "packages",
+    "field": "hash"
+  },
+  "tests": [
+    {
+      "file": "mix.lock",
+      "document": {
+        "packages": {
+          "phoenix": {
+            "version": "1.7.10"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "mix.lock",
+      "document": {
+        "packages": {
+          "ecto": {
+            "version": "3.11.2"
+          },
+          "phoenix": {
+            "version": "1.7.10",
+            "hash": "sha256:aaaa"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "mix.lock",
+      "document": {
+        "packages": {
+          "phoenix": {
+            "version": "1.7.10",
+            "hash": "sha256:aaaa"
+          }
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "mix.lock",
+      "document": {
+        "packages": {
+          "ecto": {
+            "version": "3.11.2",
+            "hash": "sha256:bbbb"
+          }
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2354"
+  ],
+  "remediation": "Regenerate the lockfile so every package records its hash.",
+  "limitation": "It matches a locked package that records no hash in the parsed mix.lock; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

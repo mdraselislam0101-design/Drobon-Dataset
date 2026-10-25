@@ -1,0 +1,66 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0093",
+  "title": "Yarn allowed to rewrite the lockfile during CI",
+  "description": ".yarnrc.yml declares a Yarn setting that lets an install update the lockfile it was given. A CI run can resolve versions the review never saw and report success, so the committed lockfile stops describing what was built.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1104",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "npm"
+  ],
+  "artifact": ".yarnrc.yml",
+  "parser": "yaml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "config.enableImmutable",
+    "valuePattern": "^false$"
+  },
+  "tests": [
+    {
+      "file": ".yarnrc.yml",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "enableImmutable": false
+        }
+      },
+      "match": true
+    },
+    {
+      "file": ".yarnrc.yml",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "enableImmutable": "false"
+        }
+      },
+      "match": true
+    },
+    {
+      "file": ".yarnrc.yml",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "enableImmutable": true
+        }
+      },
+      "match": false
+    },
+    {
+      "file": ".yarnrc.yml",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "npmRegistryServer": "https://registry.yarnpkg.com/"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2230"
+  ],
+  "remediation": "Enable immutable installs in CI so a drift fails the build instead of being written away.",
+  "limitation": "It matches a Yarn setting that lets an install update the lockfile it was given in the parsed .yarnrc.yml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

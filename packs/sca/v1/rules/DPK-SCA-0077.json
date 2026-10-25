@@ -1,0 +1,66 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0077",
+  "title": "Base64 basic-auth credential in the client configuration",
+  "description": ".npmrc declares a base64 `user:password` credential written into the checked-in client configuration. Base64 is encoding, not encryption: the pair decodes with one command, so the account can be used until the password is changed.",
+  "severity": "HIGH",
+  "cwe": "CWE-522",
+  "category": "credential-in-config",
+  "ecosystems": [
+    "npm"
+  ],
+  "artifact": ".npmrc",
+  "parser": "ini",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "config._auth",
+    "valuePattern": "^[A-Za-z0-9+/=]{16,}$"
+  },
+  "tests": [
+    {
+      "file": ".npmrc",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "_auth": "ZXhhbXBsZTpleGFtcGxlcGFzc3dvcmQ="
+        }
+      },
+      "match": true
+    },
+    {
+      "file": ".npmrc",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "_auth": "ZGVtby1zdmM6ZXhhbXBsZXBhc3N3b3Jk"
+        }
+      },
+      "match": true
+    },
+    {
+      "file": ".npmrc",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "_auth": "${NPM_BASIC_AUTH}"
+        }
+      },
+      "match": false
+    },
+    {
+      "file": ".npmrc",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "registry": "https://registry.npmjs.org/"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2214"
+  ],
+  "remediation": "Read the credential from the environment and switch the account to a scoped token.",
+  "limitation": "It matches a base64 `user:password` credential written into the checked-in client configuration in the parsed .npmrc; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

@@ -1,0 +1,98 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0210",
+  "title": "Gemfile.lock carries a private namespace gem",
+  "description": "Gemfile.lock declares a locked spec whose name sits in the private `acme-` namespace. A private name resolved from the public source is the dependency-confusion path: whoever publishes that name first wins the install.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1104",
+  "category": "lockfile-integrity",
+  "ecosystems": [
+    "rubygems"
+  ],
+  "artifact": "Gemfile.lock",
+  "parser": "lockfile-text",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "specs[].name",
+    "valuePattern": "^acme-"
+  },
+  "tests": [
+    {
+      "file": "Gemfile.lock",
+      "document": {
+        "specs": [
+          {
+            "name": "acme-internal-core",
+            "version": "1.4.2"
+          },
+          {
+            "name": "rails",
+            "version": "7.1.3"
+          }
+        ],
+        "source": {
+          "remote": "https://rubygems.org"
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "Gemfile.lock",
+      "document": {
+        "specs": [
+          {
+            "name": "acme-internal-util",
+            "version": "2.0.0"
+          }
+        ],
+        "source": {
+          "remote": "https://gems.acme.example"
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "Gemfile.lock",
+      "document": {
+        "specs": [
+          {
+            "name": "rails",
+            "version": "7.1.3"
+          },
+          {
+            "name": "puma",
+            "version": "6.4.2"
+          }
+        ],
+        "source": {
+          "remote": "https://rubygems.org"
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "Gemfile.lock",
+      "document": {
+        "specs": [
+          {
+            "name": "nokogiri",
+            "version": "1.16.7"
+          },
+          {
+            "name": "rake",
+            "version": "13.2.1"
+          }
+        ],
+        "source": {
+          "remote": "https://rubygems.org"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2347"
+  ],
+  "remediation": "Confirm every private-namespace gem comes from the private source, and pin the source in the Gemfile.",
+  "limitation": "It matches a locked spec whose name sits in the private `acme-` namespace in the parsed Gemfile.lock; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

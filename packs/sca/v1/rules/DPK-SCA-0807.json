@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0807",
+  "title": "Poetry package from a non-index source",
+  "description": "poetry.lock declares a `source.type` other than the default index. A name or scope that resolves outside the project's intended registry is fetched from a source nobody reviewed, so a publish there becomes an install here. This rule reads a `source.type` other than the default index.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-829",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "pypi"
+  ],
+  "artifact": "poetry.lock",
+  "parser": "toml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "package[].source.type",
+    "valuePattern": "^(?:legacy|url|git)$"
+  },
+  "tests": [
+    {
+      "file": "poetry.lock",
+      "document": {
+        "package": [
+          {
+            "name": "acme-sdk",
+            "version": "4.2.0",
+            "source": {
+              "type": "legacy",
+              "url": "https://pypi.acme.example/simple"
+            }
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "poetry.lock",
+      "document": {
+        "package": [
+          {
+            "name": "acme-core",
+            "version": "1.4.2",
+            "source": {
+              "type": "git",
+              "url": "https://github.com/acme/core"
+            }
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "poetry.lock",
+      "document": {
+        "package": [
+          {
+            "name": "requests",
+            "version": "2.32.3"
+          }
+        ]
+      },
+      "match": false
+    },
+    {
+      "file": "poetry.lock",
+      "document": {
+        "package": [
+          {
+            "name": "urllib3",
+            "version": "2.2.2",
+            "source": {
+              "type": "file",
+              "url": "/opt/vendor"
+            }
+          }
+        ]
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2944"
+  ],
+  "remediation": "Point the declaration or the registry configuration at the namespace the project controls, and remove the lookup path that resolves elsewhere. Specifically: fix a `source.type` other than the default index.",
+  "limitation": "It matches a `source.type` other than the default index in the parsed poetry.lock; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0215",
+  "title": "Hex dependency with an open lower bound",
+  "description": "mix.exs declares a `>=` requirement with no upper bound. Every later major satisfies the requirement, so Mix can resolve an incompatible release the project never tested.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1104",
+  "category": "dependency-hygiene",
+  "ecosystems": [
+    "hex"
+  ],
+  "artifact": "mix.exs",
+  "parser": "lockfile-text",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "deps[].requirement",
+    "valuePattern": "^>=\\s*\\d"
+  },
+  "tests": [
+    {
+      "file": "mix.exs",
+      "document": {
+        "project": {
+          "app": "demo_service"
+        },
+        "deps": [
+          {
+            "name": "phoenix",
+            "requirement": ">= 1.7.0"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "mix.exs",
+      "document": {
+        "project": {
+          "app": "demo_service"
+        },
+        "deps": [
+          {
+            "name": "ecto",
+            "requirement": ">= 3.10.0"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "mix.exs",
+      "document": {
+        "project": {
+          "app": "demo_service"
+        },
+        "deps": [
+          {
+            "name": "phoenix",
+            "requirement": "~> 1.7.10"
+          }
+        ]
+      },
+      "match": false
+    },
+    {
+      "file": "mix.exs",
+      "document": {
+        "project": {
+          "app": "demo_service"
+        },
+        "deps": [
+          {
+            "name": "ecto",
+            "requirement": "3.11.2"
+          }
+        ]
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2352"
+  ],
+  "remediation": "Use a pessimistic (`~>`) requirement or pin the exact version.",
+  "limitation": "It matches a `>=` requirement with no upper bound in the parsed mix.exs; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

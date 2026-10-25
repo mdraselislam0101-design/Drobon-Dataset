@@ -1,0 +1,84 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0101",
+  "title": "pnpm lockfile resolves a package from a git repository",
+  "description": "pnpm-lock.yaml declares a pnpm resolution that names a git repository instead of a registry tarball. The installed code is outside registry publication controls, so no checksum or advisory range covers it.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-829",
+  "category": "lockfile-integrity",
+  "ecosystems": [
+    "npm"
+  ],
+  "artifact": "pnpm-lock.yaml",
+  "parser": "yaml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "packages.*.resolution.repo",
+    "valuePattern": "^git\\+"
+  },
+  "tests": [
+    {
+      "file": "pnpm-lock.yaml",
+      "document": {
+        "lockfileVersion": "9.0",
+        "packages": {
+          "/acme-sdk@4.2.0": {
+            "resolution": {
+              "repo": "git+https://github.com/acme/sdk.git",
+              "commit": "9f2c4a1"
+            }
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "pnpm-lock.yaml",
+      "document": {
+        "lockfileVersion": "9.0",
+        "packages": {
+          "/acme-cli@2.1.0": {
+            "resolution": {
+              "repo": "git+ssh://git@github.com/acme/cli.git",
+              "commit": "0a1b2c3"
+            }
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "pnpm-lock.yaml",
+      "document": {
+        "lockfileVersion": "9.0",
+        "packages": {
+          "/acme-sdk@4.2.0": {
+            "resolution": {
+              "integrity": "sha512-AAAA"
+            }
+          }
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "pnpm-lock.yaml",
+      "document": {
+        "lockfileVersion": "9.0",
+        "packages": {
+          "/acme-cli@2.1.0": {
+            "resolution": {
+              "tarball": "https://registry.npmjs.org/acme-cli/-/acme-cli-2.1.0.tgz"
+            }
+          }
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2238"
+  ],
+  "remediation": "Depend on a published version served by the registry.",
+  "limitation": "It matches a pnpm resolution that names a git repository instead of a registry tarball in the parsed pnpm-lock.yaml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

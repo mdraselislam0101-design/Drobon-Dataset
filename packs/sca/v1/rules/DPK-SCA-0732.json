@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0732",
+  "title": "Hex dependency declared from a local path",
+  "description": "mix.exs declares a dependency resolved from a directory on the build machine. A dependency resolved from a local path or a mutable branch is not the published artifact the rest of the project audits. This rule reads a dependency resolved from a directory on the build machine.",
+  "severity": "HIGH",
+  "cwe": "CWE-1104",
+  "category": "local-source",
+  "ecosystems": [
+    "hex"
+  ],
+  "artifact": "mix.exs",
+  "parser": "lockfile-text",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "deps[].path",
+    "valuePattern": "^\\.{0,2}/"
+  },
+  "tests": [
+    {
+      "file": "mix.exs",
+      "document": {
+        "project": {
+          "app": "demo_service"
+        },
+        "deps": [
+          {
+            "name": "acme_core",
+            "path": "../acme_core"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "mix.exs",
+      "document": {
+        "project": {
+          "app": "demo_service"
+        },
+        "deps": [
+          {
+            "name": "acme_sdk",
+            "path": "/opt/vendor/acme_sdk"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "mix.exs",
+      "document": {
+        "project": {
+          "app": "demo_service"
+        },
+        "deps": [
+          {
+            "name": "phoenix",
+            "requirement": "~> 1.7"
+          }
+        ]
+      },
+      "match": false
+    },
+    {
+      "file": "mix.exs",
+      "document": {
+        "project": {
+          "app": "demo_service"
+        },
+        "deps": [
+          {
+            "name": "jason",
+            "requirement": "~> 1.4"
+          }
+        ]
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2869"
+  ],
+  "remediation": "Depend on a published, versioned artifact, and keep local paths or branch references out of the committed manifest. Specifically: fix a dependency resolved from a directory on the build machine.",
+  "limitation": "It matches a dependency resolved from a directory on the build machine in the parsed mix.exs; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

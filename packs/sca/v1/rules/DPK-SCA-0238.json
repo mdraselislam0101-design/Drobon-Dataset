@@ -1,0 +1,73 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0238",
+  "title": "conda environment mixes pip installs into the solver's tree",
+  "description": "environment.yml declares a `pip` entry in the conda dependency list, which lets pip install outside the solver. pip writes packages the conda solver did not resolve, so the environment has two sources of truth and the pinned file no longer describes it.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1104",
+  "category": "dependency-hygiene",
+  "ecosystems": [
+    "conda"
+  ],
+  "artifact": "environment.yml",
+  "parser": "yaml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "dependencies[]",
+    "valuePattern": "^pip$"
+  },
+  "tests": [
+    {
+      "file": "environment.yml",
+      "document": {
+        "name": "demo",
+        "dependencies": [
+          "numpy=1.26.4",
+          "pip"
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "environment.yml",
+      "document": {
+        "name": "demo",
+        "dependencies": [
+          "pip",
+          {
+            "pip": [
+              "requests==2.32.3"
+            ]
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "environment.yml",
+      "document": {
+        "name": "demo",
+        "dependencies": [
+          "numpy=1.26.4",
+          "pandas=2.2.2"
+        ]
+      },
+      "match": false
+    },
+    {
+      "file": "environment.yml",
+      "document": {
+        "name": "demo",
+        "dependencies": [
+          "scipy=1.14.0"
+        ]
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2375"
+  ],
+  "remediation": "Keep the environment solver-only, or move the pip requirements into a pinned file that the build reads explicitly.",
+  "limitation": "It matches a `pip` entry in the conda dependency list, which lets pip install outside the solver in the parsed environment.yml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

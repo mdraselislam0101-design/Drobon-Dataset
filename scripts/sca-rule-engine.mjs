@@ -10,7 +10,7 @@
  * `scripts/range.mjs`.
  *
  * The engine is deliberately small: one path resolver plus a closed vocabulary
- * of five predicates. Every rule file carries its own regex or string literal,
+ * of six predicates. Every rule file carries its own regex or string literal,
  * which is where the rule's knowledge lives; the evaluator only applies it.
  *
  * Input contract: `{ file, document }` where `document` is the already-parsed
@@ -32,26 +32,6 @@ export const SCA_CHECK_TYPES = Object.freeze([
 
 /** Predicates that take a regular expression. */
 export const SCA_PATTERN_TYPES = Object.freeze(['sca-field-matches', 'sca-field-not-matches', 'sca-key-matches']);
-
-/**
- * Entries reached by a container path. A lockfile map (`packages`) and an array
- * (`requirements`) both reduce to their entry objects, so one predicate can ask
- * "does any entry lack field X" without knowing the container shape.
- */
-export function entriesAtPath(document, path) {
-  const entries = [];
-  for (const node of resolvePath(document, path)) {
-    const value = node.value;
-    if (Array.isArray(value)) {
-      for (const item of value) if (item !== null && typeof item === 'object' && !Array.isArray(item)) entries.push(item);
-    } else if (value !== null && typeof value === 'object') {
-      for (const item of Object.values(value)) {
-        if (item !== null && typeof item === 'object' && !Array.isArray(item)) entries.push(item);
-      }
-    }
-  }
-  return entries;
-}
 
 /** Ecosystems a rule may name. One ecosystem per rule, by design. */
 export const SCA_ECOSYSTEMS = Object.freeze([
@@ -98,12 +78,12 @@ export class ScaRuleError extends Error {
  * Resolve a dotted path against a parsed document.
  *
  * Grammar: `a.b` (object member), `a.*` (every object member), `a[]` (every
- * array element). Segments combine, e.g. `packages[].dependencies.*` or
- * `requirements[].hashes[]`. The empty path is the document itself.
+ * array element), `a.*[]` (every element of every member). The empty path is the
+ * document itself.
  *
  * Returns `{ path, value, key }` nodes for every value the path reaches. A
- * missing member simply yields no node; callers that need "absent" semantics
- * use that empty result, never an exception.
+ * missing member simply yields no node; callers that need "absent" semantics use
+ * that empty result, never an exception.
  */
 export function resolvePath(document, path) {
   if (typeof path !== 'string') throw new ScaRuleError('path: must be a string');
@@ -121,10 +101,15 @@ export function resolvePath(document, path) {
       if (name === '*') {
         if (value === null || typeof value !== 'object' || Array.isArray(value)) continue;
         for (const [childKey, childValue] of Object.entries(value)) {
-          next.push({
-            path: nodePath === '' ? childKey : `${nodePath}.${childKey}`,
-            value: childValue,
-            key: childKey,
+          const childPath = nodePath === '' ? childKey : `${nodePath}.${childKey}`;
+          if (!arrayWildcard) {
+            next.push({ path: childPath, value: childValue, key: childKey });
+            continue;
+          }
+          // `*[]` combines both: every member, then every element of that member.
+          if (!Array.isArray(childValue)) continue;
+          childValue.forEach((item, index) => {
+            next.push({ path: `${childPath}[${index}]`, value: item, key: index });
           });
         }
         continue;
@@ -158,6 +143,40 @@ export function keysAtPath(document, path) {
     for (const key of Object.keys(node.value)) keys.push({ path: node.path, key, value: node.value[key] });
   }
   return keys;
+}
+
+/**
+ * Entry objects reached by `path`.
+ *
+ * A lockfile map (`packages`), an array (`requirements`) and a single object
+ * (`packages[].dist`) are all valid entry shapes, so the resolver decides per
+ * node instead of guessing from the path text:
+ *
+ *  - an array contributes its object elements;
+ *  - an object whose own values are objects, and which does not itself carry
+ *    `field`, is a container of entries (its values are the entries);
+ *  - any other object is the entry itself.
+ *
+ * That makes `packages` + `integrity` (one entry per locked package) and
+ * `packages[].dist` + `reference` (one entry per distribution) both expressible
+ * without a per-format predicate.
+ */
+export function entriesAtPath(document, path, field) {
+  const isEntryObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+  const entries = [];
+  for (const node of resolvePath(document, path)) {
+    const value = node.value;
+    if (Array.isArray(value)) {
+      for (const item of value) if (isEntryObject(item)) entries.push(item);
+      continue;
+    }
+    if (!isEntryObject(value)) continue;
+    const children = Object.values(value).filter(isEntryObject);
+    const carriesField = typeof field === 'string' && Object.prototype.hasOwnProperty.call(value, field);
+    if (children.length > 0 && !carriesField) entries.push(...children);
+    else entries.push(value);
+  }
+  return entries;
 }
 
 /**
@@ -251,7 +270,7 @@ export function evaluateScaCheck(check, input) {
       if (typeof check.field !== 'string' || check.field.length === 0) {
         throw new ScaRuleError('check.field: must be a non-empty member name');
       }
-      const entries = entriesAtPath(document, check.path);
+      const entries = entriesAtPath(document, check.path, check.field);
       if (entries.length === 0) return false;
       return entries.some((entry) => !Object.prototype.hasOwnProperty.call(entry, check.field));
     }

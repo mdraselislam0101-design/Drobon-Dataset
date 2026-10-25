@@ -1,0 +1,112 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0666",
+  "title": "Repository credential stored in a settings file",
+  "description": "settings.xml declares a literal password in `settings.xml`. A secret committed in this file is readable by everyone with repository access and lives on in history after removal. This rule reads a literal password in `settings.xml`.",
+  "severity": "HIGH",
+  "cwe": "CWE-798",
+  "category": "credential-in-config",
+  "ecosystems": [
+    "maven"
+  ],
+  "artifact": "settings.xml",
+  "parser": "xml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "settings.servers[].password",
+    "valuePattern": "^(?!\\$\\{)[A-Za-z0-9!@#$%^&*._-]{8,40}$"
+  },
+  "tests": [
+    {
+      "file": "settings.xml",
+      "document": {
+        "settings": {
+          "mirrors": [
+            {
+              "id": "central",
+              "mirrorOf": "central",
+              "url": "https://repo1.maven.org/maven2"
+            }
+          ],
+          "servers": [
+            {
+              "id": "acme",
+              "username": "ci-bot",
+              "password": "EXAMPLESECRETVALUE01"
+            }
+          ],
+          "profiles": []
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "settings.xml",
+      "document": {
+        "settings": {
+          "mirrors": [
+            {
+              "id": "central",
+              "mirrorOf": "central",
+              "url": "https://repo1.maven.org/maven2"
+            }
+          ],
+          "servers": [
+            {
+              "id": "nexus",
+              "username": "deploy",
+              "password": "EXAMPLESECRETVALUE02"
+            }
+          ],
+          "profiles": []
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "settings.xml",
+      "document": {
+        "settings": {
+          "mirrors": [
+            {
+              "id": "central",
+              "mirrorOf": "central",
+              "url": "https://repo1.maven.org/maven2"
+            }
+          ],
+          "servers": [
+            {
+              "id": "acme",
+              "username": "ci-bot",
+              "password": "${env.MAVEN_PASSWORD}"
+            }
+          ],
+          "profiles": []
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "settings.xml",
+      "document": {
+        "settings": {
+          "mirrors": [
+            {
+              "id": "central",
+              "mirrorOf": "central",
+              "url": "https://repo1.maven.org/maven2"
+            }
+          ],
+          "servers": [],
+          "profiles": []
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2803"
+  ],
+  "remediation": "Remove the literal, rotate the credential and inject it from the CI secret store at run time. Specifically: fix a literal password in `settings.xml`.",
+  "limitation": "It matches a literal password in `settings.xml` in the parsed settings.xml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

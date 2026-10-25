@@ -1,0 +1,82 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0150",
+  "title": "Go dependency on a pre-1.0 module",
+  "description": "go.mod declares a `v0.x` module version, which carries no compatibility promise. The API can change in any release, so the build can break or silently change behaviour without a major-version signal.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1104",
+  "category": "dependency-hygiene",
+  "ecosystems": [
+    "go"
+  ],
+  "artifact": "go.mod",
+  "parser": "ini",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "require[].version",
+    "valuePattern": "^v0\\."
+  },
+  "tests": [
+    {
+      "file": "go.mod",
+      "document": {
+        "module": "example.com/demo-service",
+        "go": "1.22",
+        "require": [
+          {
+            "module": "github.com/acme/experimental",
+            "version": "v0.4.2"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "go.mod",
+      "document": {
+        "module": "example.com/demo-service",
+        "go": "1.22",
+        "require": [
+          {
+            "module": "github.com/acme/alpha",
+            "version": "v0.9.0"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "go.mod",
+      "document": {
+        "module": "example.com/demo-service",
+        "go": "1.22",
+        "require": [
+          {
+            "module": "github.com/acme/sdk",
+            "version": "v1.4.2"
+          }
+        ]
+      },
+      "match": false
+    },
+    {
+      "file": "go.mod",
+      "document": {
+        "module": "example.com/demo-service",
+        "go": "1.22",
+        "require": [
+          {
+            "module": "github.com/acme/cli",
+            "version": "v2.0.0"
+          }
+        ]
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2287"
+  ],
+  "remediation": "Track the upstream path to v1, or pin the exact version and vendor it.",
+  "limitation": "It matches a `v0.x` module version, which carries no compatibility promise in the parsed go.mod; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

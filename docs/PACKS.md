@@ -14,21 +14,24 @@ packs/
 ├── secrets/v1/
 │   ├── pack.json
 │   └── rules/DPK-SEC-###.json
-└── dast/v1/
+├── dast/v1/
+│   ├── pack.json
+│   └── rules/DPK-DAST-###.json
+└── sca/v1/
     ├── pack.json
-    └── rules/DPK-DAST-###.json
+    └── rules/DPK-SCA-####.json
 ```
 
 - One rule per file; filename MUST equal the rule `id`.
 - `pack.json` carries the pack identity (`packId` `^[a-z0-9-]+$`, `version` `^N.N.N$`).
 - Packs have **no sample concept**: every shipped rule must be a genuine, tested rule. Ids containing `-SAMPLE-` are rejected.
 
-## Common rule fields (all three kinds)
+## Common rule fields (all four kinds)
 
 | Field | Bound | Notes |
 |---|---|---|
-| `schemaVersion` | const per kind | `drobon.pack.sast/v1` / `drobon.pack.secrets/v1` / `drobon.pack.dast/v1` |
-| `id` | `^DPK-(SAST\|SEC\|DAST)-[0-9]{3,}$` | stable, never reused; distinct from the app's `DG-*` ids |
+| `schemaVersion` | const per kind | `drobon.pack.sast/v1` / `drobon.pack.secrets/v1` / `drobon.pack.dast/v1` / `drobon.pack.sca/v1` |
+| `id` | `^DPK-(SAST\|SEC\|DAST\|SCA)-[0-9]{3,}$` | stable, never reused; distinct from the app's `DG-*` ids |
 | `title` | 1–120 chars | surfaces in findings |
 | `description` | 1–1000 chars | what matched and why it matters |
 | `severity` | `CRITICAL`/`HIGH`/`MEDIUM`/`LOW`/`INFO` | conservative; lexical-only rules cap at MEDIUM unless the construct itself is the weakness |
@@ -55,6 +58,8 @@ Every pattern passes a conservative static lint (validator-enforced): **no neste
 Flow/dataflow rules (`flow: command|sql|html` in the app) are NOT expressible as packs — packs are lexical only, by design.
 
 ## Secrets pack (`drobon.pack.secrets/v1`)
+
+Status: **128 rules of the 1,000-per-engine target (12.8 %)** — the smallest tier of the four, and the only one that is not at its target. Growth here is evidence-gated by design: a rule must match a **published** token format (vendor documentation naming a prefix and length family), because a credential detector that guesses shapes produces false positives that train users to ignore the engine. Padding rules to reach 1,000 would be counted breadth and is forbidden by this document's contributing rules (§ Contributing rules). The 128 rules are 127 prefix-shape detectors plus one `matchOnlyEvidence` rule; every one carries a denylist (except that one), `redact: true`, a pattern, a record, a remediation entry, executed positive/negative validator tests and an independent evaluation pair.
 
 Credential-shape rules — the data twin of the app's `SecretsRule` contract. Shape-only: a match proves the STRING has a credential's shape, never that it is live/valid/compromised.
 
@@ -106,6 +111,93 @@ Notes:
 - One header value counts as one cookie (a folded multi-cookie single value may under-flag — documented v1 limitation; loaders SHOULD pass arrays).
 - `status`/`body`/`contentType` are validated structurally in tests and reserved for future check types; v1 checks do not read them.
 - `tests`: `{ observation: { url (http/https, ≤400), status (100–599), headers (≤30, values string or string[] ≤1000), body? (≤4000), contentType? (≤200) }, match }`. The validator IMPLEMENTS all seven checks in the table above (`evalDastCheck`) and asserts every example — DAST semantics are executable here, not prose.
+
+## SCA pack (`drobon.pack.sca/v1`)
+
+Dependency-declaration checks over manifests, lockfiles and registry configuration — the data twin of a software-composition analysis pass that reads *what a project declares*, not *which advisory exists*. A rule classifies the declaration text in one ecosystem and one artifact. It never decides that a concrete version is affected by a published advisory, and the pack holds no advisory data (no GHSA/OSV/NVD ingestion), so nothing here overlaps `scripts/range.mjs`: the range tier evaluates versions, this tier reports the declared text.
+
+Status: **1,000 of the owner-approved 1,000-rule target — AT TARGET and frozen** (approved 2026-10-25; schema in `docs/SCA_RULE_SCHEMA_PROPOSAL.md`). The pack is authored additively in sixteen cell batches under `data/asset-cells/sca-1.json` … `sca-16.json`; `scripts/generate-sca-assets.mjs` allocates ids and writes the rule, its pattern, its record and its remediation entry, refusing (quarantining) a cell that contradicts its own declared tests. Reaching the target is authoring completeness only: the App has no SCA pack loader today, so no rule here is reachable from a scan yet.
+
+Closed predicate vocabulary (v1 — `scripts/sca-rule-engine.mjs` implements exactly these):
+
+| `check.type` | Params | Fires when |
+|---|---|---|
+| `sca-field-matches` | `path`, `valuePattern` (bounded regex, ReDoS-linted) | any node at `path` has a scalar text value matching the pattern |
+| `sca-field-not-matches` | `path`, `valuePattern` | `path` resolves to at least one node and **no** node's scalar text matches the pattern (why `^$` is not "absent" — see `sca-field-absent`) |
+| `sca-field-absent` | `path` | `path` resolves to nothing |
+| `sca-entry-missing-field` | `path`, `field` (member name) | at least one entry collected at `path` lacks the own property `field` |
+| `sca-key-matches` | `path`, `valuePattern` | a **key** (dependency/alias/source name) at `path` matches the pattern — used for allow/deny lists, not values |
+| `sca-name-distance` | `path`, `target`, `maxDistance` (`1` or `2`) | a key at `path` is within bounded edit distance of `target` and is not `target` itself; keys shorter than 4 characters are skipped, so the predicate cannot fire on noise (`lodash` vs `1odash`, not `a` vs `b`) |
+
+Path grammar (deliberately the whole grammar — no expressions, no functions):
+
+| Form | Meaning |
+|---|---|
+| `a.b` | object member chain |
+| `a.*` | every member value of the object at `a` |
+| `a[]` | every element of the array at `a` |
+| `a.*[]` | every element of every array member of `a` |
+
+`sca-entry-missing-field` resolves `path` to *entries*: an array contributes its object elements, an object whose values are objects and which does not itself carry `field` is read as a container of entries, and any other object is the entry. That is what lets `packages[]` (yarn) and `packages.*` (pnpm) express "this installed package entry has no integrity field".
+
+Rule shape: `schemaVersion`, `id` (`DPK-SCA-nnnn`), `title`, `description`, `severity`, `cwe` (one id, resolved by `knowledge/cwe`), `category`, `ecosystems` (exactly one for now), `artifact`, `parser`, `check`, `tests` (4–50 executed cases: ≥2 positive, ≥2 negative, each `{ file, document, match }` where `document` is the already-parsed artifact), `patternRefs`, `remediation`, `limitation`. `parser` is one of `json`, `toml`, `yaml`, `requirements`, `xml`, `gradle`, `properties`, `ini`, `lockfile-text`; the consumer owns the parser, and a parse failure is the consumer's error to report, never a silent "no match".
+
+Coverage at 1,000 rules — 17 ecosystems, 57 distinct artifacts, severity `MEDIUM` 850 / `LOW` 91 / `HIGH` 59, and eleven categories (`name-watchlist` 533, `dependency-hygiene` 179, `registry-configuration` 86, `lockfile-integrity` 52, `supply-chain-integrity` 49, `policy-metadata` 34, `trust-bypass` 16, `dependency-confusion` 15, `local-source` 14, `credential-in-config` 12, `build-hook` 10):
+
+| Ecosystem | Rules | Artifacts exercised |
+|---|---|---|
+| npm | 361 | `.npmrc`, `.yarnrc`, `.yarnrc.yml`, `package-lock.json`, `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `yarn.lock` |
+| pypi | 222 | `.pypirc`, `Pipfile`, `pip.conf`, `poetry.lock`, `pyproject.toml`, `requirements.txt`, `setup.cfg`, `tox.ini` |
+| cargo | 73 | `.cargo/config.toml`, `Cargo.lock`, `Cargo.toml` |
+| composer | 64 | `auth.json`, `composer.json`, `composer.lock` |
+| nuget | 53 | `Directory.Build.props`, `Directory.Packages.props`, `nuget.config`, `packages.config`, `packages.lock.json` |
+| pub | 35 | `pubspec.lock`, `pubspec.yaml` |
+| maven | 32 | `pom.xml`, `settings.xml` |
+| hex | 30 | `mix.exs`, `mix.lock` |
+| gradle | 29 | `build.gradle`, `gradle.properties`, `settings.gradle`, `verification-metadata.xml` |
+| cran | 24 | `.Rprofile`, `DESCRIPTION`, `renv.lock` |
+| go | 21 | `go.mod`, `go.sum`, `go.work` |
+| rubygems | 14 | `Gemfile`, `Gemfile.lock` |
+| conan | 11 | `conan.lock`, `conanfile.py`, `conanfile.txt`, `global.conf` |
+| swift | 8 | `Package.resolved`, `Package.swift` |
+| cocoapods | 8 | `Podfile`, `Podfile.lock` |
+| conda | 8 | `.condarc`, `environment.yml` |
+| vcpkg | 7 | `vcpkg-configuration.json`, `vcpkg.json` |
+
+Two tiers make up the thousand. The **declaration tier** (467 rules) reads manifests, lockfiles and registry configuration: unpinned or moving specifiers, missing lockfile integrity, cleartext or local repositories, TLS-verification switches, scope/id shadowing, build hooks and policy metadata. The **name-watchlist tier** (533 rules) is `sca-name-distance`: each rule names one dependency a project is likely to declare (`express`, `requests`, `serde`, `serde_json`, …) inside the artifact where that ecosystem declares dependencies, and fires when a declared key sits within a bounded edit distance of it and is not the name itself — the typosquat/confusion shape that the target registry does not publish, so it is authored here rather than ingested. Each of those rules derives its `path`/`artifact` from the generated declaration rules of the same ecosystem, so no watchlist rule can duplicate a declaration predicate, and the 533 targets are disjoint from one another.
+
+Predicate mix at 1,000: `sca-name-distance` 533, `sca-field-matches` 387, `sca-field-absent` 39, `sca-entry-missing-field` 27, `sca-key-matches` 11, `sca-field-not-matches` 3. All six closed-vocabulary types are now exercised by the pack itself, not only by the engine fixtures.
+
+Batch ledger (each batch is one cell file; a rejected candidate consumes no id it can reuse, and no id is ever reused after a removal):
+
+| Batch | Landed cells | Running total | Scope |
+|---|---|---|---|
+| 1 | 42 | 42 | npm `package.json` specifiers, scripts and registry config |
+| 2 | 25 | 67 | pypi `requirements.txt`, `pyproject.toml`, `Pipfile`, `poetry.lock` |
+| 3 | 37 | 104 | go, maven, gradle declarations and lockfiles |
+| 4 | 37 | 141 | npm/pypi lockfile integrity and registry config |
+| 5 | 34 | 175 | nuget, cargo, composer, rubygems |
+| 6 | 32 | 207 | hex, cocoapods, swift, pub |
+| 7 | 32 | 239 | cran, conda, vcpkg, conan, plus the remaining registry detail |
+| 8 | 390 | 629 | name-watchlist tier, first wave |
+| 9 | 34 | 663 | client config: `.npmrc`, `.yarnrc.yml`, `pip.conf`, `.pypirc`, `nuget.config` |
+| 10 | 29 | 692 | lockfile detail across nine ecosystems |
+| 11 | 29 | 721 | policy metadata (`license`, `engines`, `publishConfig`, `authors`) |
+| 12 | 45 | 766 | ecosystem policy detail (maven, gradle, nuget, cargo, composer, swift, cocoapods, cran, conda, vcpkg, conan) |
+| 13 | 16 | 782 | client config and locks (`setup.cfg`, `tox.ini`, `poetry.lock`, `pnpm-lock.yaml`, `yarn.lock`) |
+| 14 | 143 | 925 | name-watchlist tier, second wave with disjoint targets |
+| 15 | 33 | 958 | go, maven, gradle, nuget, composer, cargo, rubygems, swift, cocoapods, conda, vcpkg, conan detail |
+| 16 | 42 | 1,000 | final batch: npm/pypi client metadata, maven/gradle/nuget/cargo policy, go/hex/cran/rubygems detail |
+
+Gates and honesty notes:
+
+- `npm run validate:sca-packs` — schema, `check.field` member-name rule, ReDoS lint on `valuePattern`, CWE resolution, one pattern/record/remediation per rule, and execution of **every** declared test case.
+- `node scripts/test-sca-packs.mjs` — 28 checks over the whole pack: id uniqueness/monotonicity, per-rule test polarity, duplicate-predicate detection (signature = `ecosystem|type|path|field|target|maxDistance`), and the engine contract.
+- `node scripts/test-sca-engine.mjs` / `test-sca-fixtures.mjs` — the six predicates and the bounded-distance helper against their own fixtures.
+- `node scripts/test-eval.mjs` — the SCA cohort contributes 2,000 independent cases (one positive fixture and one negative control per rule, mode `sca-document`): the runner parses each fixture document and evaluates the rule's declared predicate against it, then scores TP/FP/FN with an evidence anchor taken from the document text. The fixtures are authored for the case and are disjoint from the rule's own validator tests, so a rule cannot pass by reproducing its own example. Cohort result: 0 FN, 0 FP.
+- A cell whose tests do not reproduce is **quarantined** and its id is not consumed; the generator prints `cells / written / quarantined`. Current run: 1,000 cells, 1,000 written, 0 quarantined. Every authored candidate that failed a gate before landing (duplicate id, duplicate predicate signature, ReDoS lint, fixture drift) was deleted from its cell file instead of being shipped, and its id stayed reserved — that is why the pack is exactly 1,000 and not a padded superset. Earlier batches quarantined `composer-lock-reference-absent` until the predicate could express "present but empty" (`sca-field-absent` vs `sca-field-matches: ^$`) — the fix was in the cell's predicate choice, never in the validator.
+- Three cells were removed rather than shipped as near-duplicates when the pack gate compared detection signals: a Composer cleartext-repository cell duplicated the Gradle predicate verbatim, a Dart local-path cell duplicated the Cargo one, and the NuGet missing-version cell was kept only after its path was corrected to `packages[]` (a list in `packages.config`) so it no longer collides with the npm lockfile entry check. `npm run test:packs` enforces that no two rules share one signal.
+- Detection, not prevention: a rule reports a declaration. It does not block an install, resolve a version, or claim a package is vulnerable. `docs/SCA_RULE_SCHEMA_PROPOSAL.md` carries the owner approval and the ecosystem roadmap to 1,000.
 
 ## Finding mapping (loader contract)
 
@@ -234,6 +326,12 @@ trusted certificates without the header. The rule stays informational with
 "do not add the header" guidance; its wording was tightened accordingly.
 
 - DAST header-surface decision note (2026-10-21): `docs/DAST_HEADER_SURFACE_OPTIONS_2026-10-21.md` prices the three ways to close the 73-rule reachability gap — one synthesised header carrying every response header (398/398 from a single header), widening `ALLOWED_RESPONSE_HEADERS` to the 46 missing names, or retiring the rules. Only the first two keep the coverage; the third is listed and rejected because a shrinking denominator is not a fix.
+- Evaluation-layer batches (2026-10-25, **every rule now carries a positive case and a negative control**): three additive batches closed the coverage gap that had left 497 DAST rules, 58 SAST rules and 481 SAST controls unwritten. **(1) DAST body cohort — 500 cases** (`EVAL-DASTB-001…497` positives, one per previously uncovered `response-body-matches` rule, plus three benign production-like pages as controls: `EVAL-DASTB-900/901/902`, each forbidding all 497 ids). Bodies are sampled from the rule's own `valuePattern` and then re-checked with the real `evalDastCheck` before writing, so no case can exist that the predicate does not fire on; four lookahead-heavy patterns (`568`, `640`, `863`, `891`) could not be sampled and were hand-authored. **(2) SAST positive cohort — 50 cases** (`EVAL-SASB-*`) for the SAST rules that had none, each placing the sampled match on a declared line with the evidence anchored to the match itself; eight were skipped at the dry-run stage (see the next item). **(3) SAST control cohort — 102 cases** (`EVAL-SASN-*`) covering 481 rules, grouped by primary language over authored benign, idiomatic code/config; a group is split whenever any rule in it fires on the shared snippet, and every control names the rule ids it forbids. Corpus 3,888 -> **4,548 cases, true positives 2,583 -> 3,138, FN 0, FP 1** (the preserved `EVAL-SAST-008` docstring trap). Coverage ledger: `eval.positive` 2,549 -> **3,135/3,135** and `eval.negative` 2,126 -> **3,135/3,135**.
+- BLK-EVAL-01 closed (2026-10-25, owner instruction "finish the remaining work"): eight SAST marker rules (`416`, `417`, `418`, `423`, `424`, `678`, `692`, `731`) match 2–3 characters, so no case could ever declare four characters of evidence. The owner's instruction selects the recorded option (a): a case may set `shortEvidence: true` and declare a shorter `mustContain`, and the runner then requires that text to equal the detector's **complete** match — a 2–3 character fragment of a longer match is still scored as a false negative (`scripts/test-eval.mjs` regression-tests both directions). No detector was weakened and no validator rule was dropped: `mustContain` still requires ≥4 characters unless the case opts in. The eight `EVAL-SAEV-*` cases are that cohort. Contract text: `docs/FINDING_EVIDENCE_CONTRACT.md` §1.1.
+- SCA authoring batches 1–16 (2026-10-24 → 2026-10-25, **the SCA pack is authored**): **1,000 rules** (`DPK-SCA-0001…1000`), each with one `knowledge/patterns` entry, one `knowledge/records` entry and one `knowledge/remediation` entry — knowledge totals 2,104 -> **3,135 each**. Scope: the 17 ecosystems the pack declares (npm 361, pypi 222, cargo 73, composer 64, nuget 53, pub 35, maven 32, hex 30, gradle 29, cran 24, go 21, rubygems 14, conan 11, swift 8, cocoapods 8, conda 8, vcpkg 7), every rule classifying *declared* dependency text in one ecosystem and one artifact. **No advisory data is ingested** (no GHSA/OSV/NVD): the pack reports what a project declares, never that a version is affected, which is why it does not overlap `scripts/range.mjs`. Every rule carries executed positive and negative validator tests (`test-sca-packs.mjs` 2,000/2,000) and, from the evaluation batch above, one independent positive case and one control in `sca-document` mode. Duplicate-predicate gate: a candidate whose predicate is byte-identical to an existing rule is dropped before it consumes an id (17 candidates were dropped across the batches; ids are never reused).
+- Secrets documented-format batch (2026-10-25, **the evidence-gated expansion**): **31 new rules** (secrets 97 -> 128), patterns/records/remediation 3,104 -> **3,135** each, pack total 3,135. One authored cell file (`data/asset-cells/secrets-6.json`) in the same cell grammar as the previous secrets batches: prefix fragments plus synthetic runs, so no joined credential shape is ever written to a data file. Formats, each taken from its vendor's published documentation: Alibaba Cloud AccessKey ID (`LTAI`), Tencent Cloud SecretId (`AKID`), DigitalOcean OAuth (`doo_v1_`), Terraform Cloud (`.atlasv1.`), GitLab deploy/runner/OAuth (`gldt-`, `glrt-`, `gloas-`), Bitbucket app password (`ATBB`), Postman (`PMAK-`), SonarQube (`squ_`, `sqp_`), Typeform (`tfp_`), Dropbox (`sl.`), Resend (`re_`), W&B (`wandb_v1_`), LangSmith (`lsv2_pt_`), xAI (`xai-`), Pinecone (`pcsk_`), Replicate (`r8_`), NVIDIA NGC (`nvapi-`), Grafana Cloud (`glc_`), Flutterwave (`FLWSECK-`), Mercado Pago (`APP_USR-`), Braintree access token (`access_token$production$…`), Cloudinary credential URL, Sentry DSN, Microsoft Teams incoming webhook, Google OAuth client secret (`GOCSPX-`), Fauna (`fnAC`), Astra DB (`AstraCS:`), encrypted PKCS#8 key block. Two controls (`EVAL-SECB-900/901`) name all 31 ids and must stay silent on environment lookups and deploy-time placeholders. Evaluation: 31 positives + 2 controls, **0 FN / 0 FP**; corpus 4,548 -> **4,582 cases**, true positives 3,138 -> **3,170**. One candidate was withdrawn before it was written: the Figma personal access token (`figd_` + 40 characters) cannot be represented in this repository at all, because GitHub push protection refuses a literal of that exact shape — the same reason no live-shaped credential is stored here. Its evaluation case went with it and the id is not reused.
+
+Deliberately NOT added: shapes without a published prefix (Hetzner, Vultr, Cloudflare 40-char tokens, Railway, Datadog hex keys), because a bare alphanumeric run cannot be told from an identifier — they stay documented gaps rather than guesswork.
 - DAST Batch 29 (2026-10-21, app-surface batch 5): **31 new rules** (DAST 367 -> 398), patterns 1445, records 1445, remediation 1445, pack total 1445, check types 7 (unchanged), CWE 69 (unchanged). Body evidence only, so all 31 are reachable inside the App and the unreachable set stays at 73. Families: 6 framework development surfaces (Django Debug Toolbar, Flask Debug Toolbar, Rails web-console, Next.js development build, Nuxt DevTools, Astro dev toolbar), 2 development consoles (Quarkus Dev UI, Spring Boot Admin), 8 orchestration, streaming and ML consoles (Go expvar, TensorBoard, MLflow, Prefect, Dagster, Flink dashboard, Storm UI, YARN ResourceManager), 11 dependency lockfiles and build definitions (`.yarnrc`, Gemfile.lock, yarn.lock, composer.lock, poetry.lock, go.mod, Terraform provider lockfile, Jenkinsfile, GitLab CI, Travis, plus the Apache server-info page), and 4 served runtime files (Functions `local.settings.json`, `appsettings.Development.json`, shell history, SSH authorized_keys). Five candidates were dropped at the dry-run stage because an existing rule already covers the evidence (H2 console 223, PHP-FPM status 241, NameNode 167, Spark master 182, `wp-config.php` 261, `.npmrc` token 237). 33 new evaluation cases (31 positives plus a production-dashboard control and a handbook control that names every toolbar, lockfile and configuration file without serving one) take the DAST corpus to 656 and the dataset to 1,772 cases; `run-eval` true positives move 1,440 -> 1,471 with no new false positive. Reachability improves from 294/367 to **325/398 (81.7 %)**. Report: `docs/DAST_APP_SURFACE_BATCH_5_2026-10-21.md`.
 - DAST Batch 28 (2026-10-21, app-surface batch 4): **42 new rules** (DAST 325 -> 367), patterns 1414, records 1414, remediation 1414, pack total 1414, check types 7 (unchanged), CWE 69 (CWE-1021 added). Fourth batch built the same way as the third: every rule reads the body or the `Set-Cookie` value, so all 42 are reachable inside the App and the unreachable set stays at exactly 73. Families: 21 administrative-console fingerprints (Druid, Redash, Metabase, Superset, Neo4j Browser, InfluxDB, Chronograf, Zeppelin, JupyterHub, Kafdrop, OpenSearch Dashboards, phpLDAPadmin, Gitea, TeamCity, Concourse, Rancher, Verdaccio, Nagios, Sentry, Kiali, Drone), 9 framework debug surfaces (CodeIgniter, CakePHP Debug Kit, Yii debugger, Jetty, IIS detailed errors, Phoenix LiveDashboard, Sidekiq, Telescope, Horizon), 8 served artefacts (Dockerfile, `.svn/entries`, `.hg/hgrc`, `phpunit.xml`, `crossdomain.xml` and `clientaccesspolicy.xml` allow-all, Apache access and error logs), 2 markup rules (`base` and `meta refresh` to a secure foreign origin, the complement of 271/275 which own the plaintext form) and 2 cookie Domain contracts (address literal, trailing dot). Three candidates were dropped at the dry-run stage: the Nomad console (duplicate of 236) and the any-origin forms of `base`/`meta refresh` (fixture subsets of 271/275; narrowed to the secure cross-origin form, which those rules cannot match). 44 new evaluation cases (42 positives plus a hardened page and an operations runbook that names every console and artefact without serving one) take the DAST corpus to 623 and the dataset to 1,739 cases; `run-eval` true positives move 1,398 -> 1,440 with no new false positive. Reachability improves from 252/325 to **294/367 (80.1 %)**. Remaining distance to the 500 target and the family-by-family plan: `docs/DAST_500_GAP_PLAN_2026-10-21.md`. Report: `docs/DAST_APP_SURFACE_BATCH_4_2026-10-21.md`.
 - DAST Batch 31 (2026-10-21, bank-surface batch): **10 new rules** (DAST 500 -> 510), patterns 1557, records 1557, remediation 1557, pack total 1557, check types 7 (unchanged), CWE 73 (unchanged). Requested with a banking question; every rule reads the response body only, so all 10 are App-reachable and the unreachable set stays at 73 (reachability 437/510 = 85.7 %). Rules: account number in a link URL (510), account number + balance in one payload (511), card fields in a GET payment form (512), CVV rendered into an input value (513), OTP served in a response (514), card PIN served in a response (515), security answer rendered into an input (516), session identifier in a URL (517), statement exported as CSV (518), SWIFT/BIC paired with an account reference (519). Six candidates were dropped before writing (OTP in Location = 507's question; `autocomplete` on password fields = legitimate password-manager behaviour; `WWW-Authenticate` = not forwarded by the App; card PAN in a comment = 502; bulk account list = subset of 481/482; "TEST MODE" banner = not a defect). 12 evaluation cases (10 positives + 2 controls forbidding all 10 new ids) take the corpus to 1,888; `run-eval` true positives move 1,573 -> 1,583 with no new false positive. **The batch adds detection, not protection**: `docs/BANK_THREAT_COVERAGE_2026-10-21.md` states what a bank still needs (patching, WAF, authenticated pentest, SOC) and why a scanner cannot substitute for them. Batch report: `docs/DAST_BANK_SURFACE_BATCH_2026-10-21.md`.

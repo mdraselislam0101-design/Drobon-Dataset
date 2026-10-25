@@ -1,0 +1,94 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0156",
+  "title": "go.mod excludes a published module version",
+  "description": "go.mod declares an `exclude` directive that keeps a specific version out of the build. The exclusion is invisible to anyone reading the dependency list, and a fix published in that version never reaches the build.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1104",
+  "category": "dependency-hygiene",
+  "ecosystems": [
+    "go"
+  ],
+  "artifact": "go.mod",
+  "parser": "ini",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "exclude[].version",
+    "valuePattern": "^v\\d"
+  },
+  "tests": [
+    {
+      "file": "go.mod",
+      "document": {
+        "module": "example.com/demo-service",
+        "go": "1.22",
+        "require": [
+          {
+            "module": "github.com/acme/sdk",
+            "version": "v4.2.0"
+          }
+        ],
+        "exclude": [
+          {
+            "module": "github.com/acme/sdk",
+            "version": "v4.1.9"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "go.mod",
+      "document": {
+        "module": "example.com/demo-service",
+        "go": "1.22",
+        "require": [
+          {
+            "module": "github.com/acme/cli",
+            "version": "v2.1.0"
+          }
+        ],
+        "exclude": [
+          {
+            "module": "github.com/acme/cli",
+            "version": "v2.1.1"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "go.mod",
+      "document": {
+        "module": "example.com/demo-service",
+        "go": "1.22",
+        "require": [
+          {
+            "module": "github.com/acme/sdk",
+            "version": "v4.2.0"
+          }
+        ]
+      },
+      "match": false
+    },
+    {
+      "file": "go.mod",
+      "document": {
+        "module": "example.com/demo-service",
+        "go": "1.22",
+        "require": [
+          {
+            "module": "github.com/acme/cli",
+            "version": "v2.1.0"
+          }
+        ]
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2293"
+  ],
+  "remediation": "Move off the excluded version by upgrading, and record why the version is blocked.",
+  "limitation": "It matches an `exclude` directive that keeps a specific version out of the build in the parsed go.mod; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

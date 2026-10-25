@@ -18,13 +18,30 @@ or test results). A span that cannot be located yields an explicit error.
 | Exact file path and line range | `location.path`, `location.lineFrom..lineTo` | computed from text offsets; multi-line spans supported |
 | Actual source excerpt + context | `source.excerpt`, `source.matchedText`, `source.context[]`, `contextFrom/To` | excerpt = the actual matched line; context = ±2 lines |
 | Language / framework context | `analysis.language`, `analysis.framework` | language from path extension; framework only when declared; unknown ⇒ `null` |
-| Detection/analysis method | `analysis.method`, `analysis.ruleVersion` | e.g. `line-regex`, `observation`; always named; rule version carried only when the rule declares an integer version (Phase 7) |
+| Detection/analysis method | `analysis.method`, `analysis.ruleVersion` | e.g. `line-regex`, `observation`, `sca-document`; always named; rule version carried only when the rule declares an integer version (Phase 7) |
 | Data-flow / call-chain evidence | `dataFlowEvidence`, `callChainEvidence` | `NOT_ASSESSED` with a note while no such analysis exists — absence is explicit, never faked |
 | Confidence and uncertainty | `confidence.level`, `confidence.uncertainty` | shape matches are `SHAPE_MATCH` with mandatory uncertainty text |
 | Evaluation/verification status | `verification.state` (Phase 7) | `UNVERIFIED` by default; only `CONFIRMED`/`REJECTED`/`UNRESOLVED`/`UNASSESSED` when the verification contract produced that state — never upgraded without evidence |
 | Severity / CWE / CVSS | `cwe`, `severity` (optional) | carried ONLY from a declared rule (validated format); **CVSS is never invented** — field absent by design under the production lock |
 | Why this is a security issue | `whyItMatters` | separate from source text |
 | Proposed remediation | `remediation` | always a separate field (filled from `knowledge/remediation/`), never merged into source |
+
+### 1.1 Evaluation evidence (what an eval case may claim)
+
+An evaluation case pins its expectation before any detector runs, and the runner only
+counts a detection when the declared evidence is found in the actual match:
+
+| Case field | Rule |
+|---|---|
+| `expected.detections[].mustContain` | default: at least 4 characters and a substring of the detector's actual matched text |
+| `shortEvidence: true` | opt-in for detectors whose whole match is 2–3 characters (SAST marker rules 416, 417, 418, 423, 424, 678, 692, 731). The declared text must then equal the detector's **complete** match — a 2–3 character fragment of a longer match is still a false negative (`scripts/test-eval.mjs` regression-tests both directions) |
+
+Why this exists: BLK-EVAL-01 recorded eight marker detectors that can never produce
+four characters of evidence. On 2026-10-25 the owner asked for the remaining
+evaluation work to be finished, which selects the recorded option (a) — accept the
+full match as evidence when it is shorter than four characters. The guard keeps the
+contract strict: short evidence is admissible only as an exact whole-match proof, so
+no case can pass on a loose keyword, and no detector was weakened to enable it.
 
 ## 2. Finding identity (scan-to-scan)
 

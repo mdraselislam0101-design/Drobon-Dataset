@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0979",
+  "title": "Environment file points at a default channel",
+  "description": "environment.yml declares an environment channel list that names `defaults` or `nodefaults`. A name or scope that resolves outside the project's intended registry is fetched from a source nobody reviewed, so a publish there becomes an install here. This rule reads an environment channel list that names `defaults` or `nodefaults`.",
+  "severity": "LOW",
+  "cwe": "CWE-829",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "conda"
+  ],
+  "artifact": "environment.yml",
+  "parser": "yaml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "channels[]",
+    "valuePattern": "^(?:nodefaults|defaults)$"
+  },
+  "tests": [
+    {
+      "file": "environment.yml",
+      "document": {
+        "name": "demo",
+        "channels": [
+          "defaults",
+          "conda-forge"
+        ],
+        "dependencies": [
+          "numpy=1.26.4"
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "environment.yml",
+      "document": {
+        "name": "demo",
+        "channels": [
+          "nodefaults"
+        ],
+        "dependencies": [
+          "numpy=1.26.4"
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "environment.yml",
+      "document": {
+        "name": "demo",
+        "channels": [
+          "conda-forge"
+        ],
+        "dependencies": [
+          "numpy=1.26.4"
+        ]
+      },
+      "match": false
+    },
+    {
+      "file": "environment.yml",
+      "document": {
+        "name": "demo",
+        "channels": [
+          "https://conda.acme.example"
+        ],
+        "dependencies": [
+          "numpy=1.26.4"
+        ]
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-3116"
+  ],
+  "remediation": "Point the declaration or the registry configuration at the namespace the project controls, and remove the lookup path that resolves elsewhere. Specifically: fix an environment channel list that names `defaults` or `nodefaults`.",
+  "limitation": "It matches an environment channel list that names `defaults` or `nodefaults` in the parsed environment.yml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

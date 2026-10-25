@@ -1,0 +1,82 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-1004",
+  "title": "Package source backed by a folder",
+  "description": "nuget.config declares a source value of the `file:` scheme. A dependency resolved from a local path or a mutable branch is not the published artifact the rest of the project audits. This rule reads a source value of the `file:` scheme.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1104",
+  "category": "local-source",
+  "ecosystems": [
+    "nuget"
+  ],
+  "artifact": "nuget.config",
+  "parser": "xml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "sources[].value",
+    "valuePattern": "^file:"
+  },
+  "tests": [
+    {
+      "file": "nuget.config",
+      "document": {
+        "sources": [
+          {
+            "key": "local",
+            "value": "file:///opt/nuget/packages"
+          }
+        ],
+        "config": {},
+        "settings": {}
+      },
+      "match": true
+    },
+    {
+      "file": "nuget.config",
+      "document": {
+        "sources": [
+          {
+            "key": "vendor",
+            "value": "file:///mnt/vendor/feed"
+          }
+        ],
+        "config": {},
+        "settings": {}
+      },
+      "match": true
+    },
+    {
+      "file": "nuget.config",
+      "document": {
+        "sources": [
+          {
+            "key": "nuget.org",
+            "value": "https://api.nuget.org/v3/index.json"
+          }
+        ],
+        "config": {},
+        "settings": {}
+      },
+      "match": false
+    },
+    {
+      "file": "nuget.config",
+      "document": {
+        "sources": [
+          {
+            "key": "acme",
+            "value": "https://nuget.acme.example/v3/index.json"
+          }
+        ],
+        "config": {},
+        "settings": {}
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-3141"
+  ],
+  "remediation": "Depend on a published, versioned artifact, and keep local paths or branch references out of the committed manifest. Specifically: fix a source value of the `file:` scheme.",
+  "limitation": "It matches a source value of the `file:` scheme in the parsed nuget.config; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

@@ -1,0 +1,130 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0697",
+  "title": "Test tooling compiles into the shipped binary",
+  "description": "Cargo.toml declares a test-only crate declared as a runtime dependency. A name or scope that resolves outside the project's intended registry is fetched from a source nobody reviewed, so a publish there becomes an install here. This rule reads a test-only crate declared as a runtime dependency.",
+  "severity": "LOW",
+  "cwe": "CWE-829",
+  "category": "dependency-confusion",
+  "ecosystems": [
+    "cargo"
+  ],
+  "artifact": "Cargo.toml",
+  "parser": "toml",
+  "check": {
+    "type": "sca-key-matches",
+    "path": "dependencies",
+    "keyPattern": "^(?:criterion|proptest|mockall|rstest)$"
+  },
+  "tests": [
+    {
+      "file": "Cargo.toml",
+      "document": {
+        "package": {
+          "name": "demo-service",
+          "version": "0.1.0",
+          "license": "MIT"
+        },
+        "dependencies": {
+          "serde": {
+            "version": "1.0.210"
+          },
+          "criterion": {
+            "version": "0.5.1"
+          }
+        },
+        "patch": {},
+        "workspace": {
+          "dependencies": {
+            "serde": "1.0.210"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "Cargo.toml",
+      "document": {
+        "package": {
+          "name": "demo-service",
+          "version": "0.1.0",
+          "license": "MIT"
+        },
+        "dependencies": {
+          "serde": {
+            "version": "1.0.210"
+          },
+          "mockall": {
+            "version": "0.13.0"
+          }
+        },
+        "patch": {},
+        "workspace": {
+          "dependencies": {
+            "serde": "1.0.210"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "Cargo.toml",
+      "document": {
+        "package": {
+          "name": "demo-service",
+          "version": "0.1.0",
+          "license": "MIT"
+        },
+        "dependencies": {
+          "serde": {
+            "version": "1.0.210"
+          }
+        },
+        "patch": {},
+        "workspace": {
+          "dependencies": {
+            "serde": "1.0.210"
+          }
+        },
+        "dev-dependencies": {
+          "criterion": {
+            "version": "0.5.1"
+          }
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "Cargo.toml",
+      "document": {
+        "package": {
+          "name": "demo-service",
+          "version": "0.1.0",
+          "license": "MIT"
+        },
+        "dependencies": {
+          "serde": {
+            "version": "1.0.210"
+          }
+        },
+        "patch": {},
+        "workspace": {
+          "dependencies": {
+            "serde": "1.0.210"
+          }
+        },
+        "dev-dependencies": {
+          "proptest": {
+            "version": "1.5.0"
+          }
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2834"
+  ],
+  "remediation": "Point the declaration or the registry configuration at the namespace the project controls, and remove the lookup path that resolves elsewhere. Specifically: fix a test-only crate declared as a runtime dependency.",
+  "limitation": "It matches a test-only crate declared as a runtime dependency in the parsed Cargo.toml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

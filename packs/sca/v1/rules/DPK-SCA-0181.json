@@ -1,0 +1,78 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0181",
+  "title": "NuGet feed configured over cleartext",
+  "description": "nuget.config declares a package source URL that uses cleartext http. Packages and their content hashes cross the network unencrypted, so a network attacker can substitute the package the restore records.",
+  "severity": "HIGH",
+  "cwe": "CWE-319",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "nuget"
+  ],
+  "artifact": "nuget.config",
+  "parser": "xml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "sources[].value",
+    "valuePattern": "^http://"
+  },
+  "tests": [
+    {
+      "file": "nuget.config",
+      "document": {
+        "sources": [
+          {
+            "key": "acme",
+            "value": "http://nuget.acme.example/v3/index.json"
+          }
+        ],
+        "settings": {}
+      },
+      "match": true
+    },
+    {
+      "file": "nuget.config",
+      "document": {
+        "sources": [
+          {
+            "key": "mirror",
+            "value": "http://10.24.8.9/v3/index.json"
+          }
+        ],
+        "settings": {}
+      },
+      "match": true
+    },
+    {
+      "file": "nuget.config",
+      "document": {
+        "sources": [
+          {
+            "key": "acme",
+            "value": "https://nuget.acme.example/v3/index.json"
+          }
+        ],
+        "settings": {}
+      },
+      "match": false
+    },
+    {
+      "file": "nuget.config",
+      "document": {
+        "sources": [
+          {
+            "key": "nuget.org",
+            "value": "https://api.nuget.org/v3/index.json"
+          }
+        ],
+        "settings": {}
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2318"
+  ],
+  "remediation": "Point the source at https.",
+  "limitation": "It matches a package source URL that uses cleartext http in the parsed nuget.config; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

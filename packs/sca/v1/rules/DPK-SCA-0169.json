@@ -1,0 +1,85 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0169",
+  "title": "Maven server password stored in settings.xml",
+  "description": "settings.xml declares a repository password written directly into the checked-in Maven settings. Repository readers can publish or pull as the account, and the credential cannot be scoped or expired like a token.",
+  "severity": "HIGH",
+  "cwe": "CWE-798",
+  "category": "credential-in-config",
+  "ecosystems": [
+    "maven"
+  ],
+  "artifact": "settings.xml",
+  "parser": "xml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "settings.servers[].password",
+    "valuePattern": "^[A-Za-z0-9!@#$%^&*._-]{8,40}$"
+  },
+  "tests": [
+    {
+      "file": "settings.xml",
+      "document": {
+        "settings": {
+          "servers": [
+            {
+              "id": "acme-releases",
+              "username": "ci",
+              "password": "EXAMPLESECRETPASSWORD01"
+            }
+          ]
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "settings.xml",
+      "document": {
+        "settings": {
+          "servers": [
+            {
+              "id": "acme-snapshots",
+              "username": "ci",
+              "password": "EXAMPLESECONDPASSWORD1234"
+            }
+          ]
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "settings.xml",
+      "document": {
+        "settings": {
+          "servers": [
+            {
+              "id": "acme-releases",
+              "username": "ci",
+              "password": "${env.MAVEN_PASSWORD}"
+            }
+          ]
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "settings.xml",
+      "document": {
+        "settings": {
+          "servers": [
+            {
+              "id": "acme-releases",
+              "username": "ci"
+            }
+          ]
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2306"
+  ],
+  "remediation": "Read the password from the environment or a credential store, and rotate it.",
+  "limitation": "It matches a repository password written directly into the checked-in Maven settings in the parsed settings.xml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

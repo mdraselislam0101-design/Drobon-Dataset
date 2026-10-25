@@ -1,0 +1,130 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0649",
+  "title": "Publication target declared over cleartext",
+  "description": "package.json declares a `publishConfig.registry` over cleartext. An artifact fetched over plain HTTP can be replaced in transit, so the bytes that install are not bound to what the author published. This rule reads a `publishConfig.registry` over cleartext.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-319",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "npm"
+  ],
+  "artifact": "package.json",
+  "parser": "json",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "publishConfig.registry",
+    "valuePattern": "^http://"
+  },
+  "tests": [
+    {
+      "file": "package.json",
+      "document": {
+        "name": "demo-service",
+        "version": "1.4.0",
+        "license": "MIT",
+        "private": true,
+        "engines": {
+          "node": ">=20"
+        },
+        "dependencies": {
+          "lodash": "^4.17.21"
+        },
+        "devDependencies": {
+          "jest": "^29.7.0"
+        },
+        "scripts": {
+          "test": "node --test",
+          "build": "tsc -p ."
+        },
+        "publishConfig": {
+          "registry": "http://npm.acme.example"
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "package.json",
+      "document": {
+        "name": "demo-service",
+        "version": "1.4.0",
+        "license": "MIT",
+        "private": true,
+        "engines": {
+          "node": ">=20"
+        },
+        "dependencies": {
+          "lodash": "^4.17.21"
+        },
+        "devDependencies": {
+          "jest": "^29.7.0"
+        },
+        "scripts": {
+          "test": "node --test",
+          "build": "tsc -p ."
+        },
+        "publishConfig": {
+          "registry": "http://10.24.8.9:4873"
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "package.json",
+      "document": {
+        "name": "demo-service",
+        "version": "1.4.0",
+        "license": "MIT",
+        "private": true,
+        "engines": {
+          "node": ">=20"
+        },
+        "dependencies": {
+          "lodash": "^4.17.21"
+        },
+        "devDependencies": {
+          "jest": "^29.7.0"
+        },
+        "scripts": {
+          "test": "node --test",
+          "build": "tsc -p ."
+        },
+        "publishConfig": {
+          "registry": "https://npm.acme.example"
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "package.json",
+      "document": {
+        "name": "demo-service",
+        "version": "1.4.0",
+        "license": "MIT",
+        "private": true,
+        "engines": {
+          "node": ">=20"
+        },
+        "dependencies": {
+          "lodash": "^4.17.21"
+        },
+        "devDependencies": {
+          "jest": "^29.7.0"
+        },
+        "scripts": {
+          "test": "node --test",
+          "build": "tsc -p ."
+        },
+        "publishConfig": {
+          "registry": "https://registry.npmjs.org"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2786"
+  ],
+  "remediation": "Use the HTTPS endpoint the registry publishes and keep the hostname in the configuration reviewable. Specifically: fix a `publishConfig.registry` over cleartext.",
+  "limitation": "It matches a `publishConfig.registry` over cleartext in the parsed package.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

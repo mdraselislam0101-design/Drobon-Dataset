@@ -1,0 +1,93 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0157",
+  "title": "go.mod retracts a published version",
+  "description": "go.mod declares a `retract` directive in the dependency graph, which marks a version as withdrawn. A retraction usually follows a defect or a bad publish; a tree that still transitively resolves the retracted version keeps building withdrawn code.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1104",
+  "category": "dependency-hygiene",
+  "ecosystems": [
+    "go"
+  ],
+  "artifact": "go.mod",
+  "parser": "ini",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "retract[].version",
+    "valuePattern": "^v\\d"
+  },
+  "tests": [
+    {
+      "file": "go.mod",
+      "document": {
+        "module": "example.com/demo-service",
+        "go": "1.22",
+        "require": [
+          {
+            "module": "github.com/acme/sdk",
+            "version": "v4.3.0"
+          }
+        ],
+        "retract": [
+          {
+            "version": "v4.2.0",
+            "rationale": "broken release"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "go.mod",
+      "document": {
+        "module": "example.com/demo-service",
+        "go": "1.22",
+        "require": [
+          {
+            "module": "github.com/acme/cli",
+            "version": "v2.2.0"
+          }
+        ],
+        "retract": [
+          {
+            "version": "v2.1.5"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "go.mod",
+      "document": {
+        "module": "example.com/demo-service",
+        "go": "1.22",
+        "require": [
+          {
+            "module": "github.com/acme/sdk",
+            "version": "v4.3.0"
+          }
+        ]
+      },
+      "match": false
+    },
+    {
+      "file": "go.mod",
+      "document": {
+        "module": "example.com/demo-service",
+        "go": "1.22",
+        "require": [
+          {
+            "module": "github.com/acme/cli",
+            "version": "v2.2.0"
+          }
+        ]
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2294"
+  ],
+  "remediation": "Confirm no transitive requirement still resolves the retracted version, and record the retraction in review.",
+  "limitation": "It matches a `retract` directive in the dependency graph, which marks a version as withdrawn in the parsed go.mod; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

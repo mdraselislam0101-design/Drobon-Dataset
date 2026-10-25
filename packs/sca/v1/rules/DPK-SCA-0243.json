@@ -1,0 +1,72 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0243",
+  "title": "Conan requirement declared without a version",
+  "description": "conanfile.txt declares a `requires` entry that names no version. Conan resolves the reference to whatever the remote holds, so the compiled library version is decided by the remote.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1104",
+  "category": "dependency-hygiene",
+  "ecosystems": [
+    "conan"
+  ],
+  "artifact": "conanfile.txt",
+  "parser": "ini",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "requires[]",
+    "valuePattern": "^[a-z0-9][a-z0-9_-]{1,40}$"
+  },
+  "tests": [
+    {
+      "file": "conanfile.txt",
+      "document": {
+        "requires": [
+          "zlib"
+        ],
+        "generators": [
+          "CMakeDeps"
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "conanfile.txt",
+      "document": {
+        "requires": [
+          "zlib/1.3.1",
+          "fmt"
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "conanfile.txt",
+      "document": {
+        "requires": [
+          "zlib/1.3.1"
+        ],
+        "generators": [
+          "CMakeDeps"
+        ]
+      },
+      "match": false
+    },
+    {
+      "file": "conanfile.txt",
+      "document": {
+        "requires": [
+          "fmt/10.2.1"
+        ],
+        "generators": [
+          "CMakeDeps"
+        ]
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2380"
+  ],
+  "remediation": "Record the version in the reference and commit `conan.lock`.",
+  "limitation": "It matches a `requires` entry that names no version in the parsed conanfile.txt; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

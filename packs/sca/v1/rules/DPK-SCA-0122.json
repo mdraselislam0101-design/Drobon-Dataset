@@ -1,0 +1,72 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0122",
+  "title": "Python install pulls from an additional index",
+  "description": "requirements.txt declares an `--extra-index-url` that adds a second index to every resolution. The installer searches both indexes for the best match, so a package published to the extra index can win over the reviewed one.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1104",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "pypi"
+  ],
+  "artifact": "requirements.txt",
+  "parser": "requirements",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "options.extra_index_url",
+    "valuePattern": "^\\S{1,200}$"
+  },
+  "tests": [
+    {
+      "file": "requirements.txt",
+      "document": {
+        "requirements": [],
+        "options": {
+          "extra_index_url": "https://pypi.acme.example/simple"
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "requirements.txt",
+      "document": {
+        "requirements": [],
+        "options": {
+          "index_url": "https://pypi.org/simple",
+          "extra_index_url": "https://mirror.thirdparty.example/simple"
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "requirements.txt",
+      "document": {
+        "requirements": [],
+        "options": {
+          "index_url": "https://pypi.org/simple"
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "requirements.txt",
+      "document": {
+        "requirements": [
+          {
+            "name": "requests",
+            "specifier": "==2.32.3"
+          }
+        ],
+        "options": {
+          "index_url": "https://pypi.org/simple"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2259"
+  ],
+  "remediation": "Use one trusted index, or pin every requirement with hashes so a substitute cannot match.",
+  "limitation": "It matches an `--extra-index-url` that adds a second index to every resolution in the parsed requirements.txt; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

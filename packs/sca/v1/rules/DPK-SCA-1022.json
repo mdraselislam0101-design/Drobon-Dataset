@@ -1,0 +1,89 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-1022",
+  "title": "Hex dependency limited to one environment",
+  "description": "mix.exs declares a dependency that is compiled only in `dev` or `test`. A name or scope that resolves outside the project's intended registry is fetched from a source nobody reviewed, so a publish there becomes an install here. This rule reads a dependency that is compiled only in `dev` or `test`.",
+  "severity": "LOW",
+  "cwe": "CWE-829",
+  "category": "dependency-confusion",
+  "ecosystems": [
+    "hex"
+  ],
+  "artifact": "mix.exs",
+  "parser": "lockfile-text",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "deps[].only",
+    "valuePattern": "^(?:dev|test)$"
+  },
+  "tests": [
+    {
+      "file": "mix.exs",
+      "document": {
+        "project": {
+          "app": "demo_service"
+        },
+        "deps": [
+          {
+            "name": "credo",
+            "requirement": "~> 1.7",
+            "only": "dev"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "mix.exs",
+      "document": {
+        "project": {
+          "app": "demo_service"
+        },
+        "deps": [
+          {
+            "name": "ex_machina",
+            "requirement": "~> 2.7",
+            "only": "test"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "mix.exs",
+      "document": {
+        "project": {
+          "app": "demo_service"
+        },
+        "deps": [
+          {
+            "name": "phoenix",
+            "requirement": "~> 1.7",
+            "only": "prod"
+          }
+        ]
+      },
+      "match": false
+    },
+    {
+      "file": "mix.exs",
+      "document": {
+        "project": {
+          "app": "demo_service"
+        },
+        "deps": [
+          {
+            "name": "ecto",
+            "requirement": "~> 3.12"
+          }
+        ]
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-3159"
+  ],
+  "remediation": "Point the declaration or the registry configuration at the namespace the project controls, and remove the lookup path that resolves elsewhere. Specifically: fix a dependency that is compiled only in `dev` or `test`.",
+  "limitation": "It matches a dependency that is compiled only in `dev` or `test` in the parsed mix.exs; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

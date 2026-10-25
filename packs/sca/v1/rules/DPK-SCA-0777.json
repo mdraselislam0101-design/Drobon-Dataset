@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0777",
+  "title": "R session that points at a cleartext repository",
+  "description": ".Rprofile declares an `options(repos=)` value over cleartext. An artifact fetched over plain HTTP can be replaced in transit, so the bytes that install are not bound to what the author published. This rule reads an `options(repos=)` value over cleartext.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-319",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "cran"
+  ],
+  "artifact": ".Rprofile",
+  "parser": "yaml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "options.repos.*",
+    "valuePattern": "^http://"
+  },
+  "tests": [
+    {
+      "file": ".Rprofile",
+      "document": {
+        "options": {
+          "repos": {
+            "CRAN": "http://cran.acme.example"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": ".Rprofile",
+      "document": {
+        "options": {
+          "repos": {
+            "CRAN": "http://10.24.8.9/cran"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": ".Rprofile",
+      "document": {
+        "options": {
+          "repos": {
+            "CRAN": "https://cloud.r-project.org"
+          }
+        }
+      },
+      "match": false
+    },
+    {
+      "file": ".Rprofile",
+      "document": {
+        "options": {
+          "repos": {
+            "CRAN": "https://cran.acme.example"
+          }
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2914"
+  ],
+  "remediation": "Use the HTTPS endpoint the registry publishes and keep the hostname in the configuration reviewable. Specifically: fix an `options(repos=)` value over cleartext.",
+  "limitation": "It matches an `options(repos=)` value over cleartext in the parsed .Rprofile; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

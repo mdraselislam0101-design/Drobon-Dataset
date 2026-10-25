@@ -1,0 +1,2431 @@
+[
+  {
+    "class": "nuget-source-cleartext",
+    "ecosystem": "nuget",
+    "artifact": "nuget.config",
+    "parser": "xml",
+    "category": "registry-configuration",
+    "cwe": "CWE-319",
+    "severity": "HIGH",
+    "title": "NuGet feed configured over cleartext",
+    "what": "a package source URL that uses cleartext http",
+    "impact": "Packages and their content hashes cross the network unencrypted, so a network attacker can substitute the package the restore records.",
+    "remediation": "Point the source at https.",
+    "limitation": "It matches a package source URL that uses cleartext http in the parsed nuget.config; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A nuget.config that mentions a package source URL that uses cleartext http in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "sources[].value",
+      "valuePattern": "^http://"
+    },
+    "tests": [
+      {
+        "file": "nuget.config",
+        "document": {
+          "sources": [
+            {
+              "key": "acme",
+              "value": "http://nuget.acme.example/v3/index.json"
+            }
+          ],
+          "settings": {}
+        },
+        "match": true
+      },
+      {
+        "file": "nuget.config",
+        "document": {
+          "sources": [
+            {
+              "key": "mirror",
+              "value": "http://10.24.8.9/v3/index.json"
+            }
+          ],
+          "settings": {}
+        },
+        "match": true
+      },
+      {
+        "file": "nuget.config",
+        "document": {
+          "sources": [
+            {
+              "key": "acme",
+              "value": "https://nuget.acme.example/v3/index.json"
+            }
+          ],
+          "settings": {}
+        },
+        "match": false
+      },
+      {
+        "file": "nuget.config",
+        "document": {
+          "sources": [
+            {
+              "key": "nuget.org",
+              "value": "https://api.nuget.org/v3/index.json"
+            }
+          ],
+          "settings": {}
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "registry-configuration"
+  },
+  {
+    "class": "nuget-signature-validation-accept",
+    "ecosystem": "nuget",
+    "artifact": "nuget.config",
+    "parser": "xml",
+    "category": "lockfile-integrity",
+    "cwe": "CWE-347",
+    "severity": "MEDIUM",
+    "title": "NuGet accepts packages without a valid signature",
+    "what": "a `signatureValidationMode` of `accept`, which does not require a signed package",
+    "impact": "An unsigned or tampered package restores exactly like a signed one, so the signature chain never gates the build.",
+    "remediation": "Set the mode to `require` and trust the signers the project reviewed.",
+    "limitation": "It matches a `signatureValidationMode` of `accept`, which does not require a signed package in the parsed nuget.config; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A nuget.config that mentions a `signatureValidationMode` of `accept`, which does not require a signed package in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "settings.signatureValidationMode",
+      "valuePattern": "^accept$"
+    },
+    "tests": [
+      {
+        "file": "nuget.config",
+        "document": {
+          "sources": [],
+          "settings": {
+            "signatureValidationMode": "accept"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "nuget.config",
+        "document": {
+          "sources": [
+            {
+              "key": "acme",
+              "value": "https://nuget.acme.example/v3/index.json"
+            }
+          ],
+          "settings": {
+            "signatureValidationMode": "accept"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "nuget.config",
+        "document": {
+          "sources": [],
+          "settings": {
+            "signatureValidationMode": "require"
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "nuget.config",
+        "document": {
+          "sources": [
+            {
+              "key": "nuget.org",
+              "value": "https://api.nuget.org/v3/index.json"
+            }
+          ],
+          "settings": {
+            "signatureValidationMode": "require"
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "nuget-package-version-range",
+    "ecosystem": "nuget",
+    "artifact": "packages.config",
+    "parser": "xml",
+    "category": "dependency-hygiene",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "NuGet package declared with a version range",
+    "what": "a package version written as a range",
+    "impact": "The restore resolves whatever satisfies the range on that day, so two restores of the same file can bring different code.",
+    "remediation": "Pin the exact version and update it deliberately.",
+    "limitation": "It matches a package version written as a range in the parsed packages.config; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A packages.config that mentions a package version written as a range in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "packages[].version",
+      "valuePattern": "^\\["
+    },
+    "tests": [
+      {
+        "file": "packages.config",
+        "document": {
+          "packages": [
+            {
+              "id": "Newtonsoft.Json",
+              "version": "[13.0.1,14.0.0)"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "packages.config",
+        "document": {
+          "packages": [
+            {
+              "id": "Serilog",
+              "version": "[3.0.0,)"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "packages.config",
+        "document": {
+          "packages": [
+            {
+              "id": "Newtonsoft.Json",
+              "version": "13.0.3"
+            }
+          ]
+        },
+        "match": false
+      },
+      {
+        "file": "packages.config",
+        "document": {
+          "packages": [
+            {
+              "id": "Serilog",
+              "version": "4.0.1"
+            }
+          ]
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "dependency-hygiene"
+  },
+  {
+    "class": "nuget-package-version-absent",
+    "ecosystem": "nuget",
+    "artifact": "packages.config",
+    "parser": "xml",
+    "category": "dependency-hygiene",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "NuGet package entry without a version",
+    "what": "a `packages.config` entry that records no version",
+    "impact": "The restore has no version to resolve, so the project's actual package identity comes from whatever the tooling decides.",
+    "remediation": "Regenerate the file with a pinned version for every package.",
+    "limitation": "It matches a `packages.config` entry that records no version in the parsed packages.config; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A packages.config that mentions a `packages.config` entry that records no version in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-entry-missing-field",
+      "path": "packages[]",
+      "field": "version"
+    },
+    "tests": [
+      {
+        "file": "packages.config",
+        "document": {
+          "packages": [
+            {
+              "id": "Newtonsoft.Json"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "packages.config",
+        "document": {
+          "packages": [
+            {
+              "id": "Serilog"
+            },
+            {
+              "id": "Dapper",
+              "version": "2.1.35"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "packages.config",
+        "document": {
+          "packages": [
+            {
+              "id": "Newtonsoft.Json",
+              "version": "13.0.3"
+            }
+          ]
+        },
+        "match": false
+      },
+      {
+        "file": "packages.config",
+        "document": {
+          "packages": [
+            {
+              "id": "Dapper",
+              "version": "2.1.35"
+            }
+          ]
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "dependency-hygiene"
+  },
+  {
+    "class": "nuget-lock-content-hash-absent",
+    "ecosystem": "nuget",
+    "artifact": "packages.lock.json",
+    "parser": "json",
+    "category": "lockfile-integrity",
+    "cwe": "CWE-494",
+    "severity": "MEDIUM",
+    "title": "NuGet lockfile entry without a content hash",
+    "what": "a locked package that records no `contentHash`",
+    "impact": "Restore cannot verify the package it downloads against the lockfile, so a feed substitution installs silently.",
+    "remediation": "Regenerate the lockfile with `RestorePackagesWithLockFile` enabled so hashes are recorded.",
+    "limitation": "It matches a locked package that records no `contentHash` in the parsed packages.lock.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A packages.lock.json that mentions a locked package that records no `contentHash` in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-entry-missing-field",
+      "path": "dependencies.*",
+      "field": "contentHash"
+    },
+    "tests": [
+      {
+        "file": "packages.lock.json",
+        "document": {
+          "version": 1,
+          "dependencies": {
+            "net8.0": {
+              "Newtonsoft.Json": {
+                "type": "Direct",
+                "resolved": "13.0.3"
+              }
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "packages.lock.json",
+        "document": {
+          "version": 1,
+          "dependencies": {
+            "net8.0": {
+              "Serilog": {
+                "type": "Transitive",
+                "resolved": "4.0.1"
+              }
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "packages.lock.json",
+        "document": {
+          "version": 1,
+          "dependencies": {
+            "net8.0": {
+              "Newtonsoft.Json": {
+                "type": "Direct",
+                "resolved": "13.0.3",
+                "contentHash": "aaaa"
+              }
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "packages.lock.json",
+        "document": {
+          "version": 1,
+          "dependencies": {
+            "net8.0": {
+              "Serilog": {
+                "type": "Transitive",
+                "resolved": "4.0.1",
+                "contentHash": "bbbb"
+              }
+            }
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "nuget-lock-floating-version",
+    "ecosystem": "nuget",
+    "artifact": "packages.lock.json",
+    "parser": "json",
+    "category": "lockfile-integrity",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "NuGet lockfile recorded a floating version",
+    "what": "a resolved version that is a floating `N.*` selector",
+    "impact": "A floating version resolves to whatever exists at restore time, so the lockfile stops describing the tree that was reviewed.",
+    "remediation": "Pin the concrete version in the project and re-lock.",
+    "limitation": "It matches a resolved version that is a floating `N.*` selector in the parsed packages.lock.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A packages.lock.json that mentions a resolved version that is a floating `N.*` selector in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "dependencies.*.*.resolved",
+      "valuePattern": "^\\d{1,3}\\.\\*$"
+    },
+    "tests": [
+      {
+        "file": "packages.lock.json",
+        "document": {
+          "version": 1,
+          "dependencies": {
+            "net8.0": {
+              "Newtonsoft.Json": {
+                "type": "Direct",
+                "resolved": "13.*",
+                "contentHash": "aaaa"
+              }
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "packages.lock.json",
+        "document": {
+          "version": 1,
+          "dependencies": {
+            "net8.0": {
+              "Serilog": {
+                "type": "Direct",
+                "resolved": "4.*",
+                "contentHash": "bbbb"
+              }
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "packages.lock.json",
+        "document": {
+          "version": 1,
+          "dependencies": {
+            "net8.0": {
+              "Newtonsoft.Json": {
+                "type": "Direct",
+                "resolved": "13.0.3",
+                "contentHash": "aaaa"
+              }
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "packages.lock.json",
+        "document": {
+          "version": 1,
+          "dependencies": {
+            "net8.0": {
+              "Serilog": {
+                "type": "Direct",
+                "resolved": "4.0.1",
+                "contentHash": "bbbb"
+              }
+            }
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "nuget-central-version-absent",
+    "ecosystem": "nuget",
+    "artifact": "Directory.Packages.props",
+    "parser": "xml",
+    "category": "dependency-hygiene",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "Central package version entry without a version",
+    "what": "a `PackageVersion` entry that declares no version",
+    "impact": "With central package management the version comes from this file only, so an empty entry leaves the restore to the feed's latest.",
+    "remediation": "Record the version the project tested for every centrally managed package.",
+    "limitation": "It matches a `PackageVersion` entry that declares no version in the parsed Directory.Packages.props; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A Directory.Packages.props that mentions a `PackageVersion` entry that declares no version in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-entry-missing-field",
+      "path": "project.itemGroup.PackageVersion",
+      "field": "Version"
+    },
+    "tests": [
+      {
+        "file": "Directory.Packages.props",
+        "document": {
+          "project": {
+            "itemGroup": {
+              "PackageVersion": [
+                {
+                  "Include": "Newtonsoft.Json"
+                }
+              ]
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "Directory.Packages.props",
+        "document": {
+          "project": {
+            "itemGroup": {
+              "PackageVersion": [
+                {
+                  "Include": "Serilog"
+                },
+                {
+                  "Include": "Dapper",
+                  "Version": "2.1.35"
+                }
+              ]
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "Directory.Packages.props",
+        "document": {
+          "project": {
+            "itemGroup": {
+              "PackageVersion": [
+                {
+                  "Include": "Newtonsoft.Json",
+                  "Version": "13.0.3"
+                }
+              ]
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "Directory.Packages.props",
+        "document": {
+          "project": {
+            "itemGroup": {
+              "PackageVersion": [
+                {
+                  "Include": "Dapper",
+                  "Version": "2.1.35"
+                }
+              ]
+            }
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "dependency-hygiene"
+  },
+  {
+    "class": "nuget-source-credential-inline",
+    "ecosystem": "nuget",
+    "artifact": "nuget.config",
+    "parser": "xml",
+    "category": "credential-in-config",
+    "cwe": "CWE-798",
+    "severity": "HIGH",
+    "title": "NuGet feed password stored in nuget.config",
+    "what": "a feed password written directly into the checked-in NuGet configuration",
+    "impact": "Everyone who can read the repository can pull private packages as that account, and the value also lands in restore logs.",
+    "remediation": "Reference an environment variable and rotate the credential.",
+    "limitation": "It matches a feed password written directly into the checked-in NuGet configuration in the parsed nuget.config; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A nuget.config that mentions a feed password written directly into the checked-in NuGet configuration in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "sources[].password",
+      "valuePattern": "^[A-Za-z0-9!@#$%^&*._-]{8,40}$"
+    },
+    "tests": [
+      {
+        "file": "nuget.config",
+        "document": {
+          "sources": [
+            {
+              "key": "acme",
+              "value": "https://nuget.acme.example/v3/index.json",
+              "password": "EXAMPLESECRETPASSWORD01"
+            }
+          ],
+          "settings": {}
+        },
+        "match": true
+      },
+      {
+        "file": "nuget.config",
+        "document": {
+          "sources": [
+            {
+              "key": "mirror",
+              "value": "https://nuget.acme.example/v3/index.json",
+              "password": "EXAMPLESECONDPASSWORD1234"
+            }
+          ],
+          "settings": {}
+        },
+        "match": true
+      },
+      {
+        "file": "nuget.config",
+        "document": {
+          "sources": [
+            {
+              "key": "acme",
+              "value": "https://nuget.acme.example/v3/index.json",
+              "password": "${ACME_NUGET_PASSWORD}"
+            }
+          ],
+          "settings": {}
+        },
+        "match": false
+      },
+      {
+        "file": "nuget.config",
+        "document": {
+          "sources": [
+            {
+              "key": "nuget.org",
+              "value": "https://api.nuget.org/v3/index.json"
+            }
+          ],
+          "settings": {}
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "credential-in-config"
+  },
+  {
+    "class": "nuget-dependency-version-wildcard",
+    "ecosystem": "nuget",
+    "artifact": "packages.config",
+    "parser": "xml",
+    "category": "dependency-hygiene",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "NuGet package pinned with a wildcard",
+    "what": "a `N.N.*` wildcard pin",
+    "impact": "The wildcard accepts every patch the feed publishes, so a package added after review installs without a manifest change.",
+    "remediation": "Pin the exact patch version.",
+    "limitation": "It matches a `N.N.*` wildcard pin in the parsed packages.config; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A packages.config that mentions a `N.N.*` wildcard pin in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "packages[].version",
+      "valuePattern": "^\\d{1,3}\\.\\d{1,3}\\.\\*$"
+    },
+    "tests": [
+      {
+        "file": "packages.config",
+        "document": {
+          "packages": [
+            {
+              "id": "Newtonsoft.Json",
+              "version": "13.0.*"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "packages.config",
+        "document": {
+          "packages": [
+            {
+              "id": "Serilog",
+              "version": "4.0.*"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "packages.config",
+        "document": {
+          "packages": [
+            {
+              "id": "Newtonsoft.Json",
+              "version": "13.0.3"
+            }
+          ]
+        },
+        "match": false
+      },
+      {
+        "file": "packages.config",
+        "document": {
+          "packages": [
+            {
+              "id": "Serilog",
+              "version": "4.0.1"
+            }
+          ]
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "dependency-hygiene"
+  },
+  {
+    "class": "cargo-dependency-wildcard",
+    "ecosystem": "cargo",
+    "artifact": "Cargo.toml",
+    "parser": "toml",
+    "category": "dependency-hygiene",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "Cargo dependency declared with a wildcard",
+    "what": "a `version = \"*\"` dependency",
+    "impact": "Cargo resolves the newest release of any major line, so a breaking or compromised publish installs with no manifest change.",
+    "remediation": "Pin the version the project tested, and let `Cargo.lock` record the resolution.",
+    "limitation": "It matches a `version = \"*\"` dependency in the parsed Cargo.toml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A Cargo.toml that mentions a `version = \"*\"` dependency in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "dependencies.*.version",
+      "valuePattern": "^\\*$"
+    },
+    "tests": [
+      {
+        "file": "Cargo.toml",
+        "document": {
+          "package": {
+            "name": "demo-service",
+            "version": "0.1.0"
+          },
+          "dependencies": {
+            "serde": {
+              "version": "*"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "Cargo.toml",
+        "document": {
+          "package": {
+            "name": "demo-service",
+            "version": "0.1.0"
+          },
+          "dependencies": {
+            "rand": {
+              "version": "*"
+            },
+            "serde": {
+              "version": "1.0.210"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "Cargo.toml",
+        "document": {
+          "package": {
+            "name": "demo-service",
+            "version": "0.1.0"
+          },
+          "dependencies": {
+            "serde": {
+              "version": "1.0.210"
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "Cargo.toml",
+        "document": {
+          "package": {
+            "name": "demo-service",
+            "version": "0.1.0"
+          },
+          "dependencies": {
+            "rand": {
+              "version": "0.8.5"
+            }
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "dependency-hygiene"
+  },
+  {
+    "class": "cargo-dependency-open-bound",
+    "ecosystem": "cargo",
+    "artifact": "Cargo.toml",
+    "parser": "toml",
+    "category": "dependency-hygiene",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "Cargo dependency declared with an open lower bound",
+    "what": "a `>=` requirement with no upper bound",
+    "impact": "Every later major satisfies the requirement, so Cargo can resolve an incompatible or compromised release the project never tested.",
+    "remediation": "Use a caret or tilde requirement, or pin the exact version.",
+    "limitation": "It matches a `>=` requirement with no upper bound in the parsed Cargo.toml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A Cargo.toml that mentions a `>=` requirement with no upper bound in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "dependencies.*.version",
+      "valuePattern": "^>=\\s*\\d{1,3}(?:\\.\\d{1,3}){0,2}$"
+    },
+    "tests": [
+      {
+        "file": "Cargo.toml",
+        "document": {
+          "package": {
+            "name": "demo-service",
+            "version": "0.1.0"
+          },
+          "dependencies": {
+            "serde": {
+              "version": ">=1.0"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "Cargo.toml",
+        "document": {
+          "package": {
+            "name": "demo-service",
+            "version": "0.1.0"
+          },
+          "dependencies": {
+            "tokio": {
+              "version": ">=1.40.0"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "Cargo.toml",
+        "document": {
+          "package": {
+            "name": "demo-service",
+            "version": "0.1.0"
+          },
+          "dependencies": {
+            "serde": {
+              "version": "1.0.210"
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "Cargo.toml",
+        "document": {
+          "package": {
+            "name": "demo-service",
+            "version": "0.1.0"
+          },
+          "dependencies": {
+            "tokio": {
+              "version": ">=1.40, <2"
+            }
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "dependency-hygiene"
+  },
+  {
+    "class": "cargo-dependency-git",
+    "ecosystem": "cargo",
+    "artifact": "Cargo.toml",
+    "parser": "toml",
+    "category": "dependency-hygiene",
+    "cwe": "CWE-829",
+    "severity": "MEDIUM",
+    "title": "Cargo dependency installed from a git remote",
+    "what": "a dependency sourced from a git remote rather than crates.io",
+    "impact": "The code is outside the registry's checksum and yank controls, so the lockfile hash model does not cover it.",
+    "remediation": "Publish the crate and depend on the version.",
+    "limitation": "It matches a dependency sourced from a git remote rather than crates.io in the parsed Cargo.toml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A Cargo.toml that mentions a dependency sourced from a git remote rather than crates.io in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "dependencies.*.git",
+      "valuePattern": "^https?://"
+    },
+    "tests": [
+      {
+        "file": "Cargo.toml",
+        "document": {
+          "package": {
+            "name": "demo-service",
+            "version": "0.1.0"
+          },
+          "dependencies": {
+            "acme_sdk": {
+              "git": "https://github.com/acme/sdk",
+              "tag": "v4.2.0"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "Cargo.toml",
+        "document": {
+          "package": {
+            "name": "demo-service",
+            "version": "0.1.0"
+          },
+          "dependencies": {
+            "acme_cli": {
+              "git": "https://github.com/acme/cli"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "Cargo.toml",
+        "document": {
+          "package": {
+            "name": "demo-service",
+            "version": "0.1.0"
+          },
+          "dependencies": {
+            "acme_sdk": {
+              "version": "4.2.0"
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "Cargo.toml",
+        "document": {
+          "package": {
+            "name": "demo-service",
+            "version": "0.1.0"
+          },
+          "dependencies": {
+            "acme_cli": {
+              "version": "2.1.0"
+            }
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "dependency-hygiene"
+  },
+  {
+    "class": "cargo-dependency-path",
+    "ecosystem": "cargo",
+    "artifact": "Cargo.toml",
+    "parser": "toml",
+    "category": "dependency-hygiene",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "Cargo dependency resolved from a local path",
+    "what": "a dependency that points at a directory on the build machine",
+    "impact": "The build compiles whatever that directory holds, so the artifact is not reproducible from the manifest.",
+    "remediation": "Publish the crate and depend on a version for releases.",
+    "limitation": "It matches a dependency that points at a directory on the build machine in the parsed Cargo.toml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A Cargo.toml that mentions a dependency that points at a directory on the build machine in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "dependencies.*.path",
+      "valuePattern": "^(?:\\.{1,2}/|/)"
+    },
+    "tests": [
+      {
+        "file": "Cargo.toml",
+        "document": {
+          "package": {
+            "name": "demo-service",
+            "version": "0.1.0"
+          },
+          "dependencies": {
+            "acme_shared": {
+              "path": "../acme-shared"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "Cargo.toml",
+        "document": {
+          "package": {
+            "name": "demo-service",
+            "version": "0.1.0"
+          },
+          "dependencies": {
+            "acme_lib": {
+              "path": "/opt/vendor/acme-lib"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "Cargo.toml",
+        "document": {
+          "package": {
+            "name": "demo-service",
+            "version": "0.1.0"
+          },
+          "dependencies": {
+            "acme_shared": {
+              "version": "1.2.0"
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "Cargo.toml",
+        "document": {
+          "package": {
+            "name": "demo-service",
+            "version": "0.1.0"
+          },
+          "dependencies": {
+            "acme_lib": {
+              "version": "2.0.1"
+            }
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "dependency-hygiene"
+  },
+  {
+    "class": "cargo-dependency-branch",
+    "ecosystem": "cargo",
+    "artifact": "Cargo.toml",
+    "parser": "toml",
+    "category": "dependency-hygiene",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "Cargo dependency follows a git branch",
+    "what": "a git dependency pinned to a branch instead of a revision",
+    "impact": "The branch moves, so every build can compile a different tree while the manifest and the review record stay identical.",
+    "remediation": "Pin the `rev` to a commit sha, or depend on a published version.",
+    "limitation": "It matches a git dependency pinned to a branch instead of a revision in the parsed Cargo.toml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A Cargo.toml that mentions a git dependency pinned to a branch instead of a revision in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "dependencies.*.branch",
+      "valuePattern": "^[A-Za-z]"
+    },
+    "tests": [
+      {
+        "file": "Cargo.toml",
+        "document": {
+          "package": {
+            "name": "demo-service",
+            "version": "0.1.0"
+          },
+          "dependencies": {
+            "acme_sdk": {
+              "git": "https://github.com/acme/sdk",
+              "branch": "main"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "Cargo.toml",
+        "document": {
+          "package": {
+            "name": "demo-service",
+            "version": "0.1.0"
+          },
+          "dependencies": {
+            "acme_cli": {
+              "git": "https://github.com/acme/cli",
+              "branch": "develop"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "Cargo.toml",
+        "document": {
+          "package": {
+            "name": "demo-service",
+            "version": "0.1.0"
+          },
+          "dependencies": {
+            "acme_sdk": {
+              "git": "https://github.com/acme/sdk",
+              "rev": "9f2c4a1b7c3d"
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "Cargo.toml",
+        "document": {
+          "package": {
+            "name": "demo-service",
+            "version": "0.1.0"
+          },
+          "dependencies": {
+            "acme_sdk": {
+              "version": "4.2.0"
+            }
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "dependency-hygiene"
+  },
+  {
+    "class": "cargo-source-replacement",
+    "ecosystem": "cargo",
+    "artifact": "Cargo.toml",
+    "parser": "toml",
+    "category": "registry-configuration",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "Cargo replaces a registry with another source",
+    "what": "a `replace-with` rule that redirects a registry to another source",
+    "impact": "Every crate from the replaced registry resolves through a different index, so its publication controls apply instead of the public registry's.",
+    "remediation": "Document the mirror and serve it with a verified index, or remove the replacement.",
+    "limitation": "It matches a `replace-with` rule that redirects a registry to another source in the parsed Cargo.toml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A Cargo.toml that mentions a `replace-with` rule that redirects a registry to another source in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "source.*.replace-with",
+      "valuePattern": "^[a-z0-9_-]{2,40}$"
+    },
+    "tests": [
+      {
+        "file": "Cargo.toml",
+        "document": {
+          "package": {
+            "name": "demo-service"
+          },
+          "source": {
+            "crates-io": {
+              "replace-with": "acme-mirror"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "Cargo.toml",
+        "document": {
+          "package": {
+            "name": "demo-service"
+          },
+          "source": {
+            "acme-mirror": {
+              "replace-with": "acme-fallback"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "Cargo.toml",
+        "document": {
+          "package": {
+            "name": "demo-service"
+          },
+          "source": {
+            "acme-mirror": {
+              "registry": "https://mirror.acme.example/index"
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "Cargo.toml",
+        "document": {
+          "package": {
+            "name": "demo-service"
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "registry-configuration"
+  },
+  {
+    "class": "cargo-package-license-absent",
+    "ecosystem": "cargo",
+    "artifact": "Cargo.toml",
+    "parser": "toml",
+    "category": "dependency-hygiene",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "Cargo manifest declares no licence",
+    "what": "a crate manifest that records no licence",
+    "impact": "Redistribution rights cannot be established from the manifest, which blocks release review and downstream use.",
+    "remediation": "Declare `license` (SPDX) or `license-file`, and include the file in the package.",
+    "limitation": "It matches a crate manifest that records no licence in the parsed Cargo.toml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A Cargo.toml that mentions a crate manifest that records no licence in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-absent",
+      "path": "package.license"
+    },
+    "tests": [
+      {
+        "file": "Cargo.toml",
+        "document": {
+          "package": {
+            "name": "demo-service",
+            "version": "0.1.0"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "Cargo.toml",
+        "document": {
+          "package": {
+            "name": "demo-service",
+            "version": "0.1.0",
+            "dependencies": {}
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "Cargo.toml",
+        "document": {
+          "package": {
+            "name": "demo-service",
+            "version": "0.1.0",
+            "license": "MIT OR Apache-2.0"
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "Cargo.toml",
+        "document": {
+          "package": {
+            "name": "demo-service",
+            "version": "0.1.0",
+            "license": "Apache-2.0"
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "dependency-hygiene"
+  },
+  {
+    "class": "cargo-lock-checksum-absent",
+    "ecosystem": "cargo",
+    "artifact": "Cargo.lock",
+    "parser": "toml",
+    "category": "lockfile-integrity",
+    "cwe": "CWE-494",
+    "severity": "MEDIUM",
+    "title": "Cargo lockfile entry without a checksum",
+    "what": "a locked crate that records no checksum",
+    "impact": "Cargo cannot verify the downloaded crate against the lockfile, so a mirror can serve different bytes for the same version.",
+    "remediation": "Regenerate the lockfile so every registry crate carries a checksum.",
+    "limitation": "It matches a locked crate that records no checksum in the parsed Cargo.lock; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A Cargo.lock that mentions a locked crate that records no checksum in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-entry-missing-field",
+      "path": "packages",
+      "field": "checksum"
+    },
+    "tests": [
+      {
+        "file": "Cargo.lock",
+        "document": {
+          "version": 4,
+          "packages": [
+            {
+              "name": "serde",
+              "version": "1.0.210"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "Cargo.lock",
+        "document": {
+          "version": 4,
+          "packages": [
+            {
+              "name": "tokio",
+              "version": "1.40.0"
+            },
+            {
+              "name": "demo-service",
+              "version": "0.1.0"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "Cargo.lock",
+        "document": {
+          "version": 4,
+          "packages": [
+            {
+              "name": "serde",
+              "version": "1.0.210",
+              "checksum": "aaaa"
+            }
+          ]
+        },
+        "match": false
+      },
+      {
+        "file": "Cargo.lock",
+        "document": {
+          "version": 4,
+          "packages": [
+            {
+              "name": "tokio",
+              "version": "1.40.0",
+              "checksum": "bbbb"
+            }
+          ]
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "cargo-lock-git-source",
+    "ecosystem": "cargo",
+    "artifact": "Cargo.lock",
+    "parser": "toml",
+    "category": "lockfile-integrity",
+    "cwe": "CWE-829",
+    "severity": "MEDIUM",
+    "title": "Cargo lockfile resolves a crate from git",
+    "what": "a locked crate whose source is a git remote",
+    "impact": "The code sits outside crates.io checksums and yanks, so the lockfile's integrity model does not describe it.",
+    "remediation": "Publish the crate and depend on the registry version.",
+    "limitation": "It matches a locked crate whose source is a git remote in the parsed Cargo.lock; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A Cargo.lock that mentions a locked crate whose source is a git remote in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "packages[].source",
+      "valuePattern": "^git\\+"
+    },
+    "tests": [
+      {
+        "file": "Cargo.lock",
+        "document": {
+          "version": 4,
+          "packages": [
+            {
+              "name": "acme-sdk",
+              "version": "4.2.0",
+              "source": "git+https://github.com/acme/sdk?rev=9f2c4a1#9f2c4a1"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "Cargo.lock",
+        "document": {
+          "version": 4,
+          "packages": [
+            {
+              "name": "acme-cli",
+              "version": "2.1.0",
+              "source": "git+ssh://git@github.com/acme/cli#0a1b2c3"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "Cargo.lock",
+        "document": {
+          "version": 4,
+          "packages": [
+            {
+              "name": "acme-sdk",
+              "version": "4.2.0",
+              "source": "registry+https://github.com/rust-lang/crates.io-index"
+            }
+          ]
+        },
+        "match": false
+      },
+      {
+        "file": "Cargo.lock",
+        "document": {
+          "version": 4,
+          "packages": [
+            {
+              "name": "serde",
+              "version": "1.0.210",
+              "source": "registry+https://github.com/rust-lang/crates.io-index"
+            }
+          ]
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "composer-dependency-wildcard",
+    "ecosystem": "composer",
+    "artifact": "composer.json",
+    "parser": "json",
+    "category": "dependency-hygiene",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "Composer dependency declared with a wildcard",
+    "what": "a `require` entry whose constraint is `*`",
+    "impact": "Every release satisfies the constraint, so the install follows whatever Packagist serves next.",
+    "remediation": "Pin the constraint the project tested.",
+    "limitation": "It matches a `require` entry whose constraint is `*` in the parsed composer.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A composer.json that mentions a `require` entry whose constraint is `*` in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "require.*",
+      "valuePattern": "^\\*$"
+    },
+    "tests": [
+      {
+        "file": "composer.json",
+        "document": {
+          "require": {
+            "monolog/monolog": "*"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "composer.json",
+        "document": {
+          "require": {
+            "monolog/monolog": "*",
+            "guzzlehttp/guzzle": "^7.9"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "composer.json",
+        "document": {
+          "require": {
+            "monolog/monolog": "^3.7"
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "composer.json",
+        "document": {
+          "require": {
+            "guzzlehttp/guzzle": "^7.9"
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "dependency-hygiene"
+  },
+  {
+    "class": "composer-development-branch",
+    "ecosystem": "composer",
+    "artifact": "composer.json",
+    "parser": "json",
+    "category": "dependency-hygiene",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "Composer dependency pinned to a development branch",
+    "what": "a `dev-\u2026` constraint, which follows a VCS branch",
+    "impact": "The branch moves, so a package install on any day can differ from the one reviewed, and the install pulls from the VCS rather than Packagist.",
+    "remediation": "Depend on a tagged release.",
+    "limitation": "It matches a `dev-\u2026` constraint, which follows a VCS branch in the parsed composer.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A composer.json that mentions a `dev-\u2026` constraint, which follows a VCS branch in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "require.*",
+      "valuePattern": "^dev-"
+    },
+    "tests": [
+      {
+        "file": "composer.json",
+        "document": {
+          "require": {
+            "acme/sdk": "dev-main"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "composer.json",
+        "document": {
+          "require": {
+            "acme/cli": "dev-feature/x"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "composer.json",
+        "document": {
+          "require": {
+            "acme/sdk": "^4.2"
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "composer.json",
+        "document": {
+          "require": {
+            "acme/cli": "2.1.0"
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "dependency-hygiene"
+  },
+  {
+    "class": "composer-secure-http-disabled",
+    "ecosystem": "composer",
+    "artifact": "composer.json",
+    "parser": "json",
+    "category": "registry-configuration",
+    "cwe": "CWE-319",
+    "severity": "HIGH",
+    "title": "Composer accepts cleartext package downloads",
+    "what": "`secure-http` turned off, which permits http downloads",
+    "impact": "Any repository URL can be served over cleartext, so a network attacker can replace the archive and its metadata.",
+    "remediation": "Leave `secure-http` enabled and serve every repository over https.",
+    "limitation": "It matches `secure-http` turned off, which permits http downloads in the parsed composer.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A composer.json that mentions `secure-http` turned off, which permits http downloads in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "config.secure-http",
+      "valuePattern": "^false$"
+    },
+    "tests": [
+      {
+        "file": "composer.json",
+        "document": {
+          "require": {},
+          "config": {
+            "secure-http": false
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "composer.json",
+        "document": {
+          "require": {
+            "monolog/monolog": "^3.7"
+          },
+          "config": {
+            "secure-http": false
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "composer.json",
+        "document": {
+          "require": {},
+          "config": {
+            "secure-http": true
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "composer.json",
+        "document": {
+          "require": {
+            "monolog/monolog": "^3.7"
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "registry-configuration"
+  },
+  {
+    "class": "composer-minimum-stability-dev",
+    "ecosystem": "composer",
+    "artifact": "composer.json",
+    "parser": "json",
+    "category": "dependency-hygiene",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "Composer accepts unstable packages globally",
+    "what": "a `minimum-stability` below stable",
+    "impact": "Every constraint in the project can resolve to a prerelease or a development build, which sits outside most advisory ranges.",
+    "remediation": "Keep `minimum-stability` at `stable` and mark the few packages that need otherwise.",
+    "limitation": "It matches a `minimum-stability` below stable in the parsed composer.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A composer.json that mentions a `minimum-stability` below stable in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "minimum-stability",
+      "valuePattern": "^(?:dev|alpha|beta|RC)$"
+    },
+    "tests": [
+      {
+        "file": "composer.json",
+        "document": {
+          "require": {
+            "monolog/monolog": "^3.7"
+          },
+          "minimum-stability": "dev"
+        },
+        "match": true
+      },
+      {
+        "file": "composer.json",
+        "document": {
+          "require": {
+            "acme/sdk": "^4.2"
+          },
+          "minimum-stability": "beta"
+        },
+        "match": true
+      },
+      {
+        "file": "composer.json",
+        "document": {
+          "require": {
+            "monolog/monolog": "^3.7"
+          },
+          "minimum-stability": "stable"
+        },
+        "match": false
+      },
+      {
+        "file": "composer.json",
+        "document": {
+          "require": {
+            "acme/sdk": "^4.2"
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "dependency-hygiene"
+  },
+  {
+    "class": "composer-lock-content-hash-absent",
+    "ecosystem": "composer",
+    "artifact": "composer.lock",
+    "parser": "json",
+    "category": "lockfile-integrity",
+    "cwe": "CWE-494",
+    "severity": "MEDIUM",
+    "title": "Composer lockfile without a content hash",
+    "what": "a `composer.lock` that records no usable `content-hash`",
+    "impact": "Composer cannot tell whether the lockfile matches `composer.json`, so an install can proceed from a stale lock the review never covered.",
+    "remediation": "Regenerate the lockfile with `composer update --lock` and commit it.",
+    "limitation": "It matches a `composer.lock` that records no usable `content-hash` in the parsed composer.lock; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A composer.lock that mentions a `composer.lock` that records no usable `content-hash` in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-absent",
+      "path": "content-hash"
+    },
+    "tests": [
+      {
+        "file": "composer.lock",
+        "document": {
+          "packages": [
+            {
+              "name": "monolog/monolog",
+              "version": "3.7.1"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "composer.lock",
+        "document": {
+          "packages": [
+            {
+              "name": "guzzlehttp/guzzle",
+              "version": "7.9.2"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "composer.lock",
+        "document": {
+          "packages": [
+            {
+              "name": "monolog/monolog",
+              "version": "3.7.1"
+            }
+          ],
+          "content-hash": "9f2c4a1b7c3d0a1b2c3d4e5f60718293"
+        },
+        "match": false
+      },
+      {
+        "file": "composer.lock",
+        "document": {
+          "packages": [
+            {
+              "name": "guzzlehttp/guzzle",
+              "version": "7.9.2"
+            }
+          ],
+          "content-hash": "0a1b2c3d4e5f60718293a4b5c6d7e8f9"
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "composer-lock-dist-cleartext",
+    "ecosystem": "composer",
+    "artifact": "composer.lock",
+    "parser": "json",
+    "category": "lockfile-integrity",
+    "cwe": "CWE-319",
+    "severity": "MEDIUM",
+    "title": "Composer lockfile downloads a distribution over cleartext",
+    "what": "a `dist.url` that uses cleartext http",
+    "impact": "The archive crosses the network unencrypted, so it can be replaced before Composer verifies anything.",
+    "remediation": "Re-lock so distributions resolve over https.",
+    "limitation": "It matches a `dist.url` that uses cleartext http in the parsed composer.lock; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A composer.lock that mentions a `dist.url` that uses cleartext http in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "packages[].dist.url",
+      "valuePattern": "^http://"
+    },
+    "tests": [
+      {
+        "file": "composer.lock",
+        "document": {
+          "packages": [
+            {
+              "name": "monolog/monolog",
+              "version": "3.7.1",
+              "dist": {
+                "type": "zip",
+                "url": "http://packagist.acme.example/monolog.zip"
+              }
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "composer.lock",
+        "document": {
+          "packages": [
+            {
+              "name": "guzzlehttp/guzzle",
+              "version": "7.9.2",
+              "dist": {
+                "type": "zip",
+                "url": "http://10.24.8.9/guzzle.zip"
+              }
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "composer.lock",
+        "document": {
+          "packages": [
+            {
+              "name": "monolog/monolog",
+              "version": "3.7.1",
+              "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/Seldaek/monolog/zipball/9f2c4a1"
+              }
+            }
+          ]
+        },
+        "match": false
+      },
+      {
+        "file": "composer.lock",
+        "document": {
+          "packages": [
+            {
+              "name": "guzzlehttp/guzzle",
+              "version": "7.9.2",
+              "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/guzzle/guzzle/zipball/0a1b2c3"
+              }
+            }
+          ]
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "composer-lock-reference-absent",
+    "ecosystem": "composer",
+    "artifact": "composer.lock",
+    "parser": "json",
+    "category": "lockfile-integrity",
+    "cwe": "CWE-494",
+    "severity": "MEDIUM",
+    "title": "Composer lockfile entry without a distribution reference",
+    "what": "a locked package whose distribution records no commit reference",
+    "impact": "Nothing pins the archive to a specific commit, so the same version string can serve different contents on different days.",
+    "remediation": "Re-lock so every package records its distribution reference.",
+    "limitation": "It matches a locked package whose distribution records no commit reference in the parsed composer.lock; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A composer.lock that mentions a locked package whose distribution records no commit reference in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-entry-missing-field",
+      "path": "packages[].dist",
+      "field": "reference"
+    },
+    "tests": [
+      {
+        "file": "composer.lock",
+        "document": {
+          "packages": [
+            {
+              "name": "monolog/monolog",
+              "version": "3.7.1",
+              "dist": {
+                "url": "https://packagist.acme.example/monolog.zip"
+              }
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "composer.lock",
+        "document": {
+          "packages": [
+            {
+              "name": "guzzlehttp/guzzle",
+              "version": "7.9.2",
+              "dist": {
+                "url": "https://packagist.acme.example/guzzle.zip"
+              }
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "composer.lock",
+        "document": {
+          "packages": [
+            {
+              "name": "monolog/monolog",
+              "version": "3.7.1",
+              "dist": {
+                "reference": "9f2c4a1b7c3d0a1b2c3d4e5f60718293"
+              }
+            }
+          ]
+        },
+        "match": false
+      },
+      {
+        "file": "composer.lock",
+        "document": {
+          "packages": [
+            {
+              "name": "guzzlehttp/guzzle",
+              "version": "7.9.2",
+              "dist": {
+                "reference": "0a1b2c3d4e5f60718293a4b5c6d7e8f9"
+              }
+            }
+          ]
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  },
+  {
+    "class": "gemfile-unpinned-gem",
+    "ecosystem": "rubygems",
+    "artifact": "Gemfile",
+    "parser": "lockfile-text",
+    "category": "dependency-hygiene",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "Gemfile entry with no version requirement",
+    "what": "a gem declared with no version requirement",
+    "impact": "Bundler resolves the newest release, so a gem published after review installs with no change to the Gemfile.",
+    "remediation": "Declare the requirement the project tested and commit `Gemfile.lock`.",
+    "limitation": "It matches a gem declared with no version requirement in the parsed Gemfile; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A Gemfile that mentions a gem declared with no version requirement in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "gems[].requirement",
+      "valuePattern": "^$"
+    },
+    "tests": [
+      {
+        "file": "Gemfile",
+        "document": {
+          "source": "https://rubygems.org",
+          "gems": [
+            {
+              "name": "rails",
+              "requirement": ""
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "Gemfile",
+        "document": {
+          "source": "https://rubygems.org",
+          "gems": [
+            {
+              "name": "puma",
+              "requirement": ""
+            },
+            {
+              "name": "rails",
+              "requirement": "~> 7.1"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "Gemfile",
+        "document": {
+          "source": "https://rubygems.org",
+          "gems": [
+            {
+              "name": "rails",
+              "requirement": "~> 7.1.3"
+            }
+          ]
+        },
+        "match": false
+      },
+      {
+        "file": "Gemfile",
+        "document": {
+          "source": "https://rubygems.org",
+          "gems": [
+            {
+              "name": "puma",
+              "requirement": ">= 6.0"
+            }
+          ]
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "dependency-hygiene"
+  },
+  {
+    "class": "gemfile-open-bound",
+    "ecosystem": "rubygems",
+    "artifact": "Gemfile",
+    "parser": "lockfile-text",
+    "category": "dependency-hygiene",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "Gemfile requirement with an open lower bound",
+    "what": "a `>=` requirement with no upper bound",
+    "impact": "Every later major satisfies the requirement, so Bundler can resolve an incompatible release the project never tested.",
+    "remediation": "Use a pessimistic (`~>`) requirement or pin the exact version.",
+    "limitation": "It matches a `>=` requirement with no upper bound in the parsed Gemfile; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A Gemfile that mentions a `>=` requirement with no upper bound in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "gems[].requirement",
+      "valuePattern": "^>=\\s*\\d"
+    },
+    "tests": [
+      {
+        "file": "Gemfile",
+        "document": {
+          "source": "https://rubygems.org",
+          "gems": [
+            {
+              "name": "rails",
+              "requirement": ">= 7.0"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "Gemfile",
+        "document": {
+          "source": "https://rubygems.org",
+          "gems": [
+            {
+              "name": "puma",
+              "requirement": ">= 6.4.0"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "Gemfile",
+        "document": {
+          "source": "https://rubygems.org",
+          "gems": [
+            {
+              "name": "rails",
+              "requirement": "~> 7.1.3"
+            }
+          ]
+        },
+        "match": false
+      },
+      {
+        "file": "Gemfile",
+        "document": {
+          "source": "https://rubygems.org",
+          "gems": [
+            {
+              "name": "puma",
+              "requirement": "6.4.2"
+            }
+          ]
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "dependency-hygiene"
+  },
+  {
+    "class": "gemfile-git-source",
+    "ecosystem": "rubygems",
+    "artifact": "Gemfile",
+    "parser": "lockfile-text",
+    "category": "dependency-hygiene",
+    "cwe": "CWE-829",
+    "severity": "MEDIUM",
+    "title": "Gemfile installs a gem from a git remote",
+    "what": "a gem sourced from a git remote rather than rubygems.org",
+    "impact": "The code is outside the gem checksum and yank controls, so the lockfile's integrity model does not describe it.",
+    "remediation": "Build and publish the gem, or pin the git reference to a commit and record why.",
+    "limitation": "It matches a gem sourced from a git remote rather than rubygems.org in the parsed Gemfile; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A Gemfile that mentions a gem sourced from a git remote rather than rubygems.org in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "gems[].git",
+      "valuePattern": "^https?://"
+    },
+    "tests": [
+      {
+        "file": "Gemfile",
+        "document": {
+          "source": "https://rubygems.org",
+          "gems": [
+            {
+              "name": "acme-sdk",
+              "git": "https://github.com/acme/sdk.git",
+              "ref": "9f2c4a1"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "Gemfile",
+        "document": {
+          "source": "https://rubygems.org",
+          "gems": [
+            {
+              "name": "acme-cli",
+              "git": "https://github.com/acme/cli.git",
+              "branch": "main"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "Gemfile",
+        "document": {
+          "source": "https://rubygems.org",
+          "gems": [
+            {
+              "name": "rails",
+              "requirement": "~> 7.1.3"
+            }
+          ]
+        },
+        "match": false
+      },
+      {
+        "file": "Gemfile",
+        "document": {
+          "source": "https://rubygems.org",
+          "gems": [
+            {
+              "name": "puma",
+              "requirement": "6.4.2"
+            }
+          ]
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "dependency-hygiene"
+  },
+  {
+    "class": "gemfile-source-cleartext",
+    "ecosystem": "rubygems",
+    "artifact": "Gemfile",
+    "parser": "lockfile-text",
+    "category": "registry-configuration",
+    "cwe": "CWE-319",
+    "severity": "HIGH",
+    "title": "Gemfile source declared over cleartext",
+    "what": "a gem source URL that uses cleartext http",
+    "impact": "Gems and their checksums cross the network unencrypted, so a network attacker can serve a different gem.",
+    "remediation": "Point the source at https.",
+    "limitation": "It matches a gem source URL that uses cleartext http in the parsed Gemfile; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A Gemfile that mentions a gem source URL that uses cleartext http in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "source",
+      "valuePattern": "^http://"
+    },
+    "tests": [
+      {
+        "file": "Gemfile",
+        "document": {
+          "source": "http://rubygems.acme.example",
+          "gems": []
+        },
+        "match": true
+      },
+      {
+        "file": "Gemfile",
+        "document": {
+          "source": "http://10.24.8.9",
+          "gems": []
+        },
+        "match": true
+      },
+      {
+        "file": "Gemfile",
+        "document": {
+          "source": "https://rubygems.org",
+          "gems": []
+        },
+        "match": false
+      },
+      {
+        "file": "Gemfile",
+        "document": {
+          "source": "https://gems.acme.example",
+          "gems": []
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "registry-configuration"
+  },
+  {
+    "class": "gemfile-path-source",
+    "ecosystem": "rubygems",
+    "artifact": "Gemfile",
+    "parser": "lockfile-text",
+    "category": "dependency-hygiene",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "Gemfile resolves a gem from a local path",
+    "what": "a gem that installs from a directory on the build machine",
+    "impact": "The build compiles whatever that directory holds, so the artifact is not reproducible from the Gemfile.",
+    "remediation": "Build and publish the gem, and depend on a version for releases.",
+    "limitation": "It matches a gem that installs from a directory on the build machine in the parsed Gemfile; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A Gemfile that mentions a gem that installs from a directory on the build machine in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "gems[].path",
+      "valuePattern": "^(?:\\.{1,2}/|/)"
+    },
+    "tests": [
+      {
+        "file": "Gemfile",
+        "document": {
+          "source": "https://rubygems.org",
+          "gems": [
+            {
+              "name": "acme-shared",
+              "path": "../acme-shared"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "Gemfile",
+        "document": {
+          "source": "https://rubygems.org",
+          "gems": [
+            {
+              "name": "acme-assets",
+              "path": "/opt/vendor/acme-assets"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "Gemfile",
+        "document": {
+          "source": "https://rubygems.org",
+          "gems": [
+            {
+              "name": "rails",
+              "requirement": "~> 7.1.3"
+            }
+          ]
+        },
+        "match": false
+      },
+      {
+        "file": "Gemfile",
+        "document": {
+          "source": "https://rubygems.org",
+          "gems": [
+            {
+              "name": "puma",
+              "requirement": "6.4.2"
+            }
+          ]
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "dependency-hygiene"
+  },
+  {
+    "class": "gemfile-gemspec-path",
+    "ecosystem": "rubygems",
+    "artifact": "Gemfile",
+    "parser": "lockfile-text",
+    "category": "dependency-hygiene",
+    "cwe": "CWE-829",
+    "severity": "MEDIUM",
+    "title": "Gemfile loads a gemspec from a build-machine path",
+    "what": "a `gemspec` directive that points at a path rather than a gemspec name",
+    "impact": "The dependency set of the build is decided by a file outside the repository's review, so the resolved gems are unknown.",
+    "remediation": "Keep the gemspec inside the repository and reference it by name.",
+    "limitation": "It matches a `gemspec` directive that points at a path rather than a gemspec name in the parsed Gemfile; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A Gemfile that mentions a `gemspec` directive that points at a path rather than a gemspec name in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "gemspec",
+      "valuePattern": "^\\.{0,2}/"
+    },
+    "tests": [
+      {
+        "file": "Gemfile",
+        "document": {
+          "source": "https://rubygems.org",
+          "gems": [],
+          "gemspec": "./acme.gemspec"
+        },
+        "match": true
+      },
+      {
+        "file": "Gemfile",
+        "document": {
+          "source": "https://rubygems.org",
+          "gems": [],
+          "gemspec": "../acme/acme.gemspec"
+        },
+        "match": true
+      },
+      {
+        "file": "Gemfile",
+        "document": {
+          "source": "https://rubygems.org",
+          "gems": [],
+          "gemspec": "acme.gemspec"
+        },
+        "match": false
+      },
+      {
+        "file": "Gemfile",
+        "document": {
+          "source": "https://rubygems.org",
+          "gems": [
+            {
+              "name": "rails",
+              "requirement": "~> 7.1.3"
+            }
+          ]
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "dependency-hygiene"
+  },
+  {
+    "class": "gemfile-platform-lock",
+    "ecosystem": "rubygems",
+    "artifact": "Gemfile.lock",
+    "parser": "lockfile-text",
+    "category": "lockfile-integrity",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "Gemfile.lock carries a private namespace gem",
+    "what": "a locked spec whose name sits in the private `acme-` namespace",
+    "impact": "A private name resolved from the public source is the dependency-confusion path: whoever publishes that name first wins the install.",
+    "remediation": "Confirm every private-namespace gem comes from the private source, and pin the source in the Gemfile.",
+    "limitation": "It matches a locked spec whose name sits in the private `acme-` namespace in the parsed Gemfile.lock; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A Gemfile.lock that mentions a locked spec whose name sits in the private `acme-` namespace in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "specs[].name",
+      "valuePattern": "^acme-"
+    },
+    "tests": [
+      {
+        "file": "Gemfile.lock",
+        "document": {
+          "specs": [
+            {
+              "name": "acme-internal-core",
+              "version": "1.4.2"
+            },
+            {
+              "name": "rails",
+              "version": "7.1.3"
+            }
+          ],
+          "source": {
+            "remote": "https://rubygems.org"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "Gemfile.lock",
+        "document": {
+          "specs": [
+            {
+              "name": "acme-internal-util",
+              "version": "2.0.0"
+            }
+          ],
+          "source": {
+            "remote": "https://gems.acme.example"
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "Gemfile.lock",
+        "document": {
+          "specs": [
+            {
+              "name": "rails",
+              "version": "7.1.3"
+            },
+            {
+              "name": "puma",
+              "version": "6.4.2"
+            }
+          ],
+          "source": {
+            "remote": "https://rubygems.org"
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "Gemfile.lock",
+        "document": {
+          "specs": [
+            {
+              "name": "nokogiri",
+              "version": "1.16.7"
+            },
+            {
+              "name": "rake",
+              "version": "13.2.1"
+            }
+          ],
+          "source": {
+            "remote": "https://rubygems.org"
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "lockfile-integrity"
+  }
+]

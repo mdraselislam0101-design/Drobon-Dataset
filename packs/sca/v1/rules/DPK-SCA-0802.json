@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0802",
+  "title": "Requirement pointing at a local path",
+  "description": "setup.cfg declares an `install_requires` entry that resolves from disk. A dependency resolved from a local path or a mutable branch is not the published artifact the rest of the project audits. This rule reads an `install_requires` entry that resolves from disk.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1104",
+  "category": "local-source",
+  "ecosystems": [
+    "pypi"
+  ],
+  "artifact": "setup.cfg",
+  "parser": "ini",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "options.install_requires[]",
+    "valuePattern": "^(?:file|link):|^\\.{1,2}/"
+  },
+  "tests": [
+    {
+      "file": "setup.cfg",
+      "document": {
+        "metadata": {
+          "name": "demo-service",
+          "version": "1.4.0"
+        },
+        "options": {
+          "install_requires": [
+            "file:../acme-core"
+          ]
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "setup.cfg",
+      "document": {
+        "metadata": {
+          "name": "demo-service",
+          "version": "1.4.0"
+        },
+        "options": {
+          "install_requires": [
+            "./vendor/acme-sdk"
+          ]
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "setup.cfg",
+      "document": {
+        "metadata": {
+          "name": "demo-service",
+          "version": "1.4.0"
+        },
+        "options": {
+          "install_requires": [
+            "requests==2.32.3"
+          ]
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "setup.cfg",
+      "document": {
+        "metadata": {
+          "name": "demo-service",
+          "version": "1.4.0"
+        },
+        "options": {
+          "install_requires": [
+            "urllib3==2.2.2"
+          ]
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2939"
+  ],
+  "remediation": "Depend on a published, versioned artifact, and keep local paths or branch references out of the committed manifest. Specifically: fix an `install_requires` entry that resolves from disk.",
+  "limitation": "It matches an `install_requires` entry that resolves from disk in the parsed setup.cfg; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

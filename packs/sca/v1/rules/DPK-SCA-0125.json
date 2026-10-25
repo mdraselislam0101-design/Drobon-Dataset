@@ -1,0 +1,78 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0125",
+  "title": "pyproject dependency declared as a direct URL",
+  "description": "pyproject.toml declares a `name @ url` dependency that bypasses the index. The artifact is fetched from a URL the index never recorded, so its provenance and hash are whatever that server chooses to serve.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-829",
+  "category": "dependency-hygiene",
+  "ecosystems": [
+    "pypi"
+  ],
+  "artifact": "pyproject.toml",
+  "parser": "toml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "project.dependencies[]",
+    "valuePattern": "^[A-Za-z0-9._-]{1,80}(?:\\[[^\\]]{0,60}\\])? @ https?://"
+  },
+  "tests": [
+    {
+      "file": "pyproject.toml",
+      "document": {
+        "project": {
+          "name": "demo-service",
+          "version": "1.4.0",
+          "dependencies": [
+            "acme-sdk @ https://downloads.acme.example/acme_sdk-4.2.0-py3-none-any.whl"
+          ]
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "pyproject.toml",
+      "document": {
+        "project": {
+          "name": "demo-service",
+          "version": "1.4.0",
+          "dependencies": [
+            "acme-cli[fast] @ https://files.acme.example/cli.tar.gz"
+          ]
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "pyproject.toml",
+      "document": {
+        "project": {
+          "name": "demo-service",
+          "version": "1.4.0",
+          "dependencies": [
+            "acme-sdk==4.2.0"
+          ]
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "pyproject.toml",
+      "document": {
+        "project": {
+          "name": "demo-service",
+          "version": "1.4.0",
+          "dependencies": [
+            "acme-cli>=2.1,<3"
+          ]
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2262"
+  ],
+  "remediation": "Depend on the package name and version, and let the index serve the artifact.",
+  "limitation": "It matches a `name @ url` dependency that bypasses the index in the parsed pyproject.toml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

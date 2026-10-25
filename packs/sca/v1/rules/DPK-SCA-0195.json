@@ -1,0 +1,82 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0195",
+  "title": "Cargo lockfile resolves a crate from git",
+  "description": "Cargo.lock declares a locked crate whose source is a git remote. The code sits outside crates.io checksums and yanks, so the lockfile's integrity model does not describe it.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-829",
+  "category": "lockfile-integrity",
+  "ecosystems": [
+    "cargo"
+  ],
+  "artifact": "Cargo.lock",
+  "parser": "toml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "packages[].source",
+    "valuePattern": "^git\\+"
+  },
+  "tests": [
+    {
+      "file": "Cargo.lock",
+      "document": {
+        "version": 4,
+        "packages": [
+          {
+            "name": "acme-sdk",
+            "version": "4.2.0",
+            "source": "git+https://github.com/acme/sdk?rev=9f2c4a1#9f2c4a1"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "Cargo.lock",
+      "document": {
+        "version": 4,
+        "packages": [
+          {
+            "name": "acme-cli",
+            "version": "2.1.0",
+            "source": "git+ssh://git@github.com/acme/cli#0a1b2c3"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "Cargo.lock",
+      "document": {
+        "version": 4,
+        "packages": [
+          {
+            "name": "acme-sdk",
+            "version": "4.2.0",
+            "source": "registry+https://github.com/rust-lang/crates.io-index"
+          }
+        ]
+      },
+      "match": false
+    },
+    {
+      "file": "Cargo.lock",
+      "document": {
+        "version": 4,
+        "packages": [
+          {
+            "name": "serde",
+            "version": "1.0.210",
+            "source": "registry+https://github.com/rust-lang/crates.io-index"
+          }
+        ]
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2332"
+  ],
+  "remediation": "Publish the crate and depend on the registry version.",
+  "limitation": "It matches a locked crate whose source is a git remote in the parsed Cargo.lock; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

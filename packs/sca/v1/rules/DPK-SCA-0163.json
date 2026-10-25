@@ -1,0 +1,111 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0163",
+  "title": "Maven repository serves snapshots to this build",
+  "description": "pom.xml declares a repository with snapshot resolution enabled. Snapshots are rebuilt in place, so the resolved artifact can change between two runs that use the same pom.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1104",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "maven"
+  ],
+  "artifact": "pom.xml",
+  "parser": "xml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "project.repositories[].snapshots.enabled",
+    "valuePattern": "^true$"
+  },
+  "tests": [
+    {
+      "file": "pom.xml",
+      "document": {
+        "project": {
+          "modelVersion": "4.0.0",
+          "groupId": "com.acme",
+          "artifactId": "demo-service",
+          "version": "1.4.0",
+          "dependencies": [],
+          "repositories": [
+            {
+              "id": "acme",
+              "url": "https://repo.acme.example/maven2",
+              "snapshots": {
+                "enabled": true
+              }
+            }
+          ]
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "pom.xml",
+      "document": {
+        "project": {
+          "modelVersion": "4.0.0",
+          "groupId": "com.acme",
+          "artifactId": "demo-service",
+          "version": "1.4.0",
+          "dependencies": [],
+          "repositories": [
+            {
+              "id": "internal",
+              "url": "https://repo.acme.example/snapshots",
+              "snapshots": {
+                "enabled": true
+              }
+            }
+          ]
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "pom.xml",
+      "document": {
+        "project": {
+          "modelVersion": "4.0.0",
+          "groupId": "com.acme",
+          "artifactId": "demo-service",
+          "version": "1.4.0",
+          "dependencies": [],
+          "repositories": [
+            {
+              "id": "acme",
+              "url": "https://repo.acme.example/maven2",
+              "snapshots": {
+                "enabled": false
+              }
+            }
+          ]
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "pom.xml",
+      "document": {
+        "project": {
+          "modelVersion": "4.0.0",
+          "groupId": "com.acme",
+          "artifactId": "demo-service",
+          "version": "1.4.0",
+          "dependencies": [],
+          "repositories": [
+            {
+              "id": "central",
+              "url": "https://repo.maven.apache.org/maven2"
+            }
+          ]
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2300"
+  ],
+  "remediation": "Resolve snapshots only in development profiles, never in the release build.",
+  "limitation": "It matches a repository with snapshot resolution enabled in the parsed pom.xml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

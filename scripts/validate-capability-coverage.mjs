@@ -129,12 +129,24 @@ for (const c of caps) {
   const evalDir = join(ROOT, 'data', 'eval-cases');
   const cases = readdirSync(evalDir).filter((f) => f.endsWith('.json'))
     .map((f) => JSON.parse(readFileSync(join(evalDir, f), 'utf8')));
-  const prefix = { sast: 'EVAL-SAST-', secrets: 'EVAL-SEC-', dast: 'EVAL-DAST-' };
+  // Every cohort counts, not only the first one per engine. The new cohorts were
+  // invisible here until 2026-10-25: `EVAL-SASB-`, `EVAL-SASN-` and `EVAL-SAEV-`
+  // (SAST), `EVAL-SECB-` (secrets) and `EVAL-DASTB-` (DAST) were authored later and
+  // silently fell outside the recount, which made the gate report a lower coverage
+  // than the tree holds. A case is attributed to an engine by the rule ids it names,
+  // and the cohorts below are that engine's id families.
+  const idFamily = { sast: 'DPK-SAST-', secrets: 'DPK-SEC-', dast: 'DPK-DAST-' };
   const rows = { sast: 'DCC-SAST', secrets: 'DCC-SECRETS', dast: 'DCC-DAST' };
   for (const fam of ['sast', 'secrets', 'dast']) {
     const rules = loadRules(fam);
     const ids = new Set(rules.map((r) => r.id));
-    const mine = cases.filter((c) => c.id.startsWith(prefix[fam]));
+    // Attribution by the rule ids the case names, never by the case-id prefix: older
+    // cohorts (EVAL-CMD-*, EVAL-SQL-*, EVAL-XSS-*) and the later ones (EVAL-SASB-*,
+    // EVAL-SASN-*, EVAL-SAEV-*, EVAL-DASTB-*, EVAL-SECB-*) all name pack rules, and
+    // filtering on the id prefix made the recount depend on how a case was named.
+    const namesFamily = (c) => [...(c.expected?.detections ?? []).map((d) => d.ruleId),
+      ...(c.expected?.forbiddenDetections ?? [])].some((id) => String(id).startsWith(idFamily[fam]));
+    const mine = cases.filter(namesFamily);
     const pos = new Set();
     const neg = new Set();
     let assessed = 0;

@@ -1,0 +1,82 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0148",
+  "title": "Go dependency pinned to a pseudo-version",
+  "description": "go.mod declares a pseudo-version, which names a commit that carries no release tag. The commit has no release review, no changelog and no version that an advisory range can describe, yet it is what compiles.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1104",
+  "category": "dependency-hygiene",
+  "ecosystems": [
+    "go"
+  ],
+  "artifact": "go.mod",
+  "parser": "ini",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "require[].version",
+    "valuePattern": "^v\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}-(?:0\\.)?\\d{14}-[0-9a-f]{12}$"
+  },
+  "tests": [
+    {
+      "file": "go.mod",
+      "document": {
+        "module": "example.com/demo-service",
+        "go": "1.22",
+        "require": [
+          {
+            "module": "github.com/acme/sdk",
+            "version": "v0.0.0-20240612120000-9f2c4a1b7c3d"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "go.mod",
+      "document": {
+        "module": "example.com/demo-service",
+        "go": "1.22",
+        "require": [
+          {
+            "module": "github.com/acme/cli",
+            "version": "v1.4.2-0.20240101000000-0a1b2c3d4e5f"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "go.mod",
+      "document": {
+        "module": "example.com/demo-service",
+        "go": "1.22",
+        "require": [
+          {
+            "module": "github.com/acme/sdk",
+            "version": "v4.2.0"
+          }
+        ]
+      },
+      "match": false
+    },
+    {
+      "file": "go.mod",
+      "document": {
+        "module": "example.com/demo-service",
+        "go": "1.22",
+        "require": [
+          {
+            "module": "github.com/acme/cli",
+            "version": "v2.1.0"
+          }
+        ]
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2285"
+  ],
+  "remediation": "Tag a release upstream and depend on the tagged version.",
+  "limitation": "It matches a pseudo-version, which names a commit that carries no release tag in the parsed go.mod; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

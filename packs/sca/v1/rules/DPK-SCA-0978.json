@@ -1,0 +1,71 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0978",
+  "title": "Conda channel list relies on `defaults`",
+  "description": ".condarc declares a channel list that still contains `defaults`. A name or scope that resolves outside the project's intended registry is fetched from a source nobody reviewed, so a publish there becomes an install here. This rule reads a channel list that still contains `defaults`.",
+  "severity": "LOW",
+  "cwe": "CWE-829",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "conda"
+  ],
+  "artifact": ".condarc",
+  "parser": "yaml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "channels[]",
+    "valuePattern": "^defaults$"
+  },
+  "tests": [
+    {
+      "file": ".condarc",
+      "document": {
+        "channels": [
+          "defaults"
+        ],
+        "ssl_verify": true,
+        "channel_priority": "strict"
+      },
+      "match": true
+    },
+    {
+      "file": ".condarc",
+      "document": {
+        "channels": [
+          "conda-forge",
+          "defaults"
+        ],
+        "ssl_verify": true,
+        "channel_priority": "strict"
+      },
+      "match": true
+    },
+    {
+      "file": ".condarc",
+      "document": {
+        "channels": [
+          "conda-forge"
+        ],
+        "ssl_verify": true,
+        "channel_priority": "strict"
+      },
+      "match": false
+    },
+    {
+      "file": ".condarc",
+      "document": {
+        "channels": [
+          "https://conda.acme.example"
+        ],
+        "ssl_verify": true,
+        "channel_priority": "strict"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-3115"
+  ],
+  "remediation": "Point the declaration or the registry configuration at the namespace the project controls, and remove the lookup path that resolves elsewhere. Specifically: fix a channel list that still contains `defaults`.",
+  "limitation": "It matches a channel list that still contains `defaults` in the parsed .condarc; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

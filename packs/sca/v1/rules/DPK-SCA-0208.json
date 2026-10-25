@@ -1,0 +1,81 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0208",
+  "title": "NuGet feed password stored in nuget.config",
+  "description": "nuget.config declares a feed password written directly into the checked-in NuGet configuration. Everyone who can read the repository can pull private packages as that account, and the value also lands in restore logs.",
+  "severity": "HIGH",
+  "cwe": "CWE-798",
+  "category": "credential-in-config",
+  "ecosystems": [
+    "nuget"
+  ],
+  "artifact": "nuget.config",
+  "parser": "xml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "sources[].password",
+    "valuePattern": "^[A-Za-z0-9!@#$%^&*._-]{8,40}$"
+  },
+  "tests": [
+    {
+      "file": "nuget.config",
+      "document": {
+        "sources": [
+          {
+            "key": "acme",
+            "value": "https://nuget.acme.example/v3/index.json",
+            "password": "EXAMPLESECRETPASSWORD01"
+          }
+        ],
+        "settings": {}
+      },
+      "match": true
+    },
+    {
+      "file": "nuget.config",
+      "document": {
+        "sources": [
+          {
+            "key": "mirror",
+            "value": "https://nuget.acme.example/v3/index.json",
+            "password": "EXAMPLESECONDPASSWORD1234"
+          }
+        ],
+        "settings": {}
+      },
+      "match": true
+    },
+    {
+      "file": "nuget.config",
+      "document": {
+        "sources": [
+          {
+            "key": "acme",
+            "value": "https://nuget.acme.example/v3/index.json",
+            "password": "${ACME_NUGET_PASSWORD}"
+          }
+        ],
+        "settings": {}
+      },
+      "match": false
+    },
+    {
+      "file": "nuget.config",
+      "document": {
+        "sources": [
+          {
+            "key": "nuget.org",
+            "value": "https://api.nuget.org/v3/index.json"
+          }
+        ],
+        "settings": {}
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2345"
+  ],
+  "remediation": "Reference an environment variable and rotate the credential.",
+  "limitation": "It matches a feed password written directly into the checked-in NuGet configuration in the parsed nuget.config; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

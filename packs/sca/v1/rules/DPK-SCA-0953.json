@@ -1,0 +1,93 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0953",
+  "title": "Indirect requirement written by hand",
+  "description": "go.mod declares a `require` entry marked `// indirect` in the module file. The declaration leaves version choice to a resolver run, so a release published after this review is taken without a new decision. This rule reads a `require` entry marked `// indirect` in the module file.",
+  "severity": "LOW",
+  "cwe": "CWE-1104",
+  "category": "dependency-hygiene",
+  "ecosystems": [
+    "go"
+  ],
+  "artifact": "go.mod",
+  "parser": "lockfile-text",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "require[].indirect",
+    "valuePattern": "^true$"
+  },
+  "tests": [
+    {
+      "file": "go.mod",
+      "document": {
+        "module": "example.com/demo-service",
+        "go": "1.22",
+        "require": [
+          {
+            "module": "github.com/acme/sdk",
+            "version": "v4.2.0",
+            "indirect": true
+          }
+        ],
+        "replace": [],
+        "exclude": []
+      },
+      "match": true
+    },
+    {
+      "file": "go.mod",
+      "document": {
+        "module": "example.com/demo-service",
+        "go": "1.22",
+        "require": [
+          {
+            "module": "github.com/stretchr/testify",
+            "version": "v1.9.0",
+            "indirect": "true"
+          }
+        ],
+        "replace": [],
+        "exclude": []
+      },
+      "match": true
+    },
+    {
+      "file": "go.mod",
+      "document": {
+        "module": "example.com/demo-service",
+        "go": "1.22",
+        "require": [
+          {
+            "module": "github.com/acme/sdk",
+            "version": "v4.2.0",
+            "indirect": false
+          }
+        ],
+        "replace": [],
+        "exclude": []
+      },
+      "match": false
+    },
+    {
+      "file": "go.mod",
+      "document": {
+        "module": "example.com/demo-service",
+        "go": "1.22",
+        "require": [
+          {
+            "module": "github.com/stretchr/testify",
+            "version": "v1.9.0"
+          }
+        ],
+        "replace": [],
+        "exclude": []
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-3090"
+  ],
+  "remediation": "Pin the declaration to an exact version or to the narrowest range the project tests, and update it deliberately. Specifically: fix a `require` entry marked `// indirect` in the module file.",
+  "limitation": "It matches a `require` entry marked `// indirect` in the module file in the parsed go.mod; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

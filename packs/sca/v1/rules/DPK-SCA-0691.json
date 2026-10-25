@@ -1,0 +1,93 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0691",
+  "title": "Registry index fetched over cleartext",
+  "description": ".cargo/config.toml declares a registry `index` over cleartext. An artifact fetched over plain HTTP can be replaced in transit, so the bytes that install are not bound to what the author published. This rule reads a registry `index` over cleartext.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-319",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "cargo"
+  ],
+  "artifact": ".cargo/config.toml",
+  "parser": "toml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "registries.*.index",
+    "valuePattern": "^http://"
+  },
+  "tests": [
+    {
+      "file": ".cargo/config.toml",
+      "document": {
+        "source": {
+          "crates-io": {
+            "replace-with": "acme"
+          }
+        },
+        "registries": {
+          "acme": {
+            "index": "http://registry.acme.example/index"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": ".cargo/config.toml",
+      "document": {
+        "source": {
+          "crates-io": {
+            "replace-with": "acme"
+          }
+        },
+        "registries": {
+          "acme": {
+            "index": "https://registry.acme.example/index"
+          },
+          "internal": {
+            "index": "http://10.24.8.9/index"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": ".cargo/config.toml",
+      "document": {
+        "source": {
+          "crates-io": {
+            "replace-with": "acme"
+          }
+        },
+        "registries": {
+          "acme": {
+            "index": "https://registry.acme.example/index"
+          }
+        }
+      },
+      "match": false
+    },
+    {
+      "file": ".cargo/config.toml",
+      "document": {
+        "source": {
+          "crates-io": {
+            "replace-with": "acme"
+          }
+        },
+        "registries": {
+          "acme": {
+            "index": "https://registry.acme.example/index"
+          }
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2828"
+  ],
+  "remediation": "Use the HTTPS endpoint the registry publishes and keep the hostname in the configuration reviewable. Specifically: fix a registry `index` over cleartext.",
+  "limitation": "It matches a registry `index` over cleartext in the parsed .cargo/config.toml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

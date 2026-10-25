@@ -1,0 +1,3481 @@
+[
+  {
+    "class": "go-require-indirect-marker",
+    "ecosystem": "go",
+    "artifact": "go.mod",
+    "parser": "lockfile-text",
+    "category": "dependency-hygiene",
+    "cwe": "CWE-1104",
+    "severity": "LOW",
+    "title": "Indirect requirement written by hand",
+    "what": "a `require` entry marked `// indirect` in the module file",
+    "impact": "The declaration leaves version choice to a resolver run, so a release published after this review is taken without a new decision. This rule reads a `require` entry marked `// indirect` in the module file.",
+    "remediation": "Pin the declaration to an exact version or to the narrowest range the project tests, and update it deliberately. Specifically: fix a `require` entry marked `// indirect` in the module file.",
+    "limitation": "It matches a `require` entry marked `// indirect` in the module file in the parsed go.mod; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A go.mod that mentions a `require` entry marked `// indirect` in the module file in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "require[].indirect",
+      "valuePattern": "^true$"
+    },
+    "tests": [
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/acme/sdk",
+              "version": "v4.2.0",
+              "indirect": true
+            }
+          ],
+          "replace": [],
+          "exclude": []
+        },
+        "match": true
+      },
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/stretchr/testify",
+              "version": "v1.9.0",
+              "indirect": "true"
+            }
+          ],
+          "replace": [],
+          "exclude": []
+        },
+        "match": true
+      },
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/acme/sdk",
+              "version": "v4.2.0",
+              "indirect": false
+            }
+          ],
+          "replace": [],
+          "exclude": []
+        },
+        "match": false
+      },
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/stretchr/testify",
+              "version": "v1.9.0"
+            }
+          ],
+          "replace": [],
+          "exclude": []
+        },
+        "match": false
+      }
+    ]
+  },
+  {
+    "class": "go-toolchain-directive-absent",
+    "ecosystem": "go",
+    "artifact": "go.mod",
+    "parser": "lockfile-text",
+    "category": "policy-metadata",
+    "cwe": "CWE-1104",
+    "severity": "LOW",
+    "title": "Module with no toolchain directive",
+    "what": "a go.mod that names no toolchain, so the local one decides",
+    "impact": "The declaration leaves version choice to a resolver run, so a release published after this review is taken without a new decision. This rule reads a go.mod that names no toolchain, so the local one decides.",
+    "remediation": "Pin the declaration to an exact version or to the narrowest range the project tests, and update it deliberately. Specifically: fix a go.mod that names no toolchain, so the local one decides.",
+    "limitation": "It matches a go.mod that names no toolchain, so the local one decides in the parsed go.mod; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A go.mod that mentions a go.mod that names no toolchain, so the local one decides in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-absent",
+      "path": "toolchain"
+    },
+    "tests": [
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/stretchr/testify",
+              "version": "v1.9.0"
+            }
+          ],
+          "replace": [],
+          "exclude": []
+        },
+        "match": true
+      },
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/stretchr/testify",
+              "version": "v1.9.0"
+            }
+          ],
+          "replace": [],
+          "exclude": []
+        },
+        "match": true
+      },
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/stretchr/testify",
+              "version": "v1.9.0"
+            }
+          ],
+          "replace": [],
+          "exclude": [],
+          "toolchain": "go1.22.7"
+        },
+        "match": false
+      },
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/stretchr/testify",
+              "version": "v1.9.0"
+            }
+          ],
+          "replace": [],
+          "exclude": [],
+          "toolchain": "go1.23.1"
+        },
+        "match": false
+      }
+    ]
+  },
+  {
+    "class": "go-sum-incompatible-marker",
+    "ecosystem": "go",
+    "artifact": "go.sum",
+    "parser": "lockfile-text",
+    "category": "dependency-hygiene",
+    "cwe": "CWE-1104",
+    "severity": "LOW",
+    "title": "Module locked at an incompatible major",
+    "what": "a `+incompatible` version in go.sum",
+    "impact": "A name or scope that resolves outside the project's intended registry is fetched from a source nobody reviewed, so a publish there becomes an install here. This rule reads a `+incompatible` version in go.sum.",
+    "remediation": "Point the declaration or the registry configuration at the namespace the project controls, and remove the lookup path that resolves elsewhere. Specifically: fix a `+incompatible` version in go.sum.",
+    "limitation": "It matches a `+incompatible` version in go.sum in the parsed go.sum; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A go.sum that mentions a `+incompatible` version in go.sum in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "entries[].version",
+      "valuePattern": "\\+incompatible$"
+    },
+    "tests": [
+      {
+        "file": "go.sum",
+        "document": {
+          "entries": [
+            {
+              "module": "github.com/acme/legacy",
+              "version": "v2.1.0+incompatible",
+              "hash": "h1:9f2c3d4e5f60"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "go.sum",
+        "document": {
+          "entries": [
+            {
+              "module": "github.com/acme/tool",
+              "version": "v3.0.4+incompatible",
+              "hash": "h1:a1b2c3d4e5f6"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "go.sum",
+        "document": {
+          "entries": [
+            {
+              "module": "github.com/acme/core/v2",
+              "version": "v2.1.0",
+              "hash": "h1:9f2c3d4e5f60"
+            }
+          ]
+        },
+        "match": false
+      },
+      {
+        "file": "go.sum",
+        "document": {
+          "entries": [
+            {
+              "module": "github.com/acme/sdk",
+              "version": "v4.2.0",
+              "hash": "h1:a1b2c3d4e5f6"
+            }
+          ]
+        },
+        "match": false
+      }
+    ]
+  },
+  {
+    "class": "go-require-version-missing-patch",
+    "ecosystem": "go",
+    "artifact": "go.mod",
+    "parser": "lockfile-text",
+    "category": "dependency-hygiene",
+    "cwe": "CWE-1104",
+    "severity": "LOW",
+    "title": "Requirement written with two version components",
+    "what": "a requirement version with no patch component",
+    "impact": "The declaration leaves version choice to a resolver run, so a release published after this review is taken without a new decision. This rule reads a requirement version with no patch component.",
+    "remediation": "Pin the declaration to an exact version or to the narrowest range the project tests, and update it deliberately. Specifically: fix a requirement version with no patch component.",
+    "limitation": "It matches a requirement version with no patch component in the parsed go.mod; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A go.mod that mentions a requirement version with no patch component in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "require[].version",
+      "valuePattern": "^v\\d+\\.\\d+$"
+    },
+    "tests": [
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/acme/sdk",
+              "version": "v4.2"
+            }
+          ],
+          "replace": [],
+          "exclude": []
+        },
+        "match": true
+      },
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/acme/core",
+              "version": "v1.4"
+            }
+          ],
+          "replace": [],
+          "exclude": []
+        },
+        "match": true
+      },
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/acme/sdk",
+              "version": "v4.2.0"
+            }
+          ],
+          "replace": [],
+          "exclude": []
+        },
+        "match": false
+      },
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/stretchr/testify",
+              "version": "v1.9.0"
+            }
+          ],
+          "replace": [],
+          "exclude": []
+        },
+        "match": false
+      }
+    ]
+  },
+  {
+    "class": "go-module-directive-absent",
+    "ecosystem": "go",
+    "artifact": "go.mod",
+    "parser": "lockfile-text",
+    "category": "policy-metadata",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "go.mod with no module path",
+    "what": "a module file that declares no module path",
+    "impact": "A name or scope that resolves outside the project's intended registry is fetched from a source nobody reviewed, so a publish there becomes an install here. This rule reads a module file that declares no module path.",
+    "remediation": "Point the declaration or the registry configuration at the namespace the project controls, and remove the lookup path that resolves elsewhere. Specifically: fix a module file that declares no module path.",
+    "limitation": "It matches a module file that declares no module path in the parsed go.mod; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A go.mod that mentions a module file that declares no module path in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-absent",
+      "path": "module"
+    },
+    "tests": [
+      {
+        "file": "go.mod",
+        "document": {
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/stretchr/testify",
+              "version": "v1.9.0"
+            }
+          ],
+          "replace": [],
+          "exclude": []
+        },
+        "match": true
+      },
+      {
+        "file": "go.mod",
+        "document": {
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/stretchr/testify",
+              "version": "v1.9.0"
+            }
+          ],
+          "replace": [],
+          "exclude": []
+        },
+        "match": true
+      },
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "example.com/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/stretchr/testify",
+              "version": "v1.9.0"
+            }
+          ],
+          "replace": [],
+          "exclude": []
+        },
+        "match": false
+      },
+      {
+        "file": "go.mod",
+        "document": {
+          "module": "github.com/acme/demo-service",
+          "go": "1.22",
+          "require": [
+            {
+              "module": "github.com/stretchr/testify",
+              "version": "v1.9.0"
+            }
+          ],
+          "replace": [],
+          "exclude": []
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "module-path"
+  },
+  {
+    "class": "maven-relocation-present",
+    "ecosystem": "maven",
+    "artifact": "pom.xml",
+    "parser": "xml",
+    "category": "dependency-hygiene",
+    "cwe": "CWE-1104",
+    "severity": "LOW",
+    "title": "Module relocated to other coordinates",
+    "what": "a relocation block that redirects the module",
+    "impact": "A name or scope that resolves outside the project's intended registry is fetched from a source nobody reviewed, so a publish there becomes an install here. This rule reads a relocation block that redirects the module.",
+    "remediation": "Point the declaration or the registry configuration at the namespace the project controls, and remove the lookup path that resolves elsewhere. Specifically: fix a relocation block that redirects the module.",
+    "limitation": "It matches a relocation block that redirects the module in the parsed pom.xml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A pom.xml that mentions a relocation block that redirects the module in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-key-matches",
+      "path": "project.distributionManagement.relocation",
+      "keyPattern": "^(?:groupId|artifactId)$"
+    },
+    "tests": [
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "licenses": [
+              {
+                "name": "Apache-2.0"
+              }
+            ],
+            "repositories": [
+              {
+                "id": "central",
+                "url": "https://repo1.maven.org/maven2"
+              }
+            ],
+            "dependencyManagement": {
+              "dependencies": [
+                {
+                  "groupId": "org.slf4j",
+                  "artifactId": "slf4j-api",
+                  "version": "2.0.13"
+                }
+              ]
+            },
+            "dependencies": [
+              {
+                "groupId": "org.slf4j",
+                "artifactId": "slf4j-api"
+              }
+            ],
+            "distributionManagement": {
+              "relocation": {
+                "groupId": "com.acme",
+                "artifactId": "demo-service-core"
+              }
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "licenses": [
+              {
+                "name": "Apache-2.0"
+              }
+            ],
+            "repositories": [
+              {
+                "id": "central",
+                "url": "https://repo1.maven.org/maven2"
+              }
+            ],
+            "dependencyManagement": {
+              "dependencies": [
+                {
+                  "groupId": "org.slf4j",
+                  "artifactId": "slf4j-api",
+                  "version": "2.0.13"
+                }
+              ]
+            },
+            "dependencies": [
+              {
+                "groupId": "org.slf4j",
+                "artifactId": "slf4j-api"
+              }
+            ],
+            "distributionManagement": {
+              "relocation": {
+                "artifactId": "demo-service-sdk"
+              }
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "licenses": [
+              {
+                "name": "Apache-2.0"
+              }
+            ],
+            "repositories": [
+              {
+                "id": "central",
+                "url": "https://repo1.maven.org/maven2"
+              }
+            ],
+            "dependencyManagement": {
+              "dependencies": [
+                {
+                  "groupId": "org.slf4j",
+                  "artifactId": "slf4j-api",
+                  "version": "2.0.13"
+                }
+              ]
+            },
+            "dependencies": [
+              {
+                "groupId": "org.slf4j",
+                "artifactId": "slf4j-api"
+              }
+            ],
+            "distributionManagement": {}
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "licenses": [
+              {
+                "name": "Apache-2.0"
+              }
+            ],
+            "repositories": [
+              {
+                "id": "central",
+                "url": "https://repo1.maven.org/maven2"
+              }
+            ],
+            "dependencyManagement": {
+              "dependencies": [
+                {
+                  "groupId": "org.slf4j",
+                  "artifactId": "slf4j-api",
+                  "version": "2.0.13"
+                }
+              ]
+            },
+            "dependencies": [
+              {
+                "groupId": "org.slf4j",
+                "artifactId": "slf4j-api"
+              }
+            ],
+            "distributionManagement": {}
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "relocation"
+  },
+  {
+    "class": "maven-classifier-present",
+    "ecosystem": "maven",
+    "artifact": "pom.xml",
+    "parser": "xml",
+    "category": "supply-chain-integrity",
+    "cwe": "CWE-1104",
+    "severity": "LOW",
+    "title": "Dependency resolved with a classifier",
+    "what": "a dependency that pins a classifier artifact",
+    "impact": "Without a recorded digest the downloaded artifact cannot be checked against what was reviewed, so substitution is undetectable at install time. This rule reads a dependency that pins a classifier artifact.",
+    "remediation": "Regenerate the artifact with integrity data enabled and commit the recorded digest or checksum. Specifically: fix a dependency that pins a classifier artifact.",
+    "limitation": "It matches a dependency that pins a classifier artifact in the parsed pom.xml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A pom.xml that mentions a dependency that pins a classifier artifact in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "project.dependencies[].classifier",
+      "valuePattern": "^.+$"
+    },
+    "tests": [
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "licenses": [
+              {
+                "name": "Apache-2.0"
+              }
+            ],
+            "repositories": [
+              {
+                "id": "central",
+                "url": "https://repo1.maven.org/maven2"
+              }
+            ],
+            "dependencyManagement": {
+              "dependencies": [
+                {
+                  "groupId": "org.slf4j",
+                  "artifactId": "slf4j-api",
+                  "version": "2.0.13"
+                }
+              ]
+            },
+            "dependencies": [
+              {
+                "groupId": "com.acme",
+                "artifactId": "sdk",
+                "version": "4.2.0",
+                "classifier": "jar-with-dependencies"
+              }
+            ]
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "licenses": [
+              {
+                "name": "Apache-2.0"
+              }
+            ],
+            "repositories": [
+              {
+                "id": "central",
+                "url": "https://repo1.maven.org/maven2"
+              }
+            ],
+            "dependencyManagement": {
+              "dependencies": [
+                {
+                  "groupId": "org.slf4j",
+                  "artifactId": "slf4j-api",
+                  "version": "2.0.13"
+                }
+              ]
+            },
+            "dependencies": [
+              {
+                "groupId": "com.acme",
+                "artifactId": "core",
+                "version": "1.4.2",
+                "classifier": "tests"
+              }
+            ]
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "licenses": [
+              {
+                "name": "Apache-2.0"
+              }
+            ],
+            "repositories": [
+              {
+                "id": "central",
+                "url": "https://repo1.maven.org/maven2"
+              }
+            ],
+            "dependencyManagement": {
+              "dependencies": [
+                {
+                  "groupId": "org.slf4j",
+                  "artifactId": "slf4j-api",
+                  "version": "2.0.13"
+                }
+              ]
+            },
+            "dependencies": [
+              {
+                "groupId": "com.acme",
+                "artifactId": "sdk",
+                "version": "4.2.0"
+              }
+            ]
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "licenses": [
+              {
+                "name": "Apache-2.0"
+              }
+            ],
+            "repositories": [
+              {
+                "id": "central",
+                "url": "https://repo1.maven.org/maven2"
+              }
+            ],
+            "dependencyManagement": {
+              "dependencies": [
+                {
+                  "groupId": "org.slf4j",
+                  "artifactId": "slf4j-api",
+                  "version": "2.0.13"
+                }
+              ]
+            },
+            "dependencies": [
+              {
+                "groupId": "org.slf4j",
+                "artifactId": "slf4j-api",
+                "version": "2.0.13"
+              }
+            ]
+          }
+        },
+        "match": false
+      }
+    ]
+  },
+  {
+    "class": "maven-enforcer-skip",
+    "ecosystem": "maven",
+    "artifact": "pom.xml",
+    "parser": "xml",
+    "category": "trust-bypass",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "Build plugin skipped",
+    "what": "a plugin whose `skip` configuration is true",
+    "impact": "A verification or locking control is switched off, so the integrity guarantees the ecosystem offers are not applied here. This rule reads a plugin whose `skip` configuration is true.",
+    "remediation": "Turn the control back on and fix what it reported instead of disabling the check. Specifically: fix a plugin whose `skip` configuration is true.",
+    "limitation": "It matches a plugin whose `skip` configuration is true in the parsed pom.xml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A pom.xml that mentions a plugin whose `skip` configuration is true in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "project.build.plugins[].configuration.skip",
+      "valuePattern": "^true$"
+    },
+    "tests": [
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "licenses": [
+              {
+                "name": "Apache-2.0"
+              }
+            ],
+            "repositories": [
+              {
+                "id": "central",
+                "url": "https://repo1.maven.org/maven2"
+              }
+            ],
+            "dependencyManagement": {
+              "dependencies": [
+                {
+                  "groupId": "org.slf4j",
+                  "artifactId": "slf4j-api",
+                  "version": "2.0.13"
+                }
+              ]
+            },
+            "dependencies": [
+              {
+                "groupId": "org.slf4j",
+                "artifactId": "slf4j-api"
+              }
+            ],
+            "build": {
+              "plugins": [
+                {
+                  "groupId": "org.apache.maven.plugins",
+                  "artifactId": "maven-enforcer-plugin",
+                  "configuration": {
+                    "skip": "true"
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "licenses": [
+              {
+                "name": "Apache-2.0"
+              }
+            ],
+            "repositories": [
+              {
+                "id": "central",
+                "url": "https://repo1.maven.org/maven2"
+              }
+            ],
+            "dependencyManagement": {
+              "dependencies": [
+                {
+                  "groupId": "org.slf4j",
+                  "artifactId": "slf4j-api",
+                  "version": "2.0.13"
+                }
+              ]
+            },
+            "dependencies": [
+              {
+                "groupId": "org.slf4j",
+                "artifactId": "slf4j-api"
+              }
+            ],
+            "build": {
+              "plugins": [
+                {
+                  "groupId": "org.apache.maven.plugins",
+                  "artifactId": "maven-dependency-plugin",
+                  "configuration": {
+                    "skip": true
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "licenses": [
+              {
+                "name": "Apache-2.0"
+              }
+            ],
+            "repositories": [
+              {
+                "id": "central",
+                "url": "https://repo1.maven.org/maven2"
+              }
+            ],
+            "dependencyManagement": {
+              "dependencies": [
+                {
+                  "groupId": "org.slf4j",
+                  "artifactId": "slf4j-api",
+                  "version": "2.0.13"
+                }
+              ]
+            },
+            "dependencies": [
+              {
+                "groupId": "org.slf4j",
+                "artifactId": "slf4j-api"
+              }
+            ],
+            "build": {
+              "plugins": [
+                {
+                  "groupId": "org.apache.maven.plugins",
+                  "artifactId": "maven-enforcer-plugin",
+                  "configuration": {
+                    "skip": "false"
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "licenses": [
+              {
+                "name": "Apache-2.0"
+              }
+            ],
+            "repositories": [
+              {
+                "id": "central",
+                "url": "https://repo1.maven.org/maven2"
+              }
+            ],
+            "dependencyManagement": {
+              "dependencies": [
+                {
+                  "groupId": "org.slf4j",
+                  "artifactId": "slf4j-api",
+                  "version": "2.0.13"
+                }
+              ]
+            },
+            "dependencies": [
+              {
+                "groupId": "org.slf4j",
+                "artifactId": "slf4j-api"
+              }
+            ],
+            "build": {
+              "plugins": []
+            }
+          }
+        },
+        "match": false
+      }
+    ]
+  },
+  {
+    "class": "maven-profile-active-by-default",
+    "ecosystem": "maven",
+    "artifact": "pom.xml",
+    "parser": "xml",
+    "category": "policy-metadata",
+    "cwe": "CWE-1104",
+    "severity": "LOW",
+    "title": "Profile active by default",
+    "what": "a profile that applies without being requested",
+    "impact": "The declaration leaves version choice to a resolver run, so a release published after this review is taken without a new decision. This rule reads a profile that applies without being requested.",
+    "remediation": "Pin the declaration to an exact version or to the narrowest range the project tests, and update it deliberately. Specifically: fix a profile that applies without being requested.",
+    "limitation": "It matches a profile that applies without being requested in the parsed pom.xml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A pom.xml that mentions a profile that applies without being requested in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "project.profiles[].activation.activeByDefault",
+      "valuePattern": "^true$"
+    },
+    "tests": [
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "licenses": [
+              {
+                "name": "Apache-2.0"
+              }
+            ],
+            "repositories": [
+              {
+                "id": "central",
+                "url": "https://repo1.maven.org/maven2"
+              }
+            ],
+            "dependencyManagement": {
+              "dependencies": [
+                {
+                  "groupId": "org.slf4j",
+                  "artifactId": "slf4j-api",
+                  "version": "2.0.13"
+                }
+              ]
+            },
+            "dependencies": [
+              {
+                "groupId": "org.slf4j",
+                "artifactId": "slf4j-api"
+              }
+            ],
+            "profiles": [
+              {
+                "id": "dev",
+                "activation": {
+                  "activeByDefault": "true"
+                }
+              }
+            ]
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "licenses": [
+              {
+                "name": "Apache-2.0"
+              }
+            ],
+            "repositories": [
+              {
+                "id": "central",
+                "url": "https://repo1.maven.org/maven2"
+              }
+            ],
+            "dependencyManagement": {
+              "dependencies": [
+                {
+                  "groupId": "org.slf4j",
+                  "artifactId": "slf4j-api",
+                  "version": "2.0.13"
+                }
+              ]
+            },
+            "dependencies": [
+              {
+                "groupId": "org.slf4j",
+                "artifactId": "slf4j-api"
+              }
+            ],
+            "profiles": [
+              {
+                "id": "legacy",
+                "activation": {
+                  "activeByDefault": true
+                }
+              }
+            ]
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "licenses": [
+              {
+                "name": "Apache-2.0"
+              }
+            ],
+            "repositories": [
+              {
+                "id": "central",
+                "url": "https://repo1.maven.org/maven2"
+              }
+            ],
+            "dependencyManagement": {
+              "dependencies": [
+                {
+                  "groupId": "org.slf4j",
+                  "artifactId": "slf4j-api",
+                  "version": "2.0.13"
+                }
+              ]
+            },
+            "dependencies": [
+              {
+                "groupId": "org.slf4j",
+                "artifactId": "slf4j-api"
+              }
+            ],
+            "profiles": [
+              {
+                "id": "dev",
+                "activation": {
+                  "activeByDefault": "false"
+                }
+              }
+            ]
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "licenses": [
+              {
+                "name": "Apache-2.0"
+              }
+            ],
+            "repositories": [
+              {
+                "id": "central",
+                "url": "https://repo1.maven.org/maven2"
+              }
+            ],
+            "dependencyManagement": {
+              "dependencies": [
+                {
+                  "groupId": "org.slf4j",
+                  "artifactId": "slf4j-api",
+                  "version": "2.0.13"
+                }
+              ]
+            },
+            "dependencies": [
+              {
+                "groupId": "org.slf4j",
+                "artifactId": "slf4j-api"
+              }
+            ],
+            "profiles": []
+          }
+        },
+        "match": false
+      }
+    ]
+  },
+  {
+    "class": "maven-repository-releases-disabled",
+    "ecosystem": "maven",
+    "artifact": "pom.xml",
+    "parser": "xml",
+    "category": "registry-configuration",
+    "cwe": "CWE-829",
+    "severity": "LOW",
+    "title": "Repository with releases disabled",
+    "what": "a repository that serves only snapshots",
+    "impact": "The declaration leaves version choice to a resolver run, so a release published after this review is taken without a new decision. This rule reads a repository that serves only snapshots.",
+    "remediation": "Pin the declaration to an exact version or to the narrowest range the project tests, and update it deliberately. Specifically: fix a repository that serves only snapshots.",
+    "limitation": "It matches a repository that serves only snapshots in the parsed pom.xml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A pom.xml that mentions a repository that serves only snapshots in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "project.repositories[].releases.enabled",
+      "valuePattern": "^false$"
+    },
+    "tests": [
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "licenses": [
+              {
+                "name": "Apache-2.0"
+              }
+            ],
+            "repositories": [
+              {
+                "id": "acme",
+                "url": "https://nexus.acme.example/snapshots",
+                "releases": {
+                  "enabled": "false"
+                }
+              }
+            ],
+            "dependencyManagement": {
+              "dependencies": [
+                {
+                  "groupId": "org.slf4j",
+                  "artifactId": "slf4j-api",
+                  "version": "2.0.13"
+                }
+              ]
+            },
+            "dependencies": [
+              {
+                "groupId": "org.slf4j",
+                "artifactId": "slf4j-api"
+              }
+            ]
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "licenses": [
+              {
+                "name": "Apache-2.0"
+              }
+            ],
+            "repositories": [
+              {
+                "id": "internal",
+                "url": "https://nexus.acme.example/snapshots",
+                "releases": {
+                  "enabled": false
+                }
+              }
+            ],
+            "dependencyManagement": {
+              "dependencies": [
+                {
+                  "groupId": "org.slf4j",
+                  "artifactId": "slf4j-api",
+                  "version": "2.0.13"
+                }
+              ]
+            },
+            "dependencies": [
+              {
+                "groupId": "org.slf4j",
+                "artifactId": "slf4j-api"
+              }
+            ]
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "licenses": [
+              {
+                "name": "Apache-2.0"
+              }
+            ],
+            "repositories": [
+              {
+                "id": "central",
+                "url": "https://repo1.maven.org/maven2",
+                "releases": {
+                  "enabled": "true"
+                }
+              }
+            ],
+            "dependencyManagement": {
+              "dependencies": [
+                {
+                  "groupId": "org.slf4j",
+                  "artifactId": "slf4j-api",
+                  "version": "2.0.13"
+                }
+              ]
+            },
+            "dependencies": [
+              {
+                "groupId": "org.slf4j",
+                "artifactId": "slf4j-api"
+              }
+            ]
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "pom.xml",
+        "document": {
+          "project": {
+            "modelVersion": "4.0.0",
+            "groupId": "com.acme",
+            "artifactId": "demo-service",
+            "version": "1.4.0",
+            "licenses": [
+              {
+                "name": "Apache-2.0"
+              }
+            ],
+            "repositories": [],
+            "dependencyManagement": {
+              "dependencies": [
+                {
+                  "groupId": "org.slf4j",
+                  "artifactId": "slf4j-api",
+                  "version": "2.0.13"
+                }
+              ]
+            },
+            "dependencies": [
+              {
+                "groupId": "org.slf4j",
+                "artifactId": "slf4j-api"
+              }
+            ]
+          }
+        },
+        "match": false
+      }
+    ]
+  },
+  {
+    "class": "gradle-repository-content-filter-absent",
+    "ecosystem": "gradle",
+    "artifact": "build.gradle",
+    "parser": "gradle",
+    "category": "dependency-confusion",
+    "cwe": "CWE-829",
+    "severity": "LOW",
+    "title": "Repository with no content filter",
+    "what": "a repository that may serve every group and module",
+    "impact": "A name or scope that resolves outside the project's intended registry is fetched from a source nobody reviewed, so a publish there becomes an install here. This rule reads a repository that may serve every group and module.",
+    "remediation": "Point the declaration or the registry configuration at the namespace the project controls, and remove the lookup path that resolves elsewhere. Specifically: fix a repository that may serve every group and module.",
+    "limitation": "It matches a repository that may serve every group and module in the parsed build.gradle; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A build.gradle that mentions a repository that may serve every group and module in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-absent",
+      "path": "repositories[].content"
+    },
+    "tests": [
+      {
+        "file": "build.gradle",
+        "document": {
+          "repositories": [
+            {
+              "name": "acme",
+              "url": "https://repo.acme.example/maven2"
+            }
+          ],
+          "dependencies": [
+            {
+              "group": "org.slf4j",
+              "name": "slf4j-api",
+              "version": "2.0.13"
+            }
+          ],
+          "configurations": [],
+          "dependencyLocking": {
+            "lockAllConfigurations": true
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "build.gradle",
+        "document": {
+          "repositories": [
+            {
+              "name": "acme",
+              "url": "https://repo.acme.example/maven2"
+            },
+            {
+              "name": "mirror"
+            }
+          ],
+          "dependencies": [
+            {
+              "group": "org.slf4j",
+              "name": "slf4j-api",
+              "version": "2.0.13"
+            }
+          ],
+          "configurations": [],
+          "dependencyLocking": {
+            "lockAllConfigurations": true
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "build.gradle",
+        "document": {
+          "repositories": [
+            {
+              "name": "acme",
+              "url": "https://repo.acme.example/maven2",
+              "content": {
+                "includeGroup": [
+                  "com.acme"
+                ]
+              }
+            }
+          ],
+          "dependencies": [
+            {
+              "group": "org.slf4j",
+              "name": "slf4j-api",
+              "version": "2.0.13"
+            }
+          ],
+          "configurations": [],
+          "dependencyLocking": {
+            "lockAllConfigurations": true
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "build.gradle",
+        "document": {
+          "repositories": [
+            {
+              "name": "central",
+              "url": "https://repo1.maven.org/maven2",
+              "content": {
+                "includeGroup": [
+                  "org.slf4j"
+                ]
+              }
+            }
+          ],
+          "dependencies": [
+            {
+              "group": "org.slf4j",
+              "name": "slf4j-api",
+              "version": "2.0.13"
+            }
+          ],
+          "configurations": [],
+          "dependencyLocking": {
+            "lockAllConfigurations": true
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "content-filter"
+  },
+  {
+    "class": "gradle-exclude-group",
+    "ecosystem": "gradle",
+    "artifact": "build.gradle",
+    "parser": "gradle",
+    "category": "dependency-hygiene",
+    "cwe": "CWE-1104",
+    "severity": "LOW",
+    "title": "Transitive group excluded per dependency",
+    "what": "an exclusion that removes a group from the graph",
+    "impact": "The declaration leaves version choice to a resolver run, so a release published after this review is taken without a new decision. This rule reads an exclusion that removes a group from the graph.",
+    "remediation": "Pin the declaration to an exact version or to the narrowest range the project tests, and update it deliberately. Specifically: fix an exclusion that removes a group from the graph.",
+    "limitation": "It matches an exclusion that removes a group from the graph in the parsed build.gradle; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A build.gradle that mentions an exclusion that removes a group from the graph in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "dependencies[].exclude[].group",
+      "valuePattern": "^.+$"
+    },
+    "tests": [
+      {
+        "file": "build.gradle",
+        "document": {
+          "repositories": [
+            {
+              "name": "central",
+              "url": "https://repo1.maven.org/maven2"
+            }
+          ],
+          "dependencies": [
+            {
+              "group": "com.acme",
+              "name": "sdk",
+              "version": "4.2.0",
+              "exclude": [
+                {
+                  "group": "commons-logging"
+                }
+              ]
+            }
+          ],
+          "configurations": [],
+          "dependencyLocking": {
+            "lockAllConfigurations": true
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "build.gradle",
+        "document": {
+          "repositories": [
+            {
+              "name": "central",
+              "url": "https://repo1.maven.org/maven2"
+            }
+          ],
+          "dependencies": [
+            {
+              "group": "com.acme",
+              "name": "core",
+              "version": "1.4.2",
+              "exclude": [
+                {
+                  "group": "log4j"
+                }
+              ]
+            }
+          ],
+          "configurations": [],
+          "dependencyLocking": {
+            "lockAllConfigurations": true
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "build.gradle",
+        "document": {
+          "repositories": [
+            {
+              "name": "central",
+              "url": "https://repo1.maven.org/maven2"
+            }
+          ],
+          "dependencies": [
+            {
+              "group": "com.acme",
+              "name": "sdk",
+              "version": "4.2.0"
+            }
+          ],
+          "configurations": [],
+          "dependencyLocking": {
+            "lockAllConfigurations": true
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "build.gradle",
+        "document": {
+          "repositories": [
+            {
+              "name": "central",
+              "url": "https://repo1.maven.org/maven2"
+            }
+          ],
+          "dependencies": [
+            {
+              "group": "org.slf4j",
+              "name": "slf4j-api",
+              "version": "2.0.13"
+            }
+          ],
+          "configurations": [],
+          "dependencyLocking": {
+            "lockAllConfigurations": true
+          }
+        },
+        "match": false
+      }
+    ]
+  },
+  {
+    "class": "gradle-feature-variant",
+    "ecosystem": "gradle",
+    "artifact": "build.gradle",
+    "parser": "gradle",
+    "category": "dependency-confusion",
+    "cwe": "CWE-829",
+    "severity": "LOW",
+    "title": "Dependency resolved through another configuration",
+    "what": "a dependency whose target configuration is overridden",
+    "impact": "A name or scope that resolves outside the project's intended registry is fetched from a source nobody reviewed, so a publish there becomes an install here. This rule reads a dependency whose target configuration is overridden.",
+    "remediation": "Point the declaration or the registry configuration at the namespace the project controls, and remove the lookup path that resolves elsewhere. Specifically: fix a dependency whose target configuration is overridden.",
+    "limitation": "It matches a dependency whose target configuration is overridden in the parsed build.gradle; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A build.gradle that mentions a dependency whose target configuration is overridden in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "dependencies[].targetConfiguration",
+      "valuePattern": "^.+$"
+    },
+    "tests": [
+      {
+        "file": "build.gradle",
+        "document": {
+          "repositories": [
+            {
+              "name": "central",
+              "url": "https://repo1.maven.org/maven2"
+            }
+          ],
+          "dependencies": [
+            {
+              "group": "com.acme",
+              "name": "sdk",
+              "version": "4.2.0",
+              "targetConfiguration": "shaded"
+            }
+          ],
+          "configurations": [],
+          "dependencyLocking": {
+            "lockAllConfigurations": true
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "build.gradle",
+        "document": {
+          "repositories": [
+            {
+              "name": "central",
+              "url": "https://repo1.maven.org/maven2"
+            }
+          ],
+          "dependencies": [
+            {
+              "group": "com.acme",
+              "name": "core",
+              "version": "1.4.2",
+              "targetConfiguration": "debug"
+            }
+          ],
+          "configurations": [],
+          "dependencyLocking": {
+            "lockAllConfigurations": true
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "build.gradle",
+        "document": {
+          "repositories": [
+            {
+              "name": "central",
+              "url": "https://repo1.maven.org/maven2"
+            }
+          ],
+          "dependencies": [
+            {
+              "group": "com.acme",
+              "name": "sdk",
+              "version": "4.2.0"
+            }
+          ],
+          "configurations": [],
+          "dependencyLocking": {
+            "lockAllConfigurations": true
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "build.gradle",
+        "document": {
+          "repositories": [
+            {
+              "name": "central",
+              "url": "https://repo1.maven.org/maven2"
+            }
+          ],
+          "dependencies": [
+            {
+              "group": "org.slf4j",
+              "name": "slf4j-api",
+              "version": "2.0.13"
+            }
+          ],
+          "configurations": [],
+          "dependencyLocking": {
+            "lockAllConfigurations": true
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "variant-selection"
+  },
+  {
+    "class": "gradle-metadata-source-absent",
+    "ecosystem": "gradle",
+    "artifact": "settings.gradle",
+    "parser": "gradle",
+    "category": "lockfile-integrity",
+    "cwe": "CWE-494",
+    "severity": "LOW",
+    "title": "Resolution without metadata source policy",
+    "what": "a setup that accepts whatever metadata variant a repository serves",
+    "impact": "Without a recorded digest the downloaded artifact cannot be checked against what was reviewed, so substitution is undetectable at install time. This rule reads a setup that accepts whatever metadata variant a repository serves.",
+    "remediation": "Regenerate the artifact with integrity data enabled and commit the recorded digest or checksum. Specifically: fix a setup that accepts whatever metadata variant a repository serves.",
+    "limitation": "It matches a setup that accepts whatever metadata variant a repository serves in the parsed settings.gradle; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A settings.gradle that mentions a setup that accepts whatever metadata variant a repository serves in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-absent",
+      "path": "dependencyResolutionManagement.metadataSources"
+    },
+    "tests": [
+      {
+        "file": "settings.gradle",
+        "document": {
+          "pluginManagement": {
+            "repositories": [
+              {
+                "name": "gradlePluginPortal",
+                "url": "https://plugins.gradle.org/m2"
+              }
+            ]
+          },
+          "dependencyResolutionManagement": {
+            "repositories": [
+              {
+                "name": "central",
+                "url": "https://repo1.maven.org/maven2"
+              }
+            ]
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "settings.gradle",
+        "document": {
+          "pluginManagement": {
+            "repositories": [
+              {
+                "name": "gradlePluginPortal",
+                "url": "https://plugins.gradle.org/m2"
+              }
+            ]
+          },
+          "dependencyResolutionManagement": {
+            "repositories": []
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "settings.gradle",
+        "document": {
+          "pluginManagement": {
+            "repositories": [
+              {
+                "name": "gradlePluginPortal",
+                "url": "https://plugins.gradle.org/m2"
+              }
+            ]
+          },
+          "dependencyResolutionManagement": {
+            "repositories": [
+              {
+                "name": "central",
+                "url": "https://repo1.maven.org/maven2"
+              }
+            ],
+            "metadataSources": {
+              "gradleMetadata": true
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "settings.gradle",
+        "document": {
+          "pluginManagement": {
+            "repositories": [
+              {
+                "name": "gradlePluginPortal",
+                "url": "https://plugins.gradle.org/m2"
+              }
+            ]
+          },
+          "dependencyResolutionManagement": {
+            "repositories": [
+              {
+                "name": "central",
+                "url": "https://repo1.maven.org/maven2"
+              }
+            ],
+            "metadataSources": {
+              "mavenPom": true
+            }
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "metadata-policy"
+  },
+  {
+    "class": "nuget-package-reference-exclude-assets",
+    "ecosystem": "nuget",
+    "artifact": "Directory.Packages.props",
+    "parser": "xml",
+    "category": "dependency-hygiene",
+    "cwe": "CWE-1104",
+    "severity": "LOW",
+    "title": "Central package with assets excluded",
+    "what": "a `<PackageVersion>` that strips runtime assets",
+    "impact": "The declaration leaves version choice to a resolver run, so a release published after this review is taken without a new decision. This rule reads a `<PackageVersion>` that strips runtime assets.",
+    "remediation": "Pin the declaration to an exact version or to the narrowest range the project tests, and update it deliberately. Specifically: fix a `<PackageVersion>` that strips runtime assets.",
+    "limitation": "It matches a `<PackageVersion>` that strips runtime assets in the parsed Directory.Packages.props; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A Directory.Packages.props that mentions a `<PackageVersion>` that strips runtime assets in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "project.itemGroup.PackageVersion[].ExcludeAssets",
+      "valuePattern": "^(?:runtime|all|compile|build|analyzers)$"
+    },
+    "tests": [
+      {
+        "file": "Directory.Packages.props",
+        "document": {
+          "project": {
+            "itemGroup": {
+              "PackageVersion": [
+                {
+                  "Include": "System.Text.Json",
+                  "Version": "8.0.5",
+                  "ExcludeAssets": "runtime"
+                }
+              ]
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "Directory.Packages.props",
+        "document": {
+          "project": {
+            "itemGroup": {
+              "PackageVersion": [
+                {
+                  "Include": "NLog",
+                  "Version": "5.3.4",
+                  "ExcludeAssets": "all"
+                }
+              ]
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "Directory.Packages.props",
+        "document": {
+          "project": {
+            "itemGroup": {
+              "PackageVersion": [
+                {
+                  "Include": "Newtonsoft.Json",
+                  "Version": "13.0.3"
+                }
+              ]
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "Directory.Packages.props",
+        "document": {
+          "project": {
+            "itemGroup": {
+              "PackageVersion": [
+                {
+                  "Include": "Dapper",
+                  "Version": "2.1.35",
+                  "ExcludeAssets": "none"
+                }
+              ]
+            }
+          }
+        },
+        "match": false
+      }
+    ]
+  },
+  {
+    "class": "nuget-source-protocol-version",
+    "ecosystem": "nuget",
+    "artifact": "nuget.config",
+    "parser": "xml",
+    "category": "registry-configuration",
+    "cwe": "CWE-829",
+    "severity": "LOW",
+    "title": "Package source on the legacy V2 protocol",
+    "what": "a source pinned to protocol version 2",
+    "impact": "Without a recorded digest the downloaded artifact cannot be checked against what was reviewed, so substitution is undetectable at install time. This rule reads a source pinned to protocol version 2.",
+    "remediation": "Regenerate the artifact with integrity data enabled and commit the recorded digest or checksum. Specifically: fix a source pinned to protocol version 2.",
+    "limitation": "It matches a source pinned to protocol version 2 in the parsed nuget.config; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A nuget.config that mentions a source pinned to protocol version 2 in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "sources[].protocolVersion",
+      "valuePattern": "^2$"
+    },
+    "tests": [
+      {
+        "file": "nuget.config",
+        "document": {
+          "sources": [
+            {
+              "key": "acme",
+              "value": "https://nuget.acme.example/v2",
+              "protocolVersion": "2"
+            }
+          ],
+          "config": {},
+          "settings": {}
+        },
+        "match": true
+      },
+      {
+        "file": "nuget.config",
+        "document": {
+          "sources": [
+            {
+              "key": "internal",
+              "value": "https://10.24.8.9/v2",
+              "protocolVersion": 2
+            }
+          ],
+          "config": {},
+          "settings": {}
+        },
+        "match": true
+      },
+      {
+        "file": "nuget.config",
+        "document": {
+          "sources": [
+            {
+              "key": "nuget.org",
+              "value": "https://api.nuget.org/v3/index.json",
+              "protocolVersion": "3"
+            }
+          ],
+          "config": {},
+          "settings": {}
+        },
+        "match": false
+      },
+      {
+        "file": "nuget.config",
+        "document": {
+          "sources": [],
+          "config": {},
+          "settings": {}
+        },
+        "match": false
+      }
+    ]
+  },
+  {
+    "class": "nuget-lock-content-hash-missing-target",
+    "ecosystem": "nuget",
+    "artifact": "packages.lock.json",
+    "parser": "json",
+    "category": "lockfile-integrity",
+    "cwe": "CWE-494",
+    "severity": "LOW",
+    "title": "Locked dependency with an empty content hash",
+    "what": "a `contentHash` field that is present but empty",
+    "impact": "Without a recorded digest the downloaded artifact cannot be checked against what was reviewed, so substitution is undetectable at install time. This rule reads a `contentHash` field that is present but empty.",
+    "remediation": "Regenerate the artifact with integrity data enabled and commit the recorded digest or checksum. Specifically: fix a `contentHash` field that is present but empty.",
+    "limitation": "It matches a `contentHash` field that is present but empty in the parsed packages.lock.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A packages.lock.json that mentions a `contentHash` field that is present but empty in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "dependencies.*.*.contentHash",
+      "valuePattern": "^$"
+    },
+    "tests": [
+      {
+        "file": "packages.lock.json",
+        "document": {
+          "version": 1,
+          "dependencies": {
+            "net8.0": {
+              "Newtonsoft.Json": {
+                "type": "Direct",
+                "resolved": "13.0.3",
+                "contentHash": ""
+              }
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "packages.lock.json",
+        "document": {
+          "version": 1,
+          "dependencies": {
+            "net8.0": {
+              "Newtonsoft.Json": {
+                "type": "Direct",
+                "resolved": "13.0.3"
+              },
+              "Dapper": {
+                "type": "Direct",
+                "resolved": "2.1.35",
+                "contentHash": ""
+              }
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "packages.lock.json",
+        "document": {
+          "version": 1,
+          "dependencies": {
+            "net8.0": {
+              "Newtonsoft.Json": {
+                "type": "Direct",
+                "resolved": "13.0.3",
+                "contentHash": "9f2c3d4e"
+              }
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "packages.lock.json",
+        "document": {
+          "version": 1,
+          "dependencies": {
+            "net8.0": {
+              "Newtonsoft.Json": {
+                "type": "Direct",
+                "resolved": "13.0.3"
+              },
+              "Dapper": {
+                "type": "Direct",
+                "resolved": "2.1.35",
+                "contentHash": "a1b2c3d4"
+              }
+            }
+          }
+        },
+        "match": false
+      }
+    ]
+  },
+  {
+    "class": "nuget-packages-config-allow-prerelease",
+    "ecosystem": "nuget",
+    "artifact": "packages.config",
+    "parser": "xml",
+    "category": "dependency-hygiene",
+    "cwe": "CWE-1104",
+    "severity": "MEDIUM",
+    "title": "Package entry accepting a pre-release band",
+    "what": "an `allowedVersions` range that admits pre-releases",
+    "impact": "The declaration leaves version choice to a resolver run, so a release published after this review is taken without a new decision. This rule reads an `allowedVersions` range that admits pre-releases.",
+    "remediation": "Pin the declaration to an exact version or to the narrowest range the project tests, and update it deliberately. Specifically: fix an `allowedVersions` range that admits pre-releases.",
+    "limitation": "It matches an `allowedVersions` range that admits pre-releases in the parsed packages.config; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A packages.config that mentions an `allowedVersions` range that admits pre-releases in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "packages[].allowedVersions",
+      "valuePattern": "^\\[[^\\]]*-"
+    },
+    "tests": [
+      {
+        "file": "packages.config",
+        "document": {
+          "packages": [
+            {
+              "id": "Acme.Sdk",
+              "version": "4.2.0-beta1",
+              "allowedVersions": "[4.0.0-beta,5.0.0)"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "packages.config",
+        "document": {
+          "packages": [
+            {
+              "id": "Acme.Core",
+              "version": "1.5.0-rc2",
+              "allowedVersions": "[1.4.0-rc,2.0.0)"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "packages.config",
+        "document": {
+          "packages": [
+            {
+              "id": "Newtonsoft.Json",
+              "version": "13.0.3",
+              "allowedVersions": "[13.0.0,14.0.0)"
+            }
+          ]
+        },
+        "match": false
+      },
+      {
+        "file": "packages.config",
+        "document": {
+          "packages": [
+            {
+              "id": "Dapper",
+              "version": "2.1.35"
+            }
+          ]
+        },
+        "match": false
+      }
+    ]
+  },
+  {
+    "class": "cargo-build-dependency-in-dependencies",
+    "ecosystem": "cargo",
+    "artifact": "Cargo.toml",
+    "parser": "toml",
+    "category": "dependency-confusion",
+    "cwe": "CWE-829",
+    "severity": "LOW",
+    "title": "Build tooling declared as a runtime crate",
+    "what": "a build-script crate in the runtime dependency table",
+    "impact": "A name or scope that resolves outside the project's intended registry is fetched from a source nobody reviewed, so a publish there becomes an install here. This rule reads a build-script crate in the runtime dependency table.",
+    "remediation": "Point the declaration or the registry configuration at the namespace the project controls, and remove the lookup path that resolves elsewhere. Specifically: fix a build-script crate in the runtime dependency table.",
+    "limitation": "It matches a build-script crate in the runtime dependency table in the parsed Cargo.toml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A Cargo.toml that mentions a build-script crate in the runtime dependency table in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-key-matches",
+      "path": "dependencies",
+      "keyPattern": "^(?:cc|cmake|bindgen|pkg-config)$"
+    },
+    "tests": [
+      {
+        "file": "Cargo.toml",
+        "document": {
+          "package": {
+            "name": "demo-service",
+            "version": "0.1.0",
+            "license": "MIT"
+          },
+          "dependencies": {
+            "serde": {
+              "version": "1.0.210"
+            },
+            "cc": {
+              "version": "1.1.31"
+            }
+          },
+          "patch": {},
+          "workspace": {
+            "dependencies": {
+              "serde": "1.0.210"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "Cargo.toml",
+        "document": {
+          "package": {
+            "name": "demo-service",
+            "version": "0.1.0",
+            "license": "MIT"
+          },
+          "dependencies": {
+            "serde": {
+              "version": "1.0.210"
+            },
+            "bindgen": {
+              "version": "0.70.1"
+            }
+          },
+          "patch": {},
+          "workspace": {
+            "dependencies": {
+              "serde": "1.0.210"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "Cargo.toml",
+        "document": {
+          "package": {
+            "name": "demo-service",
+            "version": "0.1.0",
+            "license": "MIT"
+          },
+          "dependencies": {
+            "serde": {
+              "version": "1.0.210"
+            }
+          },
+          "patch": {},
+          "workspace": {
+            "dependencies": {
+              "serde": "1.0.210"
+            }
+          },
+          "build-dependencies": {
+            "cc": {
+              "version": "1.1.31"
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "Cargo.toml",
+        "document": {
+          "package": {
+            "name": "demo-service",
+            "version": "0.1.0",
+            "license": "MIT"
+          },
+          "dependencies": {
+            "serde": {
+              "version": "1.0.210"
+            }
+          },
+          "patch": {},
+          "workspace": {
+            "dependencies": {
+              "serde": "1.0.210"
+            }
+          },
+          "build-dependencies": {
+            "bindgen": {
+              "version": "0.70.1"
+            }
+          }
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "environment-confusion"
+  },
+  {
+    "class": "cargo-target-triple-lock",
+    "ecosystem": "cargo",
+    "artifact": "Cargo.toml",
+    "parser": "toml",
+    "category": "policy-metadata",
+    "cwe": "CWE-1104",
+    "severity": "LOW",
+    "title": "Crate declares an old minimum Rust version",
+    "what": "a `rust-version` below the supported toolchain floor",
+    "impact": "The declaration leaves version choice to a resolver run, so a release published after this review is taken without a new decision. This rule reads a `rust-version` below the supported toolchain floor.",
+    "remediation": "Pin the declaration to an exact version or to the narrowest range the project tests, and update it deliberately. Specifically: fix a `rust-version` below the supported toolchain floor.",
+    "limitation": "It matches a `rust-version` below the supported toolchain floor in the parsed Cargo.toml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A Cargo.toml that mentions a `rust-version` below the supported toolchain floor in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "package.rust-version",
+      "valuePattern": "^1\\.[0-5]\\d$"
+    },
+    "tests": [
+      {
+        "file": "Cargo.toml",
+        "document": {
+          "package": {
+            "name": "demo-service",
+            "version": "0.1.0",
+            "license": "MIT",
+            "rust-version": "1.56"
+          },
+          "dependencies": {
+            "serde": {
+              "version": "1.0.210"
+            }
+          },
+          "patch": {},
+          "workspace": {
+            "dependencies": {
+              "serde": "1.0.210"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "Cargo.toml",
+        "document": {
+          "package": {
+            "name": "demo-service",
+            "version": "0.1.0",
+            "license": "MIT",
+            "rust-version": "1.48"
+          },
+          "dependencies": {
+            "serde": {
+              "version": "1.0.210"
+            }
+          },
+          "patch": {},
+          "workspace": {
+            "dependencies": {
+              "serde": "1.0.210"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "Cargo.toml",
+        "document": {
+          "package": {
+            "name": "demo-service",
+            "version": "0.1.0",
+            "license": "MIT",
+            "rust-version": "1.74"
+          },
+          "dependencies": {
+            "serde": {
+              "version": "1.0.210"
+            }
+          },
+          "patch": {},
+          "workspace": {
+            "dependencies": {
+              "serde": "1.0.210"
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "Cargo.toml",
+        "document": {
+          "package": {
+            "name": "demo-service",
+            "version": "0.1.0",
+            "license": "MIT",
+            "rust-version": "1.80"
+          },
+          "dependencies": {
+            "serde": {
+              "version": "1.0.210"
+            }
+          },
+          "patch": {},
+          "workspace": {
+            "dependencies": {
+              "serde": "1.0.210"
+            }
+          }
+        },
+        "match": false
+      }
+    ]
+  },
+  {
+    "class": "cargo-publish-false",
+    "ecosystem": "cargo",
+    "artifact": "Cargo.toml",
+    "parser": "toml",
+    "category": "policy-metadata",
+    "cwe": "CWE-1104",
+    "severity": "LOW",
+    "title": "Crate marked unpublishable",
+    "what": "a `publish = false` crate that other projects may still path-depend on",
+    "impact": "The declaration leaves version choice to a resolver run, so a release published after this review is taken without a new decision. This rule reads a `publish = false` crate that other projects may still path-depend on.",
+    "remediation": "Pin the declaration to an exact version or to the narrowest range the project tests, and update it deliberately. Specifically: fix a `publish = false` crate that other projects may still path-depend on.",
+    "limitation": "It matches a `publish = false` crate that other projects may still path-depend on in the parsed Cargo.toml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A Cargo.toml that mentions a `publish = false` crate that other projects may still path-depend on in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "package.publish",
+      "valuePattern": "^false$"
+    },
+    "tests": [
+      {
+        "file": "Cargo.toml",
+        "document": {
+          "package": {
+            "name": "demo-service",
+            "version": "0.1.0",
+            "license": "MIT",
+            "publish": false
+          },
+          "dependencies": {
+            "serde": {
+              "version": "1.0.210"
+            }
+          },
+          "patch": {},
+          "workspace": {
+            "dependencies": {
+              "serde": "1.0.210"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "Cargo.toml",
+        "document": {
+          "package": {
+            "name": "demo-service",
+            "version": "0.1.0",
+            "license": "MIT",
+            "publish": "false"
+          },
+          "dependencies": {
+            "serde": {
+              "version": "1.0.210"
+            }
+          },
+          "patch": {},
+          "workspace": {
+            "dependencies": {
+              "serde": "1.0.210"
+            }
+          }
+        },
+        "match": true
+      },
+      {
+        "file": "Cargo.toml",
+        "document": {
+          "package": {
+            "name": "demo-service",
+            "version": "0.1.0",
+            "license": "MIT",
+            "publish": true
+          },
+          "dependencies": {
+            "serde": {
+              "version": "1.0.210"
+            }
+          },
+          "patch": {},
+          "workspace": {
+            "dependencies": {
+              "serde": "1.0.210"
+            }
+          }
+        },
+        "match": false
+      },
+      {
+        "file": "Cargo.toml",
+        "document": {
+          "package": {
+            "name": "demo-service",
+            "version": "0.1.0",
+            "license": "MIT",
+            "publish": [
+              "crates-io"
+            ]
+          },
+          "dependencies": {
+            "serde": {
+              "version": "1.0.210"
+            }
+          },
+          "patch": {},
+          "workspace": {
+            "dependencies": {
+              "serde": "1.0.210"
+            }
+          }
+        },
+        "match": false
+      }
+    ]
+  },
+  {
+    "class": "composer-lock-plugin-api-absent",
+    "ecosystem": "composer",
+    "artifact": "composer.lock",
+    "parser": "json",
+    "category": "lockfile-integrity",
+    "cwe": "CWE-494",
+    "severity": "LOW",
+    "title": "Lock file without a plugin API version",
+    "what": "a composer.lock that records no plugin API version",
+    "impact": "Without a recorded digest the downloaded artifact cannot be checked against what was reviewed, so substitution is undetectable at install time. This rule reads a composer.lock that records no plugin API version.",
+    "remediation": "Regenerate the artifact with integrity data enabled and commit the recorded digest or checksum. Specifically: fix a composer.lock that records no plugin API version.",
+    "limitation": "It matches a composer.lock that records no plugin API version in the parsed composer.lock; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A composer.lock that mentions a composer.lock that records no plugin API version in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-absent",
+      "path": "plugin-api-version"
+    },
+    "tests": [
+      {
+        "file": "composer.lock",
+        "document": {
+          "content-hash": "9f2c3d4e5f60",
+          "packages": [
+            {
+              "name": "monolog/monolog",
+              "version": "3.7.1"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "composer.lock",
+        "document": {
+          "content-hash": "9f2c3d4e5f60",
+          "packages": []
+        },
+        "match": true
+      },
+      {
+        "file": "composer.lock",
+        "document": {
+          "plugin-api-version": "2.6.0",
+          "content-hash": "9f2c3d4e5f60",
+          "packages": [
+            {
+              "name": "monolog/monolog",
+              "version": "3.7.1"
+            }
+          ]
+        },
+        "match": false
+      },
+      {
+        "file": "composer.lock",
+        "document": {
+          "plugin-api-version": "2.5.0",
+          "content-hash": "9f2c3d4e5f60",
+          "packages": [
+            {
+              "name": "monolog/monolog",
+              "version": "3.7.1"
+            }
+          ]
+        },
+        "match": false
+      }
+    ]
+  },
+  {
+    "class": "composer-platform-overrides",
+    "ecosystem": "composer",
+    "artifact": "composer.json",
+    "parser": "json",
+    "category": "policy-metadata",
+    "cwe": "CWE-1104",
+    "severity": "LOW",
+    "title": "Platform package faked for resolution",
+    "what": "a `config.platform` entry that pretends an extension is absent",
+    "impact": "The declaration leaves version choice to a resolver run, so a release published after this review is taken without a new decision. This rule reads a `config.platform` entry that pretends an extension is absent.",
+    "remediation": "Pin the declaration to an exact version or to the narrowest range the project tests, and update it deliberately. Specifically: fix a `config.platform` entry that pretends an extension is absent.",
+    "limitation": "It matches a `config.platform` entry that pretends an extension is absent in the parsed composer.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A composer.json that mentions a `config.platform` entry that pretends an extension is absent in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "config.platform.*",
+      "valuePattern": "^false$"
+    },
+    "tests": [
+      {
+        "file": "composer.json",
+        "document": {
+          "require": {
+            "monolog/monolog": "^3.7"
+          },
+          "license": [
+            "MIT"
+          ],
+          "config": {
+            "secure-http": true,
+            "platform": {
+              "php": "8.3.0",
+              "ext-gd": false
+            }
+          },
+          "prefer-stable": true,
+          "scripts": {}
+        },
+        "match": true
+      },
+      {
+        "file": "composer.json",
+        "document": {
+          "require": {
+            "monolog/monolog": "^3.7"
+          },
+          "license": [
+            "MIT"
+          ],
+          "config": {
+            "secure-http": true,
+            "platform": {
+              "php": "8.3.0",
+              "ext-intl": "false"
+            }
+          },
+          "prefer-stable": true,
+          "scripts": {}
+        },
+        "match": true
+      },
+      {
+        "file": "composer.json",
+        "document": {
+          "require": {
+            "monolog/monolog": "^3.7"
+          },
+          "license": [
+            "MIT"
+          ],
+          "config": {
+            "secure-http": true,
+            "platform": {
+              "php": "8.3.0"
+            }
+          },
+          "prefer-stable": true,
+          "scripts": {}
+        },
+        "match": false
+      },
+      {
+        "file": "composer.json",
+        "document": {
+          "require": {
+            "monolog/monolog": "^3.7"
+          },
+          "license": [
+            "MIT"
+          ],
+          "config": {
+            "secure-http": true,
+            "platform": {
+              "php": "8.3.0"
+            }
+          },
+          "prefer-stable": true,
+          "scripts": {}
+        },
+        "match": false
+      }
+    ]
+  },
+  {
+    "class": "gemfile-lock-platforms-absent",
+    "ecosystem": "rubygems",
+    "artifact": "Gemfile.lock",
+    "parser": "yaml",
+    "category": "policy-metadata",
+    "cwe": "CWE-1104",
+    "severity": "LOW",
+    "title": "Gemfile.lock with no PLATFORMS section",
+    "what": "a lockfile that records no target platforms",
+    "impact": "The declaration leaves version choice to a resolver run, so a release published after this review is taken without a new decision. This rule reads a lockfile that records no target platforms.",
+    "remediation": "Pin the declaration to an exact version or to the narrowest range the project tests, and update it deliberately. Specifically: fix a lockfile that records no target platforms.",
+    "limitation": "It matches a lockfile that records no target platforms in the parsed Gemfile.lock; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A Gemfile.lock that mentions a lockfile that records no target platforms in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-absent",
+      "path": "platforms"
+    },
+    "tests": [
+      {
+        "file": "Gemfile.lock",
+        "document": {
+          "specs": [
+            {
+              "name": "rails",
+              "version": "7.1.3"
+            }
+          ],
+          "checksums": {
+            "rails": "sha256=9f2c3d4e"
+          },
+          "ruby_version": "ruby 3.3.4p94",
+          "bundled_with": "BUNDLED WITH 2.5.11"
+        },
+        "match": true
+      },
+      {
+        "file": "Gemfile.lock",
+        "document": {
+          "specs": [],
+          "checksums": {
+            "rails": "sha256=9f2c3d4e"
+          },
+          "ruby_version": "ruby 3.3.4p94",
+          "bundled_with": "BUNDLED WITH 2.5.11"
+        },
+        "match": true
+      },
+      {
+        "file": "Gemfile.lock",
+        "document": {
+          "specs": [
+            {
+              "name": "rails",
+              "version": "7.1.3"
+            }
+          ],
+          "checksums": {
+            "rails": "sha256=9f2c3d4e"
+          },
+          "ruby_version": "ruby 3.3.4p94",
+          "bundled_with": "BUNDLED WITH 2.5.11",
+          "platforms": [
+            "ruby",
+            "x86_64-linux"
+          ]
+        },
+        "match": false
+      },
+      {
+        "file": "Gemfile.lock",
+        "document": {
+          "specs": [
+            {
+              "name": "rails",
+              "version": "7.1.3"
+            }
+          ],
+          "checksums": {
+            "rails": "sha256=9f2c3d4e"
+          },
+          "ruby_version": "ruby 3.3.4p94",
+          "bundled_with": "BUNDLED WITH 2.5.11",
+          "platforms": [
+            "arm64-darwin-23"
+          ]
+        },
+        "match": false
+      }
+    ]
+  },
+  {
+    "class": "gemfile-git-stub",
+    "ecosystem": "rubygems",
+    "artifact": "Gemfile",
+    "parser": "yaml",
+    "category": "supply-chain-integrity",
+    "cwe": "CWE-829",
+    "severity": "MEDIUM",
+    "title": "Gem pinned to a branch",
+    "what": "a gem from git whose ref is a branch name",
+    "impact": "The declaration leaves version choice to a resolver run, so a release published after this review is taken without a new decision. This rule reads a gem from git whose ref is a branch name.",
+    "remediation": "Pin the declaration to an exact version or to the narrowest range the project tests, and update it deliberately. Specifically: fix a gem from git whose ref is a branch name.",
+    "limitation": "It matches a gem from git whose ref is a branch name in the parsed Gemfile; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A Gemfile that mentions a gem from git whose ref is a branch name in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "gems[].branch",
+      "valuePattern": "^.+$"
+    },
+    "tests": [
+      {
+        "file": "Gemfile",
+        "document": {
+          "source": "https://rubygems.org",
+          "gems": [
+            {
+              "name": "acme-core",
+              "git": "https://github.com/acme/core",
+              "branch": "main"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "Gemfile",
+        "document": {
+          "source": "https://rubygems.org",
+          "gems": [
+            {
+              "name": "acme-sdk",
+              "git": "https://github.com/acme/sdk",
+              "branch": "develop"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "Gemfile",
+        "document": {
+          "source": "https://rubygems.org",
+          "gems": [
+            {
+              "name": "acme-core",
+              "git": "https://github.com/acme/core",
+              "ref": "9f2c3d4e5f60"
+            }
+          ]
+        },
+        "match": false
+      },
+      {
+        "file": "Gemfile",
+        "document": {
+          "source": "https://rubygems.org",
+          "gems": [
+            {
+              "name": "rails",
+              "requirement": "~> 7.1"
+            }
+          ]
+        },
+        "match": false
+      }
+    ]
+  },
+  {
+    "class": "swift-resolved-pin-revision-short",
+    "ecosystem": "swift",
+    "artifact": "Package.resolved",
+    "parser": "json",
+    "category": "lockfile-integrity",
+    "cwe": "CWE-494",
+    "severity": "LOW",
+    "title": "Resolved pin whose revision is not a full SHA",
+    "what": "a pin whose revision is shorter than 40 hex characters",
+    "impact": "Without a recorded digest the downloaded artifact cannot be checked against what was reviewed, so substitution is undetectable at install time. This rule reads a pin whose revision is shorter than 40 hex characters.",
+    "remediation": "Regenerate the artifact with integrity data enabled and commit the recorded digest or checksum. Specifically: fix a pin whose revision is shorter than 40 hex characters.",
+    "limitation": "It matches a pin whose revision is shorter than 40 hex characters in the parsed Package.resolved; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A Package.resolved that mentions a pin whose revision is shorter than 40 hex characters in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-not-matches",
+      "path": "pins[].state.revision",
+      "valuePattern": "^[0-9a-f]{40}$"
+    },
+    "tests": [
+      {
+        "file": "Package.resolved",
+        "document": {
+          "pins": [
+            {
+              "identity": "sdk",
+              "location": "https://github.com/acme/sdk",
+              "state": {
+                "revision": "9f2c3d4e"
+              }
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "Package.resolved",
+        "document": {
+          "pins": [
+            {
+              "identity": "core",
+              "location": "https://github.com/acme/core",
+              "state": {
+                "revision": "a1b2"
+              }
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "Package.resolved",
+        "document": {
+          "pins": [
+            {
+              "identity": "sdk",
+              "location": "https://github.com/acme/sdk",
+              "state": {
+                "revision": "9f2c3d4e5f60718293a4b5c6d7e8f90123456789"
+              }
+            }
+          ]
+        },
+        "match": false
+      },
+      {
+        "file": "Package.resolved",
+        "document": {
+          "pins": [
+            {
+              "identity": "core",
+              "location": "https://github.com/acme/core",
+              "state": {
+                "revision": "abcdef0123456789abcdef0123456789abcdef01"
+              }
+            }
+          ]
+        },
+        "match": false
+      }
+    ]
+  },
+  {
+    "class": "swift-tools-version-absent",
+    "ecosystem": "swift",
+    "artifact": "Package.swift",
+    "parser": "yaml",
+    "category": "policy-metadata",
+    "cwe": "CWE-1104",
+    "severity": "LOW",
+    "title": "Package manifest with no tools version",
+    "what": "a manifest that declares no Swift tools version",
+    "impact": "The declaration leaves version choice to a resolver run, so a release published after this review is taken without a new decision. This rule reads a manifest that declares no Swift tools version.",
+    "remediation": "Pin the declaration to an exact version or to the narrowest range the project tests, and update it deliberately. Specifically: fix a manifest that declares no Swift tools version.",
+    "limitation": "It matches a manifest that declares no Swift tools version in the parsed Package.swift; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A Package.swift that mentions a manifest that declares no Swift tools version in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-absent",
+      "path": "toolsVersion"
+    },
+    "tests": [
+      {
+        "file": "Package.swift",
+        "document": {
+          "dependencies": [
+            {
+              "url": "https://github.com/acme/sdk",
+              "requirement": {
+                "exact": "4.2.0"
+              }
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "Package.swift",
+        "document": {
+          "dependencies": []
+        },
+        "match": true
+      },
+      {
+        "file": "Package.swift",
+        "document": {
+          "dependencies": [
+            {
+              "url": "https://github.com/acme/sdk",
+              "requirement": {
+                "exact": "4.2.0"
+              }
+            }
+          ],
+          "toolsVersion": "5.10"
+        },
+        "match": false
+      },
+      {
+        "file": "Package.swift",
+        "document": {
+          "dependencies": [
+            {
+              "url": "https://github.com/acme/sdk",
+              "requirement": {
+                "exact": "4.2.0"
+              }
+            }
+          ],
+          "toolsVersion": "6.0"
+        },
+        "match": false
+      }
+    ]
+  },
+  {
+    "class": "podfile-inhibit-warnings",
+    "ecosystem": "cocoapods",
+    "artifact": "Podfile",
+    "parser": "yaml",
+    "category": "trust-bypass",
+    "cwe": "CWE-1104",
+    "severity": "LOW",
+    "title": "Pod built with warnings suppressed",
+    "what": "a pod that hides compiler warnings",
+    "impact": "A verification or locking control is switched off, so the integrity guarantees the ecosystem offers are not applied here. This rule reads a pod that hides compiler warnings.",
+    "remediation": "Turn the control back on and fix what it reported instead of disabling the check. Specifically: fix a pod that hides compiler warnings.",
+    "limitation": "It matches a pod that hides compiler warnings in the parsed Podfile; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A Podfile that mentions a pod that hides compiler warnings in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "pods[].inhibit_warnings",
+      "valuePattern": "^true$"
+    },
+    "tests": [
+      {
+        "file": "Podfile",
+        "document": {
+          "sources": [
+            "https://cdn.cocoapods.org/"
+          ],
+          "pods": [
+            {
+              "name": "AcmeCore",
+              "inhibit_warnings": true
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "Podfile",
+        "document": {
+          "sources": [
+            "https://cdn.cocoapods.org/"
+          ],
+          "pods": [
+            {
+              "name": "AcmeSDK",
+              "inhibit_warnings": "true"
+            }
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "Podfile",
+        "document": {
+          "sources": [
+            "https://cdn.cocoapods.org/"
+          ],
+          "pods": [
+            {
+              "name": "Alamofire",
+              "inhibit_warnings": false
+            }
+          ]
+        },
+        "match": false
+      },
+      {
+        "file": "Podfile",
+        "document": {
+          "sources": [
+            "https://cdn.cocoapods.org/"
+          ],
+          "pods": [
+            {
+              "name": "SnapKit"
+            }
+          ]
+        },
+        "match": false
+      }
+    ]
+  },
+  {
+    "class": "conda-defaults-channel",
+    "ecosystem": "conda",
+    "artifact": ".condarc",
+    "parser": "yaml",
+    "category": "registry-configuration",
+    "cwe": "CWE-829",
+    "severity": "LOW",
+    "title": "Conda channel list relies on `defaults`",
+    "what": "a channel list that still contains `defaults`",
+    "impact": "A name or scope that resolves outside the project's intended registry is fetched from a source nobody reviewed, so a publish there becomes an install here. This rule reads a channel list that still contains `defaults`.",
+    "remediation": "Point the declaration or the registry configuration at the namespace the project controls, and remove the lookup path that resolves elsewhere. Specifically: fix a channel list that still contains `defaults`.",
+    "limitation": "It matches a channel list that still contains `defaults` in the parsed .condarc; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A .condarc that mentions a channel list that still contains `defaults` in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "channels[]",
+      "valuePattern": "^defaults$"
+    },
+    "tests": [
+      {
+        "file": ".condarc",
+        "document": {
+          "channels": [
+            "defaults"
+          ],
+          "ssl_verify": true,
+          "channel_priority": "strict"
+        },
+        "match": true
+      },
+      {
+        "file": ".condarc",
+        "document": {
+          "channels": [
+            "conda-forge",
+            "defaults"
+          ],
+          "ssl_verify": true,
+          "channel_priority": "strict"
+        },
+        "match": true
+      },
+      {
+        "file": ".condarc",
+        "document": {
+          "channels": [
+            "conda-forge"
+          ],
+          "ssl_verify": true,
+          "channel_priority": "strict"
+        },
+        "match": false
+      },
+      {
+        "file": ".condarc",
+        "document": {
+          "channels": [
+            "https://conda.acme.example"
+          ],
+          "ssl_verify": true,
+          "channel_priority": "strict"
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "channel-precedence"
+  },
+  {
+    "class": "conda-channel-alias",
+    "ecosystem": "conda",
+    "artifact": "environment.yml",
+    "parser": "yaml",
+    "category": "registry-configuration",
+    "cwe": "CWE-829",
+    "severity": "LOW",
+    "title": "Environment file points at a default channel",
+    "what": "an environment channel list that names `defaults` or `nodefaults`",
+    "impact": "A name or scope that resolves outside the project's intended registry is fetched from a source nobody reviewed, so a publish there becomes an install here. This rule reads an environment channel list that names `defaults` or `nodefaults`.",
+    "remediation": "Point the declaration or the registry configuration at the namespace the project controls, and remove the lookup path that resolves elsewhere. Specifically: fix an environment channel list that names `defaults` or `nodefaults`.",
+    "limitation": "It matches an environment channel list that names `defaults` or `nodefaults` in the parsed environment.yml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A environment.yml that mentions an environment channel list that names `defaults` or `nodefaults` in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "channels[]",
+      "valuePattern": "^(?:nodefaults|defaults)$"
+    },
+    "tests": [
+      {
+        "file": "environment.yml",
+        "document": {
+          "name": "demo",
+          "channels": [
+            "defaults",
+            "conda-forge"
+          ],
+          "dependencies": [
+            "numpy=1.26.4"
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "environment.yml",
+        "document": {
+          "name": "demo",
+          "channels": [
+            "nodefaults"
+          ],
+          "dependencies": [
+            "numpy=1.26.4"
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "environment.yml",
+        "document": {
+          "name": "demo",
+          "channels": [
+            "conda-forge"
+          ],
+          "dependencies": [
+            "numpy=1.26.4"
+          ]
+        },
+        "match": false
+      },
+      {
+        "file": "environment.yml",
+        "document": {
+          "name": "demo",
+          "channels": [
+            "https://conda.acme.example"
+          ],
+          "dependencies": [
+            "numpy=1.26.4"
+          ]
+        },
+        "match": false
+      }
+    ],
+    "subcategory": "channel-precedence"
+  },
+  {
+    "class": "vcpkg-version-constraint-absent",
+    "ecosystem": "vcpkg",
+    "artifact": "vcpkg.json",
+    "parser": "json",
+    "category": "dependency-hygiene",
+    "cwe": "CWE-1104",
+    "severity": "LOW",
+    "title": "vcpkg manifest with no version constraints",
+    "what": "a manifest that accepts whatever version the baseline resolves",
+    "impact": "The declaration leaves version choice to a resolver run, so a release published after this review is taken without a new decision. This rule reads a manifest that accepts whatever version the baseline resolves.",
+    "remediation": "Pin the declaration to an exact version or to the narrowest range the project tests, and update it deliberately. Specifically: fix a manifest that accepts whatever version the baseline resolves.",
+    "limitation": "It matches a manifest that accepts whatever version the baseline resolves in the parsed vcpkg.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A vcpkg.json that mentions a manifest that accepts whatever version the baseline resolves in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-absent",
+      "path": "version-constraints"
+    },
+    "tests": [
+      {
+        "file": "vcpkg.json",
+        "document": {
+          "name": "demo",
+          "version": "1.4.0",
+          "dependencies": [
+            "fmt"
+          ],
+          "builtin-baseline": "9f2c3d4e5f60718293a4b5c6d7e8f90123456789",
+          "overrides": []
+        },
+        "match": true
+      },
+      {
+        "file": "vcpkg.json",
+        "document": {
+          "name": "demo",
+          "version": "1.4.0",
+          "dependencies": [
+            "fmt"
+          ],
+          "builtin-baseline": "9f2c3d4e5f60718293a4b5c6d7e8f90123456789",
+          "overrides": []
+        },
+        "match": true
+      },
+      {
+        "file": "vcpkg.json",
+        "document": {
+          "name": "demo",
+          "version": "1.4.0",
+          "dependencies": [
+            "fmt"
+          ],
+          "builtin-baseline": "9f2c3d4e5f60718293a4b5c6d7e8f90123456789",
+          "overrides": [],
+          "version-constraints": [
+            {
+              "name": "fmt",
+              "version>=": "10.2.1"
+            }
+          ]
+        },
+        "match": false
+      },
+      {
+        "file": "vcpkg.json",
+        "document": {
+          "name": "demo",
+          "version": "1.4.0",
+          "dependencies": [
+            "fmt"
+          ],
+          "builtin-baseline": "9f2c3d4e5f60718293a4b5c6d7e8f90123456789",
+          "overrides": [],
+          "version-constraints": [
+            {
+              "name": "zlib",
+              "version>=": "1.3.1"
+            }
+          ]
+        },
+        "match": false
+      }
+    ]
+  },
+  {
+    "class": "conan-require-missing-revision",
+    "ecosystem": "conan",
+    "artifact": "conanfile.txt",
+    "parser": "ini",
+    "category": "lockfile-integrity",
+    "cwe": "CWE-494",
+    "severity": "MEDIUM",
+    "title": "Conan requirement without a recipe revision",
+    "what": "a requirement pinned to a version but no revision",
+    "impact": "Without a recorded digest the downloaded artifact cannot be checked against what was reviewed, so substitution is undetectable at install time. This rule reads a requirement pinned to a version but no revision.",
+    "remediation": "Regenerate the artifact with integrity data enabled and commit the recorded digest or checksum. Specifically: fix a requirement pinned to a version but no revision.",
+    "limitation": "It matches a requirement pinned to a version but no revision in the parsed conanfile.txt; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A conanfile.txt that mentions a requirement pinned to a version but no revision in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "requires[]",
+      "valuePattern": "^[^#]+/[^@#]+$"
+    },
+    "tests": [
+      {
+        "file": "conanfile.txt",
+        "document": {
+          "requires": [
+            "zlib/1.3.1"
+          ],
+          "generators": [
+            "CMakeDeps"
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "conanfile.txt",
+        "document": {
+          "requires": [
+            "fmt/10.2.1"
+          ],
+          "generators": [
+            "CMakeDeps"
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "conanfile.txt",
+        "document": {
+          "requires": [
+            "zlib/1.3.1#9f2c3d4e5f60"
+          ],
+          "generators": [
+            "CMakeDeps"
+          ]
+        },
+        "match": false
+      },
+      {
+        "file": "conanfile.txt",
+        "document": {
+          "requires": [
+            "fmt/10.2.1#a1b2c3d4e5f6"
+          ],
+          "generators": [
+            "CMakeDeps"
+          ]
+        },
+        "match": false
+      }
+    ]
+  },
+  {
+    "class": "conan-lock-lockfile-format-old",
+    "ecosystem": "conan",
+    "artifact": "conan.lock",
+    "parser": "json",
+    "category": "lockfile-integrity",
+    "cwe": "CWE-494",
+    "severity": "LOW",
+    "title": "Conan lock on an older format",
+    "what": "a lock `version` from the pre-0.5 format",
+    "impact": "Without a recorded digest the downloaded artifact cannot be checked against what was reviewed, so substitution is undetectable at install time. This rule reads a lock `version` from the pre-0.5 format.",
+    "remediation": "Regenerate the artifact with integrity data enabled and commit the recorded digest or checksum. Specifically: fix a lock `version` from the pre-0.5 format.",
+    "limitation": "It matches a lock `version` from the pre-0.5 format in the parsed conan.lock; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code.",
+    "fp": "A conan.lock that mentions a lock `version` from the pre-0.5 format in a comment, a documentation example or a template placeholder is not reported; the rule reads the parsed value that the installer acts on.",
+    "check": {
+      "type": "sca-field-matches",
+      "path": "version",
+      "valuePattern": "^0\\.[0-4]$"
+    },
+    "tests": [
+      {
+        "file": "conan.lock",
+        "document": {
+          "version": "0.4",
+          "requires": [
+            "zlib/1.3.1"
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "conan.lock",
+        "document": {
+          "version": "0.3",
+          "requires": [
+            "zlib/1.3.1"
+          ]
+        },
+        "match": true
+      },
+      {
+        "file": "conan.lock",
+        "document": {
+          "version": "0.5",
+          "requires": [
+            "zlib/1.3.1"
+          ]
+        },
+        "match": false
+      },
+      {
+        "file": "conan.lock",
+        "document": {
+          "version": "0.5",
+          "requires": []
+        },
+        "match": false
+      }
+    ]
+  }
+]

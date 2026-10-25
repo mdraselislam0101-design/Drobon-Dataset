@@ -1,0 +1,98 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0967",
+  "title": "Locked dependency with an empty content hash",
+  "description": "packages.lock.json declares a `contentHash` field that is present but empty. Without a recorded digest the downloaded artifact cannot be checked against what was reviewed, so substitution is undetectable at install time. This rule reads a `contentHash` field that is present but empty.",
+  "severity": "LOW",
+  "cwe": "CWE-494",
+  "category": "lockfile-integrity",
+  "ecosystems": [
+    "nuget"
+  ],
+  "artifact": "packages.lock.json",
+  "parser": "json",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "dependencies.*.*.contentHash",
+    "valuePattern": "^$"
+  },
+  "tests": [
+    {
+      "file": "packages.lock.json",
+      "document": {
+        "version": 1,
+        "dependencies": {
+          "net8.0": {
+            "Newtonsoft.Json": {
+              "type": "Direct",
+              "resolved": "13.0.3",
+              "contentHash": ""
+            }
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "packages.lock.json",
+      "document": {
+        "version": 1,
+        "dependencies": {
+          "net8.0": {
+            "Newtonsoft.Json": {
+              "type": "Direct",
+              "resolved": "13.0.3"
+            },
+            "Dapper": {
+              "type": "Direct",
+              "resolved": "2.1.35",
+              "contentHash": ""
+            }
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "packages.lock.json",
+      "document": {
+        "version": 1,
+        "dependencies": {
+          "net8.0": {
+            "Newtonsoft.Json": {
+              "type": "Direct",
+              "resolved": "13.0.3",
+              "contentHash": "9f2c3d4e"
+            }
+          }
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "packages.lock.json",
+      "document": {
+        "version": 1,
+        "dependencies": {
+          "net8.0": {
+            "Newtonsoft.Json": {
+              "type": "Direct",
+              "resolved": "13.0.3"
+            },
+            "Dapper": {
+              "type": "Direct",
+              "resolved": "2.1.35",
+              "contentHash": "a1b2c3d4"
+            }
+          }
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-3104"
+  ],
+  "remediation": "Regenerate the artifact with integrity data enabled and commit the recorded digest or checksum. Specifically: fix a `contentHash` field that is present but empty.",
+  "limitation": "It matches a `contentHash` field that is present but empty in the parsed packages.lock.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

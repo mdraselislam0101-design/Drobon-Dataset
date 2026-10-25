@@ -4,7 +4,7 @@ Status: **IMPLEMENTED.** The owner approved the rule kind and the schema on 2026
 SCA dataset to be built to the 1,000-rule planning target, additively. This document describes what is
 actually on disk and enforced by tests; it is not a proposal.
 
-sca-pack: implemented = 67 rules
+sca-pack: implemented = 1000 rules
 
 Date: 2026-10-25. Main App reference: `9360dd1` (read-only).
 
@@ -118,17 +118,28 @@ malicious. No GHSA/OSV/NVD record, id or range is copied into `packs/sca/`.
 
 | Tier | Count | Evidence |
 |---|---|---|
-| SCA rules (`packs/sca/v1/rules`) | **67** of 1,000 | `docs/CURRENT_INVENTORY.json` `scaRules` |
-| SCA patterns / records / remediation | **67** each | generated 1:1:1:1 with the rules |
+| SCA rules (`packs/sca/v1/rules`) | **1000** of 1,000 | `docs/CURRENT_INVENTORY.json` `scaRules` |
+| SCA patterns / records / remediation | **1000** each | generated 1:1:1:1 with the rules |
 | Executed rule tests | 4+ per rule, ≥2 positive and ≥2 negative | `validate-packs` runs them all |
+| Independent eval cases | 1,000 positive + 1,000 negative control (`sca-document`) | `data/eval-cases`, `npm run test:eval` |
 | Advisory records (`vuln-intel/`) | 84 items / 100 files, **unchanged** | `docs/CORPUS_TARGETS.json` `advisory-record` |
 | App consumption | none | the App has no `sca` pack loader; its SCA seam is the advisory provider |
 
 ## 8. What is still open
 
-- **The pack is at 42 / 1,000.** Later batches add the remaining families (per-ecosystem specifier
-  hazards, lockfile and registry configuration, the curated name watchlist, policy metadata). Until the
-  count reaches 1,000 the corpus category stays in progress and no document may call SCA complete.
+- **The pack reached 1,000 / 1,000 on 2026-10-25 (sixteen batches) and is frozen.** The declaration tier
+  (467 rules) covers specifiers, lockfile integrity, registry/credential configuration and policy metadata
+  across all 17 ecosystems and 57 artifacts; the name-watchlist tier (533 rules, `sca-name-distance`) covers
+  the typosquat/dependency-confusion shape. Authoring completeness is not reachability: the App-side loader
+  below is still missing, so nothing in this pack runs in a scan yet.
+- **Independent evaluation: 1,000 / 1,000 rules.** Every rule ships one authored positive fixture
+  (`EVAL-SCA-nnnn`) and one negative control (`EVAL-SCN-nnnn`) under `data/eval-cases`, in the
+  `sca-document` eval mode: the runner parses the fixture document, evaluates the rule's declared predicate
+  against it exactly as a consumer would, and scores TP/FP/FN against an evidence anchor taken from the
+  document text. The fixtures are constructed against the predicate contract and are checked to be disjoint
+  from the rule's own validator tests, so a rule cannot pass by memorising its own example. Current cohort
+  result: 0 FN, 0 FP (`npm run test:eval`). This measures the authored population only — it is not an
+  estimate of real-world detection effectiveness.
 - **The App cannot load this pack yet.** `packs/sca/v1` is dataset-side only; the App's SCA engine reads
   advisory records through `apps/api/src/scans/sca/provider.ts`. Loading declared-dependency rules needs an
   app-side loader — an owner decision on the app side, not a dataset change.

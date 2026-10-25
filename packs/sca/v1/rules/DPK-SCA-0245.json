@@ -1,0 +1,74 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0245",
+  "title": "Conan remote configured over cleartext",
+  "description": "conanfile.py declares a remote URL that uses cleartext http. Recipes and packages cross the network unencrypted, so a substituted recipe runs arbitrary build logic.",
+  "severity": "HIGH",
+  "cwe": "CWE-319",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "conan"
+  ],
+  "artifact": "conanfile.py",
+  "parser": "lockfile-text",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "remotes.*.url",
+    "valuePattern": "^http://"
+  },
+  "tests": [
+    {
+      "file": "conanfile.py",
+      "document": {
+        "remotes": {
+          "acme": {
+            "url": "http://conan.acme.example",
+            "verify_ssl": true
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "conanfile.py",
+      "document": {
+        "remotes": {
+          "mirror": {
+            "url": "http://10.24.8.9",
+            "verify_ssl": true
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "conanfile.py",
+      "document": {
+        "remotes": {
+          "acme": {
+            "url": "https://conan.acme.example",
+            "verify_ssl": true
+          }
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "conanfile.py",
+      "document": {
+        "remotes": {
+          "conancenter": {
+            "url": "https://center.conan.io",
+            "verify_ssl": true
+          }
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2382"
+  ],
+  "remediation": "Point the remote at https.",
+  "limitation": "It matches a remote URL that uses cleartext http in the parsed conanfile.py; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

@@ -1,0 +1,78 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0955",
+  "title": "Module locked at an incompatible major",
+  "description": "go.sum declares a `+incompatible` version in go.sum. A name or scope that resolves outside the project's intended registry is fetched from a source nobody reviewed, so a publish there becomes an install here. This rule reads a `+incompatible` version in go.sum.",
+  "severity": "LOW",
+  "cwe": "CWE-1104",
+  "category": "dependency-hygiene",
+  "ecosystems": [
+    "go"
+  ],
+  "artifact": "go.sum",
+  "parser": "lockfile-text",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "entries[].version",
+    "valuePattern": "\\+incompatible$"
+  },
+  "tests": [
+    {
+      "file": "go.sum",
+      "document": {
+        "entries": [
+          {
+            "module": "github.com/acme/legacy",
+            "version": "v2.1.0+incompatible",
+            "hash": "h1:9f2c3d4e5f60"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "go.sum",
+      "document": {
+        "entries": [
+          {
+            "module": "github.com/acme/tool",
+            "version": "v3.0.4+incompatible",
+            "hash": "h1:a1b2c3d4e5f6"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "go.sum",
+      "document": {
+        "entries": [
+          {
+            "module": "github.com/acme/core/v2",
+            "version": "v2.1.0",
+            "hash": "h1:9f2c3d4e5f60"
+          }
+        ]
+      },
+      "match": false
+    },
+    {
+      "file": "go.sum",
+      "document": {
+        "entries": [
+          {
+            "module": "github.com/acme/sdk",
+            "version": "v4.2.0",
+            "hash": "h1:a1b2c3d4e5f6"
+          }
+        ]
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-3092"
+  ],
+  "remediation": "Point the declaration or the registry configuration at the namespace the project controls, and remove the lookup path that resolves elsewhere. Specifically: fix a `+incompatible` version in go.sum.",
+  "limitation": "It matches a `+incompatible` version in go.sum in the parsed go.sum; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

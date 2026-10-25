@@ -1,0 +1,78 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0170",
+  "title": "Gradle repository declared over cleartext",
+  "description": "build.gradle declares a repository URL that uses cleartext http. Artifacts and their checksums cross the network unencrypted, so a network attacker can substitute both.",
+  "severity": "HIGH",
+  "cwe": "CWE-319",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "gradle"
+  ],
+  "artifact": "build.gradle",
+  "parser": "gradle",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "repositories[].url",
+    "valuePattern": "^http://"
+  },
+  "tests": [
+    {
+      "file": "build.gradle",
+      "document": {
+        "repositories": [
+          {
+            "name": "acme",
+            "url": "http://repo.acme.example/maven2"
+          }
+        ],
+        "dependencies": []
+      },
+      "match": true
+    },
+    {
+      "file": "build.gradle",
+      "document": {
+        "repositories": [
+          {
+            "name": "mirror",
+            "url": "http://10.24.8.9/maven2"
+          }
+        ],
+        "dependencies": []
+      },
+      "match": true
+    },
+    {
+      "file": "build.gradle",
+      "document": {
+        "repositories": [
+          {
+            "name": "acme",
+            "url": "https://repo.acme.example/maven2"
+          }
+        ],
+        "dependencies": []
+      },
+      "match": false
+    },
+    {
+      "file": "build.gradle",
+      "document": {
+        "repositories": [
+          {
+            "name": "mavenCentral",
+            "url": "https://repo.maven.apache.org/maven2"
+          }
+        ],
+        "dependencies": []
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2307"
+  ],
+  "remediation": "Point the repository at https.",
+  "limitation": "It matches a repository URL that uses cleartext http in the parsed build.gradle; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

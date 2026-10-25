@@ -11,9 +11,9 @@ This page states where each engine actually stands, what is left, and what stops
 |---|---|---|---|---|---|---|---|
 | SAST | **1000** | 100% | 1000 | 1000 | 1000 | 0 | AT_TARGET |
 | DAST | **1007** | 100% | 1007 | 1007 | 1007 | 0 | AT_TARGET |
-| SECRETS | **97** | 9.7% | 97 | 97 | 97 | 903 | IN_PROGRESS |
-| SCA | **67** | 6.7% | 67 | 67 | 67 | 933 | IN_PROGRESS |
-| **Total** | **2171** | — | — | — | — | — | 2 of 4 at target |
+| SECRETS | **128** | 12.8% | 128 | 128 | 128 | 872 | IN_PROGRESS |
+| SCA | **1000** | 100% | 1000 | 1000 | 1000 | 0 | AT_TARGET |
+| **Total** | **3135** | — | — | — | — | — | 3 of 4 at target |
 
 ## What blocks each engine
 
@@ -54,8 +54,8 @@ counting it as new content would be padding. Source: `docs/USER_TYPE_LENSES.md`.
 |---|---|---|---|---|---|---|
 | DEVELOPER | **1000** / 1000 | 788 | 972 | 0 | 28 | 0 |
 | STUDENT | **1000** / 1000 | 928 | 775 | 0 | 0 | 225 |
-| SECURITY_PROFESSIONAL | **1000** / 1000 | 992 | 127 | 0 | 94 | 779 |
-| PENTESTER | **1000** / 1000 | 994 | 43 | 0 | 94 | 863 |
+| SECURITY_PROFESSIONAL | **1000** / 1000 | 992 | 96 | 0 | 125 | 779 |
+| PENTESTER | **1000** / 1000 | 994 | 29 | 0 | 108 | 863 |
 
 ---
 

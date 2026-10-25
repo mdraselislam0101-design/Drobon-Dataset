@@ -1,0 +1,147 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0995",
+  "title": "uv index configured over cleartext",
+  "description": "pyproject.toml declares a `tool.uv.index` URL over cleartext. An artifact fetched over plain HTTP can be replaced in transit, so the bytes that install are not bound to what the author published. This rule reads a `tool.uv.index` URL over cleartext.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-319",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "pypi"
+  ],
+  "artifact": "pyproject.toml",
+  "parser": "toml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "tool.uv.index[].url",
+    "valuePattern": "^http://"
+  },
+  "tests": [
+    {
+      "file": "pyproject.toml",
+      "document": {
+        "project": {
+          "name": "demo-service",
+          "version": "1.4.0",
+          "dependencies": [
+            "requests==2.32.3"
+          ],
+          "license": {
+            "text": "MIT"
+          }
+        },
+        "build-system": {
+          "requires": [
+            "setuptools==75.1.0"
+          ],
+          "build-backend": "setuptools.build_meta"
+        },
+        "tool": {
+          "uv": {
+            "index": [
+              {
+                "name": "acme",
+                "url": "http://pypi.acme.example/simple"
+              }
+            ]
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "pyproject.toml",
+      "document": {
+        "project": {
+          "name": "demo-service",
+          "version": "1.4.0",
+          "dependencies": [
+            "requests==2.32.3"
+          ],
+          "license": {
+            "text": "MIT"
+          }
+        },
+        "build-system": {
+          "requires": [
+            "setuptools==75.1.0"
+          ],
+          "build-backend": "setuptools.build_meta"
+        },
+        "tool": {
+          "uv": {
+            "index": [
+              {
+                "name": "internal",
+                "url": "http://10.24.8.9/simple"
+              }
+            ]
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "pyproject.toml",
+      "document": {
+        "project": {
+          "name": "demo-service",
+          "version": "1.4.0",
+          "dependencies": [
+            "requests==2.32.3"
+          ],
+          "license": {
+            "text": "MIT"
+          }
+        },
+        "build-system": {
+          "requires": [
+            "setuptools==75.1.0"
+          ],
+          "build-backend": "setuptools.build_meta"
+        },
+        "tool": {
+          "uv": {
+            "index": [
+              {
+                "name": "pypi",
+                "url": "https://pypi.org/simple"
+              }
+            ]
+          }
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "pyproject.toml",
+      "document": {
+        "project": {
+          "name": "demo-service",
+          "version": "1.4.0",
+          "dependencies": [
+            "requests==2.32.3"
+          ],
+          "license": {
+            "text": "MIT"
+          }
+        },
+        "build-system": {
+          "requires": [
+            "setuptools==75.1.0"
+          ],
+          "build-backend": "setuptools.build_meta"
+        },
+        "tool": {
+          "uv": {}
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-3132"
+  ],
+  "remediation": "Use the HTTPS endpoint the registry publishes and keep the hostname in the configuration reviewable. Specifically: fix a `tool.uv.index` URL over cleartext.",
+  "limitation": "It matches a `tool.uv.index` URL over cleartext in the parsed pyproject.toml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0139",
+  "title": "pip configuration points at a cleartext index",
+  "description": "pip.conf declares a `pip.conf` index URL that uses cleartext http. Every artifact and hash comparison crosses the network unencrypted, so a substitution is invisible.",
+  "severity": "HIGH",
+  "cwe": "CWE-319",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "pypi"
+  ],
+  "artifact": "pip.conf",
+  "parser": "ini",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "config.global.index-url",
+    "valuePattern": "^http://"
+  },
+  "tests": [
+    {
+      "file": "pip.conf",
+      "document": {
+        "config": {
+          "global": {
+            "index-url": "http://pypi.acme.example/simple"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "pip.conf",
+      "document": {
+        "config": {
+          "global": {
+            "index-url": "http://10.24.8.9:8081/simple"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "pip.conf",
+      "document": {
+        "config": {
+          "global": {
+            "index-url": "https://pypi.org/simple"
+          }
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "pip.conf",
+      "document": {
+        "config": {
+          "global": {
+            "index-url": "https://pypi.acme.example/simple"
+          }
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2276"
+  ],
+  "remediation": "Point `index-url` at an https endpoint.",
+  "limitation": "It matches a `pip.conf` index URL that uses cleartext http in the parsed pip.conf; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

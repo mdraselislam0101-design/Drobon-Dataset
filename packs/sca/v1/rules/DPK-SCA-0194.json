@@ -1,0 +1,84 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0194",
+  "title": "Cargo lockfile entry without a checksum",
+  "description": "Cargo.lock declares a locked crate that records no checksum. Cargo cannot verify the downloaded crate against the lockfile, so a mirror can serve different bytes for the same version.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-494",
+  "category": "lockfile-integrity",
+  "ecosystems": [
+    "cargo"
+  ],
+  "artifact": "Cargo.lock",
+  "parser": "toml",
+  "check": {
+    "type": "sca-entry-missing-field",
+    "path": "packages",
+    "field": "checksum"
+  },
+  "tests": [
+    {
+      "file": "Cargo.lock",
+      "document": {
+        "version": 4,
+        "packages": [
+          {
+            "name": "serde",
+            "version": "1.0.210"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "Cargo.lock",
+      "document": {
+        "version": 4,
+        "packages": [
+          {
+            "name": "tokio",
+            "version": "1.40.0"
+          },
+          {
+            "name": "demo-service",
+            "version": "0.1.0"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "Cargo.lock",
+      "document": {
+        "version": 4,
+        "packages": [
+          {
+            "name": "serde",
+            "version": "1.0.210",
+            "checksum": "aaaa"
+          }
+        ]
+      },
+      "match": false
+    },
+    {
+      "file": "Cargo.lock",
+      "document": {
+        "version": 4,
+        "packages": [
+          {
+            "name": "tokio",
+            "version": "1.40.0",
+            "checksum": "bbbb"
+          }
+        ]
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2331"
+  ],
+  "remediation": "Regenerate the lockfile so every registry crate carries a checksum.",
+  "limitation": "It matches a locked crate that records no checksum in the parsed Cargo.lock; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

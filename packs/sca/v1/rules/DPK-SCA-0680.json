@@ -1,0 +1,88 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0680",
+  "title": "Restore writes packages into a shared machine location",
+  "description": "nuget.config declares a `globalPackagesFolder` outside the workspace. A dependency resolved from a local path or a mutable branch is not the published artifact the rest of the project audits. This rule reads a `globalPackagesFolder` outside the workspace.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1104",
+  "category": "local-source",
+  "ecosystems": [
+    "nuget"
+  ],
+  "artifact": "nuget.config",
+  "parser": "xml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "config.globalPackagesFolder",
+    "valuePattern": "^(?:/|~|[A-Za-z]:)"
+  },
+  "tests": [
+    {
+      "file": "nuget.config",
+      "document": {
+        "sources": [
+          {
+            "key": "nuget.org",
+            "value": "https://api.nuget.org/v3/index.json"
+          }
+        ],
+        "config": {
+          "globalPackagesFolder": "/var/cache/nuget/packages"
+        },
+        "settings": {}
+      },
+      "match": true
+    },
+    {
+      "file": "nuget.config",
+      "document": {
+        "sources": [
+          {
+            "key": "nuget.org",
+            "value": "https://api.nuget.org/v3/index.json"
+          }
+        ],
+        "config": {
+          "globalPackagesFolder": "C:\\nuget\\packages"
+        },
+        "settings": {}
+      },
+      "match": true
+    },
+    {
+      "file": "nuget.config",
+      "document": {
+        "sources": [
+          {
+            "key": "nuget.org",
+            "value": "https://api.nuget.org/v3/index.json"
+          }
+        ],
+        "config": {
+          "globalPackagesFolder": ".packages"
+        },
+        "settings": {}
+      },
+      "match": false
+    },
+    {
+      "file": "nuget.config",
+      "document": {
+        "sources": [
+          {
+            "key": "nuget.org",
+            "value": "https://api.nuget.org/v3/index.json"
+          }
+        ],
+        "config": {},
+        "settings": {}
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2817"
+  ],
+  "remediation": "Depend on a published, versioned artifact, and keep local paths or branch references out of the committed manifest. Specifically: fix a `globalPackagesFolder` outside the workspace.",
+  "limitation": "It matches a `globalPackagesFolder` outside the workspace in the parsed nuget.config; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

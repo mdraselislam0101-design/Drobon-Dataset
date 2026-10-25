@@ -1,0 +1,82 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0149",
+  "title": "Go dependency carrying the +incompatible marker",
+  "description": "go.mod declares a `+incompatible` version, which declares a major version without a matching module path. The module path no longer identifies the major line, so two incompatible versions can be resolved under one path.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1104",
+  "category": "dependency-hygiene",
+  "ecosystems": [
+    "go"
+  ],
+  "artifact": "go.mod",
+  "parser": "ini",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "require[].version",
+    "valuePattern": "\\+incompatible$"
+  },
+  "tests": [
+    {
+      "file": "go.mod",
+      "document": {
+        "module": "example.com/demo-service",
+        "go": "1.22",
+        "require": [
+          {
+            "module": "github.com/legacy/lib",
+            "version": "v2.1.0+incompatible"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "go.mod",
+      "document": {
+        "module": "example.com/demo-service",
+        "go": "1.22",
+        "require": [
+          {
+            "module": "github.com/legacy/core",
+            "version": "v3.0.1+incompatible"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "go.mod",
+      "document": {
+        "module": "example.com/demo-service",
+        "go": "1.22",
+        "require": [
+          {
+            "module": "github.com/legacy/lib",
+            "version": "v2.1.0"
+          }
+        ]
+      },
+      "match": false
+    },
+    {
+      "file": "go.mod",
+      "document": {
+        "module": "example.com/demo-service",
+        "go": "1.22",
+        "require": [
+          {
+            "module": "github.com/legacy/lib/v2",
+            "version": "v2.1.0"
+          }
+        ]
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2286"
+  ],
+  "remediation": "Depend on the module path that carries the major suffix, or vendor the dependency.",
+  "limitation": "It matches a `+incompatible` version, which declares a major version without a matching module path in the parsed go.mod; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

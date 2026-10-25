@@ -1,0 +1,105 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0788",
+  "title": "Build flags that trade safety for speed",
+  "description": ".cargo/config.toml declares a rustflag that changes code generation for the whole workspace. A verification or locking control is switched off, so the integrity guarantees the ecosystem offers are not applied here. This rule reads a rustflag that changes code generation for the whole workspace.",
+  "severity": "LOW",
+  "cwe": "CWE-1104",
+  "category": "policy-metadata",
+  "ecosystems": [
+    "cargo"
+  ],
+  "artifact": ".cargo/config.toml",
+  "parser": "toml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "build.rustflags[]",
+    "valuePattern": "^(?:-C\\s)?(?:panic=abort|codegen-units=[0-9]+)$"
+  },
+  "tests": [
+    {
+      "file": ".cargo/config.toml",
+      "document": {
+        "source": {
+          "crates-io": {
+            "replace-with": "acme"
+          }
+        },
+        "registries": {
+          "acme": {
+            "index": "https://registry.acme.example/index"
+          }
+        },
+        "build": {
+          "rustflags": [
+            "codegen-units=16"
+          ]
+        }
+      },
+      "match": true
+    },
+    {
+      "file": ".cargo/config.toml",
+      "document": {
+        "source": {
+          "crates-io": {
+            "replace-with": "acme"
+          }
+        },
+        "registries": {
+          "acme": {
+            "index": "https://registry.acme.example/index"
+          }
+        },
+        "build": {
+          "rustflags": [
+            "-C",
+            "panic=abort"
+          ]
+        }
+      },
+      "match": true
+    },
+    {
+      "file": ".cargo/config.toml",
+      "document": {
+        "source": {
+          "crates-io": {
+            "replace-with": "acme"
+          }
+        },
+        "registries": {
+          "acme": {
+            "index": "https://registry.acme.example/index"
+          }
+        },
+        "build": {
+          "rustflags": []
+        }
+      },
+      "match": false
+    },
+    {
+      "file": ".cargo/config.toml",
+      "document": {
+        "source": {
+          "crates-io": {
+            "replace-with": "acme"
+          }
+        },
+        "registries": {
+          "acme": {
+            "index": "https://registry.acme.example/index"
+          }
+        },
+        "build": {}
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2925"
+  ],
+  "remediation": "Turn the control back on and fix what it reported instead of disabling the check. Specifically: fix a rustflag that changes code generation for the whole workspace.",
+  "limitation": "It matches a rustflag that changes code generation for the whole workspace in the parsed .cargo/config.toml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

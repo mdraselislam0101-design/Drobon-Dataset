@@ -1,0 +1,73 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0698",
+  "title": "Package repository credential stored in a committed file",
+  "description": "auth.json declares a literal repository password in `auth.json`. A secret committed in this file is readable by everyone with repository access and lives on in history after removal. This rule reads a literal repository password in `auth.json`.",
+  "severity": "HIGH",
+  "cwe": "CWE-798",
+  "category": "credential-in-config",
+  "ecosystems": [
+    "composer"
+  ],
+  "artifact": "auth.json",
+  "parser": "json",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "http-basic.*.password",
+    "valuePattern": "^(?!\\$\\{)[A-Za-z0-9!@#$%^&*._-]{8,40}$"
+  },
+  "tests": [
+    {
+      "file": "auth.json",
+      "document": {
+        "http-basic": {
+          "repo.acme.example": {
+            "username": "ci-bot",
+            "password": "EXAMPLESECRETVALUE03"
+          }
+        },
+        "github-oauth": {}
+      },
+      "match": true
+    },
+    {
+      "file": "auth.json",
+      "document": {
+        "http-basic": {
+          "nexus.acme.example": {
+            "username": "deploy",
+            "password": "EXAMPLESECRETVALUE04"
+          }
+        },
+        "github-oauth": {}
+      },
+      "match": true
+    },
+    {
+      "file": "auth.json",
+      "document": {
+        "http-basic": {
+          "repo.acme.example": {
+            "username": "ci-bot",
+            "password": "${COMPOSER_AUTH_PASSWORD}"
+          }
+        },
+        "github-oauth": {}
+      },
+      "match": false
+    },
+    {
+      "file": "auth.json",
+      "document": {
+        "http-basic": {},
+        "github-oauth": {}
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2835"
+  ],
+  "remediation": "Remove the literal, rotate the credential and inject it from the CI secret store at run time. Specifically: fix a literal repository password in `auth.json`.",
+  "limitation": "It matches a literal repository password in `auth.json` in the parsed auth.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

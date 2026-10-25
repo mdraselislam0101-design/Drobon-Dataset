@@ -1,0 +1,90 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0176",
+  "title": "Gradle repository password written into the build script",
+  "description": "build.gradle declares a repository credential written directly into the checked-in build script. Everyone who can read the build script can publish or pull as that account, and the value also lands in build logs and caches.",
+  "severity": "HIGH",
+  "cwe": "CWE-798",
+  "category": "credential-in-config",
+  "ecosystems": [
+    "gradle"
+  ],
+  "artifact": "build.gradle",
+  "parser": "gradle",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "repositories[].credentials.password",
+    "valuePattern": "^[A-Za-z0-9!@#$%^&*._-]{8,40}$"
+  },
+  "tests": [
+    {
+      "file": "build.gradle",
+      "document": {
+        "repositories": [
+          {
+            "name": "acme",
+            "url": "https://repo.acme.example/maven2",
+            "credentials": {
+              "username": "ci",
+              "password": "EXAMPLESECRETPASSWORD01"
+            }
+          }
+        ],
+        "dependencies": []
+      },
+      "match": true
+    },
+    {
+      "file": "build.gradle",
+      "document": {
+        "repositories": [
+          {
+            "name": "mirror",
+            "url": "https://mirror.acme.example/maven2",
+            "credentials": {
+              "username": "ci",
+              "password": "EXAMPLESECONDPASSWORD1234"
+            }
+          }
+        ],
+        "dependencies": []
+      },
+      "match": true
+    },
+    {
+      "file": "build.gradle",
+      "document": {
+        "repositories": [
+          {
+            "name": "acme",
+            "url": "https://repo.acme.example/maven2",
+            "credentials": {
+              "username": "ci",
+              "password": "${ACME_REPO_PASSWORD}"
+            }
+          }
+        ],
+        "dependencies": []
+      },
+      "match": false
+    },
+    {
+      "file": "build.gradle",
+      "document": {
+        "repositories": [
+          {
+            "name": "mavenCentral",
+            "url": "https://repo.maven.apache.org/maven2"
+          }
+        ],
+        "dependencies": []
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2313"
+  ],
+  "remediation": "Read the credential from Gradle properties or the environment, and rotate it.",
+  "limitation": "It matches a repository credential written directly into the checked-in build script in the parsed build.gradle; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

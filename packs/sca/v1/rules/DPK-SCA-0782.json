@@ -1,0 +1,77 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0782",
+  "title": "vcpkg overlay port directory",
+  "description": "vcpkg-configuration.json declares an `overlay-ports` entry that replaces registry ports with local files. A dependency resolved from a local path or a mutable branch is not the published artifact the rest of the project audits. This rule reads an `overlay-ports` entry that replaces registry ports with local files.",
+  "severity": "HIGH",
+  "cwe": "CWE-1104",
+  "category": "local-source",
+  "ecosystems": [
+    "vcpkg"
+  ],
+  "artifact": "vcpkg-configuration.json",
+  "parser": "json",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "overlay-ports[]",
+    "valuePattern": "^.+$"
+  },
+  "tests": [
+    {
+      "file": "vcpkg-configuration.json",
+      "document": {
+        "default-registry": {
+          "kind": "git",
+          "repository": "https://github.com/microsoft/vcpkg",
+          "baseline": "9f2c3d4e"
+        },
+        "overlay-ports": [
+          "./ports/fmt"
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "vcpkg-configuration.json",
+      "document": {
+        "default-registry": {
+          "kind": "git",
+          "repository": "https://github.com/microsoft/vcpkg",
+          "baseline": "9f2c3d4e"
+        },
+        "overlay-ports": [
+          "/opt/vendor/ports"
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "vcpkg-configuration.json",
+      "document": {
+        "default-registry": {
+          "kind": "git",
+          "repository": "https://github.com/microsoft/vcpkg",
+          "baseline": "9f2c3d4e"
+        },
+        "overlay-ports": []
+      },
+      "match": false
+    },
+    {
+      "file": "vcpkg-configuration.json",
+      "document": {
+        "default-registry": {
+          "kind": "git",
+          "repository": "https://github.com/microsoft/vcpkg",
+          "baseline": "9f2c3d4e"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2919"
+  ],
+  "remediation": "Depend on a published, versioned artifact, and keep local paths or branch references out of the committed manifest. Specifically: fix an `overlay-ports` entry that replaces registry ports with local files.",
+  "limitation": "It matches an `overlay-ports` entry that replaces registry ports with local files in the parsed vcpkg-configuration.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

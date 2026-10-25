@@ -1,0 +1,90 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0201",
+  "title": "Composer lockfile downloads a distribution over cleartext",
+  "description": "composer.lock declares a `dist.url` that uses cleartext http. The archive crosses the network unencrypted, so it can be replaced before Composer verifies anything.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-319",
+  "category": "lockfile-integrity",
+  "ecosystems": [
+    "composer"
+  ],
+  "artifact": "composer.lock",
+  "parser": "json",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "packages[].dist.url",
+    "valuePattern": "^http://"
+  },
+  "tests": [
+    {
+      "file": "composer.lock",
+      "document": {
+        "packages": [
+          {
+            "name": "monolog/monolog",
+            "version": "3.7.1",
+            "dist": {
+              "type": "zip",
+              "url": "http://packagist.acme.example/monolog.zip"
+            }
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "composer.lock",
+      "document": {
+        "packages": [
+          {
+            "name": "guzzlehttp/guzzle",
+            "version": "7.9.2",
+            "dist": {
+              "type": "zip",
+              "url": "http://10.24.8.9/guzzle.zip"
+            }
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "composer.lock",
+      "document": {
+        "packages": [
+          {
+            "name": "monolog/monolog",
+            "version": "3.7.1",
+            "dist": {
+              "type": "zip",
+              "url": "https://api.github.com/repos/Seldaek/monolog/zipball/9f2c4a1"
+            }
+          }
+        ]
+      },
+      "match": false
+    },
+    {
+      "file": "composer.lock",
+      "document": {
+        "packages": [
+          {
+            "name": "guzzlehttp/guzzle",
+            "version": "7.9.2",
+            "dist": {
+              "type": "zip",
+              "url": "https://api.github.com/repos/guzzle/guzzle/zipball/0a1b2c3"
+            }
+          }
+        ]
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2338"
+  ],
+  "remediation": "Re-lock so distributions resolve over https.",
+  "limitation": "It matches a `dist.url` that uses cleartext http in the parsed composer.lock; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

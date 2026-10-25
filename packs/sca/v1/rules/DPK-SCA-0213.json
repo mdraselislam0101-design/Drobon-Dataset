@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0213",
+  "title": "Composer lockfile entry without a distribution reference",
+  "description": "composer.lock declares a locked package whose distribution records no commit reference. Nothing pins the archive to a specific commit, so the same version string can serve different contents on different days.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-494",
+  "category": "lockfile-integrity",
+  "ecosystems": [
+    "composer"
+  ],
+  "artifact": "composer.lock",
+  "parser": "json",
+  "check": {
+    "type": "sca-entry-missing-field",
+    "path": "packages[].dist",
+    "field": "reference"
+  },
+  "tests": [
+    {
+      "file": "composer.lock",
+      "document": {
+        "packages": [
+          {
+            "name": "monolog/monolog",
+            "version": "3.7.1",
+            "dist": {
+              "url": "https://packagist.acme.example/monolog.zip"
+            }
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "composer.lock",
+      "document": {
+        "packages": [
+          {
+            "name": "guzzlehttp/guzzle",
+            "version": "7.9.2",
+            "dist": {
+              "url": "https://packagist.acme.example/guzzle.zip"
+            }
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "composer.lock",
+      "document": {
+        "packages": [
+          {
+            "name": "monolog/monolog",
+            "version": "3.7.1",
+            "dist": {
+              "reference": "9f2c4a1b7c3d0a1b2c3d4e5f60718293"
+            }
+          }
+        ]
+      },
+      "match": false
+    },
+    {
+      "file": "composer.lock",
+      "document": {
+        "packages": [
+          {
+            "name": "guzzlehttp/guzzle",
+            "version": "7.9.2",
+            "dist": {
+              "reference": "0a1b2c3d4e5f60718293a4b5c6d7e8f9"
+            }
+          }
+        ]
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2350"
+  ],
+  "remediation": "Re-lock so every package records its distribution reference.",
+  "limitation": "It matches a locked package whose distribution records no commit reference in the parsed composer.lock; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

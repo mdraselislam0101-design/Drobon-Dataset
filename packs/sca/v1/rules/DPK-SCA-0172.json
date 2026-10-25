@@ -1,0 +1,98 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0172",
+  "title": "Gradle dependency declared with a dynamic version",
+  "description": "build.gradle declares a dependency notation ending in `N.+`, which accepts every later release of that major. The build resolves a version that does not appear anywhere in the repository, so review sees one version and the build uses another.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1104",
+  "category": "dependency-hygiene",
+  "ecosystems": [
+    "gradle"
+  ],
+  "artifact": "build.gradle",
+  "parser": "gradle",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "dependencies[].notation",
+    "valuePattern": ":\\d{1,3}\\.\\+$"
+  },
+  "tests": [
+    {
+      "file": "build.gradle",
+      "document": {
+        "repositories": [
+          {
+            "name": "mavenCentral",
+            "url": "https://repo.maven.apache.org/maven2"
+          }
+        ],
+        "dependencies": [
+          {
+            "configuration": "implementation",
+            "notation": "com.acme:internal-core:1.+"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "build.gradle",
+      "document": {
+        "repositories": [
+          {
+            "name": "mavenCentral",
+            "url": "https://repo.maven.apache.org/maven2"
+          }
+        ],
+        "dependencies": [
+          {
+            "configuration": "runtimeOnly",
+            "notation": "org.example:lib:2.+"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "build.gradle",
+      "document": {
+        "repositories": [
+          {
+            "name": "mavenCentral",
+            "url": "https://repo.maven.apache.org/maven2"
+          }
+        ],
+        "dependencies": [
+          {
+            "configuration": "implementation",
+            "notation": "com.acme:internal-core:1.4.2"
+          }
+        ]
+      },
+      "match": false
+    },
+    {
+      "file": "build.gradle",
+      "document": {
+        "repositories": [
+          {
+            "name": "mavenCentral",
+            "url": "https://repo.maven.apache.org/maven2"
+          }
+        ],
+        "dependencies": [
+          {
+            "configuration": "runtimeOnly",
+            "notation": "org.example:lib:2.0.1"
+          }
+        ]
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2309"
+  ],
+  "remediation": "Pin the exact version, or use a version catalog with resolved entries.",
+  "limitation": "It matches a dependency notation ending in `N.+`, which accepts every later release of that major in the parsed build.gradle; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

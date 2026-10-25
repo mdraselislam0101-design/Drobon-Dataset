@@ -1,0 +1,67 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0087",
+  "title": "npm client prefers cached metadata over the registry",
+  "description": ".npmrc declares a client setting that reuses cached package metadata instead of asking the registry. Revoked or unpublished versions keep resolving from the cache, so a change made on the registry never reaches the build.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1104",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "npm"
+  ],
+  "artifact": ".npmrc",
+  "parser": "ini",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "config.prefer-offline",
+    "valuePattern": "^true$"
+  },
+  "tests": [
+    {
+      "file": ".npmrc",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "prefer-offline": "true"
+        }
+      },
+      "match": true
+    },
+    {
+      "file": ".npmrc",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "prefer-offline": "true",
+          "registry": "https://npm.acme.example/"
+        }
+      },
+      "match": true
+    },
+    {
+      "file": ".npmrc",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "prefer-offline": "false"
+        }
+      },
+      "match": false
+    },
+    {
+      "file": ".npmrc",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "registry": "https://registry.npmjs.org/"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2224"
+  ],
+  "remediation": "Leave `prefer-offline` off for release builds and use a controlled cache with an integrity policy.",
+  "limitation": "It matches a client setting that reuses cached package metadata instead of asking the registry in the parsed .npmrc; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

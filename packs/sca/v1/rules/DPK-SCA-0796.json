@@ -1,0 +1,66 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0796",
+  "title": "Yarn registry configured over cleartext",
+  "description": ".yarnrc.yml declares an `npmRegistryServer` URL over cleartext. An artifact fetched over plain HTTP can be replaced in transit, so the bytes that install are not bound to what the author published. This rule reads an `npmRegistryServer` URL over cleartext.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-319",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "npm"
+  ],
+  "artifact": ".yarnrc.yml",
+  "parser": "yaml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "npmRegistryServer",
+    "valuePattern": "^http://"
+  },
+  "tests": [
+    {
+      "file": ".yarnrc.yml",
+      "document": {
+        "npmRegistryServer": "http://npm.acme.example",
+        "enableStrictSsl": "true",
+        "enableImmutableInstalls": "true",
+        "nodeLinker": "node-modules"
+      },
+      "match": true
+    },
+    {
+      "file": ".yarnrc.yml",
+      "document": {
+        "npmRegistryServer": "http://10.24.8.9",
+        "enableStrictSsl": "true",
+        "enableImmutableInstalls": "true",
+        "nodeLinker": "node-modules"
+      },
+      "match": true
+    },
+    {
+      "file": ".yarnrc.yml",
+      "document": {
+        "npmRegistryServer": "https://registry.yarnpkg.com",
+        "enableStrictSsl": "true",
+        "enableImmutableInstalls": "true",
+        "nodeLinker": "node-modules"
+      },
+      "match": false
+    },
+    {
+      "file": ".yarnrc.yml",
+      "document": {
+        "npmRegistryServer": "https://npm.acme.example",
+        "enableStrictSsl": "true",
+        "enableImmutableInstalls": "true",
+        "nodeLinker": "node-modules"
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2933"
+  ],
+  "remediation": "Use the HTTPS endpoint the registry publishes and keep the hostname in the configuration reviewable. Specifically: fix an `npmRegistryServer` URL over cleartext.",
+  "limitation": "It matches an `npmRegistryServer` URL over cleartext in the parsed .yarnrc.yml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

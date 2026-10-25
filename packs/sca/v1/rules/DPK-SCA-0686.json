@@ -1,0 +1,77 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0686",
+  "title": "Development tooling is treated as a runtime dependency",
+  "description": "packages.config declares a development-only package declared as a shipped dependency. A name or scope that resolves outside the project's intended registry is fetched from a source nobody reviewed, so a publish there becomes an install here. This rule reads a development-only package declared as a shipped dependency.",
+  "severity": "LOW",
+  "cwe": "CWE-829",
+  "category": "dependency-confusion",
+  "ecosystems": [
+    "nuget"
+  ],
+  "artifact": "packages.config",
+  "parser": "xml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "packages[].developmentDependency",
+    "valuePattern": "^true$"
+  },
+  "tests": [
+    {
+      "file": "packages.config",
+      "document": {
+        "packages": [
+          {
+            "id": "Microsoft.NET.Test.Sdk",
+            "version": "17.11.1",
+            "developmentDependency": "true"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "packages.config",
+      "document": {
+        "packages": [
+          {
+            "id": "xunit",
+            "version": "2.9.0",
+            "developmentDependency": "true"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "packages.config",
+      "document": {
+        "packages": [
+          {
+            "id": "Newtonsoft.Json",
+            "version": "13.0.3",
+            "developmentDependency": "false"
+          }
+        ]
+      },
+      "match": false
+    },
+    {
+      "file": "packages.config",
+      "document": {
+        "packages": [
+          {
+            "id": "Dapper",
+            "version": "2.1.35"
+          }
+        ]
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2823"
+  ],
+  "remediation": "Point the declaration or the registry configuration at the namespace the project controls, and remove the lookup path that resolves elsewhere. Specifically: fix a development-only package declared as a shipped dependency.",
+  "limitation": "It matches a development-only package declared as a shipped dependency in the parsed packages.config; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

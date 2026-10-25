@@ -175,12 +175,12 @@ assert(claimProblems.length === 0,
 
 // --- 7. artifact sanity -----------------------------------------------------
 const ARTIFACTS_BY_ECOSYSTEM = {
-  npm: ['package.json', 'package-lock.json', 'yarn.lock', 'pnpm-lock.yaml', '.npmrc', '.yarnrc.yml'],
-  pypi: ['requirements.txt', 'pyproject.toml', 'poetry.lock', 'Pipfile', 'Pipfile.lock', 'setup.cfg', 'pip.conf', '.pypirc'],
-  go: ['go.mod', 'go.sum', 'Gopkg.toml', 'vendor/modules.txt'],
+  npm: ['package.json', 'package-lock.json', 'yarn.lock', 'pnpm-lock.yaml', '.npmrc', '.yarnrc', '.yarnrc.yml', 'pnpm-workspace.yaml'],
+  pypi: ['requirements.txt', 'pyproject.toml', 'poetry.lock', 'Pipfile', 'Pipfile.lock', 'setup.cfg', 'pip.conf', '.pypirc', 'tox.ini'],
+  go: ['go.mod', 'go.sum', 'go.work', 'Gopkg.toml', 'vendor/modules.txt'],
   maven: ['pom.xml', 'settings.xml'],
-  gradle: ['build.gradle', 'build.gradle.kts', 'gradle.properties', 'verification-metadata.xml'],
-  nuget: ['packages.config', 'packages.lock.json', 'nuget.config', 'Directory.Packages.props'],
+  gradle: ['build.gradle', 'build.gradle.kts', 'settings.gradle', 'gradle.properties', 'verification-metadata.xml'],
+  nuget: ['packages.config', 'packages.lock.json', 'nuget.config', 'Directory.Packages.props', 'Directory.Build.props'],
   cargo: ['Cargo.toml', 'Cargo.lock', '.cargo/config.toml'],
   composer: ['composer.json', 'composer.lock', 'auth.json'],
   rubygems: ['Gemfile', 'Gemfile.lock', '.gemrc'],
@@ -188,10 +188,10 @@ const ARTIFACTS_BY_ECOSYSTEM = {
   cocoapods: ['Podfile', 'Podfile.lock'],
   swift: ['Package.swift', 'Package.resolved'],
   pub: ['pubspec.yaml', 'pubspec.lock'],
-  cran: ['DESCRIPTION', 'renv.lock'],
-  conda: ['environment.yml', 'conda-meta/history'],
+  cran: ['DESCRIPTION', 'renv.lock', '.Rprofile'],
+  conda: ['environment.yml', 'conda-meta/history', '.condarc'],
   vcpkg: ['vcpkg.json', 'vcpkg-configuration.json'],
-  conan: ['conanfile.txt', 'conanfile.py', 'conan.lock'],
+  conan: ['conanfile.txt', 'conanfile.py', 'conan.lock', 'global.conf'],
 };
 const artifactProblems = [];
 for (const { rule } of rules) {

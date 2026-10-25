@@ -1,0 +1,81 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0731",
+  "title": "Requirement that pulls a non-runtime extra",
+  "description": "requirements.txt declares an extra that installs development or test dependencies at runtime. A name or scope that resolves outside the project's intended registry is fetched from a source nobody reviewed, so a publish there becomes an install here. This rule reads an extra that installs development or test dependencies at runtime.",
+  "severity": "LOW",
+  "cwe": "CWE-829",
+  "category": "dependency-confusion",
+  "ecosystems": [
+    "pypi"
+  ],
+  "artifact": "requirements.txt",
+  "parser": "requirements",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "requirements[].extras[]",
+    "valuePattern": "^(?:dev|test|security)$"
+  },
+  "tests": [
+    {
+      "file": "requirements.txt",
+      "document": {
+        "requirements": [
+          {
+            "name": "acme-sdk",
+            "specifier": "==4.2.0",
+            "extras": [
+              "dev"
+            ]
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "requirements.txt",
+      "document": {
+        "requirements": [
+          {
+            "name": "acme-core",
+            "specifier": "==1.4.2",
+            "extras": [
+              "test"
+            ]
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "requirements.txt",
+      "document": {
+        "requirements": [
+          {
+            "name": "acme-sdk",
+            "specifier": "==4.2.0",
+            "extras": []
+          }
+        ]
+      },
+      "match": false
+    },
+    {
+      "file": "requirements.txt",
+      "document": {
+        "requirements": [
+          {
+            "name": "requests",
+            "specifier": "==2.32.3"
+          }
+        ]
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2868"
+  ],
+  "remediation": "Point the declaration or the registry configuration at the namespace the project controls, and remove the lookup path that resolves elsewhere. Specifically: fix an extra that installs development or test dependencies at runtime.",
+  "limitation": "It matches an extra that installs development or test dependencies at runtime in the parsed requirements.txt; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

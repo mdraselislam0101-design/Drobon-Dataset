@@ -1,0 +1,99 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0145",
+  "title": "Poetry resolves every package against an extra supplemental index",
+  "description": "pyproject.toml declares a Poetry source marked `priority = \"supplemental\"`, which is searched for every package name. A package published to the supplemental index can win over the reviewed one for any name the project uses, which is the dependency-confusion path.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1104",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "pypi"
+  ],
+  "artifact": "pyproject.toml",
+  "parser": "toml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "tool.poetry.source[].priority",
+    "valuePattern": "^supplemental$"
+  },
+  "tests": [
+    {
+      "file": "pyproject.toml",
+      "document": {
+        "tool": {
+          "poetry": {
+            "source": [
+              {
+                "name": "acme",
+                "url": "https://pypi.acme.example/simple",
+                "priority": "supplemental"
+              }
+            ]
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "pyproject.toml",
+      "document": {
+        "tool": {
+          "poetry": {
+            "source": [
+              {
+                "name": "pypi",
+                "url": "https://pypi.org/simple",
+                "priority": "primary"
+              },
+              {
+                "name": "acme",
+                "url": "https://pypi.acme.example/simple",
+                "priority": "supplemental"
+              }
+            ]
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "pyproject.toml",
+      "document": {
+        "tool": {
+          "poetry": {
+            "source": [
+              {
+                "name": "pypi",
+                "url": "https://pypi.org/simple",
+                "priority": "primary"
+              }
+            ]
+          }
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "pyproject.toml",
+      "document": {
+        "tool": {
+          "poetry": {
+            "source": [
+              {
+                "name": "acme",
+                "url": "https://pypi.acme.example/simple",
+                "priority": "explicit"
+              }
+            ]
+          }
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2282"
+  ],
+  "remediation": "Mark internal sources `explicit` so they are only used when a dependency names them, or mirror the public index with a documented policy.",
+  "limitation": "It matches a Poetry source marked `priority = \"supplemental\"`, which is searched for every package name in the parsed pyproject.toml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

@@ -1,0 +1,76 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0182",
+  "title": "NuGet accepts packages without a valid signature",
+  "description": "nuget.config declares a `signatureValidationMode` of `accept`, which does not require a signed package. An unsigned or tampered package restores exactly like a signed one, so the signature chain never gates the build.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-347",
+  "category": "lockfile-integrity",
+  "ecosystems": [
+    "nuget"
+  ],
+  "artifact": "nuget.config",
+  "parser": "xml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "settings.signatureValidationMode",
+    "valuePattern": "^accept$"
+  },
+  "tests": [
+    {
+      "file": "nuget.config",
+      "document": {
+        "sources": [],
+        "settings": {
+          "signatureValidationMode": "accept"
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "nuget.config",
+      "document": {
+        "sources": [
+          {
+            "key": "acme",
+            "value": "https://nuget.acme.example/v3/index.json"
+          }
+        ],
+        "settings": {
+          "signatureValidationMode": "accept"
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "nuget.config",
+      "document": {
+        "sources": [],
+        "settings": {
+          "signatureValidationMode": "require"
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "nuget.config",
+      "document": {
+        "sources": [
+          {
+            "key": "nuget.org",
+            "value": "https://api.nuget.org/v3/index.json"
+          }
+        ],
+        "settings": {
+          "signatureValidationMode": "require"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2319"
+  ],
+  "remediation": "Set the mode to `require` and trust the signers the project reviewed.",
+  "limitation": "It matches a `signatureValidationMode` of `accept`, which does not require a signed package in the parsed nuget.config; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

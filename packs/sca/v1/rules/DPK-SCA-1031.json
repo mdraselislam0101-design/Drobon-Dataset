@@ -1,0 +1,89 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-1031",
+  "title": "Hex dependency overrides the resolved version",
+  "description": "mix.exs declares an `override: true` flag that pins a version across the tree. The declaration leaves version choice to a resolver run, so a release published after this review is taken without a new decision. This rule reads an `override: true` flag that pins a version across the tree.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1104",
+  "category": "dependency-hygiene",
+  "ecosystems": [
+    "hex"
+  ],
+  "artifact": "mix.exs",
+  "parser": "lockfile-text",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "deps[].override",
+    "valuePattern": "^true$"
+  },
+  "tests": [
+    {
+      "file": "mix.exs",
+      "document": {
+        "project": {
+          "app": "demo_service"
+        },
+        "deps": [
+          {
+            "name": "jason",
+            "requirement": "~> 1.4",
+            "override": true
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "mix.exs",
+      "document": {
+        "project": {
+          "app": "demo_service"
+        },
+        "deps": [
+          {
+            "name": "plug",
+            "requirement": "~> 1.16",
+            "override": "true"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "mix.exs",
+      "document": {
+        "project": {
+          "app": "demo_service"
+        },
+        "deps": [
+          {
+            "name": "phoenix",
+            "requirement": "~> 1.7"
+          }
+        ]
+      },
+      "match": false
+    },
+    {
+      "file": "mix.exs",
+      "document": {
+        "project": {
+          "app": "demo_service"
+        },
+        "deps": [
+          {
+            "name": "ecto",
+            "requirement": "~> 3.12",
+            "override": false
+          }
+        ]
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-3168"
+  ],
+  "remediation": "Pin the declaration to an exact version or to the narrowest range the project tests, and update it deliberately. Specifically: fix an `override: true` flag that pins a version across the tree.",
+  "limitation": "It matches an `override: true` flag that pins a version across the tree in the parsed mix.exs; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

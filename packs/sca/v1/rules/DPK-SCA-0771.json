@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0771",
+  "title": "Pod spec referenced over cleartext",
+  "description": "Podfile declares a `podspec` URL over cleartext. An artifact fetched over plain HTTP can be replaced in transit, so the bytes that install are not bound to what the author published. This rule reads a `podspec` URL over cleartext.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-319",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "cocoapods"
+  ],
+  "artifact": "Podfile",
+  "parser": "yaml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "pods[].podspec",
+    "valuePattern": "^http://"
+  },
+  "tests": [
+    {
+      "file": "Podfile",
+      "document": {
+        "sources": [
+          "https://cdn.cocoapods.org/"
+        ],
+        "pods": [
+          {
+            "name": "AcmeCore",
+            "podspec": "http://specs.acme.example/AcmeCore.podspec"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "Podfile",
+      "document": {
+        "sources": [
+          "https://cdn.cocoapods.org/"
+        ],
+        "pods": [
+          {
+            "name": "AcmeSDK",
+            "podspec": "http://10.24.8.9/AcmeSDK.podspec"
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "Podfile",
+      "document": {
+        "sources": [
+          "https://cdn.cocoapods.org/"
+        ],
+        "pods": [
+          {
+            "name": "AcmeCore",
+            "podspec": "https://specs.acme.example/AcmeCore.podspec"
+          }
+        ]
+      },
+      "match": false
+    },
+    {
+      "file": "Podfile",
+      "document": {
+        "sources": [
+          "https://cdn.cocoapods.org/"
+        ],
+        "pods": [
+          {
+            "name": "Alamofire",
+            "requirement": "~> 5.9"
+          }
+        ]
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2908"
+  ],
+  "remediation": "Use the HTTPS endpoint the registry publishes and keep the hostname in the configuration reviewable. Specifically: fix a `podspec` URL over cleartext.",
+  "limitation": "It matches a `podspec` URL over cleartext in the parsed Podfile; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0140",
+  "title": "pip configuration trusts a host without TLS verification",
+  "description": "pip.conf declares a `trusted-host` entry, for which certificate validation is skipped. The transport no longer proves which server answered, so the index identity rests on the network path only.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-295",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "pypi"
+  ],
+  "artifact": "pip.conf",
+  "parser": "ini",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "config.install.trusted-host",
+    "valuePattern": "^[a-z0-9.-]{3,80}$"
+  },
+  "tests": [
+    {
+      "file": "pip.conf",
+      "document": {
+        "config": {
+          "install": {
+            "trusted-host": "pypi.acme.example"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "pip.conf",
+      "document": {
+        "config": {
+          "install": {
+            "trusted-host": "mirror.acme.example"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "pip.conf",
+      "document": {
+        "config": {
+          "install": {}
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "pip.conf",
+      "document": {
+        "config": {
+          "global": {
+            "index-url": "https://pypi.org/simple"
+          }
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2277"
+  ],
+  "remediation": "Install the internal CA instead of trusting the host.",
+  "limitation": "It matches a `trusted-host` entry, for which certificate validation is skipped in the parsed pip.conf; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

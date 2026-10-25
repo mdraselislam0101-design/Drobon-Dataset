@@ -1,0 +1,85 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0144",
+  "title": "Optional dependency group with no version constraint",
+  "description": "pyproject.toml declares an entry in an optional-dependencies group that names only the package. Extras install on whoever's machine asks for them, so an unpinned group resolves a different tree in every environment.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1104",
+  "category": "dependency-hygiene",
+  "ecosystems": [
+    "pypi"
+  ],
+  "artifact": "pyproject.toml",
+  "parser": "toml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "project.optional-dependencies.*[]",
+    "valuePattern": "^[A-Za-z0-9._-]{1,80}$"
+  },
+  "tests": [
+    {
+      "file": "pyproject.toml",
+      "document": {
+        "project": {
+          "name": "demo-service",
+          "optional-dependencies": {
+            "dev": [
+              "pytest"
+            ]
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "pyproject.toml",
+      "document": {
+        "project": {
+          "name": "demo-service",
+          "optional-dependencies": {
+            "lint": [
+              "ruff"
+            ],
+            "dev": [
+              "pytest==8.3.2"
+            ]
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "pyproject.toml",
+      "document": {
+        "project": {
+          "name": "demo-service",
+          "optional-dependencies": {
+            "dev": [
+              "pytest==8.3.2"
+            ]
+          }
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "pyproject.toml",
+      "document": {
+        "project": {
+          "name": "demo-service",
+          "optional-dependencies": {
+            "lint": [
+              "ruff>=0.6,<0.7"
+            ]
+          }
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2281"
+  ],
+  "remediation": "Pin the group the same way as the runtime dependencies.",
+  "limitation": "It matches an entry in an optional-dependencies group that names only the package in the parsed pyproject.toml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

@@ -1,0 +1,118 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0700",
+  "title": "Composer runs the script after every dependency update",
+  "description": "composer.json declares a `post-update-cmd` script. A script that runs during install or build executes with the developer or CI identity, before any test or review has looked at the code. This rule reads a `post-update-cmd` script.",
+  "severity": "HIGH",
+  "cwe": "CWE-829",
+  "category": "build-hook",
+  "ecosystems": [
+    "composer"
+  ],
+  "artifact": "composer.json",
+  "parser": "json",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "scripts.post-update-cmd[]",
+    "valuePattern": "^.+$"
+  },
+  "tests": [
+    {
+      "file": "composer.json",
+      "document": {
+        "require": {
+          "monolog/monolog": "^3.7"
+        },
+        "license": [
+          "MIT"
+        ],
+        "config": {
+          "secure-http": true,
+          "platform": {
+            "php": "8.3.0"
+          }
+        },
+        "prefer-stable": true,
+        "scripts": {
+          "post-update-cmd": [
+            "php ./scripts/migrate.php"
+          ]
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "composer.json",
+      "document": {
+        "require": {
+          "monolog/monolog": "^3.7"
+        },
+        "license": [
+          "MIT"
+        ],
+        "config": {
+          "secure-http": true,
+          "platform": {
+            "php": "8.3.0"
+          }
+        },
+        "prefer-stable": true,
+        "scripts": {
+          "post-update-cmd": [
+            "@php artisan migrate"
+          ]
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "composer.json",
+      "document": {
+        "require": {
+          "monolog/monolog": "^3.7"
+        },
+        "license": [
+          "MIT"
+        ],
+        "config": {
+          "secure-http": true,
+          "platform": {
+            "php": "8.3.0"
+          }
+        },
+        "prefer-stable": true,
+        "scripts": {
+          "test": [
+            "phpunit"
+          ]
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "composer.json",
+      "document": {
+        "require": {
+          "monolog/monolog": "^3.7"
+        },
+        "license": [
+          "MIT"
+        ],
+        "config": {
+          "secure-http": true,
+          "platform": {
+            "php": "8.3.0"
+          }
+        },
+        "prefer-stable": true,
+        "scripts": {}
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2837"
+  ],
+  "remediation": "Move the step out of the install lifecycle into an explicit, reviewed command that the build runs on purpose. Specifically: fix a `post-update-cmd` script.",
+  "limitation": "It matches a `post-update-cmd` script in the parsed composer.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

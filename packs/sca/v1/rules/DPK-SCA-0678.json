@@ -1,0 +1,143 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0678",
+  "title": "Published dependency replaced by a local project at build time",
+  "description": "settings.gradle declares a dependency substitution that swaps a published module for a local project. A dependency resolved from a local path or a mutable branch is not the published artifact the rest of the project audits. This rule reads a dependency substitution that swaps a published module for a local project.",
+  "severity": "HIGH",
+  "cwe": "CWE-1104",
+  "category": "local-source",
+  "ecosystems": [
+    "gradle"
+  ],
+  "artifact": "settings.gradle",
+  "parser": "gradle",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "dependencySubstitution[].substitute.project.path",
+    "valuePattern": "^\\.{0,2}/"
+  },
+  "tests": [
+    {
+      "file": "settings.gradle",
+      "document": {
+        "pluginManagement": {
+          "repositories": [
+            {
+              "name": "gradlePluginPortal",
+              "url": "https://plugins.gradle.org/m2"
+            }
+          ]
+        },
+        "dependencyResolutionManagement": {
+          "repositories": [
+            {
+              "name": "central",
+              "url": "https://repo1.maven.org/maven2"
+            }
+          ]
+        },
+        "dependencySubstitution": [
+          {
+            "module": "com.acme:sdk",
+            "substitute": {
+              "project": {
+                "path": "../sdk"
+              }
+            }
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "settings.gradle",
+      "document": {
+        "pluginManagement": {
+          "repositories": [
+            {
+              "name": "gradlePluginPortal",
+              "url": "https://plugins.gradle.org/m2"
+            }
+          ]
+        },
+        "dependencyResolutionManagement": {
+          "repositories": [
+            {
+              "name": "central",
+              "url": "https://repo1.maven.org/maven2"
+            }
+          ]
+        },
+        "dependencySubstitution": [
+          {
+            "module": "com.acme:core",
+            "substitute": {
+              "project": {
+                "path": "./core"
+              }
+            }
+          }
+        ]
+      },
+      "match": true
+    },
+    {
+      "file": "settings.gradle",
+      "document": {
+        "pluginManagement": {
+          "repositories": [
+            {
+              "name": "gradlePluginPortal",
+              "url": "https://plugins.gradle.org/m2"
+            }
+          ]
+        },
+        "dependencyResolutionManagement": {
+          "repositories": [
+            {
+              "name": "central",
+              "url": "https://repo1.maven.org/maven2"
+            }
+          ]
+        },
+        "dependencySubstitution": []
+      },
+      "match": false
+    },
+    {
+      "file": "settings.gradle",
+      "document": {
+        "pluginManagement": {
+          "repositories": [
+            {
+              "name": "gradlePluginPortal",
+              "url": "https://plugins.gradle.org/m2"
+            }
+          ]
+        },
+        "dependencyResolutionManagement": {
+          "repositories": [
+            {
+              "name": "central",
+              "url": "https://repo1.maven.org/maven2"
+            }
+          ]
+        },
+        "dependencySubstitution": [
+          {
+            "module": "com.acme:sdk",
+            "substitute": {
+              "module": "com.acme:sdk"
+            }
+          }
+        ]
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2815"
+  ],
+  "remediation": "Depend on a published, versioned artifact, and keep local paths or branch references out of the committed manifest. Specifically: fix a dependency substitution that swaps a published module for a local project.",
+  "limitation": "It matches a dependency substitution that swaps a published module for a local project in the parsed settings.gradle; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

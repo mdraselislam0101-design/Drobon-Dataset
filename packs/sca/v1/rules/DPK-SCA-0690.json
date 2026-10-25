@@ -1,0 +1,125 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0690",
+  "title": "Published crate replaced by another source at build time",
+  "description": "Cargo.toml declares a `[patch.crates-io]` section that swaps a published crate. A dependency resolved from a local path or a mutable branch is not the published artifact the rest of the project audits. This rule reads a `[patch.crates-io]` section that swaps a published crate.",
+  "severity": "HIGH",
+  "cwe": "CWE-1104",
+  "category": "local-source",
+  "ecosystems": [
+    "cargo"
+  ],
+  "artifact": "Cargo.toml",
+  "parser": "toml",
+  "check": {
+    "type": "sca-key-matches",
+    "path": "patch",
+    "keyPattern": "^crates-io$"
+  },
+  "tests": [
+    {
+      "file": "Cargo.toml",
+      "document": {
+        "package": {
+          "name": "demo-service",
+          "version": "0.1.0",
+          "license": "MIT"
+        },
+        "dependencies": {
+          "serde": {
+            "version": "1.0.210"
+          }
+        },
+        "patch": {
+          "crates-io": {
+            "serde": {
+              "path": "../serde"
+            }
+          }
+        },
+        "workspace": {
+          "dependencies": {
+            "serde": "1.0.210"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "Cargo.toml",
+      "document": {
+        "package": {
+          "name": "demo-service",
+          "version": "0.1.0",
+          "license": "MIT"
+        },
+        "dependencies": {
+          "serde": {
+            "version": "1.0.210"
+          }
+        },
+        "patch": {
+          "crates-io": {
+            "tokio": {
+              "git": "https://github.com/acme/tokio"
+            }
+          }
+        },
+        "workspace": {
+          "dependencies": {
+            "serde": "1.0.210"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "Cargo.toml",
+      "document": {
+        "package": {
+          "name": "demo-service",
+          "version": "0.1.0",
+          "license": "MIT"
+        },
+        "dependencies": {
+          "serde": {
+            "version": "1.0.210"
+          }
+        },
+        "patch": {},
+        "workspace": {
+          "dependencies": {
+            "serde": "1.0.210"
+          }
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "Cargo.toml",
+      "document": {
+        "package": {
+          "name": "demo-service",
+          "version": "0.1.0",
+          "license": "MIT"
+        },
+        "dependencies": {
+          "serde": {
+            "version": "1.0.210"
+          }
+        },
+        "workspace": {
+          "dependencies": {
+            "serde": "1.0.210"
+          }
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2827"
+  ],
+  "remediation": "Depend on a published, versioned artifact, and keep local paths or branch references out of the committed manifest. Specifically: fix a `[patch.crates-io]` section that swaps a published crate.",
+  "limitation": "It matches a `[patch.crates-io]` section that swaps a published crate in the parsed Cargo.toml; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

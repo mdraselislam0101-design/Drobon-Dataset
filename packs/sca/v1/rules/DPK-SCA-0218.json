@@ -1,0 +1,74 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0218",
+  "title": "mix.lock records a weak hash algorithm",
+  "description": "mix.lock declares a lockfile hash that is not SHA-256. Mix compares whatever digest the file records, so a weaker algorithm lowers the cost of finding a second package with the same hash.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-328",
+  "category": "lockfile-integrity",
+  "ecosystems": [
+    "hex"
+  ],
+  "artifact": "mix.lock",
+  "parser": "lockfile-text",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "packages.*.hash",
+    "valuePattern": "^(?!sha256:)"
+  },
+  "tests": [
+    {
+      "file": "mix.lock",
+      "document": {
+        "packages": {
+          "phoenix": {
+            "version": "1.7.10",
+            "hash": "md5:aaaabbbb"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "mix.lock",
+      "document": {
+        "packages": {
+          "ecto": {
+            "version": "3.11.2",
+            "hash": "sha1:ccccdddd"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "mix.lock",
+      "document": {
+        "packages": {
+          "phoenix": {
+            "version": "1.7.10",
+            "hash": "sha256:aaaa"
+          }
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "mix.lock",
+      "document": {
+        "packages": {
+          "ecto": {
+            "version": "3.11.2",
+            "hash": "sha256:bbbb"
+          }
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2355"
+  ],
+  "remediation": "Re-lock with a current Mix release so the hash is SHA-256.",
+  "limitation": "It matches a lockfile hash that is not SHA-256 in the parsed mix.lock; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

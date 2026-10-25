@@ -1,0 +1,66 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0083",
+  "title": "npm client reaches the network through a cleartext proxy",
+  "description": ".npmrc declares a proxy URL that uses cleartext http. The proxy sees every request in the clear, including authenticated registry calls, so a hostile or shared proxy can read and rewrite traffic.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-319",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "npm"
+  ],
+  "artifact": ".npmrc",
+  "parser": "ini",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "config.proxy",
+    "valuePattern": "^http://"
+  },
+  "tests": [
+    {
+      "file": ".npmrc",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "proxy": "http://proxy.acme.example:3128/"
+        }
+      },
+      "match": true
+    },
+    {
+      "file": ".npmrc",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "proxy": "http://10.0.0.5:8080/"
+        }
+      },
+      "match": true
+    },
+    {
+      "file": ".npmrc",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "proxy": "https://proxy.acme.example:8443/"
+        }
+      },
+      "match": false
+    },
+    {
+      "file": ".npmrc",
+      "document": {
+        "name": "demo-service",
+        "config": {
+          "registry": "https://registry.npmjs.org/"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2220"
+  ],
+  "remediation": "Use an https proxy, or terminate TLS at a proxy that presents its own verified certificate.",
+  "limitation": "It matches a proxy URL that uses cleartext http in the parsed .npmrc; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

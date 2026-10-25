@@ -1,0 +1,114 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0689",
+  "title": "Package source declared over cleartext",
+  "description": "nuget.config declares a `<packageSources><add>` entry over cleartext. An artifact fetched over plain HTTP can be replaced in transit, so the bytes that install are not bound to what the author published. This rule reads a `<packageSources><add>` entry over cleartext.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-319",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "nuget"
+  ],
+  "artifact": "nuget.config",
+  "parser": "xml",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "packageSources.add[].value",
+    "valuePattern": "^http://"
+  },
+  "tests": [
+    {
+      "file": "nuget.config",
+      "document": {
+        "sources": [
+          {
+            "key": "nuget.org",
+            "value": "https://api.nuget.org/v3/index.json"
+          }
+        ],
+        "config": {},
+        "settings": {},
+        "packageSources": {
+          "add": [
+            {
+              "key": "acme",
+              "value": "http://nuget.acme.example/v3/index.json"
+            }
+          ]
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "nuget.config",
+      "document": {
+        "sources": [
+          {
+            "key": "nuget.org",
+            "value": "https://api.nuget.org/v3/index.json"
+          }
+        ],
+        "config": {},
+        "settings": {},
+        "packageSources": {
+          "add": [
+            {
+              "key": "internal",
+              "value": "http://10.24.8.9/v3/index.json"
+            }
+          ]
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "nuget.config",
+      "document": {
+        "sources": [
+          {
+            "key": "nuget.org",
+            "value": "https://api.nuget.org/v3/index.json"
+          }
+        ],
+        "config": {},
+        "settings": {},
+        "packageSources": {
+          "add": [
+            {
+              "key": "nuget.org",
+              "value": "https://api.nuget.org/v3/index.json"
+            }
+          ]
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "nuget.config",
+      "document": {
+        "sources": [
+          {
+            "key": "nuget.org",
+            "value": "https://api.nuget.org/v3/index.json"
+          }
+        ],
+        "config": {},
+        "settings": {},
+        "packageSources": {
+          "add": [
+            {
+              "key": "acme",
+              "value": "https://nuget.acme.example/v3/index.json"
+            }
+          ]
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2826"
+  ],
+  "remediation": "Use the HTTPS endpoint the registry publishes and keep the hostname in the configuration reviewable. Specifically: fix a `<packageSources><add>` entry over cleartext.",
+  "limitation": "It matches a `<packageSources><add>` entry over cleartext in the parsed nuget.config; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

@@ -1,0 +1,71 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0141",
+  "title": "pip certificate path configured but empty",
+  "description": "pip.conf declares an empty `cert` setting. The client falls back to whatever trust store the runtime carries, so the accepted index certificates are unspecified.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-295",
+  "category": "registry-configuration",
+  "ecosystems": [
+    "pypi"
+  ],
+  "artifact": "pip.conf",
+  "parser": "ini",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "config.global.cert",
+    "valuePattern": "^$"
+  },
+  "tests": [
+    {
+      "file": "pip.conf",
+      "document": {
+        "config": {
+          "global": {
+            "cert": ""
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "pip.conf",
+      "document": {
+        "config": {
+          "global": {
+            "cert": "",
+            "index-url": "https://pypi.acme.example/simple"
+          }
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "pip.conf",
+      "document": {
+        "config": {
+          "global": {
+            "cert": "/etc/ssl/certs/acme-root.pem"
+          }
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "pip.conf",
+      "document": {
+        "config": {
+          "global": {
+            "index-url": "https://pypi.org/simple"
+          }
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2278"
+  ],
+  "remediation": "Point `cert` at the real bundle, or remove the setting deliberately.",
+  "limitation": "It matches an empty `cert` setting in the parsed pip.conf; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}
