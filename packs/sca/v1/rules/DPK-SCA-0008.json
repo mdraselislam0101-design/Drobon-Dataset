@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0008",
+  "title": "Dependency installed over SSH from a git remote",
+  "description": "package.json declares a dependency installed from a git remote over SSH. The install trusts whatever host key and account the build machine has, so the code that runs is decided outside the registry and outside the lockfile hash.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1104",
+  "category": "dependency-hygiene",
+  "ecosystems": [
+    "npm"
+  ],
+  "artifact": "package.json",
+  "parser": "json",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "dependencies.*",
+    "valuePattern": "^git\\+ssh://"
+  },
+  "tests": [
+    {
+      "file": "package.json",
+      "document": {
+        "name": "demo-service",
+        "version": "1.4.0",
+        "dependencies": {
+          "acme-sdk": "git+ssh://git@github.com/acme/sdk.git"
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "package.json",
+      "document": {
+        "name": "demo-service",
+        "version": "1.4.0",
+        "dependencies": {
+          "acme-internal": "git+ssh://git@git.acme.internal/lib.git"
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "package.json",
+      "document": {
+        "name": "demo-service",
+        "version": "1.4.0",
+        "dependencies": {
+          "acme-sdk": "git+https://github.com/acme/sdk.git"
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "package.json",
+      "document": {
+        "name": "demo-service",
+        "version": "1.4.0",
+        "dependencies": {
+          "acme-sdk": "2.1.0"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2145"
+  ],
+  "remediation": "Publish the artifact to a private registry with integrity, or pin the commit and verify the checkout digest.",
+  "limitation": "It matches a dependency installed from a git remote over SSH in the parsed package.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0035",
+  "title": "Git dependency that follows a branch name",
+  "description": "package.json declares a git dependency whose fragment names a branch instead of a commit. The branch moves, so every install can compile a different tree while the manifest and the review record stay identical.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1104",
+  "category": "dependency-hygiene",
+  "ecosystems": [
+    "npm"
+  ],
+  "artifact": "package.json",
+  "parser": "json",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "dependencies.*",
+    "valuePattern": "#[A-Za-z][A-Za-z0-9._-]{1,40}$"
+  },
+  "tests": [
+    {
+      "file": "package.json",
+      "document": {
+        "name": "demo-service",
+        "version": "1.4.0",
+        "dependencies": {
+          "acme-sdk": "github:acme/sdk#main"
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "package.json",
+      "document": {
+        "name": "demo-service",
+        "version": "1.4.0",
+        "dependencies": {
+          "acme-cli": "git+https://github.com/acme/cli.git#develop"
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "package.json",
+      "document": {
+        "name": "demo-service",
+        "version": "1.4.0",
+        "dependencies": {
+          "acme-sdk": "github:acme/sdk#9f2c4a1"
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "package.json",
+      "document": {
+        "name": "demo-service",
+        "version": "1.4.0",
+        "dependencies": {
+          "acme-sdk": "4.2.0"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2172"
+  ],
+  "remediation": "Pin the fragment to a commit sha and update it deliberately.",
+  "limitation": "It matches a git dependency whose fragment names a branch instead of a commit in the parsed package.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

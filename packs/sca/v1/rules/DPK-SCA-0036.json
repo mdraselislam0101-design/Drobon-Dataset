@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0036",
+  "title": "Git dependency that follows a tag name",
+  "description": "package.json declares a git dependency fragment that names a tag rather than a commit. A tag can be force-moved by whoever controls the remote, so the installed tree is mutable even though the manifest looks pinned.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1104",
+  "category": "dependency-hygiene",
+  "ecosystems": [
+    "npm"
+  ],
+  "artifact": "package.json",
+  "parser": "json",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "dependencies.*",
+    "valuePattern": "#[A-Za-z][A-Za-z0-9._-]{0,40}$"
+  },
+  "tests": [
+    {
+      "file": "package.json",
+      "document": {
+        "name": "demo-service",
+        "version": "1.4.0",
+        "dependencies": {
+          "acme-sdk": "github:acme/sdk#v4.2.0"
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "package.json",
+      "document": {
+        "name": "demo-service",
+        "version": "1.4.0",
+        "dependencies": {
+          "acme-cli": "git+ssh://git@github.com/acme/cli.git#release"
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "package.json",
+      "document": {
+        "name": "demo-service",
+        "version": "1.4.0",
+        "dependencies": {
+          "acme-sdk": "github:acme/sdk#9f2c4a1"
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "package.json",
+      "document": {
+        "name": "demo-service",
+        "version": "1.4.0",
+        "dependencies": {
+          "acme-sdk": "4.2.0"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2173"
+  ],
+  "remediation": "Pin the commit sha the tag currently points at.",
+  "limitation": "It matches a git dependency fragment that names a tag rather than a commit in the parsed package.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

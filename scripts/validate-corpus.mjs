@@ -96,6 +96,8 @@ function recomputeCategory(root, id) {
       return countFlatJsonFiles(join(root, 'packs', 'secrets', 'v1', 'rules'));
     case 'dast-check':
       return countFlatJsonFiles(join(root, 'packs', 'dast', 'v1', 'rules'));
+    case 'sca-rule':
+      return countFlatJsonFiles(join(root, 'packs', 'sca', 'v1', 'rules'));
     case 'cwe-entry':
       return countFlatJsonFiles(join(root, 'knowledge', 'cwe'));
     case 'remediation-entry':

@@ -35,6 +35,12 @@ const targets = readJson('docs/CORPUS_TARGETS.json');
 const pkg = readJson('package.json');
 
 const counts = inventory.counts;
+// Eval-case population. Independent eval cases are authored per SAST/secrets/DAST
+// rule today; SCA rules instead carry 4+ executed tests each (validate-packs) and
+// their own suite. Keeping the SCA rules out of this denominator while naming the
+// gap in `eval.sca` is the honest reading: no SCA eval case exists yet, and the
+// percentage must not pretend otherwise.
+const classicPackRules = counts.sastRules + counts.secretsRules + counts.dastRules;
 // --- evaluation depth (independent of the validator's namespace counting) ---
 const evalCases = [];
 {
@@ -52,7 +58,7 @@ for (const testCase of evalCases) {
 const packRules = [];
 {
   const fs = await import('node:fs');
-  for (const family of ['sast', 'secrets', 'dast']) {
+  for (const family of ['sast', 'secrets', 'dast', 'sca']) {
     for (const file of fs.readdirSync(join(ROOT, 'packs', family, 'v1', 'rules')).filter((f) => f.endsWith('.json')).sort()) {
       packRules.push({ family, ...JSON.parse(read(`packs/${family}/v1/rules/${file}`)) });
     }
@@ -176,6 +182,28 @@ const dimensions = [
     nextAction: 'None unless a new credential format is documented by its vendor.',
     verification: 'npm run validate:packs',
   }),
+  dim('packs.sca', 'SCA dependency-declaration pack against its 1000 target', {
+    measured: counts.scaRules,
+    denominator: 1000,
+    unit: 'rules',
+    pct: Math.round((counts.scaRules / 1000) * 1000) / 10,
+    status: counts.scaRules >= 1000 ? 'COMPLETE' : 'PARTIAL',
+    blocker: counts.scaRules >= 1000 ? null : 'EVIDENCE_GATED',
+    detail: `${counts.scaRules} of 1000 rules are authored. The owner approved drobon.pack.sca/v1 on 2026-10-25 and directed the pack to the 1000 target. Each rule classifies declared dependency text in one ecosystem and one artifact, carries 2 positives and 2 negatives that the validator executes, and has its own pattern, record and remediation entry. A rule never states that a version is affected by an advisory, so this pack does not depend on the GHSA/OSV/NVD data lock.`,
+    nextAction: 'Continue the family batches (lockfile integrity, registry configuration, curated name watchlist, policy metadata) until the pack reaches 1000, then freeze it.',
+    verification: 'npm run validate:packs',
+  }),
+  dim('eval.sca', 'Independent evaluation cases for SCA rules', {
+    measured: 0,
+    denominator: counts.scaRules,
+    unit: 'rules with an independent eval case',
+    pct: 0,
+    status: 'PARTIAL',
+    blocker: 'EVIDENCE_GATED',
+    detail: 'No independent eval case exists for an SCA rule yet. The rules are not unverified: validate-packs executes at least two positives and two negatives per rule, and each pattern mirrors its rule signal. An eval case is a separate, independently authored fixture, and none has been written for this kind.',
+    nextAction: 'Author independent eval cases for the SCA pack, one positive and one negative control per rule, highest false-positive risk first (name watchlist and short-literal specifiers).',
+    verification: 'npm run test:eval',
+  }),
   dim('knowledge.graph', 'Rule ↔ pattern ↔ record ↔ remediation graph', {
     measured: graphCoverage,
     denominator: counts.packRules,
@@ -211,9 +239,9 @@ const dimensions = [
   }),
   dim('eval.positive', 'Independent evaluation: rules with a positive case', {
     measured: positiveRuleCount,
-    denominator: counts.packRules,
-    unit: 'rules',
-    pct: pctOf(positiveRuleCount, counts.packRules),
+    denominator: classicPackRules,
+    unit: 'rules (SAST + secrets + DAST)',
+    pct: pctOf(positiveRuleCount, classicPackRules),
     status: 'PARTIAL',
     blocker: 'OWNER_DECISION_REQUIRED',
     detail: '8 SAST rules match 2–3 characters while the evidence contract requires mustContain >= 4, so no authored positive case can satisfy the validator (BLK-EVAL-01). Every other rule has one.',
@@ -222,9 +250,9 @@ const dimensions = [
   }),
   dim('eval.negative', 'Independent evaluation: rules with a negative control', {
     measured: negativeRuleCount,
-    denominator: counts.packRules,
-    unit: 'rules',
-    pct: pctOf(negativeRuleCount, counts.packRules),
+    denominator: classicPackRules,
+    unit: 'rules (SAST + secrets + DAST)',
+    pct: pctOf(negativeRuleCount, classicPackRules),
     status: 'PARTIAL',
     blocker: 'EVIDENCE_GATED',
     detail: 'A negative control has to be an authored fixture that the rule must not fire on; deriving them mechanically from each rule\'s own negative test would be circular and is explicitly not counted (counting rule in scripts/eval-coverage-report.mjs). Closed on 2026-10-21: all 11 universal rules (EVAL-SAST-256…264) and one ordinary-code control per language (EVAL-SAST-265…270: python, javascript, java, php, ruby, csharp), where every language-gated detector is named and must stay silent on benign, idiomatic code.',

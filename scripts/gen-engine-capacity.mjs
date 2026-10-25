@@ -61,7 +61,7 @@ const ENGINES = [
     id: 'sca',
     label: 'SCA',
     appEngine: 'apps/api/src/scans/sca/',
-    gating: 'BLOCKED_OWNER: SCA content is advisory data (GHSA/OSV/NVD), and ingestion is behind the production-data lock (GAP-001) plus an unowned licence (GAP-002)',
+    gating: 'Dataset-side only: the App has no sca pack loader, so these declared-dependency rules cannot fire in the product; its SCA seam reads advisory records (apps/api/src/scans/sca/provider.ts) behind the production-data lock (GAP-001)',
   },
 ];
 
@@ -100,9 +100,7 @@ function build() {
     const rules = counts.rules;
     const remaining = Math.max(0, TARGET - rules);
     let status;
-    if (engine.id === 'sca' && rules === 0) status = 'BLOCKED_OWNER';
-    else if (remaining === 0) status = 'AT_TARGET';
-    else if (engine.id === 'sca') status = 'BLOCKED_OWNER';
+    if (remaining === 0) status = 'AT_TARGET';
     else status = 'IN_PROGRESS';
     return {
       engine: engine.label,

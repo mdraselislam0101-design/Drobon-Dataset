@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0007",
+  "title": "Dependency installed from a git checkout",
+  "description": "package.json declares a dependency installed from a git remote rather than the registry. The recorded version is a commit the registry never vetted, the tarball has no registry integrity value, and the repository can be rewritten after review.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1104",
+  "category": "dependency-hygiene",
+  "ecosystems": [
+    "npm"
+  ],
+  "artifact": "package.json",
+  "parser": "json",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "dependencies.*",
+    "valuePattern": "^git\\+https://"
+  },
+  "tests": [
+    {
+      "file": "package.json",
+      "document": {
+        "name": "demo-service",
+        "version": "1.4.0",
+        "dependencies": {
+          "acme-sdk": "git+https://github.com/acme/sdk.git#v4.2.0"
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "package.json",
+      "document": {
+        "name": "demo-service",
+        "version": "1.4.0",
+        "dependencies": {
+          "acme-cli": "git+https://github.com/acme/cli.git"
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "package.json",
+      "document": {
+        "name": "demo-service",
+        "version": "1.4.0",
+        "dependencies": {
+          "acme-sdk": "4.2.0"
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "package.json",
+      "document": {
+        "name": "demo-service",
+        "version": "1.4.0",
+        "dependencies": {
+          "acme-sdk": "https://registry.npmjs.org/acme-sdk/-/acme-sdk-4.2.0.tgz"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2144"
+  ],
+  "remediation": "Prefer a published version with registry integrity, or pin the commit sha and record the resolved hash.",
+  "limitation": "It matches a dependency installed from a git remote rather than the registry in the parsed package.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

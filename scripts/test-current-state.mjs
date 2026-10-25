@@ -70,8 +70,8 @@ const c = inv.counts;
     const snap = readJson('docs/CURRENT_INVENTORY.json');
     assert(snap.schemaVersion === 'drobon.current-inventory/v1', 'inventory schemaVersion pinned');
     assert(!/\d{4}-\d{2}-\d{2}T/.test(currentSnapshot()), 'inventory carries no timestamps (deterministic)');
-    assert(snap.counts.packRules === snap.counts.sastRules + snap.counts.secretsRules + snap.counts.dastRules,
-      'inventory: packRules equals sast+secrets+dast');
+    assert(snap.counts.packRules === snap.counts.sastRules + snap.counts.secretsRules + snap.counts.dastRules + snap.counts.scaRules,
+      'inventory: packRules equals sast+secrets+dast+sca');
     assert(snap.counts.evalCasesTotal === snap.counts.evalCasesAssessed + snap.counts.evalCasesUnassessed,
       'inventory: eval total equals assessed+unassessed');
   }
@@ -80,12 +80,13 @@ const c = inv.counts;
 // --- 2. owner decisions: no fabricated approval ------------------------------
 {
   const decisions = readJson('docs/OWNER_DECISIONS.json').decisions ?? [];
-  assert(decisions.length === 5, `owner decisions: 5 subjects recorded (got ${decisions.length})`);
+  assert(decisions.length === 6, `owner decisions: 6 subjects recorded (got ${decisions.length})`);
   const approved = decisions.filter((d) => d.status === 'APPROVED');
   const pending = decisions.filter((d) => d.status !== 'APPROVED');
   assert(pending.length === 4, `owner decisions: 4 subjects still OWNER_DECISION_REQUIRED (got ${pending.length})`);
-  assert(approved.length === 1 && approved[0].subject === 'ORIGINAL_CONTENT',
-    'owner decisions: only ORIGINAL_CONTENT is APPROVED (D-ORIG 2026-10-17)');
+  assert(approved.length === 2
+    && approved.map((d) => d.subject).sort().join(',') === 'ORIGINAL_CONTENT,ORIGINAL_SCA_CONTENT',
+    'owner decisions: only the two own-content decisions are APPROVED (2026-10-17, 2026-10-25)');
   assert(approved.every((d) => typeof d.decidedAt === 'string' && d.decidedAt.length > 0 && typeof d.decider === 'string' && d.decider.length > 0),
     'owner decisions: the APPROVED entry records decider + date');
   assert(pending.every((d) => d.decidedAt === null && d.decider === null),

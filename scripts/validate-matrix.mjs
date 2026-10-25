@@ -31,6 +31,7 @@ const INVENTORY_KEYS = [
   'packsSast',
   'packsSecrets',
   'packsDast',
+  'packsSca',
   'remediation',
   'cwe',
   'patterns',
@@ -179,6 +180,7 @@ export function recomputeInventory(root) {
   counts.packsSast = countJsonFilesFlat(join(root, 'packs', 'sast', 'v1', 'rules'));
   counts.packsSecrets = countJsonFilesFlat(join(root, 'packs', 'secrets', 'v1', 'rules'));
   counts.packsDast = countJsonFilesFlat(join(root, 'packs', 'dast', 'v1', 'rules'));
+  counts.packsSca = countJsonFilesFlat(join(root, 'packs', 'sca', 'v1', 'rules'));
   counts.remediation = countJsonFilesFlat(join(root, 'knowledge', 'remediation'));
   counts.cwe = countJsonFilesFlat(join(root, 'knowledge', 'cwe'));
   counts.patterns = countJsonFilesFlat(join(root, 'knowledge', 'patterns'));

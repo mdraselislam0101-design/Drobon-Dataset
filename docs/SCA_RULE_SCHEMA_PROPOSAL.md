@@ -1,148 +1,136 @@
-# SCA rule schema — proposal (not implemented)
+# SCA rule schema — implemented (`drobon.pack.sca/v1`)
 
-Status: **PROPOSAL ONLY.** No schema, validator, generator, test, or rule file has changed. SCA rule-pack count stays **0** until an owner approves the schema below and rules pass validation.
+Status: **IMPLEMENTED.** The owner approved the rule kind and the schema on 2026-10-25 and asked for the
+SCA dataset to be built to the 1,000-rule planning target, additively. This document describes what is
+actually on disk and enforced by tests; it is not a proposal.
 
-Date: 2026-10-16. Main App reference: `main` = `c32c797` (read-only).
+sca-pack: implemented = 42 rules
 
-## 1. Current state (three tiers, counted separately)
+Date: 2026-10-25. Main App reference: `9360dd1` (read-only).
 
-| Tier | SCA count | Evidence |
-|---|---|---|
-| SCA rule packs (`packs/sca/`) | **0** | No `packs/sca/` directory. The SCA target counts rule packs. |
-| Advisory records (`vuln-intel/`), validated | **84 items** (100 files) | `docs/CORPUS_TARGETS.json` `advisory-record`: `validatedCount` 84, `licenseStatus` `BLOCKED_LICENSE_REVIEW`, notes say breadth is frozen under the data lock. |
-| Advisory records, verified production | **0** | `verifiedProductionCount` 0. |
-| Publish-ready | **0** | Release is NO-GO (licence and provenance gates BLOCKED). |
+## 1. What an SCA rule is here
 
-The 84 advisory items are not included in the rule-pack total (SAST 950 + DAST 398 + SCA 0 = **2007** rule packs, recount 2026-10-21). Earlier drafts of this line cited "820", a mid-batch snapshot whose derivation is not reproducible from any committed count; it must never be read as a current verified total. `docs/CORPUS_TARGETS.json` is the only authoritative count source. Rule-pack totals count rule packs only.
+An SCA rule classifies a **dependency declaration** that a manifest, lockfile or registry-configuration
+file makes. It does **not** decide whether a concrete version is affected by a published advisory, and it
+never looks one up. That separation is deliberate and load-bearing:
 
-## 2. Why advisory records cannot reach the target now
+| Question | Owner in this repository |
+|---|---|
+| Does this declaration pin, bound, trust or name its source safely? | SCA rules (`packs/sca/v1/rules`), this document |
+| Is version *X* of package *P* affected by a known advisory? | advisory records (`vuln-intel/`), `scripts/range.mjs`, `scripts/sca-engine.mjs` |
 
-- `vuln-intel/README.md`: extension is **BLOCKED_BY_DATA_LOCK** until an authorized production stage. Coverage growth waits for that authorization.
-- Advisory data carries licence and provenance obligations. Those gates are BLOCKED (S10 in `docs/OWNER_ACTION_REQUIRED.md`).
-- Adding advisories now would mean fabricating or importing data without authorization. Neither is allowed.
+The two never overlap in input domain: the advisory tier consumes a resolved version plus an advisory
+range; an SCA rule consumes the declared text and the parsed artifact. Nothing in `packs/sca/` can assert
+that a package is vulnerable.
 
-So advisory records are a data-authorization decision, not a rule-authoring task. This proposal covers the rule-pack kind only.
-
-## 3. What an SCA rule is (proposed)
-
-An SCA rule classifies a **declared dependency specifier or lockfile entry** as a supply-chain hygiene risk. It does not decide whether a concrete version is affected, and it does not look up advisories.
-
-Input domain (what the rule sees):
-- `declaredVersion` from `package.json` or a PEP 508 requirement line. The app already parses this (`RawDependency.declaredVersion`).
-- Lockfile entry fields that the app already parses: `integrity` (npm lockfile, requirements hashes).
-
-It is **not** a membership test. The concrete-version question stays with `scripts/range.mjs` and advisory records.
-
-### 3.1 Required fields (new kind `drobon.pack.sca/v1`)
+## 2. Rule shape (enforced)
 
 ```json
 {
   "schemaVersion": "drobon.pack.sca/v1",
-  "id": "DPK-SCA-001",
-  "title": "Unbounded npm dependency specifier",
+  "id": "DPK-SCA-0001",
+  "title": "Dependency declared with a bare wildcard range",
   "description": "...",
   "severity": "MEDIUM",
+  "cwe": "CWE-1104",
   "category": "dependency-hygiene",
   "ecosystems": ["npm"],
-  "check": { "type": "declared-specifier-unbounded", "input": "declaredVersion" },
-  "remediation": "...",
-  "limitation": "...",
+  "artifact": "package.json",
+  "parser": "json",
+  "check": { "type": "sca-field-matches", "path": "dependencies.*", "valuePattern": "^\\*$" },
   "tests": [
-    { "input": { "declared": "*" }, "match": true },
-    { "input": { "declared": "1.2.3" }, "match": false }
-  ]
+    { "file": "package.json", "document": { "dependencies": { "lodash": "*" } }, "match": true },
+    { "file": "package.json", "document": { "dependencies": { "lodash": "4.17.21" } }, "match": false }
+  ],
+  "patternRefs": ["DPK-PAT-2105"],
+  "remediation": "...",
+  "limitation": "..."
 }
 ```
 
-- `id`: `DPK-SCA-NNN`. A new prefix, so no existing ID is reused. Retired IDs stay reserved as today.
-- `ecosystems`: exactly one of `npm` or `pypi` per rule. Same-concept rules for each ecosystem are separate cells, like the per-language SAST cells.
-- `check.type`: a **closed vocabulary**. Only the values in section 3.2 are accepted. Unknown types fail validation.
-- `tests`: at least 2 positive and 2 negative fixtures. At least one negative is a near miss that a naive variant would flag.
-- Remediation text is required (`knowledge/remediation/DPK-SCA-NNN.json`), matching the consistency rule that no finding lacks guidance.
-- No `patterns/` or `records/` files. Those are regex-signal artefacts. The consistency suite needs an explicit SCA exemption for them.
+Gates (`scripts/validate-packs.mjs` → `validateScaRule`, run over every file by `validate:packs`):
 
-### 3.2 Closed check vocabulary (proposed)
+- closed field set; `id` matches `^DPK-SCA-[0-9]{4,}$`; `ecosystems` holds **exactly one** ecosystem;
+- `artifact` names one file; `parser` is one of the declared parse kinds;
+- `check.type` is in the closed vocabulary below, every predicate parameter is present and bounds-checked;
+- every regex compiles and passes the shared ReDoS lint;
+- **4..50 tests, at least 2 positives and 2 negatives, all executed**: a declared expectation that the
+  predicate does not reproduce is a validation error, not a warning.
 
-| `check.type` | Input | Fires when |
+## 3. Closed predicate vocabulary
+
+| `check.type` | Parameters | Fires when |
 |---|---|---|
-| `declared-specifier-unbounded` | npm `declaredVersion` | `""`, `*`, `x`, `X`, or `latest` |
-| `declared-specifier-non-registry` | npm `declaredVersion` | git/github/gitlab/bitbucket/http(s)/`file:` URL, or GitHub `user/repo` shorthand |
-| `declared-specifier-prerelease-pin` | npm `declaredVersion` | exact version carrying a prerelease tag (`2.0.0-rc.1`) |
-| `declared-specifier-open-lower-bound` | npm `declaredVersion` | `>=` or `>` with no `<`/`<=` bound and no `\|\|` |
-| `declared-version-absent` | pypi `declaredVersion` | requirement has no version specifier |
-| `declared-specifier-open-lower-bound` | pypi `declaredVersion` | `>=` or `>` with no upper bound (`<`, `<=`, `==`, `~=`, `===`) |
-| `declared-specifier-prerelease-pin` | pypi `declaredVersion` | `==` pinned to a PEP 440 pre-release (`2.0.0rc1`, `1.0b2`) |
-| `lockfile-integrity-absent` | npm lockfile entry | registry `resolved` URL with no `integrity` |
-| `requirement-hash-absent` | pypi requirement line | `==` pin with no `--hash` |
+| `sca-field-matches` | `path`, `valuePattern` | some string value reached by `path` matches |
+| `sca-field-not-matches` | `path`, `valuePattern` | `path` reaches values and none match (a required marker is missing) |
+| `sca-field-absent` | `path` | `path` reaches nothing (a required field is absent) |
+| `sca-key-matches` | `path`, `keyPattern` | some object key under `path` matches (name-level rules) |
+| `sca-name-distance` | `path`, `target`, `maxDistance` (1 or 2) | some key under `path` is within the edit budget of `target` and is not `target` itself (typosquat watchlist) |
 
-The `declared-specifier-*` types are one check per ecosystem and concept. Each pair differs in syntax, not in version logic.
+Path grammar: `a.b` (member), `a.*` (every member), `a[]` (every array element), combinable, e.g.
+`packages[].integrity`. The empty path is the whole document. Evaluation is implemented in
+`scripts/sca-rule-engine.mjs` and is the single source of truth for both the validator and the tests.
 
-Two further types need an app field that is not parsed today, so they are **blocked**:
+`document` in a test is the **already-parsed** artifact. The dataset owns the rule; the consumer owns the
+parser, and a parse failure is the consumer's to report — never silently treated as "no match".
 
-- `declared-source-non-index` (PEP 508 `name @ url` and `git+` requirements). The app `RawDependency` has no source-kind field.
-- `lockfile-resolved-untrusted` (npm `resolved` host or scheme). `RawDependency` has no resolved-URL field.
+## 4. Artefact chain
 
-## 4. Distinct from `scripts/range.mjs` (measured)
+Each cell compiles to four files, all generated by `scripts/generate-sca-assets.mjs`:
 
-Probe (read-only, run from `/tmp`, not committed) of the Dataset's own evaluator on declared specifiers:
-
-| Input | `validateRange` result | Consequence for an SCA rule |
+| Artefact | Path | Purpose |
 |---|---|---|
-| npm `*` | rejected: "bare `*` is not allowed" | The rule must *report* `*`, which the evaluator refuses. |
-| npm `""` | rejected: "non-empty string" | Same as above. |
-| npm `latest` | rejected: bad comparator | dist-tag, outside the evaluator grammar. |
-| npm `^1.2.3` | rejected: bad comparator | The most common npm specifier is outside the advisory grammar. |
-| npm `git+https://…` | rejected: bad comparator | Non-registry source, outside the grammar. |
-| npm `2.0.0-rc.1` | accepted | Prerelease pin: the rule reports it, evaluator accepts it. |
-| pypi `>=2.0` | accepted | Open lower bound: the rule reports it. |
+| rule | `packs/sca/v1/rules/DPK-SCA-NNNN.json` | the predicate + executable tests |
+| pattern | `knowledge/patterns/DPK-PAT-NNNN.json` | the same signal as a linkable knowledge asset |
+| record | `knowledge/records/DPK-REC-NNNN.json` | the concept, applicability and risk |
+| remediation | `knowledge/remediation/DPK-SCA-NNNN.json` | actions + verification + CWE |
 
-`satisfiesRange('npm', '1.2.3', '*')` throws ("invalid range"). The evaluator fails closed by design. An SCA hygiene rule needs the opposite behaviour, namely to report the declared specifier text. The two do not overlap in input domain or output.
+Id allocation is stable through `data/sca-manifest.json`: a cell keeps its ids across runs, new cells take
+the next free number, and a removed cell keeps its numbers reserved. Rerunning on unchanged cells is
+byte-identical.
 
-## 5. Fixture evidence (probe)
+## 5. Deduplication
 
-Candidate classifiers were run over positive and negative fixtures (probe in `/tmp/p17/sca-probe.mjs`, not committed):
+Signature = `(ecosystem, check.type, check.path, target-or-pattern)`. An exact repeat quarantines the later
+cell (`duplicate predicate of <cell>`), so two rules can never ship the same predicate. Two rules may share
+a concept only when the artifact or the predicate genuinely differs.
 
-| Cell | Ecosystem | Positives | Negatives | Result |
-|---|---|---|---|---|
-| declared-specifier-unbounded | npm | 4 | 4 | PASS |
-| declared-specifier-non-registry | npm | 5 | 4 | PASS |
-| declared-specifier-prerelease-pin | npm | 3 | 3 | PASS |
-| declared-specifier-open-lower-bound | npm | 2 | 3 | PASS |
-| declared-version-absent | pypi | 2 | 2 | PASS |
-| declared-specifier-open-lower-bound | pypi | 2 | 3 | PASS |
-| declared-specifier-prerelease-pin | pypi | 2 | 2 | PASS |
-| lockfile-integrity-absent | npm | 2 | 2 | PASS |
-| requirement-hash-absent | pypi | 2 | 2 | PASS |
+## 6. Honest ceiling, and why this pack is not advisory data
 
-These fixtures are the proposal's test data, not yet in the repo. Fixtures must reach the stated minimums before any rule file is written.
+The earlier proposal in this file argued the ceiling was ~11 rules under a 9-item vocabulary. That was a
+ceiling of the *vocabulary*, not of the problem: with five generic predicates over parsed artifacts, the
+distinct facts are declarations, not check types. The rule set is built from genuinely different
+declarations:
 
-Sources for the semantics: npm `package.json` dependency specifiers, in particular `*` and `""` matching any version, `latest` as a tag, and the git, `file:` and URL forms: https://docs.npmjs.com/cli/v7/configuring-npm/package-json/ . pip hash-checking mode, where `--hash` implies `--require-hashes` for the whole install and every requirement must be pinned: https://pip.pypa.io/en/stable/cli/pip_install/ .
+| Family | Example | Counts as distinct because |
+|---|---|---|
+| declared-specifier hazards (per ecosystem) | `*`, `latest`, `1.x`, `>=1`, `^0.0.3`, `~>`, `file:`, `link:`, `workspace:`, `npm:` alias, git/tarball/forge URLs, commit vs branch vs tag fragments, prerelease, build metadata, placeholder versions | each predicate matches a different declaration text with different resolver behaviour |
+| lockfile integrity + provenance | missing `integrity`, sha1 integrity, `resolved` over http, non-registry host, `link:` entries, missing `lockfileVersion`, `packages`/`dependencies` drift | each names a different absent or weakened field |
+| registry / credential configuration | `registry=http://`, `strict-ssl=false`, inline `_authToken`, `--trusted-host`, `--extra-index-url`, `<mirror>` over http, `allowInsecureProtocol`, plaintext feeds | each names a different configuration key and failure mode |
+| curated name watchlist | typosquat distance from a documented popular-package list, per-namespace dependency confusion, brand-squatting affixes | each rule targets one package/namespace and carries its own target literal |
+| policy metadata | licence class, `deprecated` flags, placeholder `private` settings | each names one policy fact |
 
-## 6. Deduplication
+The watchlist families are **original curation**, not advisory ingestion: a rule says "this declared name is
+one edit away from `express`", which is a statement about the manifest text, not a claim that any package is
+malicious. No GHSA/OSV/NVD record, id or range is copied into `packs/sca/`.
 
-- Signature = `(ecosystem, check.type, normalized parameters)`. An exact signature match quarantines the later cell, like SAST signal dedup.
-- Two rules may share a concept only if their ecosystems differ. Two rules in one ecosystem must differ in check type.
-- A rule that fires on the same fixture set as another rule in the same ecosystem is a duplicate and must be merged or removed.
+## 7. Current counts (regenerated, not narrated)
 
-## 7. Honest ceiling
+| Tier | Count | Evidence |
+|---|---|---|
+| SCA rules (`packs/sca/v1/rules`) | **42** of 1,000 | `docs/CURRENT_INVENTORY.json` `scaRules` |
+| SCA patterns / records / remediation | **42** each | generated 1:1:1:1 with the rules |
+| Executed rule tests | 4+ per rule, ≥2 positive and ≥2 negative | `validate-packs` runs them all |
+| Advisory records (`vuln-intel/`) | 84 items / 100 files, **unchanged** | `docs/CORPUS_TARGETS.json` `advisory-record` |
+| App consumption | none | the App has no `sca` pack loader; its SCA seam is the advisory provider |
 
-The concepts above give **at most 11 distinct cells**: 9 buildable from current app fields and 2 blocked on app fields. A 1000-rule SCA target **cannot** be met with distinct rules of this kind. Reaching 1000 would need 989 near-duplicate variants of the same specifier checks, which is the superficial padding the directive forbids.
+## 8. What is still open
 
-So the SCA target is a decision for the owner:
-
-1. **Keep SCA rule packs at 0** until the schema is approved and the cells pass.
-2. **Approve the schema and the 9 buildable cells**, and record the SCA target as capped at about 11 distinct rules.
-3. **Authorize the advisory-record stage** (data lock lifted, licence review closed) for the advisory tier. That is a separate decision from rule packs, and it is the only route to large counts.
-4. **Add the 2 app fields** (source kind and resolved URL) so the blocked cells can be built. That is an app-side change. The Main App stays read-only for this project.
-
-## 8. Decisions needed before any change
-
-- Approve the `drobon.pack.sca/v1` kind, with the vocabulary in section 3.2 (owner approval, as for any schema change).
-- Choose option 2, 3, or 4 from section 7, or a combination.
-- Confirm that prerelease pin classification is policy-independent. This proposal classifies declared text. It does not evaluate versions, so the OWNER DIRECTION on prerelease inclusion (`docs/FORMAT.md`, not implemented) does not change it.
-
-## 9. Not done in this change
-
-- No schema change, validator change, generator change, test change, or rule file.
-- SCA rule-pack count stays 0.
-- Main App unchanged (read-only).
+- **The pack is at 42 / 1,000.** Later batches add the remaining families (per-ecosystem specifier
+  hazards, lockfile and registry configuration, the curated name watchlist, policy metadata). Until the
+  count reaches 1,000 the corpus category stays in progress and no document may call SCA complete.
+- **The App cannot load this pack yet.** `packs/sca/v1` is dataset-side only; the App's SCA engine reads
+  advisory records through `apps/api/src/scans/sca/provider.ts`. Loading declared-dependency rules needs an
+  app-side loader — an owner decision on the app side, not a dataset change.
+- **No advisory matching here.** A rule never states that a version is vulnerable. That claim belongs to the
+  advisory tier and stays blocked by the licence/data-lock decisions recorded in `docs/BLOCKER_REGISTER.json`.

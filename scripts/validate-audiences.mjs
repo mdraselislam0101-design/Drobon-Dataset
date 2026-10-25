@@ -31,7 +31,7 @@ export const AUDIENCE_SCHEMAS = {
 };
 
 const RULE_ID_PATTERN =
-  /^(DG-SAST-[0-9]{3,}|DG-SEC-[0-9]{3,}|DG-DAST-[0-9]{3,}|DPK-SAST-[0-9]{3,}|DPK-SEC-[0-9]{3,}|DPK-DAST-[0-9]{3,})$/;
+  /^(DG-SAST-[0-9]{3,}|DG-SEC-[0-9]{3,}|DG-DAST-[0-9]{3,}|DPK-SAST-[0-9]{3,}|DPK-SEC-[0-9]{3,}|DPK-DAST-[0-9]{3,}|DPK-SCA-[0-9]{3,})$/;
 const LESSON_ID_PATTERN = /^lsn_[a-z0-9_]{3,40}$/; // mirrors STUDENT_LESSON_ID_PATTERN
 const TEMPLATE_ID_PATTERN = /^tmpl_[a-z0-9_]{3,40}$/;
 const ENGAGEMENT_ID_PATTERN = /^eng_[a-z0-9_]{3,40}$/;

@@ -1,0 +1,70 @@
+{
+  "schemaVersion": "drobon.pack.sca/v1",
+  "id": "DPK-SCA-0020",
+  "title": "Git dependency pinned through a semver fragment",
+  "description": "package.json declares a git dependency whose fragment asks npm to resolve a semver range instead of committing to one tree. The install resolves the range against the remote's tags at fetch time, so the compiled tree can move without a manifest change and without a lockfile review.",
+  "severity": "MEDIUM",
+  "cwe": "CWE-1104",
+  "category": "dependency-hygiene",
+  "ecosystems": [
+    "npm"
+  ],
+  "artifact": "package.json",
+  "parser": "json",
+  "check": {
+    "type": "sca-field-matches",
+    "path": "dependencies.*",
+    "valuePattern": "#semver:"
+  },
+  "tests": [
+    {
+      "file": "package.json",
+      "document": {
+        "name": "demo-service",
+        "version": "1.4.0",
+        "dependencies": {
+          "acme-sdk": "github:acme/sdk#semver:^4.2.0"
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "package.json",
+      "document": {
+        "name": "demo-service",
+        "version": "1.4.0",
+        "dependencies": {
+          "acme-cli": "git+https://github.com/acme/cli.git#semver:~2.1"
+        }
+      },
+      "match": true
+    },
+    {
+      "file": "package.json",
+      "document": {
+        "name": "demo-service",
+        "version": "1.4.0",
+        "dependencies": {
+          "acme-sdk": "github:acme/sdk#a1b2c3d"
+        }
+      },
+      "match": false
+    },
+    {
+      "file": "package.json",
+      "document": {
+        "name": "demo-service",
+        "version": "1.4.0",
+        "dependencies": {
+          "acme-sdk": "4.2.0"
+        }
+      },
+      "match": false
+    }
+  ],
+  "patternRefs": [
+    "DPK-PAT-2157"
+  ],
+  "remediation": "Pin the fragment to a full commit sha and record the resolved commit in review.",
+  "limitation": "It matches a git dependency whose fragment asks npm to resolve a semver range instead of committing to one tree in the parsed package.json; it cannot tell whether the package is installed, whether any published version is affected by an advisory, or whether the dependency reaches production code."
+}

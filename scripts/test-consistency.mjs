@@ -100,7 +100,7 @@ for (const file of cweFiles) {
 }
 
 // --- 2. remediation coverage ---------------------------------------------------
-const packRuleFiles = ['sast', 'secrets', 'dast'].flatMap((kind) =>
+const packRuleFiles = ['sast', 'secrets', 'dast', 'sca'].flatMap((kind) =>
   collectJsonFiles(join(ROOT, 'packs', kind, 'v1', 'rules')),
 );
 assert(packRuleFiles.length >= 18, `consistency: pack rules present (found ${packRuleFiles.length})`);
@@ -377,12 +377,12 @@ assert(
 // Manifest cells without a rule file must be exactly the retired reservations
 // listed in docs/ASSET_METHODOLOGY.md (IDs are reserved, never reused).
 const ruleIdsOnDisk = new Set(
-  ['sast', 'secrets', 'dast'].flatMap((kind) =>
+  ['sast', 'secrets', 'dast', 'sca'].flatMap((kind) =>
     readdirSync(join(ROOT, 'packs', kind, 'v1', 'rules')).map((file) => file.replace(/\.json$/, '')),
   ),
 );
 const readmeText = readFileSync(join(ROOT, 'README.md'), 'utf8');
-const packLine = /\*\*(\d+) pack rules\*\* \((\d+) SAST \+ (\d+) secrets \+ (\d+) DAST\)/.exec(readmeText);
+const packLine = /\*\*(\d+) pack rules\*\* \((\d+) SAST \+ (\d+) secrets \+ (\d+) DAST(?: \+ (\d+) SCA)?\)/.exec(readmeText);
 const remediationLine = /\*\*(\d+) remediation entries\*\*/.exec(readmeText);
 const cweLine = /\*\*(\d+) CWE knowledge entries\*\*/.exec(readmeText);
 const countPrefix = (prefix) => [...ruleIdsOnDisk].filter((id) => id.startsWith(prefix)).length;
@@ -391,6 +391,7 @@ const actualCounts = {
   packSast: countPrefix('DPK-SAST-'),
   packSecrets: countPrefix('DPK-SEC-'),
   packDast: countPrefix('DPK-DAST-'),
+  packSca: countPrefix('DPK-SCA-'),
   remediation: readdirSync(join(ROOT, 'knowledge', 'remediation')).filter((f) => f.endsWith('.json')).length,
   cwe: readdirSync(join(ROOT, 'knowledge', 'cwe')).filter((f) => f.endsWith('.json')).length,
 };
@@ -404,6 +405,7 @@ if (packLine !== null && remediationLine !== null && cweLine !== null) {
     packSast: Number(packLine[2]),
     packSecrets: Number(packLine[3]),
     packDast: Number(packLine[4]),
+    packSca: Number(packLine[5] ?? 0),
     remediation: Number(remediationLine[1]),
     cwe: Number(cweLine[1]),
   };

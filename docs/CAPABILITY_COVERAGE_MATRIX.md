@@ -55,7 +55,7 @@ Status vocabulary (closed): `COVERED_VERIFIED`, `PARTIAL`, `MISSING`, `APP_INTEG
 
 - Status: **PARTIAL** (basis: `APP_CONSUMER_VERIFIED_WITH_GAPS`); requirement: SUPPLEMENTAL; integration: INTEGRATED.
 - Contract: drobon.pack.sast/v1 rule packs: lexical line rules with executable positive/negative examples, rule-fixed severity, CWE mapping, remediation 1:1, and an omitted-languages convention for any-file rules.
-- Assets: `packs/sast/v1/rules` — 1000 (*.json rule files); `knowledge/patterns` — 2104 (*.json pattern files (all families)); `knowledge/remediation` — 2104 (*.json remediation files (all families)).
+- Assets: `packs/sast/v1/rules` — 1000 (*.json rule files); `knowledge/patterns` — 2146 (*.json pattern files (all families)); `knowledge/remediation` — 2146 (*.json remediation files (all families)).
 - Relationships: rule.patternRefs <-> pattern.linkedRules: 1310/1310 both directions, 0 dangling; 1310/1310 rules have a remediation entry keyed by ruleId; every rule CWE resolves in knowledge/cwe.
 - Evaluation: pack-tests: all 950 SAST rules execute >=1 positive and >=1 negative example; independent evaluation recount (2026-10-21): 812 SAST cases (807 assessed, 5 UNASSESSED); 890 rules appear in a positive detection; 499 rules appear as a forbidden detection in a negative case. Cases are counted by their EVAL-SAST-* namespace; a rule is counted positive only when it is named in expected.detections of such a case. The machine-checked numbers live in evaluationCoverage; dataset-wide: 1,876 cases naming all 2,104 pack rules; 1,437 rules appear in a positive detection across the three engines and 1,014 also appear as a forbidden detection in a negative control; preserved failure: EVAL-SAST-008 (1 FP, docstring trap - a lexical rule cannot see Python string context); 11 UNASSESSED cases kept out of scoring; App-side verified 2026-10-21: all 950 rules convert and merge into the App engine (getMergedSastRules) and 3,843/3,843 declared SAST tests reproduce through the App converter (0 mismatches); reachability measured 2026-10-21 and machine-gated: scripts/validate-app-language-ids.mjs (147 assertions) pins every id to the App catalog, an alias, or a missing-family declaration.
 - Production eligibility: `NOT_ELIGIBLE_NO_LICENSE`; rights: `NO_GRANT_ALL_RIGHTS_RESERVED`; owner decision: none for Dataset content.
@@ -75,7 +75,7 @@ Status vocabulary (closed): `COVERED_VERIFIED`, `PARTIAL`, `MISSING`, `APP_INTEG
 
 - Status: **PARTIAL** (basis: `APP_CONSUMER_VERIFIED_WITH_GAPS`); requirement: SUPPLEMENTAL; integration: INTEGRATED.
 - Contract: drobon.pack.secrets/v1 shape-only rules with rule-fixed severity/confidence, mandatory redaction, denylist veto unless matchOnlyEvidence, executable examples.
-- Assets: `packs/secrets/v1/rules` — 97 (*.json rule files); `knowledge/remediation` — 2104 (*.json remediation files (all families)).
+- Assets: `packs/secrets/v1/rules` — 97 (*.json rule files); `knowledge/remediation` — 2146 (*.json remediation files (all families)).
 - Relationships: 97/97 rules carry redact:true; 96 carry a denylist and 1 uses matchOnlyEvidence; 97/97 have remediation and resolvable CWE.
 - Evaluation: pack-tests: 97/97 secrets rules execute positive+negative examples; independent evaluation recount (2026-10-20): 203 secrets cases (202 assessed, 1 UNASSESSED); 97 rules appear in a positive detection and 97 in a negative case. The machine-checked numbers live in evaluationCoverage; secret-userinfo cohort: 11 assessed cases, 5 TP / 0 FP / 0 FN; leak scan clean outside the audited fixture zone; App-side verified 2026-10-21: 97/97 rules merge and 441/441 declared secrets tests reproduce through the App converter incl. the denylist veto (0 mismatches); positional redaction is implemented in apps/api/src/scans/secrets/engine.ts.
 - Production eligibility: `NOT_ELIGIBLE_NO_LICENSE`; rights: `NO_GRANT_ALL_RIGHTS_RESERVED`; owner decision: none for Dataset content.
@@ -85,7 +85,7 @@ Status vocabulary (closed): `COVERED_VERIFIED`, `PARTIAL`, `MISSING`, `APP_INTEG
 
 - Status: **PARTIAL** (basis: `APP_CONSUMER_VERIFIED_WITH_GAPS`); requirement: SUPPLEMENTAL; integration: INTEGRATED.
 - Contract: drobon.pack.dast/v1 passive observation checks over the closed 7-type check vocabulary, bounded evidence, no active probing.
-- Assets: `packs/dast/v1/rules` — 1007 (*.json rule files); `knowledge/patterns` — 2104 (*.json pattern files (all families)).
+- Assets: `packs/dast/v1/rules` — 1007 (*.json rule files); `knowledge/patterns` — 2146 (*.json pattern files (all families)).
 - Relationships: 2,104/2,104 rules have a pattern, a record and a remediation entry, 0 dangling; 510/520 DAST rules have executed observation examples; 510/510 have remediation and every declared CWE resolves.
 - Evaluation: pack-tests: 1007/1007 rules execute positive+negative observation examples; EVAL-DAST-001 exercises the DAST evaluator; passive-only semantics asserted by the pack validator; independent evaluation recount (2026-10-21, app-surface batch 5): 772 DAST observation cases cover 510/1007 rules positively and 510/1007 negatively (the ten rules added on 2026-10-21 carry pack tests but no eval-case entry yet) (synthetic objects, no request sent). The machine-checked numbers live in evaluationCoverage; overlap gate: docs/DAST_OVERLAP_LEDGER.json records every evidence-subset pair; scripts/validate-dast-overlaps.mjs fails on a new unreviewed one; App-side verified 2026-10-21: 510 of the 510 rules present at that time merge; 1,846 declared observation tests evaluated through the App-evaluator profile (scripts/lib/app-evaluator-profile.mjs, a port of App 9360dd1 semantics) produced 15 mismatches on 9 rules (Node-realistic lowercased headers), i.e. 2,137/1,846 = 99.2% parity — recorded honestly, not rounded up.
 - Production eligibility: `NOT_ELIGIBLE_NO_LICENSE`; rights: `NO_GRANT_ALL_RIGHTS_RESERVED`; owner decision: none for Dataset content; the App-side active-DAST addition is an owner boundary decision (GAP-045).
@@ -95,8 +95,8 @@ Status vocabulary (closed): `COVERED_VERIFIED`, `PARTIAL`, `MISSING`, `APP_INTEG
 
 - Status: **COVERED_VERIFIED** (basis: `DATASET_SIDE_EXECUTABLE`); requirement: REQUIRED; integration: CONTRACT_READY_NOT_INTEGRATED.
 - Contract: drobon.knowledge.remediation/v1: exactly one entry per pack rule, keyed by ruleId, with whyItMatters/actions/verification and a resolvable standardId.
-- Assets: `knowledge/remediation` — 2104 (*.json remediation files).
-- Relationships: 2104/2104 pack rules have exactly one remediation entry; 0 orphans in either direction.
+- Assets: `knowledge/remediation` — 2146 (*.json remediation files).
+- Relationships: 2146/2146 pack rules have exactly one remediation entry; 0 orphans in either direction.
 - Evaluation: npm run validate:audiences (1321 files) executes audience content; consistency suite pins the 1:1 remediation relationship; validate-assets rejects remediation with unknown ruleId; App-side verified 2026-10-21: dataset service reports remediation AVAILABLE with 1310 entries; the guidance resolver is still hard-wired to UNAVAILABLE (dead path).
 - Production eligibility: `NOT_ELIGIBLE_NO_LICENSE`; rights: `NO_GRANT_ALL_RIGHTS_RESERVED`; owner decision: none for Dataset content.
 - Verification: `npm run validate:audiences`, `node scripts/test-consistency.mjs`.

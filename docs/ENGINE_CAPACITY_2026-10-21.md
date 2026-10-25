@@ -12,15 +12,15 @@ This page states where each engine actually stands, what is left, and what stops
 | SAST | **1000** | 100% | 1000 | 1000 | 1000 | 0 | AT_TARGET |
 | DAST | **1007** | 100% | 1007 | 1007 | 1007 | 0 | AT_TARGET |
 | SECRETS | **97** | 9.7% | 97 | 97 | 97 | 903 | IN_PROGRESS |
-| SCA | **0** | 0% | 0 | 0 | 0 | 1000 | BLOCKED_OWNER |
-| **Total** | **2104** | — | — | — | — | — | 2 of 4 at target |
+| SCA | **42** | 4.2% | 42 | 42 | 42 | 958 | IN_PROGRESS |
+| **Total** | **2146** | — | — | — | — | — | 2 of 4 at target |
 
 ## What blocks each engine
 
 - **SAST** — App language catalog (53 ids) — 160 rules cannot fire (GAP-040)
 - **DAST** — App response surface (11 headers) — 73 rules cannot fire (GAP-048)
 - **SECRETS** — No engine gate; growth is evidence-gated because a token shape must be a real published format
-- **SCA** — BLOCKED_OWNER: SCA content is advisory data (GHSA/OSV/NVD), and ingestion is behind the production-data lock (GAP-001) plus an unowned licence (GAP-002)
+- **SCA** — Dataset-side only: the App has no sca pack loader, so these declared-dependency rules cannot fire in the product; its SCA seam reads advisory records (apps/api/src/scans/sca/provider.ts) behind the production-data lock (GAP-001)
 
 ## Why the counts are not the whole story
 

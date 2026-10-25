@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
  * Zero-dependency validator for Drobon rule packs:
- *   drobon.pack.sast/v1, drobon.pack.secrets/v1, drobon.pack.dast/v1
+ *   drobon.pack.sast/v1, drobon.pack.secrets/v1, drobon.pack.dast/v1,
+ *   drobon.pack.sca/v1
  *
  * This is the EXECUTABLE SPEC for packs (see docs/PACKS.md). Beyond
  * closed shapes and bounds it EXECUTES every rule against its own
@@ -20,11 +21,19 @@ import { basename, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { checkBoundedText, checkClosed, readJsonFile } from './validate.mjs';
 import { cookieHasFlag as cookieFlagPresent, cookieIsDiscarded, cookieWillBeStored } from './lib/set-cookie.mjs';
+import {
+  SCA_CHECK_TYPES,
+  SCA_ECOSYSTEMS,
+  SCA_PARSERS,
+  ScaRuleError,
+  evaluateScaCheck,
+} from './sca-rule-engine.mjs';
 
 export const PACK_SCHEMAS = {
   sast: 'drobon.pack.sast/v1',
   secrets: 'drobon.pack.secrets/v1',
   dast: 'drobon.pack.dast/v1',
+  sca: 'drobon.pack.sca/v1',
 };
 
 const SEVERITIES = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'INFO'];
@@ -44,6 +53,7 @@ const ID_PATTERNS = {
   sast: /^DPK-SAST-[0-9]{3,}$/,
   secrets: /^DPK-SEC-[0-9]{3,}$/,
   dast: /^DPK-DAST-[0-9]{3,}$/,
+  sca: /^DPK-SCA-[0-9]{4,}$/,
 };
 // Mirrors FINDING_CWE_PATTERN (Drobon app, packages/shared/src/scans.ts): no leading zeros.
 const CWE_PATTERN = /^CWE-[1-9][0-9]{0,5}$/;
@@ -85,6 +95,11 @@ const SECRETS_ALLOWED = [...BASE_REQUIRED, 'cwe', 'confidence', 'patterns', 'tes
 const SECRETS_REQUIRED = [...BASE_REQUIRED, 'confidence', 'patterns', 'tests', 'redact', 'patternRefs'];
 const DAST_ALLOWED = [...BASE_REQUIRED, 'cwe', 'check', 'tests', 'patternRefs'];
 const DAST_REQUIRED = [...BASE_REQUIRED, 'check', 'tests', 'patternRefs'];
+const SCA_ALLOWED = [...BASE_REQUIRED, 'cwe', 'ecosystems', 'artifact', 'parser', 'check', 'tests', 'patternRefs'];
+const SCA_REQUIRED = [...BASE_REQUIRED, 'ecosystems', 'artifact', 'parser', 'check', 'tests', 'patternRefs'];
+// A manifest or lockfile path in the engine's dotted grammar (`a.b`, `a.*`, `a[]`).
+const SCA_PATH_PATTERN = /^[A-Za-z0-9_*-]*(?:\[\])?(?:\.[A-Za-z0-9_*-]*(?:\[\])?)*$/;
+const SCA_ARTIFACT_PATTERN = /^[A-Za-z0-9._/@-]{1,64}$/;
 const MANIFEST_ALLOWED = ['schemaVersion', 'packId', 'version', 'description'];
 const MANIFEST_REQUIRED = ['schemaVersion', 'packId', 'version'];
 
@@ -693,6 +708,158 @@ function validateDastRule(record) {
   return errors;
 }
 
+const SCA_CHECK_FIELDS = {
+  'sca-field-matches': {
+    allowed: ['type', 'path', 'valuePattern'],
+    required: ['type', 'path', 'valuePattern'],
+  },
+  'sca-field-not-matches': {
+    allowed: ['type', 'path', 'valuePattern'],
+    required: ['type', 'path', 'valuePattern'],
+  },
+  'sca-field-absent': { allowed: ['type', 'path'], required: ['type', 'path'] },
+  'sca-key-matches': {
+    allowed: ['type', 'path', 'keyPattern'],
+    required: ['type', 'path', 'keyPattern'],
+  },
+  'sca-name-distance': {
+    allowed: ['type', 'path', 'target', 'maxDistance'],
+    required: ['type', 'path', 'target', 'maxDistance'],
+  },
+};
+const MAX_SCA_DOCUMENT = 4000;
+const SCA_TEST_FILE_PATTERN = /^[A-Za-z0-9._/@-]{1,120}$/;
+
+function checkScaCheck(errors, record) {
+  const check = record['check'];
+  if (check === undefined) {
+    return null;
+  }
+  if (typeof check !== 'object' || check === null || Array.isArray(check)) {
+    errors.push('check: must be an object');
+    return null;
+  }
+  if (typeof check['type'] !== 'string' || !SCA_CHECK_TYPES.includes(check['type'])) {
+    errors.push(`check.type: must be one of ${SCA_CHECK_TYPES.join(', ')}`);
+    return null;
+  }
+  const shape = SCA_CHECK_FIELDS[check['type']];
+  checkClosed(errors, 'check', check, shape.allowed, shape.required);
+  if (typeof check['path'] === 'string' && !SCA_PATH_PATTERN.test(check['path'])) {
+    errors.push('check.path: must use the dotted grammar (a.b, a.*, a[])');
+  }
+  const patternField = check['valuePattern'] !== undefined ? 'valuePattern' : check['keyPattern'] !== undefined ? 'keyPattern' : null;
+  if (patternField !== null) {
+    const source = check[patternField];
+    if (typeof source !== 'string' || source.length === 0 || source.length > MAX_PATTERN) {
+      errors.push(`check.${patternField}: must be a string of 1..${MAX_PATTERN} characters`);
+    } else {
+      try {
+        // eslint-disable-next-line no-new
+        new RegExp(source);
+      } catch {
+        errors.push(`check.${patternField}: invalid regex (${source.slice(0, 60)})`);
+      }
+      const lint = lintRedos(source);
+      if (lint !== null) {
+        errors.push(`check.${patternField}: ReDoS lint failed (${lint})`);
+      }
+    }
+  }
+  if (check['type'] === 'sca-name-distance') {
+    if (typeof check['target'] !== 'string' || check['target'].length < 3 || check['target'].length > 64) {
+      errors.push('check.target: must be a package name of 3..64 characters');
+    }
+    if (!Number.isInteger(check['maxDistance']) || check['maxDistance'] < 1 || check['maxDistance'] > 2) {
+      errors.push('check.maxDistance: must be 1 or 2');
+    }
+  }
+  return check;
+}
+
+function checkScaTests(errors, record, check) {
+  if (record['tests'] === undefined) {
+    return;
+  }
+  if (!Array.isArray(record['tests'])) {
+    errors.push('tests: must be an array');
+    return;
+  }
+  if (record['tests'].length < 4 || record['tests'].length > MAX_TESTS) {
+    errors.push(`tests: must have 4..${MAX_TESTS} entries (at least 2 positives and 2 negatives)`);
+    return;
+  }
+  let positives = 0;
+  let negatives = 0;
+  record['tests'].forEach((entry, index) => {
+    const path = `tests[#${index}]`;
+    if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) {
+      errors.push(`${path}: must be an object`);
+      return;
+    }
+    checkClosed(errors, path, entry, ['file', 'document', 'match'], ['file', 'document', 'match']);
+    if (typeof entry['file'] !== 'string' || !SCA_TEST_FILE_PATTERN.test(entry['file'])) {
+      errors.push(`${path}.file: must be an artifact file name (1..120 chars)`);
+    }
+    if (entry['document'] === null || typeof entry['document'] !== 'object') {
+      errors.push(`${path}.document: must be a parsed artifact object`);
+    } else if (JSON.stringify(entry['document']).length > MAX_SCA_DOCUMENT) {
+      errors.push(`${path}.document: at most ${MAX_SCA_DOCUMENT} serialized characters`);
+    }
+    if (typeof entry['match'] !== 'boolean') {
+      errors.push(`${path}.match: must be a boolean`);
+      return;
+    }
+    if (entry['match']) {
+      positives += 1;
+    } else {
+      negatives += 1;
+    }
+    if (check === null) {
+      return; // check errors already reported; cannot execute
+    }
+    let hit;
+    try {
+      hit = evaluateScaCheck(check, { file: entry['file'], document: entry['document'] });
+    } catch (error) {
+      errors.push(`${path}: cannot evaluate check (${error instanceof ScaRuleError ? error.message : String(error)})`);
+      return;
+    }
+    if (hit !== entry['match']) {
+      errors.push(
+        `${path}: expected match=${String(entry['match'])} but the predicate says ${String(hit)} for ${entry['file']}`,
+      );
+    }
+  });
+  if (positives < 2 || negatives < 2) {
+    errors.push('tests: must include at least 2 positives and 2 negatives');
+  }
+}
+
+function validateScaRule(record) {
+  const errors = [];
+  checkClosed(errors, 'rule', record, SCA_ALLOWED, SCA_REQUIRED);
+  checkBase(errors, record, 'sca');
+  if (record['ecosystems'] !== undefined) {
+    if (!Array.isArray(record['ecosystems']) || record['ecosystems'].length !== 1) {
+      errors.push('ecosystems: must hold exactly one ecosystem (same-concept rules are separate cells)');
+    } else if (!SCA_ECOSYSTEMS.includes(record['ecosystems'][0])) {
+      errors.push(`ecosystems[0]: must be one of ${SCA_ECOSYSTEMS.join(', ')}`);
+    }
+  }
+  if (record['artifact'] !== undefined) {
+    if (typeof record['artifact'] !== 'string' || !SCA_ARTIFACT_PATTERN.test(record['artifact'])) {
+      errors.push(`artifact: must name one manifest/lockfile/config file (1..64 chars, ${SCA_ARTIFACT_PATTERN})`);
+    }
+  }
+  if (record['parser'] !== undefined && !SCA_PARSERS.includes(record['parser'])) {
+    errors.push(`parser: must be one of ${SCA_PARSERS.join(', ')}`);
+  }
+  const check = checkScaCheck(errors, record);
+  checkScaTests(errors, record, check);
+  return errors;
+}
+
 /** Validate one parsed pack rule file. Routes on schemaVersion. */
 export function validatePackFile(value) {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
@@ -707,6 +874,9 @@ export function validatePackFile(value) {
   }
   if (kind === 'dast') {
     return validateDastRule(value);
+  }
+  if (kind === 'sca') {
+    return validateScaRule(value);
   }
   return [`schemaVersion: must be one of ${Object.values(PACK_SCHEMAS).join(', ')}`];
 }

@@ -23,7 +23,7 @@ audiences, and this page says so instead of counting it four times as if it were
 | SECURITY_PROFESSIONAL | **1000** / 1000 | 992 | 4.10 | 127 | 0 | 94 | 779 | `views/security-professional-v1.json` |
 | PENTESTER | **1000** / 1000 | 994 | 4.60 | 43 | 0 | 94 | 863 | `views/pentester-v1.json` |
 
-Candidates: **2104** rules across the four packs. Every lens selects the top 1000, so a rule
+Candidates: **2146** rules across the four packs. Every lens selects the top 1000, so a rule
 outside a lens is not rejected as wrong — it is simply past the cutoff for that audience.
 
 ## Scoring model (authored policy, printed so it can be argued with)
