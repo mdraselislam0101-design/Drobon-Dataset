@@ -50,7 +50,7 @@ One shared intelligence base serves all four user types. Membership is by direct
 |---|---|---|---|
 | DEVELOPER | Remediation guidance (shared, every pack rule); developer lessons `lsn_dev_*` | remediation 4007; dev lessons 2 | Data present; no app consumer |
 | STUDENT | Lessons `learning/lessons/*` (includes the 2 `lsn_dev_*` lessons; no audience field) | lessons 6 | Data present; overlap with DEVELOPER by design until audience field is approved |
-| SECURITY_PROFESSIONAL | Assessment templates `tmpl_*`; shared packs (SAST 950 / secrets 129 / DAST 91) and CWE knowledge | templates 3; CWE 63 | Data present; templates never pre-declare authorization |
+| SECURITY_PROFESSIONAL | Assessment templates `tmpl_*`; shared packs (SAST 1000 / secrets 1000 / DAST 1007 / SCA 1000) and CWE knowledge | templates 3; CWE 102 | Data present; templates never pre-declare authorization |
 | PENTESTER | Passive engagement templates `eng_*` (no offensive content) | engagement templates 2 | Data present; passive-only by design |
 
 Shared base (all four types): packs 4007 rules, patterns 4007 (all referenced by a rule), records 4007 (every rule and every pattern now has exactly one record, including the 40 legacy rules that previously had none), remediation 4007, CWE 102.
@@ -80,9 +80,9 @@ Read-only audit of the four UserTypes against the working tree and the Main App 
 
 | UserType | Checked | Result |
 |---|---|---|
-| DEVELOPER | `knowledge/remediation/` (3,156 files); lessons `lsn_dev_*` (2 files) | Counts match the tripwire. Remediation is shared, not forked. No app consumer. |
+| DEVELOPER | `knowledge/remediation/` (4,007 files); lessons `lsn_dev_*` (2 files) | Counts match the tripwire. Remediation is shared, not forked. Loaded by the App, not yet surfaced to users (GAP-008). |
 | STUDENT | `learning/lessons/` (6 files) | Counts match. The 2 `lsn_dev_*` lessons also sit in this set. No lesson has an `audience` or `userType` field (0 of 5), so overlap with DEVELOPER stays by design until the owner decides the audience field (§2). |
-| SECURITY_PROFESSIONAL | `assessments/templates/` (3); CWE (48) | Counts match. All three templates list only `scope`: `inScopeHosts`, `outOfScopeHosts`, and notes. None pre-declares authorization. Notes say "review-only" or "passive only". |
+| SECURITY_PROFESSIONAL | `assessments/templates/` (3); CWE (102) | Counts match. All three templates list only `scope`: `inScopeHosts`, `outOfScopeHosts`, and notes. None pre-declares authorization. Notes say "review-only" or "passive only". |
 | PENTESTER | `engagements/` (2) | Counts match. Checklists require written authorization, check that the target matches the declared scope exactly, and say that anything beyond passive reads needs a new written scope. No offensive or exploit content was found. A grep for `exploit`, `payload`, and `attack` in `engagements/` and `assessments/templates/` matched one benign triage phrase in `tmpl_api_review.json` ("exploitability notes"), and nothing else. |
 
 Cross-check against the Main App (read-only): `packages/shared/src/authz.ts` `USER_TYPES` = `DEVELOPER`, `STUDENT`, `SECURITY_PROFESSIONAL`, `PENTESTER`. The four Dataset types match these four ids. The Main App treats UserType as classification, not authorization, and the Dataset does the same.

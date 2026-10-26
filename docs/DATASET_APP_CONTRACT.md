@@ -1,11 +1,14 @@
 # DATASET_APP_CONTRACT.md — versioned Dataset ↔ Main App compatibility contract
 
-Contract version: **DATASET-APP/1.2** (2026-10-20). App reference: Drobon
-`main` @ `c32c797a549453802bd6d82c5673d2a1728457a3` (read-only). Dataset
-reference: `arena/9fe99288-drobon-dataset`. This document states what the
+Contract version: **DATASET-APP/1.3** (2026-10-25). App reference: Drobon
+`main` @ `9360dd1abdf940cc1bffd942aab0702703aaaaef` (read-only, re-verified
+2026-10-21). Dataset reference: `main` @ `a3f2475` (PR #7 merge; packs SAST
+1,000 · secrets 1,000 · DAST 1,007 · SCA 1,000). This document states what the
 Dataset guarantees, what the App expects, and — explicitly — what is **not**
-yet verifiable because the App ships no loader. It grants no runtime
-compatibility: validating JSON against a schema is not integration.
+yet verifiable. The App does ship a loader for SAST/secrets/DAST (2 of the 6
+checklist steps implemented); it has **no SCA loader**, so the SCA pack below is
+declared but unreachable, and validating JSON against a schema is still not
+integration.
 
 ## 1. Dataset schema / version inventory
 
@@ -14,9 +17,10 @@ compatibility: validating JSON against a schema is not integration.
 | SAST rule pack | `drobon.pack.sast/v1` | `packs/sast/v1/rules/DPK-SAST-###.json` | stable, never reused (26 retired reservations pinned) |
 | Secrets rule pack | `drobon.pack.secrets/v1` | `packs/secrets/v1/rules/DPK-SEC-###.json` | same |
 | DAST rule pack | `drobon.pack.dast/v1` | `packs/dast/v1/rules/DPK-DAST-###.json` | same |
-| Pattern | `drobon.knowledge.pattern/v1` | `knowledge/patterns/DPK-PAT-####.json` | 1:1 with rules (1,200) |
-| Record | `drobon.knowledge.record/v1` | `knowledge/records/DPK-REC-####.json` | 1,200 (1:1 with patterns; the 40 legacy record-less patterns were resolved by the generator 2026-10-19, D-13 never activated) |
-| Remediation | `drobon.knowledge.remediation/v1` | `knowledge/remediation/DPK-*.json` | 1:1 with rules (1,200), keyed by `ruleId` |
+| SCA declaration pack | `drobon.pack.sca/v1` | `packs/sca/v1/rules/DPK-SCA-####.json` | same; **no App loader at `9360dd1`** (dataset-side only) |
+| Pattern | `drobon.knowledge.pattern/v1` | `knowledge/patterns/DPK-PAT-####.json` | 1:1 with rules (4,007) |
+| Record | `drobon.knowledge.record/v1` | `knowledge/records/DPK-REC-####.json` | 4,007 (1:1 with patterns; the 40 legacy record-less patterns were resolved by the generator 2026-10-19, D-13 never activated) |
+| Remediation | `drobon.knowledge.remediation/v1` | `knowledge/remediation/DPK-*.json` | 1:1 with rules (4,007), keyed by `ruleId` |
 | Advisory record | `drobon.vuln-intel/v1` | `vuln-intel/{npm,pypi}/*.json` | identity `(provenance.source, id, ecosystem, package)`; files≠advisories≠items |
 | CWE knowledge | `drobon.knowledge.cwe/v1` | `knowledge/cwe/*.json` | MITRE id, own-words summary + pinned URL |
 | Lesson / template / engagement | `drobon.learning.lesson/v1` etc. | `learning/lessons/`, `assessments/templates/`, `engagements/` | `lsn_*` / template ids |
@@ -60,8 +64,9 @@ The only App seam is `assess(coordinates) → { providerId, datasetStatus, advis
 | Pack rules + tests | `npm run validate:packs` | schemas, ReDoS lint, executed pos/neg tests, denylist contract |
 | Assets | `npm run validate:assets` | pattern/record schema + link integrity |
 | Audiences | `npm run validate:audiences` | lesson quiz/practice; practice files executed against target rules |
-| CWE | `npm run validate:cwe` | 63 entries, URL pins |
+| CWE | `npm run validate:cwe` | 102 entries, URL pins, version pin |
 | Vectors | `npm run test:vectors` | 16/16 matching pins |
+| Independent eval coverage | `npm run eval:coverage` | every pack family measured: 4,007/4,007 rules exercised; an unmeasured pack directory fails the gate |
 | Doc/count drift | `scripts/test-doc-drift.mjs` | docs vs tree counts, ledger claims vs tree |
 | Determinism | `scripts/test-determinism.mjs` | regeneration byte-identical; tree digest |
 | Integrity | `scripts/manifest.mjs --check` | SHA manifest of 3,995+ files |
@@ -151,7 +156,7 @@ remains `BLOCKED` ("No provider design exists; Null provider still locked").
 ## 10. Changelog
 
 - **1.2 (2026-10-20):** section 1 inventory refreshed to the audited tree
-  1,200 rules / 1,200 patterns / 1,200 records / 1,200 remediation; the 40
+  4,007 rules / 4,007 patterns / 4,007 records / 4,007 remediation; the 40
   legacy record-less patterns were resolved by the generator, not by filler).
   No schema id, field guarantee or compatibility statement changed, so 1.1
   documents remain valid: this is a count refresh, not a breaking revision.

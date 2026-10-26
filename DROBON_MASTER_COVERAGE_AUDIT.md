@@ -8,6 +8,15 @@
 > verified current state read `docs/APP_CONNECTION_VERIFICATION_2026-10-21.md` and
 > `docs/CAPABILITY_COVERAGE_MATRIX.md`; the underlying blockers (no `LICENSE`,
 > production lock, 0/100,000 records) are unchanged.
+>
+> **Replaced — 2026-10-25.** The live per-engine and per-user-type figures now
+> come from `docs/APP_FEATURE_LEDGER.json` (rendered to
+> `docs/APP_FEATURE_VS_PAID_TOOL_2026-10-25.md`, with
+> `DROBON_ENGINE_COVERAGE.csv` and `DROBON_USERTYPE_COVERAGE.csv` regenerated from
+> it). Every number in the tables below is the frozen 2026-10-16 snapshot; **do
+> not quote them as current**. The deliverable scope is now 39/39 complete, and
+> the 13 rows that are not ours to deliver are listed in that report instead of
+> being averaged into a single figure.
 
 # DROBON MASTER COVERAGE AUDIT — Dataset vs Main App capability matrix vs paid tools
 
