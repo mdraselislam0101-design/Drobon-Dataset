@@ -2,7 +2,7 @@
 
 Rule packs are Drobon's answer to paid-tool rule content: detection rules shipped as **versioned, tested data** instead of hardcoded logic — the same concept as Nuclei templates or Semgrep rules, but in Drobon's own format and with 100% original Drobon content. No proprietary rule was copied, adapted, or "clean-roomed" from any commercial tool; see the originality rule below.
 
-**Honest state: packs have no consumer in the app today.** The Drobon app's current rules are hardcoded matchers. Packs become live only when the app repo ships a pack loader (checklist below). Until then this directory is ready-and-waiting data with machine-checked semantics — never silently half-integrated.
+**Honest state: the App ships a runtime loader (2026-10-21, `apps/api/src/external/`), and three of the four packs are live.** SAST and Secrets load every rule and reproduce their declared tests byte-for-byte; DAST loads and evaluates 934 of 1,007 checks through its 11-header response surface. **SCA is not loaded at all** (no `packs/sca` consumer), so those 1,000 declaration rules are dataset-side only. The loader implements 2 of the 6 checklist steps below (section 4 of `interop/APP_CONFORMANCE.md`), so an invalid or slow pack would still load silently — that is App work, tracked as GAP-042.
 
 ## Layout
 

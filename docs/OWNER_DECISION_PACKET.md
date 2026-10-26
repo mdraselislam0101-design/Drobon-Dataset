@@ -57,7 +57,9 @@ counts at that run unchanged (951/911/951/61/94/65/792; Phase 5 recount
 (2026-10-18 recount, `docs/CURRENT_INVENTORY.json`): 954/914/954/61/97/65/792**
 (pack rules / patterns / records / remediation / CWE / secrets / SAST); coverage recomputed on the
 canonical methodology at that run (72.9% = 37.90/52; SAST engine 69.0%; DEVELOPER
-73.6%; Phase 5 recount 2026-10-17 after R-CWE-03 = 74.8% = 38.90/52).
+73.6%; Phase 5 recount 2026-10-17 after R-CWE-03 = 74.8% = 38.90/52). Those
+percentages are the historical record; live figures come from
+`docs/APP_FEATURE_LEDGER.json` (see `docs/APP_FEATURE_VS_PAID_TOOL_2026-10-25.md`).
 Nothing here touches D-1/D-2/GATE-1..4 or the Production Intelligence Lock.
 
 ---

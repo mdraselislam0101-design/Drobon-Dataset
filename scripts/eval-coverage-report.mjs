@@ -20,7 +20,19 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (rel) => JSON.parse(readFileSync(join(ROOT, rel), 'utf8'));
 const list = (rel) => (existsSync(join(ROOT, rel)) ? readdirSync(join(ROOT, rel)).filter((f) => f.endsWith('.json')).sort() : []);
 
-const rules = ['sast', 'secrets', 'dast'].flatMap((fam) =>
+// Every rule family that has a pack must be in this list. SCA was added to the
+// tree on 2026-10-23 and is measured here too: a family missing from this array
+// shows up as 1000 "unknown rule ids" and an impossible >100% ratio.
+const FAMILIES = ['sast', 'secrets', 'dast', 'sca'];
+// Guard: a pack directory that this report does not read would silently leave
+// that family out of both numerator and denominator (the 2026-10-23 SCA bug).
+const packDirs = existsSync(join(ROOT, 'packs'))
+  ? readdirSync(join(ROOT, 'packs'), { withFileTypes: true }).filter((d) => d.isDirectory())
+    .map((d) => d.name).filter((name) => existsSync(join(ROOT, 'packs', name, 'v1', 'rules'))).sort()
+  : [];
+const unmeasured = packDirs.filter((name) => !FAMILIES.includes(name));
+
+const rules = FAMILIES.flatMap((fam) =>
   list(`packs/${fam}/v1/rules`).map((f) => ({ fam, ...read(`packs/${fam}/v1/rules/${f}`) })));
 const byId = new Map(rules.map((r) => [r.id, r]));
 
@@ -58,7 +70,7 @@ const unknown = [...exercised.keys()].filter((id) => !byId.has(id));
 
 const summary = {
   schemaVersion: 'drobon.eval.coverage/v1',
-  population: 'packs/{sast,secrets,dast}/v1/rules exercised by data/eval-cases (independent ground truth)',
+  population: 'packs/{sast,secrets,dast,sca}/v1/rules exercised by data/eval-cases (independent ground truth)',
   countingRule: 'a rule counts as exercised when any case names it in expected.detections or expected.forbiddenDetections, whether the case is ASSESSED or UNASSESSED',
   notCounted: 'pack-bundled positive/negative tests prove the rule matches its own examples; they are NOT counted here',
   rulesTotal: rules.length,
@@ -70,6 +82,7 @@ const summary = {
   rulesWithPositiveCase: exercised.size - positiveOnly.length,
   rulesWithNoIssueCaseOnly: positiveOnly.length,
   unknownRuleReferences: unknown,
+  unmeasuredPackFamilies: unmeasured,
   perFamily,
   perCategory,
   exercisedRules: [...exercised.keys()].sort(),
@@ -87,6 +100,7 @@ if (process.argv.includes('--json')) {
   process.stdout.write(`  cases: ${summary.casesTotal} (${summary.casesAssessed} assessed, ${summary.casesUnassessed} UNASSESSED)\n`);
   const top = Object.entries(perCategory).sort((a, b) => b[1].rules - a[1].rules).slice(0, 6);
   process.stdout.write(`  largest categories (exercised/total): ${top.map(([k, v]) => `${k} ${v.exercised}/${v.rules}`).join(', ')}\n`);
-  if (unknown.length) process.stdout.write(`  WARNING unknown rule ids: ${unknown.join(', ')}\n`);
+  if (unmeasured.length) process.stdout.write(`  ERROR unmeasured pack families (add them to FAMILIES): ${unmeasured.join(', ')}\n`);
+  if (unknown.length) process.stdout.write(`  WARNING unknown rule ids: ${unknown.slice(0, 10).join(', ')}${unknown.length > 10 ? ` … (${unknown.length} total)` : ''}\n`);
 }
-if (unknown.length > 0) process.exit(1);
+if (unknown.length > 0 || unmeasured.length > 0) process.exit(1);

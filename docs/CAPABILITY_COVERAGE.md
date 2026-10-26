@@ -1,6 +1,6 @@
 # CAPABILITY_COVERAGE.md — app capability to dataset coverage (point-in-time)
 
-App verified read-only at `c32c797` (2026-10-14; engine facts re-verified 2026-10-16: SAST 50 / Secrets 6 / DAST 8 app rules recounted from `rules.ts`, `VULN_INTEL_PROVIDER` lock and absence of pack loaders re-confirmed). Verdict key: `REQUIRED`
+App verified read-only at `9360dd1` (2026-10-21; runtime connection re-verified: all nine dataset categories load from `DATASET_PATH`, and the embedded SAST/Secrets/LESSONS sets are empty at that commit — `docs/APP_CONNECTION_VERIFICATION_2026-10-21.md`). Verdict key: `REQUIRED`
 (capability needs dataset intelligence), `SUPPLEMENTAL` (app self-contained;
 dataset holds loader-future extras), `NOT_REQUIRED` (evidenced absence of need),
 `APP_DECISION` (needs an app-repo change, not data). Machine-checked pointers
@@ -9,10 +9,10 @@ name the script that re-verifies the claim on every run.
 | Capability (app evidence) | Verdict | Dataset position | Machine check |
 |---|---|---|---|
 | SCA matching (`sca/provider.ts assess`) | REQUIRED | 100-record validated seed; breadth blocked | `validate.mjs`, `check-vectors.mjs` |
-| SAST detection (app catalog-gated engine) | SUPPLEMENTAL | 1000 Dataset rules (`DPK-SAST-*`); reachability recount in `docs/PACKS.md` (658 fully, 29 partial, 221 with no analyzed tag, 11 any-file / omitted `languages`) | `validate-packs.mjs`, `test-packs.mjs`, `test-consistency.mjs` (reachability) |
-| Secrets detection (shape-only) | SUPPLEMENTAL | 1000 Dataset rules (`DPK-SEC-*`: 149 published-format rules plus the 2026-10-25 1,000-rule batch of credential-key, file-format and tool-carrier families); no app secrets pack consumer | `validate-packs.mjs`, `test-packs.mjs` |
-| DAST observation (app: 8 hard-coded `DG-DAST-001..008` in `apps/api/src/scans/dast/rules.ts`, code not data) | SUPPLEMENTAL | 1007 Dataset rules over 7 closed check types (recount 2026-10-21; loader-future; no app consumer of `packs/dast`) | `validate-packs.mjs`, `test-packs.mjs` (DAST evaluator rows) |
-| CWE classification (app-referenced ids) | REQUIRED | 63 entries in `knowledge/cwe/`; app-referenced subset recounted 2026-10-18: **16 distinct `DG-*` CWE ids, 16/16 resolve**, 47 entries not App-referenced | `validate-cwe.mjs`, `test-consistency.mjs`, `validate-capability-coverage.mjs` |
+| SAST detection (app catalog-gated engine) | SUPPLEMENTAL | 1000 Dataset rules (`DPK-SAST-*`) load in the App (`getMergedSastRules`); **840/1000 reachable** through the App language catalog, 160 blocked by catalog families (GAP-040) | `validate-packs.mjs`, `test-packs.mjs`, `test-consistency.mjs` (reachability) |
+| Secrets detection (shape-only) | SUPPLEMENTAL | 1000 Dataset rules (`DPK-SEC-*`: 149 published-format rules plus the 2026-10-25 batch of credential-key, file-format and tool-carrier families); the App loads all 1000 (`getMergedSecretsRules`) and reproduces 4,660/4,660 declared tests | `validate-packs.mjs`, `test-packs.mjs` |
+| DAST observation (passive engine) | SUPPLEMENTAL | 1007 Dataset rules over 7 closed check types; the App evaluates the pack and **934/1007 are reachable** through its 11-header response surface (73 blocked, GAP-048); 3,658/3,673 declared tests agree with the App evaluator | `validate-packs.mjs`, `test-packs.mjs` (DAST evaluator rows) |
+| CWE classification (app-referenced ids) | REQUIRED | 102 entries in `knowledge/cwe/`; app-referenced subset recounted 2026-10-18: **16 distinct `DG-*` CWE ids, 16/16 resolve**, 47 entries not App-referenced | `validate-cwe.mjs`, `test-consistency.mjs`, `validate-capability-coverage.mjs` |
 | Remediation content (app computes status) | REQUIRED | 4007 remediation files, one per pack rule (recount 2026-10-25, SCA at 1,000 included) | `validate-audiences.mjs`, `test-consistency.mjs` |
 | Lessons (internal catalog, loader-future) | SUPPLEMENTAL | 6 lessons (2 `lsn_dev_*`, 4 `lsn_pack_*`), practice validator-executed | `validate-audiences.mjs` |
 | Assessment templates (loader-future) | SUPPLEMENTAL | 3 templates, never pre-authorize (count re-derived Pump 4) | `validate-audiences.mjs` |
